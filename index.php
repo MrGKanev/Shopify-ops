@@ -16,8 +16,8 @@ if (file_exists($envFile)) {
 $webUsername  = getenv('WEB_USERNAME') ?: 'admin';
 $webPassword  = getenv('WEB_PASSWORD') ?: 'changeme';
 $shopifyStore = getenv('SHOPIFY_STORE') ?: 'N/A';
-$appTitle     = getenv('APP_TITLE') ?: 'SS ↔ Shopify Audit';
-$appBrand     = getenv('APP_BRAND') ?: 'SS ↔ Shopify';
+$appTitle     = getenv('APP_TITLE') ?: 'ShipStation ↔ Shopify Audit';
+$appBrand     = getenv('APP_BRAND') ?: 'ShipStation ↔ Shopify';
 $reportDir    = __DIR__ . '/reports';
 
 // ── Session / auth ────────────────────────────────────────────────────────────
@@ -328,7 +328,7 @@ if ($authed && $action === 'spotcheck') {
 // ── On-demand audit ───────────────────────────────────────────────────────────
 
 $auditResult    = null;
-$auditStart     = $_POST['audit_start'] ?? $_GET['start'] ?? date('Y-m-d', strtotime('-30 days'));
+$auditStart     = $_POST['audit_start'] ?? $_GET['start'] ?? date('Y-m-d', strtotime('-12 months'));
 $auditEnd       = $_POST['audit_end']   ?? $_GET['end']   ?? date('Y-m-d');
 $auditError     = '';
 $auditDuration  = 0;
@@ -582,7 +582,7 @@ function renderMissingTable(
               <td style="color:var(--muted)"><?= esc($row['email'] ?? '—') ?></td>
               <td style="white-space:nowrap">
                 <a class="ignore-btn" href="<?= esc($ssSearchUrl) ?>" target="_blank" rel="noopener"
-                   style="margin-right:.3rem;text-decoration:none">Search SS</a>
+                   style="margin-right:.3rem;text-decoration:none">Search ShipStation</a>
                 <button class="ignore-btn js-ignore-toggle" data-order="<?= esc($normNum) ?>">Ignore</button>
                 <div id="ignore-form-<?= esc($normNum) ?>" class="ignore-form-row" style="display:none">
                   <form method="post" style="display:contents">

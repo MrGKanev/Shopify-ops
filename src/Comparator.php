@@ -106,8 +106,15 @@ class Comparator
             }
 
             // ── Compare ───────────────────────────────────────────────
-            if (isset($ssIndex[$num])) {
-                $order['_ss_matches'] = $ssIndex[$num];
+            // Shopify exposes two identifiers: `order_number` (e.g. 65075) and
+            // `name` (e.g. #165075). ShipStation may import either one depending
+            // on the integration. We try both so a mismatch in convention doesn't
+            // produce false positives.
+            $nameNorm = self::normalise((string) ($order['name'] ?? ''));
+            $match    = $ssIndex[$num] ?? $ssIndex[$nameNorm] ?? null;
+
+            if ($match !== null) {
+                $order['_ss_matches'] = $match;
                 $found[] = $order;
             } else {
                 $missing[] = $order;

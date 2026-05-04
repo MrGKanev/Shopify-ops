@@ -77,7 +77,7 @@
       <div class="value accent"><?= count($auditResult['ignored']) ?></div>
     </div>
     <div class="stat-card">
-      <div class="label">SS total</div>
+      <div class="label">ShipStation total</div>
       <div class="value accent"><?= $auditResult['total_ss'] ?></div>
     </div>
   </div>
