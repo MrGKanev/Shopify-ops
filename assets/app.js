@@ -39,29 +39,43 @@ document.querySelectorAll('.js-localtime').forEach(function(el) {
 
 // Audit loading overlay
 (function() {
-  var form = document.getElementById('js-audit-form');
+  var form    = document.getElementById('js-audit-form');
   var overlay = document.getElementById('js-audit-loading');
   if (!form || !overlay) return;
 
-  var steps = [
-    { id: 'lstep-shopify', delay: 0 },
-    { id: 'lstep-ss',      delay: 4000 },
-    { id: 'lstep-compare', delay: 9000 },
-  ];
+  var stepIds = ['lstep-shopify', 'lstep-ss', 'lstep-compare'];
+  var current = 0;
+  var timer;
+
+  function activateStep(i) {
+    if (i > 0) {
+      var prev = document.getElementById(stepIds[i - 1]);
+      if (prev) { prev.classList.remove('active'); prev.classList.add('done'); }
+    }
+    var el = document.getElementById(stepIds[i]);
+    if (el) el.classList.add('active');
+  }
+
+  function cycle() {
+    if (current < stepIds.length) {
+      activateStep(current);
+      current++;
+      // cycle through steps every ~8s while waiting for server
+      timer = setTimeout(cycle, 8000);
+    } else {
+      // all steps "done", keep last one active so it doesn't go blank
+      var last = document.getElementById(stepIds[stepIds.length - 1]);
+      if (last) { last.classList.remove('active'); last.classList.add('done'); }
+    }
+  }
 
   form.addEventListener('submit', function() {
     overlay.classList.add('active');
-
-    steps.forEach(function(s, i) {
-      setTimeout(function() {
-        // Mark previous step done
-        if (i > 0) {
-          var prev = document.getElementById(steps[i - 1].id);
-          if (prev) { prev.classList.remove('active'); prev.classList.add('done'); }
-        }
-        var el = document.getElementById(s.id);
-        if (el) el.classList.add('active');
-      }, s.delay);
+    cycle();
+    // Keep overlay up through navigation — beforeunload fires when response arrives
+    window.addEventListener('beforeunload', function() {
+      clearTimeout(timer);
+      // leave overlay visible so there's no flash before the new page paints
     });
   });
 })();

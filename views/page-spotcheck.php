@@ -51,7 +51,7 @@
                 <?php else: ?>
                   <span class="spot-match-tag">
                 <?php endif; ?>
-                  SS #<?= esc($o['orderNumber'] ?? '?') ?>
+                  ShipStation #<?= esc($o['orderNumber'] ?? '?') ?>
                   &middot; <?= esc($o['orderStatus'] ?? '?') ?>
                   <?php if (!empty($o['orderTotal'])): ?>
                     &middot; $<?= number_format((float)$o['orderTotal'], 2) ?>
