@@ -64,8 +64,11 @@ try {
     $shopify = new Shopify($shopifyStore, $shopifyToken, $cache);
 
     // ── Step 1: Fetch orders from both platforms ──────────────────
+    // SS end date is extended by 7 days to catch Addon/Z1/Z2 sub-orders
+    // that are created in ShipStation a few days after the Shopify order.
+    $ssEndDate     = date('Y-m-d', strtotime($endDate . ' +7 days'));
     $shopifyOrders = $shopify->fetchAllOrders($startDate, $endDate);
-    $ssOrders      = $ss->fetchAllOrders($startDate, $endDate);
+    $ssOrders      = $ss->fetchAllOrders($startDate, $ssEndDate);
 
     echo "\n  ✓ Shopify: " . count($shopifyOrders) . " total orders\n";
     echo "  ✓ ShipStation: " . count($ssOrders) . " total orders\n";

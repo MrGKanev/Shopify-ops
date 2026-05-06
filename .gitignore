@@ -8,3 +8,4 @@ reports/*
 
 data/*
 !data/.htaccess
+/temp
