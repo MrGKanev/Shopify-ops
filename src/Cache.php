@@ -41,10 +41,17 @@ class Cache
         $file = $this->path($prefix, $key);
 
         if (file_exists($file)) {
-            $wrapper = json_decode(file_get_contents($file), true);
-            if (is_array($wrapper) && ($wrapper['expires_at'] ?? 0) > time()) {
-                $this->hits[$prefix] = true;
-                return $wrapper['data'];
+            // Check freshness cheaply before loading the full file
+            $fh   = fopen($file, 'r');
+            $head = $fh ? fread($fh, 64) : '';
+            if ($fh) fclose($fh);
+            preg_match('/"expires_at"\s*:\s*(\d+)/', $head, $m);
+            if (isset($m[1]) && (int) $m[1] > time()) {
+                $wrapper = json_decode(file_get_contents($file), true);
+                if (is_array($wrapper)) {
+                    $this->hits[$prefix] = true;
+                    return $wrapper['data'];
+                }
             }
         }
 
@@ -71,8 +78,22 @@ class Cache
         if ($this->ttl <= 0) return false;
         $file = $this->path($prefix, $key);
         if (!file_exists($file)) return false;
-        $wrapper = json_decode(file_get_contents($file), true);
-        return is_array($wrapper) && ($wrapper['expires_at'] ?? 0) > time();
+        $fh = fopen($file, 'r');
+        if (!$fh) return false;
+        $head = fread($fh, 64);
+        fclose($fh);
+        preg_match('/"expires_at"\s*:\s*(\d+)/', $head, $m);
+        return isset($m[1]) && (int) $m[1] > time();
+    }
+
+    /**
+     * Write a value directly to the cache (bypasses the fetch callable).
+     */
+    public function put(string $prefix, string $key, mixed $data): void
+    {
+        if ($this->ttl <= 0) return;
+        $wrapper = ['expires_at' => time() + $this->ttl, 'data' => $data];
+        file_put_contents($this->path($prefix, $key), json_encode($wrapper), LOCK_EX);
     }
 
     /**
@@ -96,12 +117,14 @@ class Cache
         $files  = glob($this->dir . '/*.json') ?: [];
         $result = [];
         foreach ($files as $f) {
-            $wrapper = json_decode(file_get_contents($f), true);
-            $exp     = $wrapper['expires_at'] ?? 0;
-            preg_match('/\/([a-z]+)_[0-9a-f]+\.json$/', $f, $m);
+            // Read only the first 64 bytes — enough to extract expires_at without loading data
+            $head = fread(fopen($f, 'r'), 64);
+            preg_match('/"expires_at"\s*:\s*(\d+)/', $head, $m);
+            $exp = isset($m[1]) ? (int) $m[1] : 0;
+            preg_match('/\/([a-z_]+)_[0-9a-f]+\.json$/', $f, $pm);
             $result[] = [
                 'file'       => basename($f),
-                'prefix'     => $m[1] ?? '?',
+                'prefix'     => $pm[1] ?? '?',
                 'expires_at' => $exp,
                 'expired'    => $exp < time(),
                 'size_kb'    => round(filesize($f) / 1024, 1),

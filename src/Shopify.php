@@ -70,6 +70,18 @@ class Shopify
     }
 
     /**
+     * Fetches a single order by its Shopify numeric ID (full detail).
+     *
+     * @return array<string, mixed>
+     */
+    public function getOrder(string $orderId): array
+    {
+        $url  = "{$this->baseUrl}/orders/{$orderId}.json";
+        $data = $this->get($url);
+        return $data['order'] ?? [];
+    }
+
+    /**
      * Returns true if any fulfillment order for this Shopify order ID has
      * status 'on_hold'. Uses the Fulfillment Orders API (separate endpoint
      * from orders.json — hold state is not exposed on the order object itself).

@@ -30,20 +30,49 @@
     <div class="error-msg" style="margin-bottom:.75rem"><?= esc($auditError) ?></div>
   <?php endif; ?>
 
+  <div class="preset-row">
+    <span class="preset-label">Quick select:</span>
+    <button class="preset-btn" data-days="7">7 days</button>
+    <button class="preset-btn" data-days="30">1 month</button>
+    <button class="preset-btn" data-days="90">3 months</button>
+    <button class="preset-btn" data-days="180">6 months</button>
+    <button class="preset-btn" data-days="365">12 months</button>
+  </div>
+
   <form method="post" id="js-audit-form">
     <input type="hidden" name="action" value="run_audit">
     <div class="date-row">
       <div class="field">
         <label>From</label>
-        <input type="date" name="audit_start" value="<?= esc($auditStart) ?>" max="<?= date('Y-m-d') ?>">
+        <input type="date" id="js-audit-start" name="audit_start" value="<?= esc($auditStart) ?>" max="<?= date('Y-m-d') ?>">
       </div>
       <div class="field">
         <label>To</label>
-        <input type="date" name="audit_end" value="<?= esc($auditEnd) ?>" max="<?= date('Y-m-d') ?>">
+        <input type="date" id="js-audit-end" name="audit_end" value="<?= esc($auditEnd) ?>" max="<?= date('Y-m-d') ?>">
       </div>
       <button class="btn" type="submit" style="flex-shrink:0">Run Audit</button>
     </div>
   </form>
+
+  <script>
+  document.querySelectorAll('.preset-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var days = parseInt(this.dataset.days);
+      var end  = new Date();
+      var start = new Date();
+      start.setDate(end.getDate() - days + 1);
+      var fmt = function(d) {
+        return d.getFullYear() + '-' +
+          String(d.getMonth()+1).padStart(2,'0') + '-' +
+          String(d.getDate()).padStart(2,'0');
+      };
+      document.getElementById('js-audit-start').value = fmt(start);
+      document.getElementById('js-audit-end').value   = fmt(end);
+      document.querySelectorAll('.preset-btn').forEach(function(b){ b.classList.remove('preset-btn-active'); });
+      this.classList.add('preset-btn-active');
+    });
+  });
+  </script>
 </div>
 
 <?php if ($auditResult !== null): ?>
@@ -82,6 +111,7 @@
     </div>
   </div>
 
+  <?= pushFlashBanner() ?>
   <?= renderMissingTable($missing, $ignoredOrders, $shopifyAdminBase, 'run', $auditStart, $auditEnd, $orderHistory) ?>
 
   <?php if (!empty($auditResult['ignored'])): ?>

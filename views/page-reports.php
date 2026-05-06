@@ -70,6 +70,7 @@
     </div>
   <?php endif; ?>
 
+  <?= pushFlashBanner() ?>
   <?= renderMissingTable($missing, $ignoredOrders, $shopifyAdminBase, 'reports', $selectedDate ?? '', '', $orderHistory) ?>
 
 <?php endif; ?>
