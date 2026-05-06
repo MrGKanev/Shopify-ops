@@ -30,8 +30,9 @@ $action = $_POST['action'] ?? '';
 if ($action === 'login') {
     $attemptsFile = __DIR__ . '/data/login_attempts.json';
     $ip           = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    $lockWindow   = 900; // 15 minutes
-    $maxAttempts  = 5;
+    $lockDuration = 604800; // 1 week
+    $attemptWindow = 3600;  // sliding window to track failed attempts (1 hour)
+    $maxAttempts  = 3;
 
     if (!is_dir(__DIR__ . '/data')) mkdir(__DIR__ . '/data', 0755, true);
 
@@ -42,7 +43,8 @@ if ($action === 'login') {
     $attempts = $raw ? (json_decode($raw, true) ?: []) : [];
 
     $now      = time();
-    $attempts = array_filter($attempts, fn($e) => ($e['until'] ?? 0) > $now || ($e['first'] ?? 0) > $now - $lockWindow);
+    // Keep entries that are still banned OR had a recent failed attempt
+    $attempts = array_filter($attempts, fn($e) => ($e['until'] ?? 0) > $now || ($e['first'] ?? 0) > $now - $attemptWindow);
 
     $entry     = $attempts[$ip] ?? ['count' => 0, 'first' => $now, 'until' => 0];
     $lockedOut = ($entry['until'] ?? 0) > $now;
@@ -50,8 +52,12 @@ if ($action === 'login') {
     if ($lockedOut) {
         flock($fh, LOCK_UN);
         fclose($fh);
-        $mins  = (int) ceil(($entry['until'] - $now) / 60);
-        $error = "Too many failed attempts. Try again in {$mins} minute" . ($mins !== 1 ? 's' : '') . '.';
+        $secs  = $entry['until'] - $now;
+        $days  = (int) floor($secs / 86400);
+        $hours = (int) floor(($secs % 86400) / 3600);
+        $error = $days > 0
+            ? "Too many failed attempts. Try again in {$days} day" . ($days !== 1 ? 's' : '') . ($hours > 0 ? " and {$hours}h" : '') . '.'
+            : "Too many failed attempts. Try again in {$hours} hour" . ($hours !== 1 ? 's' : '') . '.';
     } else {
         $okUser = hash_equals($webUsername, $_POST['username'] ?? '');
         $okPass = hash_equals($webPassword, $_POST['password'] ?? '');
@@ -67,7 +73,7 @@ if ($action === 'login') {
         $entry['count'] = ($entry['count'] ?? 0) + 1;
         if (!isset($entry['first'])) $entry['first'] = $now;
         if ($entry['count'] >= $maxAttempts) {
-            $entry['until'] = $now + $lockWindow;
+            $entry['until'] = $now + $lockDuration;
         }
         $attempts[$ip] = $entry;
         ftruncate($fh, 0); rewind($fh);
@@ -77,7 +83,7 @@ if ($action === 'login') {
         $remaining = $maxAttempts - $entry['count'];
         $error = $remaining > 0
             ? 'Incorrect username or password. ' . $remaining . ' attempt' . ($remaining !== 1 ? 's' : '') . ' remaining.'
-            : 'Too many failed attempts. Try again in 15 minutes.';
+            : 'Too many failed attempts. Account locked for 1 week. Contact your administrator.';
     }
 }
 
@@ -88,6 +94,22 @@ if ($action === 'logout') {
 }
 
 $authed = !empty($_SESSION['authed']);
+
+if ($authed && $action === 'unban_ip') {
+    $attemptsFile = __DIR__ . '/data/login_attempts.json';
+    $ip = $_POST['ip'] ?? '';
+    if ($ip && file_exists($attemptsFile)) {
+        $fh = fopen($attemptsFile, 'c+');
+        flock($fh, LOCK_EX);
+        $attempts = json_decode(stream_get_contents($fh), true) ?: [];
+        unset($attempts[$ip]);
+        ftruncate($fh, 0); rewind($fh);
+        fwrite($fh, json_encode($attempts));
+        flock($fh, LOCK_UN); fclose($fh);
+    }
+    header('Location: ?page=settings&unbanned=1');
+    exit;
+}
 
 // ── Shared setup ──────────────────────────────────────────────────────────────
 
@@ -323,6 +345,23 @@ if ($authed) {
         $cacheFlushed = $cacheObj->flush();
     }
     $cacheEntries = $cacheObj->entries();
+}
+
+// ── Banned IPs ────────────────────────────────────────────────────────────────
+
+$bannedIps = [];
+
+if ($authed) {
+    $attemptsFile = __DIR__ . '/data/login_attempts.json';
+    if (file_exists($attemptsFile)) {
+        $now      = time();
+        $all      = json_decode(file_get_contents($attemptsFile), true) ?: [];
+        foreach ($all as $ip => $entry) {
+            if (($entry['until'] ?? 0) > $now) {
+                $bannedIps[$ip] = $entry;
+            }
+        }
+    }
 }
 
 // ── Spot-check ────────────────────────────────────────────────────────────────

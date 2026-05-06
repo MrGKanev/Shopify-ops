@@ -44,6 +44,53 @@
   <?php endif; ?>
 </div>
 
+<?php if (isset($_GET['unbanned'])): ?>
+  <div class="flash flash-ok" style="margin-bottom:1rem">✓ IP unbanned successfully.</div>
+<?php endif; ?>
+
+<div class="table-wrap" style="margin-bottom:1.5rem">
+  <div class="table-header">
+    <h2>Banned IPs</h2>
+    <span><?= count($bannedIps) ?> active ban<?= count($bannedIps) !== 1 ? 's' : '' ?></span>
+  </div>
+  <?php if (empty($bannedIps)): ?>
+    <div class="empty" style="padding:1.5rem">
+      <div class="icon">✅</div>
+      <h3>No active bans</h3>
+      <p>No IPs are currently locked out.</p>
+    </div>
+  <?php else: ?>
+    <table>
+      <thead>
+        <tr><th>IP Address</th><th>Failed attempts</th><th>Banned until</th><th></th></tr>
+      </thead>
+      <tbody>
+        <?php foreach ($bannedIps as $ip => $entry):
+          $until = date('Y-m-d H:i', $entry['until']);
+          $secs  = $entry['until'] - time();
+          $days  = (int) floor($secs / 86400);
+          $hours = (int) floor(($secs % 86400) / 3600);
+          $remaining = $days > 0 ? "{$days}d {$hours}h left" : "{$hours}h left";
+        ?>
+        <tr>
+          <td style="font-family:monospace"><?= esc($ip) ?></td>
+          <td><?= (int) ($entry['count'] ?? 0) ?></td>
+          <td><?= esc($until) ?> <span style="color:var(--muted);font-size:.8rem">(<?= esc($remaining) ?>)</span></td>
+          <td>
+            <form method="post" style="display:inline">
+              <input type="hidden" name="action" value="unban_ip">
+              <input type="hidden" name="ip" value="<?= esc($ip) ?>">
+              <button class="btn btn-sm btn-danger" type="submit"
+                      onclick="return confirm('Unban <?= esc($ip) ?>?')">Unban</button>
+            </form>
+          </td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  <?php endif; ?>
+</div>
+
 <div class="table-wrap">
   <div class="table-header"><h2>Current configuration</h2></div>
   <table>

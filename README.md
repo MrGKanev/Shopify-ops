@@ -7,7 +7,7 @@ Compares every paid Shopify order against ShipStation and surfaces the ones that
 ## How it works
 
 1. Fetches all Shopify orders in the configured date range (cursor-paginated, up to 250/page)
-2. Fetches all ShipStation orders in the same range (paginated, up to 500/page)
+2. Fetches all ShipStation orders for the same range **plus a 7-day trailing buffer** (see [ShipStation fetch buffer](#shipstation-fetch-buffer))
 3. Filters out orders that should never appear in ShipStation (see [What gets skipped](#what-gets-skipped))
 4. For any order not found in ShipStation, checks whether it is on hold in Shopify (separate Fulfillment Orders API call, cached per order ID)
 5. Diffs the two sets and flags any Shopify orders genuinely missing from ShipStation
@@ -118,6 +118,7 @@ Each missing order row has:
 - A **Seen** badge showing how many reports the order has appeared in (`2×` = yellow, `3×+` = red)
 - An **Ignore** button to permanently exclude it from future reports (with optional reason)
 - A **checkbox** for selecting multiple orders to bulk-ignore in one action
+- A **Push to SS** button that creates the order in ShipStation directly from the dashboard (fetches full order detail from Shopify and posts it to the ShipStation `createorder` endpoint)
 
 ---
 
@@ -140,8 +141,47 @@ The following Shopify orders are intentionally excluded from the comparison.
 
 ---
 
+## ShipStation fetch buffer
+
+When ShipStation order numbers use compound formats such as `165090-Z2`, `Addon-163048`, or `Z1-164924`, two problems arise.
+
+**Problem 1 — normalisation mismatch.**
+The original normalisation stripped all non-digit characters and joined the remaining digits together. A number like `100042-B2` would therefore become `1000422` (the trailing `2` from `B2` glues onto the main number), which never matches the Shopify order `100042`.
+
+The fix: the ShipStation index is now built by extracting **every contiguous digit-run** in the order number separately and indexing the order under each one. `100042-B2` is indexed under both `100042` and `2`; `Addon-100031` is indexed under `100031`. Because no real Shopify order number is a single digit, the short segments are harmless.
+
+**Problem 2 — date window gap.**
+Sub-orders (Addon, variant suffixes, etc.) are often created in ShipStation one or more days after the original Shopify order. If the audit window ends on day D and an Addon order is entered into ShipStation on day D+2, it falls outside the fetch window and is invisible to the index — causing a false "missing" result.
+
+The fix: ShipStation orders are now fetched for `startDate` → `endDate + 7 days`. Shopify orders are still fetched for the exact window, so the comparison logic is unaffected — the extra SS orders simply sit in the index unused. Seven days was chosen as a conservative buffer; if sub-orders in your workflow are created more than a week after the Shopify order, increase the offset in `audit.php` and `index.php`.
+
+---
+
 ## Caching
 
 API responses are cached under `cache/` as JSON files keyed by platform and date range. The default TTL is 23 hours (`CACHE_TTL=82800`) — aligned with the daily cron schedule so each run fetches fresh data. Repeated runs within the same day reuse the cache automatically.
 
+The ShipStation cache key includes the extended end date (`endDate + 7 days`), so changing the buffer automatically invalidates the old cache.
+
 To force a fresh fetch: use **Clear all cache** in the Run Audit page, or set `CACHE_TTL=0` in `.env`.
+
+---
+
+## Security
+
+- The web dashboard is protected by username/password stored in `.env`. Sessions are managed by PHP's native session mechanism.
+- Login attempts are rate-limited: 3 failed attempts per IP triggers a 1-week lockout. The lockout state is stored in `data/login_attempts.json`. Admins can view and remove active bans from the **Settings** page.
+- All user-supplied values rendered in HTML are escaped with `htmlspecialchars`.
+- The `reports/`, `cache/`, `data/`, and `logs/` directories should not be web-accessible. Add the following to your server config or `.htaccess` if your document root is the repo root:
+
+```apache
+<DirectoryMatch "^/var/www/ShipStation-Shopify-Checker/(reports|cache|data|logs)/">
+    Require all denied
+</DirectoryMatch>
+```
+
+---
+
+## Dark mode
+
+The dashboard automatically follows the OS preference (`prefers-color-scheme`). There is no manual toggle — dark mode is always on when the system is set to dark.
