@@ -160,6 +160,48 @@ if ($authed && $action === 'unignore_order') {
     exit;
 }
 
+// ── Push to ShipStation ───────────────────────────────────────────────────────
+
+if ($authed && $action === 'push_to_shipstation') {
+    $shopifyId    = trim($_POST['shopify_id'] ?? '');
+    $redirectPage = $_POST['redirect_page'] ?? 'run';
+    $redirectDate = $_POST['redirect_date'] ?? '';
+
+    $ssKey        = getenv('SS_API_KEY');
+    $ssSecret     = getenv('SS_API_SECRET');
+    $shopifyToken = getenv('SHOPIFY_ACCESS_TOKEN');
+
+    $loc = '?page=' . urlencode($redirectPage);
+    if ($redirectDate) $loc .= '&date=' . urlencode($redirectDate);
+
+    if (!$shopifyId || !$ssKey || !$ssSecret || !$shopifyToken) {
+        $loc .= '&push_error=' . urlencode('Missing credentials or order ID.');
+    } else {
+        try {
+            require_once __DIR__ . '/src/ShipStation.php';
+            require_once __DIR__ . '/src/Shopify.php';
+
+            $shopify      = new Shopify($shopifyStore, $shopifyToken);
+            $shopifyOrder = $shopify->getOrder($shopifyId);
+
+            if (empty($shopifyOrder)) {
+                throw new RuntimeException("Order {$shopifyId} not found in Shopify.");
+            }
+
+            $ss      = new ShipStation($ssKey, $ssSecret);
+            $created = $ss->createOrder($shopifyOrder);
+
+            $orderNum = $created['orderNumber'] ?? $shopifyId;
+            $loc .= '&push_ok=' . urlencode($orderNum);
+        } catch (Throwable $e) {
+            $loc .= '&push_error=' . urlencode($e->getMessage());
+        }
+    }
+
+    header('Location: ' . $loc);
+    exit;
+}
+
 // ── Bulk unignore ─────────────────────────────────────────────────────────────
 
 if ($authed && $action === 'bulk_unignore_orders') {
@@ -345,8 +387,8 @@ if ($authed && $action === 'run_audit') {
         $auditError = 'Invalid date format. Use YYYY-MM-DD.';
     } elseif ($auditStart > $auditEnd) {
         $auditError = 'Start date must be before end date.';
-    } elseif ((strtotime($auditEnd) - strtotime($auditStart)) > 366 * 86400) {
-        $auditError = 'Date range cannot exceed 366 days.';
+    } elseif (false) { // no date range limit
+        $auditError = '';
     } else {
         $ssKey        = getenv('SS_API_KEY');
         $ssSecret     = getenv('SS_API_SECRET');
@@ -360,7 +402,8 @@ if ($authed && $action === 'run_audit') {
             require_once __DIR__ . '/src/Reporter.php';
 
             try {
-                set_time_limit(300);
+                set_time_limit(600);
+                ini_set('memory_limit', '512M');
                 $t0 = microtime(true);
 
                 $auditFromCache = [
@@ -465,6 +508,19 @@ function badge(int $count): string
     return $count === 0
         ? '<span class="badge badge-ok">All clear</span>'
         : '<span class="badge badge-warn">' . $count . ' missing</span>';
+}
+
+function pushFlashBanner(): string
+{
+    $ok  = $_GET['push_ok']    ?? '';
+    $err = $_GET['push_error'] ?? '';
+    if ($ok) {
+        return '<div class="flash flash-ok">✓ Order #' . esc($ok) . ' pushed to ShipStation successfully.</div>';
+    }
+    if ($err) {
+        return '<div class="flash flash-err">✗ Push failed: ' . esc($err) . '</div>';
+    }
+    return '';
 }
 
 function renderMissingTable(
@@ -582,7 +638,19 @@ function renderMissingTable(
               <td style="color:var(--muted)"><?= esc($row['email'] ?? '—') ?></td>
               <td style="white-space:nowrap">
                 <a class="ignore-btn" href="<?= esc($ssSearchUrl) ?>" target="_blank" rel="noopener"
-                   style="margin-right:.3rem;text-decoration:none">Search ShipStation</a>
+                   style="margin-right:.3rem;text-decoration:none">Search SS</a>
+                <?php if ($shopifyId): ?>
+                <form method="post" style="display:inline" class="js-push-form">
+                  <input type="hidden" name="action" value="push_to_shipstation">
+                  <input type="hidden" name="shopify_id" value="<?= esc($shopifyId) ?>">
+                  <input type="hidden" name="redirect_page" value="<?= esc($context) ?>">
+                  <input type="hidden" name="redirect_date" value="<?= esc($contextVal) ?>">
+                  <button class="ignore-btn btn-push" type="submit"
+                          onclick="this.textContent='Pushing…';this.disabled=true;this.form.submit()">
+                    Push to SS
+                  </button>
+                </form>
+                <?php endif; ?>
                 <button class="ignore-btn js-ignore-toggle" data-order="<?= esc($normNum) ?>">Ignore</button>
                 <div id="ignore-form-<?= esc($normNum) ?>" class="ignore-form-row" style="display:none">
                   <form method="post" style="display:contents">
