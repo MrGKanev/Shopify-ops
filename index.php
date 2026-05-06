@@ -341,27 +341,42 @@ if ($authed && $action === 'spotcheck') {
         $spotError = 'Maximum 50 order numbers at once.';
     } else {
         require_once __DIR__ . '/src/ShipStation.php';
-        $ssKey    = getenv('SS_API_KEY');
-        $ssSecret = getenv('SS_API_SECRET');
+        require_once __DIR__ . '/src/Shopify.php';
+        $ssKey        = getenv('SS_API_KEY');
+        $ssSecret     = getenv('SS_API_SECRET');
+        $shopifyToken = getenv('SHOPIFY_ACCESS_TOKEN');
 
-        if (!$ssKey || !$ssSecret) {
+        $spotMode = $_POST['spotcheck_mode'] ?? 'both';
+        $checkSS  = in_array($spotMode, ['both', 'ss'], true);
+        $checkSh  = in_array($spotMode, ['both', 'shopify'], true) && $shopifyToken && $shopifyStore !== 'N/A';
+
+        if ($checkSS && !$ssKey || !$ssSecret) {
             $spotError = 'SS_API_KEY / SS_API_SECRET not set in .env.';
         } else {
             try {
-                $ss          = new ShipStation($ssKey, $ssSecret);
+                $ss      = $checkSS ? new ShipStation($ssKey, $ssSecret) : null;
+                $shopify = $checkSh ? new Shopify($shopifyStore, $shopifyToken) : null;
+
                 $spotResults = [];
                 foreach ($numbers as $num) {
-                    $clean  = ltrim(trim($num), '#');
-                    $orders = $ss->findByOrderNumber($clean);
+                    $clean    = ltrim(trim($num), '#');
+                    $ssOrders = $ss      ? $ss->findByOrderNumber($clean)      : null;
+                    $shOrders = $shopify ? $shopify->findByOrderNumber($clean)  : null;
+
                     $spotResults[] = [
-                        'input'  => $num,
-                        'number' => $clean,
-                        'orders' => $orders,
-                        'found'  => !empty($orders),
+                        'input'          => $num,
+                        'number'         => $clean,
+                        'mode'           => $spotMode,
+                        'ss_orders'      => $ssOrders,
+                        'ss_found'       => !empty($ssOrders),
+                        'shopify_orders' => $shOrders,
+                        'shopify_found'  => !empty($shOrders),
+                        'orders'         => $ssOrders ?? [],
+                        'found'          => !empty($ssOrders),
                     ];
                 }
             } catch (Throwable $e) {
-                $spotError = 'ShipStation error: ' . $e->getMessage();
+                $spotError = 'Error: ' . $e->getMessage();
             }
         }
     }
@@ -406,9 +421,13 @@ if ($authed && $action === 'run_audit') {
                 ini_set('memory_limit', '512M');
                 $t0 = microtime(true);
 
+                // SS end date is extended by 7 days to catch Addon/Z1/Z2 sub-orders
+                // that are created in ShipStation a few days after the Shopify order.
+                $ssAuditEnd = date('Y-m-d', strtotime($auditEnd . ' +7 days'));
+
                 $auditFromCache = [
                     'shopify' => $cacheObj->isFresh('shopify', "{$auditStart}|{$auditEnd}"),
-                    'ss'      => $cacheObj->isFresh('ss',      "{$auditStart}|{$auditEnd}"),
+                    'ss'      => $cacheObj->isFresh('ss',      "{$auditStart}|{$ssAuditEnd}"),
                 ];
 
                 $ss      = new ShipStation($ssKey, $ssSecret, $cacheObj);
@@ -416,7 +435,7 @@ if ($authed && $action === 'run_audit') {
 
                 ob_start();
                 $shopifyOrders = $shopify->fetchAllOrders($auditStart, $auditEnd);
-                $ssOrders      = $ss->fetchAllOrders($auditStart, $auditEnd);
+                $ssOrders      = $ss->fetchAllOrders($auditStart, $ssAuditEnd);
                 ob_end_clean();
 
                 $ssIndex    = Comparator::buildSSIndex($ssOrders);

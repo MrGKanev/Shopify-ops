@@ -86,10 +86,11 @@ class Reporter
         $csvPath = "{$dir}/missing_{$stamp}.csv";
         $fh = fopen($csvPath, 'w');
         flock($fh, LOCK_EX);
-        fputcsv($fh, ['order_number', 'shopify_id', 'created_at', 'total_price', 'financial_status', 'fulfillment_status', 'email'], ',', '"', '\\');
+        fputcsv($fh, ['order_number', 'shopify_name', 'shopify_id', 'created_at', 'total_price', 'financial_status', 'fulfillment_status', 'email'], ',', '"', '\\');
         foreach ($missing as $o) {
             fputcsv($fh, [
-                $o['order_number']       ?? $o['name'] ?? '',
+                $o['order_number']       ?? '',
+                $o['name']               ?? '',
                 $o['id']                 ?? '',
                 $o['created_at']         ?? '',
                 $o['total_price']        ?? '',
@@ -111,9 +112,12 @@ class Reporter
         ];
         foreach ($missing as $o) {
             $total_p = isset($o['total_price']) ? '$' . number_format((float)$o['total_price'], 2) : '—';
+            $num     = $o['order_number'] ?? '';
+            $name    = $o['name'] ?? '';
             $lines[] = sprintf(
-                "#%s  %s  %-8s  %-12s  %s",
-                $o['order_number']    ?? $o['name'] ?? '?',
+                "#%s (%s)  %s  %-8s  %-12s  %s",
+                $num,
+                $name,
                 substr($o['created_at'] ?? '', 0, 10),
                 $total_p,
                 $o['financial_status'] ?? '',

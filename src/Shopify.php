@@ -70,6 +70,25 @@ class Shopify
     }
 
     /**
+     * Look up orders by order number (the short numeric part, e.g. "65075").
+     * Tries both the plain number and the #1xxxxx name format.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function findByOrderNumber(string $orderNumber): array
+    {
+        $clean = ltrim(trim($orderNumber), '#');
+        $params = http_build_query([
+            'status' => 'any',
+            'name'   => $clean,
+            'limit'  => 10,
+            'fields' => 'id,order_number,name,financial_status,fulfillment_status,cancelled_at,created_at,email,total_price',
+        ]);
+        $data = $this->get("{$this->baseUrl}/orders.json?{$params}");
+        return $data['orders'] ?? [];
+    }
+
+    /**
      * Fetches a single order by its Shopify numeric ID (full detail).
      *
      * @return array<string, mixed>
@@ -135,7 +154,6 @@ class Shopify
         $code       = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $err        = curl_error($ch);
         $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-        curl_close($ch);
 
         if ($err) throw new RuntimeException("Shopify cURL error: {$err}");
 
@@ -178,7 +196,6 @@ class Shopify
         $code       = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $err        = curl_error($ch);
         $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-        curl_close($ch);
 
         if ($err) throw new RuntimeException("Shopify cURL error: {$err}");
 
