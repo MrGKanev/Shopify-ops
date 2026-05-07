@@ -460,7 +460,7 @@ if ($authed && $action === 'run_audit') {
                 ini_set('memory_limit', '512M');
                 $t0 = microtime(true);
 
-                // SS end date is extended by 7 days to catch Addon/Z1/Z2 sub-orders
+                // SS end date is extended by 7 days to catch sub-orders
                 // that are created in ShipStation a few days after the Shopify order.
                 $ssAuditEnd = date('Y-m-d', strtotime($auditEnd . ' +7 days'));
 

@@ -16,7 +16,7 @@
   <form method="post">
     <input type="hidden" name="action" value="spotcheck">
     <input type="hidden" name="spotcheck_mode" id="js-spotcheck-mode" value="both">
-    <textarea name="orders" placeholder="164777&#10;164789&#10;164812"><?= esc($spotInput) ?></textarea>
+    <textarea name="orders" placeholder="100042&#10;100043&#10;100044"><?= esc($spotInput) ?></textarea>
     <div class="spot-btn-row">
       <button class="btn" type="submit" onclick="document.getElementById('js-spotcheck-mode').value='both'">
         ShipStation &amp; Shopify

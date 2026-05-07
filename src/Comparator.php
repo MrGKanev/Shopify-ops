@@ -8,8 +8,8 @@ class Comparator
      * Build a fast lookup: normalised orderNumber → [ss orders].
      *
      * Indexes each SS order under every distinct numeric segment in its
-     * orderNumber so that compound formats like "165090-Z2", "Addon-163048",
-     * or "Z1-164924" all resolve to their Shopify counterpart correctly.
+     * orderNumber so that compound formats like "100042-B2" or "Addon-100031"
+     * all resolve to their Shopify counterpart correctly.
      *
      * @param  array<int, array<string, mixed>> $ssOrders
      * @return array<string, array<int, array<string, mixed>>>
@@ -25,7 +25,7 @@ class Comparator
                 $index[$full][] = $order;
             }
             // Secondary keys: each individual contiguous digit-run
-            // e.g. "165090-Z2" → ["165090", "2"]; "Addon-163048" → ["163048"]
+            // e.g. "100042-B2" → ["100042", "2"]; "Addon-100031" → ["100031"]
             preg_match_all('/\d+/', $raw, $m);
             foreach ($m[0] as $segment) {
                 if ($segment !== $full && $segment !== '') {

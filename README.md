@@ -84,7 +84,7 @@ AUDIT_START_DATE=2025-01-01 AUDIT_END_DATE=2025-03-31 php audit.php
 Spot-check specific order numbers without running a full audit:
 
 ```bash
-php audit.php --spot-check 164777,164789
+php audit.php --spot-check 100042,100043
 ```
 
 Exit codes: `0` = all clear, `1` = missing orders found, `2` = script error.
@@ -143,7 +143,7 @@ The following Shopify orders are intentionally excluded from the comparison.
 
 ## ShipStation fetch buffer
 
-When ShipStation order numbers use compound formats such as `165090-Z2`, `Addon-163048`, or `Z1-164924`, two problems arise.
+When ShipStation order numbers use compound formats such as `100042-B2` or `Addon-100031`, two problems arise.
 
 **Problem 1 — normalisation mismatch.**
 The original normalisation stripped all non-digit characters and joined the remaining digits together. A number like `100042-B2` would therefore become `1000422` (the trailing `2` from `B2` glues onto the main number), which never matches the Shopify order `100042`.
