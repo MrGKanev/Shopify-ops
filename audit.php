@@ -1,7 +1,7 @@
 #!/usr/bin/env php
 <?php
 // audit.php — ShipStation ↔ Shopify Order Audit
-// Usage: php audit.php [--spot-check 164777,164789]
+// Usage: php audit.php [--spot-check 100042,100043]
 
 require_once __DIR__ . '/src/Cache.php';
 require_once __DIR__ . '/src/ShipStation.php';
@@ -40,8 +40,8 @@ $startDate = getenv('AUDIT_START_DATE') ?: date('Y-m-d', strtotime('-90 days'));
 $endDate   = getenv('AUDIT_END_DATE')   ?: date('Y-m-d');
 
 // ── Parse --spot-check flag ───────────────────────────────────────
-// php audit.php --spot-check 164777,164789
-$spotCheckNumbers = ['164777', '164789']; // default from the brief
+// php audit.php --spot-check 100042,100043
+$spotCheckNumbers = [];
 $idx = array_search('--spot-check', $argv ?? []);
 if ($idx !== false && isset($argv[$idx + 1])) {
     $spotCheckNumbers = array_filter(array_map('trim', explode(',', $argv[$idx + 1])));
@@ -64,7 +64,7 @@ try {
     $shopify = new Shopify($shopifyStore, $shopifyToken, $cache);
 
     // ── Step 1: Fetch orders from both platforms ──────────────────
-    // SS end date is extended by 7 days to catch Addon/Z1/Z2 sub-orders
+    // SS end date is extended by 7 days to catch sub-orders
     // that are created in ShipStation a few days after the Shopify order.
     $ssEndDate     = date('Y-m-d', strtotime($endDate . ' +7 days'));
     $shopifyOrders = $shopify->fetchAllOrders($startDate, $endDate);
