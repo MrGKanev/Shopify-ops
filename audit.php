@@ -92,8 +92,9 @@ try {
         : [];
 
     // ── Step 4: Build index + compare ────────────────────────────
-    $ssIndex = Comparator::buildSSIndex($ssOrders);
-    $result  = Comparator::compare($shopifyOrders, $ssIndex, $ignoredNumbers);
+    $ssIndex      = Comparator::buildSSIndex($ssOrders);
+    $ssEmailIndex = Comparator::buildSSEmailIndex($ssOrders);
+    $result       = Comparator::compare($shopifyOrders, $ssIndex, $ignoredNumbers, $ssEmailIndex);
 
     // ── Step 4b: On-hold check ────────────────────────────────────
     // 'on_hold' is not exposed on the order object itself — it lives on

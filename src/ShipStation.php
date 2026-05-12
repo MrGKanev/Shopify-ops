@@ -136,6 +136,18 @@ class ShipStation
      */
     public function createOrder(array $shopifyOrder): array
     {
+        return $this->post('/orders/createorder', $this->buildPayload($shopifyOrder));
+    }
+
+    /**
+     * Builds the ShipStation createorder payload from a Shopify order without sending it.
+     * Used by the dry-run preview feature.
+     *
+     * @param  array<string, mixed> $shopifyOrder
+     * @return array<string, mixed>
+     */
+    public function buildPayload(array $shopifyOrder): array
+    {
         $addr = function (array $a): array {
             $name = trim(($a['first_name'] ?? '') . ' ' . ($a['last_name'] ?? ''));
             return [
@@ -167,7 +179,7 @@ class ShipStation
             $shippingAmount += (float) ($sl['price'] ?? 0);
         }
 
-        $payload = [
+        return [
             'orderNumber'      => (string) ($shopifyOrder['order_number'] ?? $shopifyOrder['name'] ?? ''),
             'orderDate'        => $shopifyOrder['created_at'] ?? date('c'),
             'orderStatus'      => 'awaiting_shipment',
@@ -180,8 +192,6 @@ class ShipStation
             'taxAmount'        => (float) ($shopifyOrder['total_tax']     ?? 0),
             'shippingAmount'   => $shippingAmount,
         ];
-
-        return $this->post('/orders/createorder', $payload);
     }
 
     // ── Private ───────────────────────────────────────────────────────
