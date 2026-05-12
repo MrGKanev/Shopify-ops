@@ -1,0 +1,40 @@
+{
+  "_readme": "Copy this file to order_types.json and define your own order type rules. Each rule is checked against every line item in the order. If any line item matches, that type label is included in the order's classification. Orders with no matching rules get the fallback label. Multiple matched types are joined with ' + ' (e.g. 'Main + Accessory').",
+
+  "fallback": "Accessory",
+
+  "rules": [
+    {
+      "_comment": "Main product line A — matched by SKU prefix",
+      "name": "Pro",
+      "match": "sku_starts_with",
+      "value": "widget-pro-"
+    },
+    {
+      "_comment": "Main product line B — matched by SKU prefix",
+      "name": "Lite",
+      "match": "sku_starts_with",
+      "value": "widget-lite-"
+    },
+    {
+      "_comment": "Match by product title keyword",
+      "name": "Bundle",
+      "match": "title_contains",
+      "value": "starter kit"
+    },
+    {
+      "_comment": "Match by vendor name",
+      "name": "OEM",
+      "match": "vendor_is",
+      "value": "Acme Corp"
+    }
+  ],
+
+  "_match_types": {
+    "sku_starts_with":     "SKU starts with the given string (case-insensitive)",
+    "sku_contains":        "SKU contains the given string (case-insensitive)",
+    "sku_not_starts_with": "SKU does not start with any of the given strings — pass an array for multiple prefixes",
+    "title_contains":      "Product title contains the given string (case-insensitive)",
+    "vendor_is":           "Product vendor exactly matches the given string (case-insensitive)"
+  }
+}

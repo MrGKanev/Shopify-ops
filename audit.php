@@ -3,6 +3,7 @@
 // audit.php — ShipStation ↔ Shopify Order Audit
 // Usage: php audit.php [--spot-check 100042,100043]
 
+require_once __DIR__ . '/src/Env.php';
 require_once __DIR__ . '/src/Cache.php';
 require_once __DIR__ . '/src/ShipStation.php';
 require_once __DIR__ . '/src/Shopify.php';
@@ -10,18 +11,10 @@ require_once __DIR__ . '/src/Comparator.php';
 require_once __DIR__ . '/src/Reporter.php';
 
 // ── Load .env ─────────────────────────────────────────────────────
-$envFile = __DIR__ . '/.env';
-if (!file_exists($envFile)) {
+if (!file_exists(__DIR__ . '/.env')) {
     die("\n✗ .env file not found. Copy .env.example → .env and fill in your credentials.\n\n");
 }
-foreach (file($envFile) as $line) {
-    $line = trim($line);
-    if ($line === '' || str_starts_with($line, '#')) continue;
-    [$key, $val] = array_map('trim', explode('=', $line, 2)) + ['', ''];
-    if ($key && !isset($_ENV[$key])) {
-        putenv("{$key}={$val}");
-    }
-}
+Env::load(__DIR__ . '/.env');
 
 // ── Validate required config ──────────────────────────────────────
 $required = ['SS_API_KEY', 'SS_API_SECRET', 'SHOPIFY_STORE', 'SHOPIFY_ACCESS_TOKEN'];
@@ -118,6 +111,12 @@ try {
         $result['missing'] = $stillMissing;
         echo " done\n";
     }
+
+    // ── Step 4c: Classify order types ─────────────────────────────
+    foreach ($result['missing'] as &$order) {
+        $order['_order_type'] = Comparator::classifyOrder($order);
+    }
+    unset($order);
 
     // ── Step 5: Report ────────────────────────────────────────────
     Reporter::printSummary(

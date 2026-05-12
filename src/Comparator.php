@@ -110,7 +110,7 @@ class Comparator
 
             // ── Financial status ──────────────────────────────────────
             $financial = $order['financial_status'] ?? '';
-            if (in_array($financial, ['pending', 'voided', 'refunded'], true)) {
+            if (in_array($financial, ['pending', 'voided', 'refunded', 'partially_refunded'], true)) {
                 $order['_skip_reason'] = 'financial';
                 $skipped[] = $order;
                 continue;
@@ -193,5 +193,55 @@ class Comparator
     public static function normalise(string $raw): string
     {
         return preg_replace('/\D/', '', ltrim(trim($raw), '#'));
+    }
+
+    /**
+     * Classify a Shopify order using rules defined in order_types.json.
+     * Multiple matching rule names are joined with " + " (e.g. "Pro + Accessory").
+     * Returns the configured fallback (default "Other") when no rules match.
+     */
+    public static function classifyOrder(array $order): string
+    {
+        static $config = null;
+        if ($config === null) {
+            $file   = __DIR__ . '/../order_types.json';
+            $config = file_exists($file)
+                ? (json_decode(file_get_contents($file), true) ?: [])
+                : [];
+        }
+
+        $rules    = $config['rules']    ?? [];
+        $fallback = $config['fallback'] ?? 'Other';
+
+        if (empty($rules)) return $fallback;
+
+        $matched = [];
+        foreach ($rules as $rule) {
+            $name  = $rule['name']  ?? 'Unknown';
+            $match = $rule['match'] ?? '';
+            $value = $rule['value'] ?? '';
+
+            foreach ($order['line_items'] ?? [] as $li) {
+                $sku    = strtolower($li['sku']   ?? '');
+                $title  = strtolower($li['title'] ?? '');
+                $vendor = strtolower($li['vendor'] ?? '');
+
+                $hit = match($match) {
+                    'sku_starts_with'     => str_starts_with($sku, strtolower((string)$value)),
+                    'sku_contains'        => str_contains($sku, strtolower((string)$value)),
+                    'sku_not_starts_with' => !array_filter((array)$value, fn($p) => str_starts_with($sku, strtolower($p))),
+                    'title_contains'      => str_contains($title, strtolower((string)$value)),
+                    'vendor_is'           => $vendor === strtolower((string)$value),
+                    default               => false,
+                };
+
+                if ($hit) {
+                    $matched[$name] = true;
+                    break;
+                }
+            }
+        }
+
+        return $matched ? implode(' + ', array_keys($matched)) : $fallback;
     }
 }

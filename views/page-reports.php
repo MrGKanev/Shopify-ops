@@ -2,16 +2,22 @@
   <div>
     <h1>Order Audit</h1>
     <?php if ($selectedReport): ?>
-      <div class="meta">Report for <?= esc($selectedReport['date']) ?> &mdash;
-        <a href="?action=download&date=<?= esc($selectedReport['date']) ?>">Download CSV</a>
-      </div>
+      <div class="meta"><?= esc($selectedReport['date']) ?></div>
     <?php endif; ?>
   </div>
   <?php if ($selectedReport): ?>
-    <a class="btn btn-sm btn-ghost"
-       href="?page=run&start=<?= esc($selectedReport['date']) ?>&end=<?= esc($selectedReport['date']) ?>">
-      Re-audit this date
-    </a>
+    <?php $count = $selectedReport['count']; ?>
+    <div style="display:flex;align-items:center;gap:.75rem">
+      <span class="badge <?= $count > 0 ? 'badge-warn' : 'badge-ok' ?>" style="font-size:.85rem;padding:.3rem .75rem">
+        <?= $count ?> missing
+      </span>
+      <a class="btn btn-sm btn-ghost"
+         href="?action=download&date=<?= esc($selectedReport['date']) ?>" download>Download CSV</a>
+      <a class="btn btn-sm btn-ghost"
+         href="?page=run&start=<?= esc($selectedReport['date']) ?>&end=<?= esc($selectedReport['date']) ?>">
+        Re-audit
+      </a>
+    </div>
   <?php endif; ?>
 </div>
 
@@ -25,38 +31,18 @@
   </div>
 
 <?php elseif ($selectedReport): ?>
-  <?php $missing = $selectedReport['missing']; $count = $selectedReport['count']; ?>
-
-  <div class="stats">
-    <div class="stat-card">
-      <div class="label">Missing</div>
-      <div class="value <?= $count > 0 ? 'warn' : 'ok' ?>"><?= $count ?></div>
-    </div>
-    <div class="stat-card">
-      <div class="label">Report date</div>
-      <div class="value accent" style="font-size:1.1rem;line-height:1.8"><?= esc($selectedReport['date']) ?></div>
-    </div>
-    <div class="stat-card">
-      <div class="label">Total reports</div>
-      <div class="value accent"><?= count($reports) ?></div>
-    </div>
-    <div class="stat-card" style="display:flex;flex-direction:column;justify-content:space-between">
-      <div class="label">Download</div>
-      <a class="btn btn-sm" href="?action=download&date=<?= esc($selectedReport['date']) ?>" download
-         style="margin-top:.5rem;align-self:flex-start">CSV</a>
-    </div>
-  </div>
+  <?php $missing = $selectedReport['missing']; ?>
 
   <?php if (count($reports) > 1): ?>
     <?php
       $historySlice = array_slice(array_reverse($reports), 0, 30);
       $maxCount = max(1, max(array_column($historySlice, 'count')));
     ?>
-    <div style="margin-bottom:.4rem;font-size:.75rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.07em">History</div>
-    <div class="history">
+    <div style="margin-bottom:.5rem;font-size:.75rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.07em">History</div>
+    <div class="history history-compact">
       <?php foreach ($historySlice as $r): ?>
         <?php
-          $pct    = max(8, round(($r['count'] / $maxCount) * 80));
+          $pct    = max(6, round(($r['count'] / $maxCount) * 56));
           $color  = $r['count'] === 0 ? 'var(--ok)' : 'var(--warn)';
           $active = $r['date'] === $selectedDate ? 'selected' : '';
         ?>
@@ -71,6 +57,14 @@
   <?php endif; ?>
 
   <?= pushFlashBanner() ?>
-  <?= renderMissingTable($missing, $ignoredOrders, $shopifyAdminBase, 'reports', $selectedDate ?? '', '', $orderHistory) ?>
+  <?php
+    $partialMissing          = $missing;
+    $partialIgnoredOrders    = $ignoredOrders;
+    $partialShopifyAdminBase = $shopifyAdminBase;
+    $partialContext          = 'reports';
+    $partialContextVal       = $selectedDate ?? '';
+    $partialOrderHistory     = $orderHistory;
+    require __DIR__ . '/partials/missing-table.php';
+  ?>
 
 <?php endif; ?>

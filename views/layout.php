@@ -17,7 +17,13 @@
 
 <!-- Mobile header (hidden on desktop) -->
 <header class="mobile-header">
-  <div class="brand"><?= esc($appBrand) ?> <span style="color:var(--muted);font-weight:400;font-size:.75rem"><?= esc($shopifyStore) ?></span></div>
+  <div class="brand">
+    <?php if ($appLogo): ?>
+      <img src="<?= esc($appLogo) ?>" alt="<?= esc($appBrand) ?>" class="mobile-logo">
+    <?php else: ?>
+      <?= esc($appBrand) ?> <span style="color:var(--muted);font-weight:400;font-size:.75rem"><?= esc($shopifyStore) ?></span>
+    <?php endif; ?>
+  </div>
   <button class="hamburger" id="js-hamburger" aria-label="Menu">
     <span></span><span></span><span></span>
   </button>
@@ -30,8 +36,12 @@
 
   <aside class="sidebar" id="js-sidebar">
     <div class="sidebar-header">
-      <div class="brand"><?= esc($appBrand) ?></div>
-      <div class="store"><?= esc($shopifyStore) ?></div>
+      <?php if ($appLogo): ?>
+        <img src="<?= esc($appLogo) ?>" alt="<?= esc($appBrand) ?>" class="sidebar-logo">
+      <?php else: ?>
+        <div class="brand"><?= esc($appBrand) ?></div>
+      <?php endif; ?>
+      <div class="store"><span style="text-transform:uppercase;letter-spacing:.05em;font-size:.65rem;opacity:.6">Store</span> <?= esc($shopifyStore) ?></div>
     </div>
 
     <div class="sidebar-section">Tools</div>
@@ -126,21 +136,23 @@
 <!-- Dry-run preview modal -->
 <div id="preview-modal" style="display:none;position:fixed;inset:0;z-index:1000;
      background:rgba(0,0,0,.55);align-items:center;justify-content:center">
-  <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;
+  <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;
               width:min(700px,95vw);max-height:85vh;display:flex;flex-direction:column;
               box-shadow:0 8px 32px rgba(0,0,0,.35)">
     <div style="display:flex;align-items:center;justify-content:space-between;
-                padding:.9rem 1.1rem;border-bottom:1px solid var(--border)">
-      <strong id="preview-title" style="font-size:.95rem">Preview payload</strong>
+                padding:.9rem 1.1rem;border-bottom:1px solid #e2e8f0;
+                background:#f8fafc;border-radius:10px 10px 0 0">
+      <strong id="preview-title" style="font-size:.95rem;color:#1e293b">Preview payload</strong>
       <button onclick="document.getElementById('preview-modal').style.display='none'"
               style="background:none;border:none;font-size:1.2rem;cursor:pointer;
-                     color:var(--muted);line-height:1">&times;</button>
+                     color:#64748b;line-height:1">&times;</button>
     </div>
     <pre id="preview-body"
          style="margin:0;padding:1rem;overflow:auto;font-size:.78rem;
-                line-height:1.5;flex:1;white-space:pre-wrap;word-break:break-all">Loading…</pre>
-    <div style="padding:.75rem 1.1rem;border-top:1px solid var(--border);
-                font-size:.78rem;color:var(--muted)">
+                line-height:1.5;flex:1;white-space:pre-wrap;word-break:break-all;
+                background:#ffffff;color:#1e293b">Loading…</pre>
+    <div style="padding:.75rem 1.1rem;border-top:1px solid #e2e8f0;
+                font-size:.78rem;color:#64748b;background:#f8fafc;border-radius:0 0 10px 10px">
       This is the payload that <em>would</em> be sent to ShipStation — nothing has been pushed yet.
     </div>
   </div>

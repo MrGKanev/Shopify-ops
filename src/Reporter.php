@@ -86,7 +86,7 @@ class Reporter
         $csvPath = "{$dir}/missing_{$stamp}.csv";
         $fh = fopen($csvPath, 'w');
         flock($fh, LOCK_EX);
-        fputcsv($fh, ['order_number', 'shopify_name', 'shopify_id', 'created_at', 'total_price', 'financial_status', 'fulfillment_status', 'email'], ',', '"', '\\');
+        fputcsv($fh, ['order_number', 'shopify_name', 'shopify_id', 'created_at', 'total_price', 'financial_status', 'fulfillment_status', 'email', 'order_type'], ',', '"', '\\');
         foreach ($missing as $o) {
             fputcsv($fh, [
                 $o['order_number']       ?? '',
@@ -97,6 +97,7 @@ class Reporter
                 $o['financial_status']   ?? '',
                 $o['fulfillment_status'] ?? '',
                 $o['email']              ?? '',
+                $o['_order_type']        ?? '',
             ], ',', '"', '\\');
         }
         flock($fh, LOCK_UN);

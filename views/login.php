@@ -11,7 +11,11 @@
 
 <div class="login-wrap">
   <div class="login-card">
-    <div class="logo"><?= esc($appBrand) ?></div>
+    <?php if ($appLogo): ?>
+      <img src="<?= esc($appLogo) ?>" alt="<?= esc($appBrand) ?>" class="login-logo">
+    <?php else: ?>
+      <div class="logo"><?= esc($appBrand) ?></div>
+    <?php endif; ?>
     <div class="sub"><?= esc($appTitle) ?></div>
 
     <?php if ($error): ?>

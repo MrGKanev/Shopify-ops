@@ -112,7 +112,15 @@
   </div>
 
   <?= pushFlashBanner() ?>
-  <?= renderMissingTable($missing, $ignoredOrders, $shopifyAdminBase, 'run', $auditStart, $auditEnd, $orderHistory) ?>
+  <?php
+    $partialMissing          = $missing;
+    $partialIgnoredOrders    = $ignoredOrders;
+    $partialShopifyAdminBase = $shopifyAdminBase;
+    $partialContext          = 'run';
+    $partialContextVal       = $auditStart;
+    $partialOrderHistory     = $orderHistory;
+    require __DIR__ . '/partials/missing-table.php';
+  ?>
 
   <?php if (!empty($auditResult['ignored'])): ?>
     <details class="ignored-section">

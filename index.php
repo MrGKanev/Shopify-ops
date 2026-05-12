@@ -3,21 +3,25 @@ declare(strict_types=1);
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
-$envFile = __DIR__ . '/.env';
-if (file_exists($envFile)) {
-    foreach (file($envFile) as $line) {
-        $line = trim($line);
-        if ($line === '' || str_starts_with($line, '#')) continue;
-        [$k, $v] = array_map('trim', explode('=', $line, 2)) + ['', ''];
-        if ($k && !isset($_ENV[$k])) putenv("{$k}={$v}");
-    }
-}
+require_once __DIR__ . '/src/Env.php';
+require_once __DIR__ . '/src/Auth.php';
+require_once __DIR__ . '/src/IgnoreList.php';
+require_once __DIR__ . '/src/PushLog.php';
+require_once __DIR__ . '/src/Cache.php';
+require_once __DIR__ . '/src/ShipStation.php';
+require_once __DIR__ . '/src/Shopify.php';
+require_once __DIR__ . '/src/Comparator.php';
+require_once __DIR__ . '/src/Reporter.php';
+require_once __DIR__ . '/src/ViewHelpers.php';
+
+Env::load(__DIR__ . '/.env');
 
 $webUsername  = getenv('WEB_USERNAME') ?: 'admin';
 $webPassword  = getenv('WEB_PASSWORD') ?: 'changeme';
 $shopifyStore = getenv('SHOPIFY_STORE') ?: 'N/A';
 $appTitle     = getenv('APP_TITLE') ?: 'ShipStation ↔ Shopify Audit';
 $appBrand     = getenv('APP_BRAND') ?: 'ShipStation ↔ Shopify';
+$appLogo      = getenv('APP_LOGO') ?: '';
 $reportDir    = __DIR__ . '/reports';
 
 // ── Session / auth ────────────────────────────────────────────────────────────
@@ -28,67 +32,17 @@ $error  = '';
 $action = $_POST['action'] ?? '';
 
 if ($action === 'login') {
-    $attemptsFile = __DIR__ . '/data/login_attempts.json';
-    $ip           = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    $lockDuration = 604800; // 1 week
-    $attemptWindow = 3600;  // sliding window to track failed attempts (1 hour)
-    $maxAttempts  = 3;
-
-    if (!is_dir(__DIR__ . '/data')) mkdir(__DIR__ . '/data', 0755, true);
-
-    // Exclusive lock for the full read-modify-write cycle to prevent race conditions
-    $fh  = fopen($attemptsFile, 'c+');
-    flock($fh, LOCK_EX);
-    $raw      = stream_get_contents($fh);
-    $attempts = $raw ? (json_decode($raw, true) ?: []) : [];
-
-    $now      = time();
-    // Keep entries that are still banned OR had a recent failed attempt
-    $attempts = array_filter($attempts, fn($e) => ($e['until'] ?? 0) > $now || ($e['first'] ?? 0) > $now - $attemptWindow);
-
-    $entry     = $attempts[$ip] ?? ['count' => 0, 'first' => $now, 'until' => 0];
-    $lockedOut = ($entry['until'] ?? 0) > $now;
-
-    if ($lockedOut) {
-        flock($fh, LOCK_UN);
-        fclose($fh);
-        $secs  = $entry['until'] - $now;
-        $days  = (int) floor($secs / 86400);
-        $hours = (int) floor(($secs % 86400) / 3600);
-        $error = $days > 0
-            ? "Too many failed attempts. Try again in {$days} day" . ($days !== 1 ? 's' : '') . ($hours > 0 ? " and {$hours}h" : '') . '.'
-            : "Too many failed attempts. Try again in {$hours} hour" . ($hours !== 1 ? 's' : '') . '.';
-    } else {
-        $okUser = hash_equals($webUsername, $_POST['username'] ?? '');
-        $okPass = hash_equals($webPassword, $_POST['password'] ?? '');
-        if ($okUser && $okPass) {
-            unset($attempts[$ip]);
-            ftruncate($fh, 0); rewind($fh);
-            fwrite($fh, json_encode($attempts));
-            flock($fh, LOCK_UN); fclose($fh);
-            $_SESSION['authed'] = true;
-            header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
-            exit;
-        }
-        $entry['count'] = ($entry['count'] ?? 0) + 1;
-        if (!isset($entry['first'])) $entry['first'] = $now;
-        if ($entry['count'] >= $maxAttempts) {
-            $entry['until'] = $now + $lockDuration;
-        }
-        $attempts[$ip] = $entry;
-        ftruncate($fh, 0); rewind($fh);
-        fwrite($fh, json_encode($attempts));
-        flock($fh, LOCK_UN); fclose($fh);
-
-        $remaining = $maxAttempts - $entry['count'];
-        $error = $remaining > 0
-            ? 'Incorrect username or password. ' . $remaining . ' attempt' . ($remaining !== 1 ? 's' : '') . ' remaining.'
-            : 'Too many failed attempts. Account locked for 1 week. Contact your administrator.';
+    $ip    = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $error = Auth::attempt($_POST['username'] ?? '', $_POST['password'] ?? '', $webUsername, $webPassword, $ip);
+    if ($error === '') {
+        $_SESSION['authed'] = true;
+        header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
+        exit;
     }
 }
 
 if ($action === 'logout') {
-    session_destroy();
+    Auth::logout();
     header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
     exit;
 }
@@ -96,40 +50,35 @@ if ($action === 'logout') {
 $authed = !empty($_SESSION['authed']);
 
 if ($authed && $action === 'unban_ip') {
-    $attemptsFile = __DIR__ . '/data/login_attempts.json';
-    $ip = $_POST['ip'] ?? '';
-    if ($ip && file_exists($attemptsFile)) {
-        $fh = fopen($attemptsFile, 'c+');
-        flock($fh, LOCK_EX);
-        $attempts = json_decode(stream_get_contents($fh), true) ?: [];
-        unset($attempts[$ip]);
-        ftruncate($fh, 0); rewind($fh);
-        fwrite($fh, json_encode($attempts));
-        flock($fh, LOCK_UN); fclose($fh);
-    }
+    Auth::unban($_POST['ip'] ?? '');
     header('Location: ?page=settings&unbanned=1');
     exit;
 }
 
 // ── Shared setup ──────────────────────────────────────────────────────────────
 
-$dataDir     = __DIR__ . '/data';
-$ignoredFile = $dataDir . '/ignored.json';
-$cacheDir    = __DIR__ . '/cache';
-$cacheTtl    = (int) (getenv('CACHE_TTL') ?: 82800); // 23 hours
+$cacheDir     = __DIR__ . '/cache';
+$cacheTtl     = (int) (getenv('CACHE_TTL') ?: 82800);
+$ssKey        = getenv('SS_API_KEY')           ?: '';
+$ssSecret     = getenv('SS_API_SECRET')        ?: '';
+$shopifyToken = getenv('SHOPIFY_ACCESS_TOKEN') ?: '';
 
 $ignoredOrders = [];
 $cacheObj      = null;
 
 if ($authed) {
-    require_once __DIR__ . '/src/Cache.php';
-    require_once __DIR__ . '/src/Comparator.php';
+    $cacheObj      = new Cache($cacheDir, $cacheTtl);
+    $ignoredOrders = IgnoreList::load();
+}
 
-    $cacheObj = new Cache($cacheDir, $cacheTtl);
-
-    if (file_exists($ignoredFile)) {
-        $ignoredOrders = json_decode(file_get_contents($ignoredFile), true) ?: [];
-    }
+/** Build redirect URL from POST redirect_page / redirect_date fields. */
+function redirectBack(string $defaultPage = 'reports'): string
+{
+    $page = $_POST['redirect_page'] ?? $defaultPage;
+    $date = $_POST['redirect_date'] ?? '';
+    $loc  = '?page=' . urlencode($page);
+    if ($date) $loc .= '&date=' . urlencode($date);
+    return $loc;
 }
 
 // ── CSV download ──────────────────────────────────────────────────────────────
@@ -153,55 +102,25 @@ if ($authed && ($_GET['action'] ?? '') === 'download') {
 // ── Ignore / unignore ─────────────────────────────────────────────────────────
 
 if ($authed && $action === 'ignore_order') {
-    $num    = Comparator::normalise($_POST['order_number'] ?? '');
-    $reason = trim($_POST['reason'] ?? '');
-    if ($num) {
-        if (!is_dir($dataDir)) mkdir($dataDir, 0755, true);
-        $ignoredOrders[$num] = ['reason' => $reason, 'ignored_at' => date('Y-m-d')];
-        file_put_contents($ignoredFile, json_encode($ignoredOrders, JSON_PRETTY_PRINT), LOCK_EX);
-    }
-    $redirectPage = $_POST['redirect_page'] ?? 'reports';
-    $redirectDate = $_POST['redirect_date'] ?? '';
-    $loc = '?page=' . urlencode($redirectPage);
-    if ($redirectDate) $loc .= '&date=' . urlencode($redirectDate);
-    header('Location: ' . $loc);
-    exit;
+    IgnoreList::add(Comparator::normalise($_POST['order_number'] ?? ''), trim($_POST['reason'] ?? ''));
+    header('Location: ' . redirectBack()); exit;
 }
 
 if ($authed && $action === 'unignore_order') {
-    $num = Comparator::normalise($_POST['order_number'] ?? '');
-    if ($num && isset($ignoredOrders[$num])) {
-        unset($ignoredOrders[$num]);
-        file_put_contents($ignoredFile, json_encode($ignoredOrders, JSON_PRETTY_PRINT), LOCK_EX);
-    }
-    $redirectPage = $_POST['redirect_page'] ?? 'reports';
-    $redirectDate = $_POST['redirect_date'] ?? '';
-    $loc = '?page=' . urlencode($redirectPage);
-    if ($redirectDate) $loc .= '&date=' . urlencode($redirectDate);
-    header('Location: ' . $loc);
-    exit;
+    IgnoreList::remove(Comparator::normalise($_POST['order_number'] ?? ''));
+    header('Location: ' . redirectBack()); exit;
 }
 
 // ── Push to ShipStation ───────────────────────────────────────────────────────
 
 if ($authed && $action === 'push_to_shipstation') {
-    $shopifyId    = trim($_POST['shopify_id'] ?? '');
-    $redirectPage = $_POST['redirect_page'] ?? 'run';
-    $redirectDate = $_POST['redirect_date'] ?? '';
-
-    $ssKey        = getenv('SS_API_KEY');
-    $ssSecret     = getenv('SS_API_SECRET');
-    $shopifyToken = getenv('SHOPIFY_ACCESS_TOKEN');
-
-    $loc = '?page=' . urlencode($redirectPage);
-    if ($redirectDate) $loc .= '&date=' . urlencode($redirectDate);
+    $shopifyId = trim($_POST['shopify_id'] ?? '');
+    $loc       = redirectBack('run');
 
     if (!$shopifyId || !$ssKey || !$ssSecret || !$shopifyToken) {
         $loc .= '&push_error=' . urlencode('Missing credentials or order ID.');
     } else {
         try {
-            require_once __DIR__ . '/src/ShipStation.php';
-            require_once __DIR__ . '/src/Shopify.php';
 
             $shopify      = new Shopify($shopifyStore, $shopifyToken);
             $shopifyOrder = $shopify->getOrder($shopifyId);
@@ -215,21 +134,12 @@ if ($authed && $action === 'push_to_shipstation') {
 
             $orderNum = $created['orderNumber'] ?? $shopifyId;
 
-            // Append to push log
-            $logFile  = __DIR__ . '/data/push_log.json';
-            if (!is_dir(__DIR__ . '/data')) mkdir(__DIR__ . '/data', 0755, true);
-            $fh = fopen($logFile, 'c+');
-            flock($fh, LOCK_EX);
-            $log = json_decode(stream_get_contents($fh), true) ?: [];
-            $log[] = [
+            PushLog::append([
                 'order_number' => $orderNum,
                 'shopify_id'   => $shopifyId,
                 'ss_order_id'  => $created['orderId'] ?? null,
                 'pushed_at'    => date('Y-m-d H:i:s'),
-            ];
-            ftruncate($fh, 0); rewind($fh);
-            fwrite($fh, json_encode($log, JSON_PRETTY_PRINT));
-            flock($fh, LOCK_UN); fclose($fh);
+            ]);
 
             $loc .= '&push_ok=' . urlencode($orderNum);
         } catch (Throwable $e) {
@@ -244,9 +154,7 @@ if ($authed && $action === 'push_to_shipstation') {
 // ── Dry-run push (preview payload without sending) ───────────────────────────
 
 if ($authed && $action === 'preview_push') {
-    $shopifyId    = trim($_POST['shopify_id'] ?? '');
-    $shopifyToken = getenv('SHOPIFY_ACCESS_TOKEN');
-
+    $shopifyId = trim($_POST['shopify_id'] ?? '');
     header('Content-Type: application/json');
 
     if (!$shopifyId || !$shopifyToken) {
@@ -255,8 +163,6 @@ if ($authed && $action === 'preview_push') {
     }
 
     try {
-        require_once __DIR__ . '/src/ShipStation.php';
-        require_once __DIR__ . '/src/Shopify.php';
 
         $shopify      = new Shopify($shopifyStore, $shopifyToken);
         $shopifyOrder = $shopify->getOrder($shopifyId);
@@ -266,10 +172,7 @@ if ($authed && $action === 'preview_push') {
             exit;
         }
 
-        // Build the payload the same way createOrder does, without sending it
-        $ssKey    = getenv('SS_API_KEY');
-        $ssSecret = getenv('SS_API_SECRET');
-        $ss       = new ShipStation($ssKey ?: 'preview', $ssSecret ?: 'preview');
+        $ss = new ShipStation($ssKey ?: 'preview', $ssSecret ?: 'preview');
         $payload  = $ss->buildPayload($shopifyOrder);
 
         echo json_encode(['payload' => $payload], JSON_PRETTY_PRINT);
@@ -283,12 +186,8 @@ if ($authed && $action === 'preview_push') {
 
 if ($authed && $action === 'bulk_unignore_orders') {
     $numbers = array_filter((array) ($_POST['order_numbers'] ?? []));
-    foreach ($numbers as $raw) {
-        $norm = Comparator::normalise($raw);
-        if ($norm) unset($ignoredOrders[$norm]);
-    }
-    if (!is_dir($dataDir)) mkdir($dataDir, 0755, true);
-    file_put_contents($ignoredFile, json_encode($ignoredOrders, JSON_PRETTY_PRINT), LOCK_EX);
+    $norms   = array_values(array_filter(array_map([Comparator::class, 'normalise'], $numbers)));
+    IgnoreList::bulkRemove($norms);
     header('Location: ?page=ignored');
     exit;
 }
@@ -298,20 +197,13 @@ if ($authed && $action === 'bulk_unignore_orders') {
 if ($authed && $action === 'bulk_ignore_orders') {
     $numbers = array_filter((array) ($_POST['order_numbers'] ?? []));
     $reason  = trim($_POST['reason'] ?? '');
+    $entries = [];
     foreach ($numbers as $raw) {
         $norm = Comparator::normalise($raw);
-        if ($norm) {
-            $ignoredOrders[$norm] = ['reason' => $reason, 'ignored_at' => date('Y-m-d')];
-        }
+        if ($norm) $entries[] = ['number' => $norm, 'reason' => $reason];
     }
-    if (!is_dir($dataDir)) mkdir($dataDir, 0755, true);
-    file_put_contents($ignoredFile, json_encode($ignoredOrders, JSON_PRETTY_PRINT), LOCK_EX);
-    $redirectPage = $_POST['redirect_page'] ?? 'reports';
-    $redirectDate = $_POST['redirect_date'] ?? '';
-    $loc = '?page=' . urlencode($redirectPage);
-    if ($redirectDate) $loc .= '&date=' . urlencode($redirectDate);
-    header('Location: ' . $loc);
-    exit;
+    IgnoreList::bulkAdd($entries);
+    header('Location: ' . redirectBack()); exit;
 }
 
 // ── CSV import bulk ignore ────────────────────────────────────────────────────
@@ -321,23 +213,7 @@ if ($authed && $action === 'import_ignore_csv') {
     $reason = trim($_POST['import_reason'] ?? '') ?: 'CSV import ' . date('Y-m-d');
     $count  = 0;
     if ($file && $file['error'] === UPLOAD_ERR_OK) {
-        if (($fh = fopen($file['tmp_name'], 'r')) !== false) {
-            $first = fgetcsv($fh);
-            if ($first) {
-                $firstCell = ltrim(trim((string) ($first[0] ?? '')), '#');
-                if (preg_match('/^\d+$/', $firstCell)) {
-                    $norm = Comparator::normalise($firstCell);
-                    if ($norm) { $ignoredOrders[$norm] = ['reason' => $reason, 'ignored_at' => date('Y-m-d')]; $count++; }
-                }
-            }
-            while (($row = fgetcsv($fh)) !== false) {
-                $norm = Comparator::normalise(ltrim(trim((string) ($row[0] ?? '')), '#'));
-                if ($norm) { $ignoredOrders[$norm] = ['reason' => $reason, 'ignored_at' => date('Y-m-d')]; $count++; }
-            }
-            fclose($fh);
-        }
-        if (!is_dir($dataDir)) mkdir($dataDir, 0755, true);
-        file_put_contents($ignoredFile, json_encode($ignoredOrders, JSON_PRETTY_PRINT), LOCK_EX);
+        $count = IgnoreList::importCsv($file['tmp_name'], $reason);
     }
     header('Location: ?page=ignored&imported=' . $count);
     exit;
@@ -348,9 +224,6 @@ if ($authed && $action === 'import_ignore_csv') {
 $connResults = null;
 
 if ($authed && $action === 'test_connection') {
-    $ssKey        = getenv('SS_API_KEY');
-    $ssSecret     = getenv('SS_API_SECRET');
-    $shopifyToken = getenv('SHOPIFY_ACCESS_TOKEN');
 
     $ping = function (string $url, array $headers): array {
         $ch = curl_init($url);
@@ -407,10 +280,7 @@ if ($authed) {
 $pushLog = [];
 
 if ($authed) {
-    $pushLogFile = __DIR__ . '/data/push_log.json';
-    if (file_exists($pushLogFile)) {
-        $pushLog = array_reverse(json_decode(file_get_contents($pushLogFile), true) ?: []);
-    }
+    $pushLog = PushLog::all();
 }
 
 // ── Banned IPs ────────────────────────────────────────────────────────────────
@@ -418,16 +288,7 @@ if ($authed) {
 $bannedIps = [];
 
 if ($authed) {
-    $attemptsFile = __DIR__ . '/data/login_attempts.json';
-    if (file_exists($attemptsFile)) {
-        $now      = time();
-        $all      = json_decode(file_get_contents($attemptsFile), true) ?: [];
-        foreach ($all as $ip => $entry) {
-            if (($entry['until'] ?? 0) > $now) {
-                $bannedIps[$ip] = $entry;
-            }
-        }
-    }
+    $bannedIps = Auth::bannedIps();
 }
 
 // ── Spot-check ────────────────────────────────────────────────────────────────
@@ -445,11 +306,6 @@ if ($authed && $action === 'spotcheck') {
     } elseif (count($numbers) > 50) {
         $spotError = 'Maximum 50 order numbers at once.';
     } else {
-        require_once __DIR__ . '/src/ShipStation.php';
-        require_once __DIR__ . '/src/Shopify.php';
-        $ssKey        = getenv('SS_API_KEY');
-        $ssSecret     = getenv('SS_API_SECRET');
-        $shopifyToken = getenv('SHOPIFY_ACCESS_TOKEN');
 
         $spotMode = $_POST['spotcheck_mode'] ?? 'both';
         $checkSS  = in_array($spotMode, ['both', 'ss'], true);
@@ -510,16 +366,10 @@ if ($authed && $action === 'run_audit') {
     } elseif (false) { // no date range limit
         $auditError = '';
     } else {
-        $ssKey        = getenv('SS_API_KEY');
-        $ssSecret     = getenv('SS_API_SECRET');
-        $shopifyToken = getenv('SHOPIFY_ACCESS_TOKEN');
 
         if (!$ssKey || !$ssSecret || !$shopifyToken) {
             $auditError = 'API credentials missing in .env.';
         } else {
-            require_once __DIR__ . '/src/ShipStation.php';
-            require_once __DIR__ . '/src/Shopify.php';
-            require_once __DIR__ . '/src/Reporter.php';
 
             try {
                 set_time_limit(600);
@@ -620,194 +470,6 @@ foreach ($reports as $r) {
 $shopifyAdminBase = 'https://'
     . (str_contains($shopifyStore, '.') ? $shopifyStore : "{$shopifyStore}.myshopify.com")
     . '/admin/orders';
-
-// ── View helpers ──────────────────────────────────────────────────────────────
-
-function esc(mixed $v): string
-{
-    return htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-}
-
-function badge(int $count): string
-{
-    return $count === 0
-        ? '<span class="badge badge-ok">All clear</span>'
-        : '<span class="badge badge-warn">' . $count . ' missing</span>';
-}
-
-function pushFlashBanner(): string
-{
-    $ok  = $_GET['push_ok']    ?? '';
-    $err = $_GET['push_error'] ?? '';
-    if ($ok) {
-        return '<div class="flash flash-ok">✓ Order #' . esc($ok) . ' pushed to ShipStation successfully.</div>';
-    }
-    if ($err) {
-        return '<div class="flash flash-err">✗ Push failed: ' . esc($err) . '</div>';
-    }
-    return '';
-}
-
-function renderMissingTable(
-    array  $missing,
-    array  $ignoredOrders,
-    string $shopifyAdminBase,
-    string $context,
-    string $contextVal,
-    string $contextVal2 = '',
-    array  $orderHistory = []
-): string {
-    $count   = count($missing);
-    $tableId = 'tbl-' . substr(md5($context . $contextVal), 0, 6);
-    $formId  = 'bulk-' . substr(md5($context . $contextVal), 0, 6);
-    ob_start();
-    ?>
-    <div class="search-wrap">
-      <input class="js-search" data-target="<?= esc($tableId) ?>"
-             placeholder="Filter by order #, email, status…" type="search">
-    </div>
-
-    <?php if ($count > 0): ?>
-    <form id="<?= esc($formId) ?>" method="post" class="bulk-form">
-      <input type="hidden" name="action" value="bulk_ignore_orders">
-      <input type="hidden" name="redirect_page" value="<?= esc($context) ?>">
-      <input type="hidden" name="redirect_date" value="<?= esc($contextVal) ?>">
-      <div class="bulk-bar" id="bar-<?= esc($formId) ?>">
-        <span class="bulk-count" id="cnt-<?= esc($formId) ?>">0 selected</span>
-        <input type="text" name="reason" placeholder="Reason (optional)" class="bulk-reason">
-        <button class="btn btn-sm btn-danger" type="submit">Ignore selected</button>
-        <button class="btn btn-sm btn-ghost" type="button"
-                onclick="document.querySelectorAll('#<?= esc($tableId) ?> .js-row-check').forEach(c=>c.checked=false);updateBulkBar('<?= esc($formId) ?>')">
-          Clear
-        </button>
-      </div>
-    <?php endif; ?>
-
-    <div class="table-wrap">
-      <div class="table-header">
-        <h2>Missing Orders</h2>
-        <span><?= $count ?> order<?= $count !== 1 ? 's' : '' ?></span>
-      </div>
-
-      <?php if ($count === 0): ?>
-        <div class="empty">
-          <div class="icon">✅</div>
-          <h3>All clear!</h3>
-          <p>Every paid Shopify order was found in ShipStation.</p>
-        </div>
-      <?php else: ?>
-        <table>
-          <thead>
-            <tr>
-              <th style="width:32px">
-                <input type="checkbox" class="js-select-all" data-target="<?= esc($tableId) ?>"
-                       data-bar="<?= esc($formId) ?>" title="Select all">
-              </th>
-              <th>Order #</th>
-              <th>Seen</th>
-              <th>Created</th>
-              <th>Total</th>
-              <th>Financial</th>
-              <th>Fulfillment</th>
-              <th>Email</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="<?= esc($tableId) ?>">
-            <?php foreach ($missing as $row):
-              $num       = (string) ($row['order_number'] ?? $row['name'] ?? '?');
-              $shopifyId = $row['id'] ?? $row['shopify_id'] ?? '';
-              $financial = strtolower($row['financial_status'] ?? '');
-              $chipClass = match($financial) {
-                'paid'           => 'chip-paid',
-                'partially_paid' => 'chip-partial',
-                'unpaid'         => 'chip-unpaid',
-                default          => 'chip-unknown',
-              };
-              $totalPrice = isset($row['total_price']) && $row['total_price'] !== ''
-                ? '$' . number_format((float) $row['total_price'], 2)
-                : '—';
-              $adminUrl    = $shopifyId ? $shopifyAdminBase . '/' . esc($shopifyId) : null;
-              $normNum     = preg_replace('/\D/', '', ltrim(trim($num), '#'));
-              $ssSearchUrl = 'https://app.shipstation.com/#!/orders/all-orders-search-result?quickSearch='
-                           . urlencode(ltrim($num, '#'));
-              $seenCount   = $orderHistory[$normNum]['count'] ?? 1;
-              $isRepeat    = $seenCount >= 2;
-            ?>
-            <tr class="<?= $isRepeat ? 'row-repeat' : '' ?>">
-              <td>
-                <input type="checkbox" class="js-row-check" name="order_numbers[]"
-                       value="<?= esc($num) ?>" data-bar="<?= esc($formId) ?>"
-                       onchange="updateBulkBar('<?= esc($formId) ?>')">
-              </td>
-              <td>
-                <?php if ($adminUrl): ?>
-                  <a class="order-num" href="<?= $adminUrl ?>" target="_blank" rel="noopener">#<?= esc($num) ?></a>
-                <?php else: ?>
-                  <span class="order-num">#<?= esc($num) ?></span>
-                <?php endif; ?>
-              </td>
-              <td>
-                <?php if ($seenCount >= 3): ?>
-                  <span class="seen-badge seen-hot" title="Appeared in <?= $seenCount ?> reports"><?= $seenCount ?>×</span>
-                <?php elseif ($seenCount === 2): ?>
-                  <span class="seen-badge seen-warn" title="Appeared in 2 reports">2×</span>
-                <?php else: ?>
-                  <span style="color:var(--muted);font-size:.78rem">1×</span>
-                <?php endif; ?>
-              </td>
-              <td><?= esc(substr($row['created_at'] ?? '', 0, 10)) ?></td>
-              <td style="font-variant-numeric:tabular-nums"><?= $totalPrice ?></td>
-              <td><span class="chip <?= $chipClass ?>"><?= esc($row['financial_status'] ?? '—') ?></span></td>
-              <td><?= esc($row['fulfillment_status'] ?? '—') ?></td>
-              <td style="color:var(--muted)"><?= esc($row['email'] ?? '—') ?></td>
-              <td style="white-space:nowrap">
-                <a class="ignore-btn" href="<?= esc($ssSearchUrl) ?>" target="_blank" rel="noopener"
-                   style="margin-right:.3rem;text-decoration:none">Search SS</a>
-                <a class="ignore-btn" href="?page=spotcheck&prefill=<?= urlencode(ltrim($num, '#')) ?>"
-                   style="margin-right:.3rem;text-decoration:none">Re-check</a>
-                <?php if ($shopifyId): ?>
-                <button class="ignore-btn" style="margin-right:.3rem"
-                        onclick="previewPush(<?= esc(json_encode($shopifyId)) ?>, <?= esc(json_encode('#' . $num)) ?>)">
-                  Preview
-                </button>
-                <form method="post" style="display:inline" class="js-push-form">
-                  <input type="hidden" name="action" value="push_to_shipstation">
-                  <input type="hidden" name="shopify_id" value="<?= esc($shopifyId) ?>">
-                  <input type="hidden" name="redirect_page" value="<?= esc($context) ?>">
-                  <input type="hidden" name="redirect_date" value="<?= esc($contextVal) ?>">
-                  <button class="ignore-btn btn-push" type="submit"
-                          onclick="this.textContent='Pushing…';this.disabled=true;this.form.submit()">
-                    Push to SS
-                  </button>
-                </form>
-                <?php endif; ?>
-                <button class="ignore-btn js-ignore-toggle" data-order="<?= esc($normNum) ?>">Ignore</button>
-                <div id="ignore-form-<?= esc($normNum) ?>" class="ignore-form-row" style="display:none">
-                  <form method="post" style="display:contents">
-                    <input type="hidden" name="action" value="ignore_order">
-                    <input type="hidden" name="order_number" value="<?= esc($num) ?>">
-                    <input type="hidden" name="redirect_page" value="<?= esc($context) ?>">
-                    <input type="hidden" name="redirect_date" value="<?= esc($contextVal) ?>">
-                    <input type="text" name="reason" placeholder="Reason (optional)" style="width:150px">
-                    <button class="btn btn-sm btn-danger" type="submit">Confirm</button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-            <?php endforeach; ?>
-          </tbody>
-        </table>
-      <?php endif; ?>
-    </div>
-
-    <?php if ($count > 0): ?>
-    </form>
-    <?php endif; ?>
-
-    <?php
-    return ob_get_clean();
-}
 
 // ── Prefill spot-check from Re-check link ─────────────────────────────────────
 
