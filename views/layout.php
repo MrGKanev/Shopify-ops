@@ -60,6 +60,14 @@
         </a>
       </li>
       <li>
+        <a href="?page=pushlog" class="<?= $page === 'pushlog' ? 'page-active' : '' ?>">
+          Push Log
+          <?php if (count($pushLog) > 0): ?>
+            <span class="badge badge-ok" style="font-size:.65rem"><?= count($pushLog) ?></span>
+          <?php endif; ?>
+        </a>
+      </li>
+      <li>
         <a href="?page=settings" class="<?= $page === 'settings' ? 'page-active' : '' ?>">Settings</a>
       </li>
     </ul>
@@ -100,7 +108,7 @@
 
   <main class="main">
     <?php
-      $allowedPages = ['reports', 'run', 'trends', 'spotcheck', 'ignored', 'settings'];
+      $allowedPages = ['reports', 'run', 'trends', 'spotcheck', 'ignored', 'pushlog', 'settings'];
       $page         = in_array($page, $allowedPages, true) ? $page : 'reports';
       $pageFile     = __DIR__ . '/page-' . $page . '.php';
       if (file_exists($pageFile)) {
@@ -114,5 +122,58 @@
 </div>
 
 <script src="assets/app.js"></script>
+
+<!-- Dry-run preview modal -->
+<div id="preview-modal" style="display:none;position:fixed;inset:0;z-index:1000;
+     background:rgba(0,0,0,.55);align-items:center;justify-content:center">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;
+              width:min(700px,95vw);max-height:85vh;display:flex;flex-direction:column;
+              box-shadow:0 8px 32px rgba(0,0,0,.35)">
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:.9rem 1.1rem;border-bottom:1px solid var(--border)">
+      <strong id="preview-title" style="font-size:.95rem">Preview payload</strong>
+      <button onclick="document.getElementById('preview-modal').style.display='none'"
+              style="background:none;border:none;font-size:1.2rem;cursor:pointer;
+                     color:var(--muted);line-height:1">&times;</button>
+    </div>
+    <pre id="preview-body"
+         style="margin:0;padding:1rem;overflow:auto;font-size:.78rem;
+                line-height:1.5;flex:1;white-space:pre-wrap;word-break:break-all">Loading…</pre>
+    <div style="padding:.75rem 1.1rem;border-top:1px solid var(--border);
+                font-size:.78rem;color:var(--muted)">
+      This is the payload that <em>would</em> be sent to ShipStation — nothing has been pushed yet.
+    </div>
+  </div>
+</div>
+
+<script>
+function previewPush(shopifyId, orderLabel) {
+  var modal = document.getElementById('preview-modal');
+  var body  = document.getElementById('preview-body');
+  var title = document.getElementById('preview-title');
+  title.textContent = 'Preview payload — ' + orderLabel;
+  body.textContent  = 'Loading…';
+  modal.style.display = 'flex';
+
+  var fd = new FormData();
+  fd.append('action',     'preview_push');
+  fd.append('shopify_id', shopifyId);
+
+  fetch('', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) {
+        body.textContent = 'Error: ' + data.error;
+      } else {
+        body.textContent = JSON.stringify(data.payload, null, 2);
+      }
+    })
+    .catch(function(e) { body.textContent = 'Request failed: ' + e; });
+}
+
+document.getElementById('preview-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+</script>
 </body>
 </html>

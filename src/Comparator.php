@@ -37,7 +37,31 @@ class Comparator
     }
 
     /**
+     * Build a secondary lookup: lowercase email → [ss orders].
+     * Used as a fallback when order-number matching fails.
+     *
+     * @param  array<int, array<string, mixed>> $ssOrders
+     * @return array<string, array<int, array<string, mixed>>>
+     */
+    public static function buildSSEmailIndex(array $ssOrders): array
+    {
+        $index = [];
+        foreach ($ssOrders as $order) {
+            $email = strtolower(trim($order['customerEmail'] ?? ''));
+            if ($email !== '') {
+                $index[$email][] = $order;
+            }
+        }
+        return $index;
+    }
+
+    /**
      * Compare Shopify orders against the ShipStation index.
+     *
+     * Match order (first match wins):
+     *   1. Order number — normalised numeric segments vs SS orderNumber
+     *   2. Email + amount — same customer email and total within 1% tolerance
+     *      (catches orders manually entered in SS with a wrong order number)
      *
      * Skipped reasons (stored in $order['_skip_reason']):
      *   cancelled     — cancelled_at is set
@@ -53,12 +77,14 @@ class Comparator
      * @param  array<int, array<string, mixed>>                $shopifyOrders
      * @param  array<string, array<int, array<string, mixed>>> $ssIndex
      * @param  array<string, array<string, mixed>>             $ignoredNumbers  key = normalised order number
+     * @param  array<string, array<int, array<string, mixed>>> $ssEmailIndex    optional secondary index
      * @return array{missing: list<array>, found: list<array>, skipped: list<array>, ignored: list<array>}
      */
     public static function compare(
         array $shopifyOrders,
         array $ssIndex,
-        array $ignoredNumbers = []
+        array $ignoredNumbers = [],
+        array $ssEmailIndex   = []
     ): array {
         $missing = [];
         $found   = [];
@@ -119,7 +145,7 @@ class Comparator
                 continue;
             }
 
-            // ── Compare ───────────────────────────────────────────────
+            // ── Match 1: order number ─────────────────────────────────
             // Shopify exposes two identifiers: `order_number` (e.g. 65075) and
             // `name` (e.g. #165075). ShipStation may import either one depending
             // on the integration. We try both so a mismatch in convention doesn't
@@ -128,11 +154,34 @@ class Comparator
             $match    = $ssIndex[$num] ?? $ssIndex[$nameNorm] ?? null;
 
             if ($match !== null) {
-                $order['_ss_matches'] = $match;
+                $order['_ss_matches']    = $match;
+                $order['_match_method']  = 'order_number';
                 $found[] = $order;
-            } else {
-                $missing[] = $order;
+                continue;
             }
+
+            // ── Match 2: email + amount ───────────────────────────────
+            // Fallback for orders manually entered in SS with a wrong/different
+            // order number. Requires the same customer email and a total within
+            // 1% of the Shopify total to avoid false positives.
+            if (!empty($ssEmailIndex)) {
+                $email        = strtolower(trim($order['email'] ?? ''));
+                $shopifyTotal = (float) ($order['total_price'] ?? 0);
+
+                if ($email !== '' && isset($ssEmailIndex[$email]) && $shopifyTotal > 0) {
+                    foreach ($ssEmailIndex[$email] as $ssOrder) {
+                        $ssTotal = (float) ($ssOrder['orderTotal'] ?? 0);
+                        if (abs($shopifyTotal - $ssTotal) / $shopifyTotal < 0.01) {
+                            $order['_ss_matches']   = [$ssOrder];
+                            $order['_match_method'] = 'email+amount';
+                            $found[] = $order;
+                            continue 2;
+                        }
+                    }
+                }
+            }
+
+            $missing[] = $order;
         }
 
         return compact('missing', 'found', 'skipped', 'ignored');

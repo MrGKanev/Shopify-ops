@@ -214,6 +214,23 @@ if ($authed && $action === 'push_to_shipstation') {
             $created = $ss->createOrder($shopifyOrder);
 
             $orderNum = $created['orderNumber'] ?? $shopifyId;
+
+            // Append to push log
+            $logFile  = __DIR__ . '/data/push_log.json';
+            if (!is_dir(__DIR__ . '/data')) mkdir(__DIR__ . '/data', 0755, true);
+            $fh = fopen($logFile, 'c+');
+            flock($fh, LOCK_EX);
+            $log = json_decode(stream_get_contents($fh), true) ?: [];
+            $log[] = [
+                'order_number' => $orderNum,
+                'shopify_id'   => $shopifyId,
+                'ss_order_id'  => $created['orderId'] ?? null,
+                'pushed_at'    => date('Y-m-d H:i:s'),
+            ];
+            ftruncate($fh, 0); rewind($fh);
+            fwrite($fh, json_encode($log, JSON_PRETTY_PRINT));
+            flock($fh, LOCK_UN); fclose($fh);
+
             $loc .= '&push_ok=' . urlencode($orderNum);
         } catch (Throwable $e) {
             $loc .= '&push_error=' . urlencode($e->getMessage());
@@ -221,6 +238,44 @@ if ($authed && $action === 'push_to_shipstation') {
     }
 
     header('Location: ' . $loc);
+    exit;
+}
+
+// ── Dry-run push (preview payload without sending) ───────────────────────────
+
+if ($authed && $action === 'preview_push') {
+    $shopifyId    = trim($_POST['shopify_id'] ?? '');
+    $shopifyToken = getenv('SHOPIFY_ACCESS_TOKEN');
+
+    header('Content-Type: application/json');
+
+    if (!$shopifyId || !$shopifyToken) {
+        echo json_encode(['error' => 'Missing credentials or order ID.']);
+        exit;
+    }
+
+    try {
+        require_once __DIR__ . '/src/ShipStation.php';
+        require_once __DIR__ . '/src/Shopify.php';
+
+        $shopify      = new Shopify($shopifyStore, $shopifyToken);
+        $shopifyOrder = $shopify->getOrder($shopifyId);
+
+        if (empty($shopifyOrder)) {
+            echo json_encode(['error' => "Order {$shopifyId} not found in Shopify."]);
+            exit;
+        }
+
+        // Build the payload the same way createOrder does, without sending it
+        $ssKey    = getenv('SS_API_KEY');
+        $ssSecret = getenv('SS_API_SECRET');
+        $ss       = new ShipStation($ssKey ?: 'preview', $ssSecret ?: 'preview');
+        $payload  = $ss->buildPayload($shopifyOrder);
+
+        echo json_encode(['payload' => $payload], JSON_PRETTY_PRINT);
+    } catch (Throwable $e) {
+        echo json_encode(['error' => $e->getMessage()]);
+    }
     exit;
 }
 
@@ -345,6 +400,17 @@ if ($authed) {
         $cacheFlushed = $cacheObj->flush();
     }
     $cacheEntries = $cacheObj->entries();
+}
+
+// ── Push log ──────────────────────────────────────────────────────────────────
+
+$pushLog = [];
+
+if ($authed) {
+    $pushLogFile = __DIR__ . '/data/push_log.json';
+    if (file_exists($pushLogFile)) {
+        $pushLog = array_reverse(json_decode(file_get_contents($pushLogFile), true) ?: []);
+    }
 }
 
 // ── Banned IPs ────────────────────────────────────────────────────────────────
@@ -477,8 +543,9 @@ if ($authed && $action === 'run_audit') {
                 $ssOrders      = $ss->fetchAllOrders($auditStart, $ssAuditEnd);
                 ob_end_clean();
 
-                $ssIndex    = Comparator::buildSSIndex($ssOrders);
-                $comparison = Comparator::compare($shopifyOrders, $ssIndex, $ignoredOrders);
+                $ssIndex      = Comparator::buildSSIndex($ssOrders);
+                $ssEmailIndex = Comparator::buildSSEmailIndex($ssOrders);
+                $comparison   = Comparator::compare($shopifyOrders, $ssIndex, $ignoredOrders, $ssEmailIndex);
 
                 Reporter::saveReports($comparison['missing'], $auditStart, $auditEnd);
 
@@ -697,7 +764,13 @@ function renderMissingTable(
               <td style="white-space:nowrap">
                 <a class="ignore-btn" href="<?= esc($ssSearchUrl) ?>" target="_blank" rel="noopener"
                    style="margin-right:.3rem;text-decoration:none">Search SS</a>
+                <a class="ignore-btn" href="?page=spotcheck&prefill=<?= urlencode(ltrim($num, '#')) ?>"
+                   style="margin-right:.3rem;text-decoration:none">Re-check</a>
                 <?php if ($shopifyId): ?>
+                <button class="ignore-btn" style="margin-right:.3rem"
+                        onclick="previewPush(<?= esc(json_encode($shopifyId)) ?>, <?= esc(json_encode('#' . $num)) ?>)">
+                  Preview
+                </button>
                 <form method="post" style="display:inline" class="js-push-form">
                   <input type="hidden" name="action" value="push_to_shipstation">
                   <input type="hidden" name="shopify_id" value="<?= esc($shopifyId) ?>">
@@ -734,6 +807,12 @@ function renderMissingTable(
 
     <?php
     return ob_get_clean();
+}
+
+// ── Prefill spot-check from Re-check link ─────────────────────────────────────
+
+if ($authed && ($_GET['page'] ?? '') === 'spotcheck' && isset($_GET['prefill'])) {
+    $spotInput = trim($_GET['prefill']);
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
