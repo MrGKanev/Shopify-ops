@@ -5,7 +5,7 @@
  */
 class IgnoreList
 {
-    private const FILE = __DIR__ . '/../data/ignored.json';
+    private const string FILE = __DIR__ . '/../data/ignored.json';
 
     // ── Read ──────────────────────────────────────────────────────────
 

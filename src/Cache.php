@@ -7,18 +7,14 @@
  */
 class Cache
 {
-    private string $dir;
-    private int    $ttl;
-
     /** Tracks which prefixes were served from a warm cache on this request. */
     private array $hits = [];
 
-    public function __construct(string $dir, int $ttlSeconds = 14400)
-    {
-        $this->dir = $dir;
-        $this->ttl = $ttlSeconds;
-
-        if ($ttlSeconds > 0 && !is_dir($dir)) {
+    public function __construct(
+        private readonly string $dir,
+        private readonly int    $ttl = 14400
+    ) {
+        if ($this->ttl > 0 && !is_dir($dir)) {
             mkdir($dir, 0755, true);
         }
     }

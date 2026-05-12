@@ -18,7 +18,7 @@ Compares every paid Shopify order against ShipStation and surfaces the ones that
 
 ## Requirements
 
-- PHP 8.1+ with the `curl` extension
+- PHP 8.3+ with the `curl` extension
 - A web server (Apache / Nginx / Caddy) or `php -S` for local use
 - ShipStation API credentials
 - Shopify Admin API access token (requires `read_orders` and `read_fulfillments` scopes)

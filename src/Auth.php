@@ -4,10 +4,10 @@
  */
 class Auth
 {
-    private const ATTEMPTS_FILE = __DIR__ . '/../data/login_attempts.json';
-    private const LOCK_DURATION  = 604800; // 1 week
-    private const ATTEMPT_WINDOW = 3600;   // sliding window (1 hour)
-    private const MAX_ATTEMPTS   = 3;
+    private const string ATTEMPTS_FILE = __DIR__ . '/../data/login_attempts.json';
+    private const int    LOCK_DURATION  = 604800; // 1 week
+    private const int    ATTEMPT_WINDOW = 3600;   // sliding window (1 hour)
+    private const int    MAX_ATTEMPTS   = 3;
 
     /**
      * Attempt a login. Returns an empty string on success, an error message on failure.

@@ -7,11 +7,11 @@
  */
 class ShipStation
 {
-    private const BASE_URL  = 'https://ssapi.shipstation.com';
-    private const PAGE_SIZE = 500;   // max allowed by the API
+    private const string BASE_URL  = 'https://ssapi.shipstation.com';
+    private const int    PAGE_SIZE = 500;   // max allowed by the API
 
-    private string $auth;
-    private ?Cache $cache;
+    private readonly string $auth;
+    private readonly ?Cache $cache;
 
     public function __construct(string $apiKey, string $apiSecret, ?Cache $cache = null)
     {
