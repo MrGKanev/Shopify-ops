@@ -41,7 +41,7 @@ class Shopify
                 'created_at_min' => $startDate . 'T00:00:00-00:00',
                 'created_at_max' => $endDate   . 'T23:59:59-00:00',
                 'limit'          => self::PAGE_SIZE,
-                'fields'         => 'id,order_number,name,financial_status,fulfillment_status,cancelled_at,created_at,email,total_price,shipping_lines',
+                'fields'         => 'id,order_number,name,financial_status,fulfillment_status,cancelled_at,created_at,email,total_price,shipping_lines,line_items',
             ]);
 
             echo "  Fetching Shopify orders";
