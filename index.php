@@ -186,7 +186,7 @@ if ($authed && $action === 'preview_push') {
 
 if ($authed && $action === 'bulk_unignore_orders') {
     $numbers = array_filter((array) ($_POST['order_numbers'] ?? []));
-    $norms   = array_values(array_filter(array_map([Comparator::class, 'normalise'], $numbers)));
+    $norms   = array_values(array_filter(array_map(Comparator::normalise(...), $numbers)));
     IgnoreList::bulkRemove($norms);
     header('Location: ?page=ignored');
     exit;
@@ -238,7 +238,7 @@ if ($authed && $action === 'test_connection') {
         $ms   = (int) round((microtime(true) - $t0) * 1000);
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $err  = curl_error($ch);
-        curl_close($ch);
+
         return ['ok' => ($code >= 200 && $code < 300), 'code' => $code, 'ms' => $ms, 'error' => $err ?: null];
     };
 
@@ -363,8 +363,6 @@ if ($authed && $action === 'run_audit') {
         $auditError = 'Invalid date format. Use YYYY-MM-DD.';
     } elseif ($auditStart > $auditEnd) {
         $auditError = 'Start date must be before end date.';
-    } elseif (false) { // no date range limit
-        $auditError = '';
     } else {
 
         if (!$ssKey || !$ssSecret || !$shopifyToken) {
@@ -388,10 +386,8 @@ if ($authed && $action === 'run_audit') {
                 $ss      = new ShipStation($ssKey, $ssSecret, $cacheObj);
                 $shopify = new Shopify($shopifyStore, $shopifyToken, $cacheObj);
 
-                ob_start();
                 $shopifyOrders = $shopify->fetchAllOrders($auditStart, $auditEnd);
                 $ssOrders      = $ss->fetchAllOrders($auditStart, $ssAuditEnd);
-                ob_end_clean();
 
                 $ssIndex      = Comparator::buildSSIndex($ssOrders);
                 $ssEmailIndex = Comparator::buildSSEmailIndex($ssOrders);

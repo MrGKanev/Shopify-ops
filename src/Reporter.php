@@ -4,7 +4,7 @@
  */
 class Reporter
 {
-    private const REPORT_DIR = __DIR__ . '/../reports';
+    private const string REPORT_DIR = __DIR__ . '/../reports';
 
     // ── Terminal output ───────────────────────────────────────────────
 

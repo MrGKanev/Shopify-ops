@@ -9,16 +9,16 @@
  */
 class Shopify
 {
-    private const PAGE_SIZE = 250; // max allowed by Shopify
+    private const int PAGE_SIZE = 250; // max allowed by Shopify
 
-    private string $baseUrl;
-    private string $token;
-    private ?Cache $cache;
+    private readonly string $baseUrl;
+    private readonly string $token;
+    private readonly ?Cache $cache;
 
     public function __construct(string $store, string $accessToken, ?Cache $cache = null)
     {
         $host = str_contains($store, '.') ? $store : "{$store}.myshopify.com";
-        $this->baseUrl = "https://{$host}/admin/api/2024-01";
+        $this->baseUrl = "https://{$host}/admin/api/2025-04";
         $this->token   = $accessToken;
         $this->cache   = $cache;
     }
@@ -50,7 +50,7 @@ class Shopify
 
             while ($nextUrl) {
                 [$orders, $nextUrl] = $this->getPage($nextUrl);
-                $all = array_merge($all, $orders);
+                array_push($all, ...$orders);
                 echo '.';
             }
 

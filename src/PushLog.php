@@ -4,7 +4,7 @@
  */
 class PushLog
 {
-    private const FILE = __DIR__ . '/../data/push_log.json';
+    private const string FILE = __DIR__ . '/../data/push_log.json';
 
     /**
      * Append a single entry to the push log.
