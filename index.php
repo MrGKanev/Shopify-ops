@@ -370,7 +370,7 @@ if ($authed && $action === 'run_audit') {
         } else {
 
             try {
-                set_time_limit(600);
+                if (function_exists('set_time_limit')) set_time_limit(600);
                 ini_set('memory_limit', '512M');
                 $t0 = microtime(true);
 
