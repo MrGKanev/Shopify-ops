@@ -10,5 +10,5 @@ reports/*
 data/*
 !data/.htaccess
 /temp
-.DS_Store
-.txt
+*.DS_Store
+/*.txt
