@@ -48,6 +48,8 @@ Edit `.env` and fill in all required values:
 | `CACHE_TTL` | — | Cache duration in seconds (default: `82800` = 23 hours). Set to `0` to disable. |
 | `APP_TITLE` | — | Browser tab title (default: `SS ↔ Shopify Audit`) |
 | `APP_BRAND` | — | Sidebar and login logo text (default: `SS ↔ Shopify`) |
+| `APP_LOGO` | — | URL to an image that replaces the brand text in the sidebar, header, and login page |
+| `DEBUG` | — | Set to `1` to print full stack traces on errors |
 
 #### Creating a Shopify access token
 
@@ -108,6 +110,7 @@ Run once a day at 06:00 and append output to a log file:
 | **Trends** | Aggregated stats across all reports: average missing count, worst day, repeat offenders. Includes a full history bar chart and a bulk-ignore table for chronic missing orders. |
 | **Spot-check** | Look up one or more specific order numbers in ShipStation in real time. Found orders link directly to ShipStation. |
 | **Ignored** | View and manage all ignored orders. Bulk-unignore with checkboxes. Import a list of order numbers to ignore via CSV upload. |
+| **Push Log** | Full history of every order pushed to ShipStation from the dashboard: timestamp, order number, status, and links to both platforms. Filterable by status. |
 | **Settings** | Test API connectivity for both platforms, view current `.env` configuration. |
 
 ### Missing order actions
@@ -115,10 +118,13 @@ Run once a day at 06:00 and append output to a log file:
 Each missing order row has:
 - A **Shopify admin link** to the order
 - A **Search SS** link that opens ShipStation filtered to that order number
+- A **Type** chip classifying the order (e.g. `Pro`, `Bundle`) based on line-item rules — see [Order type classification](#order-type-classification)
 - A **Seen** badge showing how many reports the order has appeared in (`2×` = yellow, `3×+` = red)
 - An **Ignore** button to permanently exclude it from future reports (with optional reason)
 - A **checkbox** for selecting multiple orders to bulk-ignore in one action
+- A **Preview** button that builds the ShipStation payload and shows it in a modal without sending — useful for verifying the data before pushing
 - A **Push to SS** button that creates the order in ShipStation directly from the dashboard (fetches full order detail from Shopify and posts it to the ShipStation `createorder` endpoint)
+- A **Re-check** link that pre-fills the Spot-check input with that order number for a quick live lookup
 
 ---
 
@@ -129,7 +135,7 @@ The following Shopify orders are intentionally excluded from the comparison.
 | Skip reason | Condition | Why |
 |---|---|---|
 | `cancelled` | `cancelled_at` is set | Order was cancelled — never goes to ShipStation |
-| `financial` | `financial_status` is `pending`, `voided`, or `refunded` | Unpaid, reversed, or refunded — not actionable |
+| `financial` | `financial_status` is `pending`, `voided`, `refunded`, or `partially_refunded` | Unpaid, reversed, or refunded — not actionable |
 | `fulfilled` | `fulfillment_status` is `fulfilled` | All items have been shipped; order is complete |
 | `restocked` | `fulfillment_status` is `restocked` | Items returned and restocked after shipment |
 | `on_hold` | Any fulfillment order has `status: on_hold` | Fulfillment deliberately paused — not a missing order |
@@ -138,6 +144,53 @@ The following Shopify orders are intentionally excluded from the comparison.
 | `ignored` | Manually dismissed via the dashboard | One-off exceptions added by the team |
 
 > **Note on `on_hold`:** Shopify does not expose hold status on the order object itself — it lives on the Fulfillment Order level and requires a separate API call (`/orders/{id}/fulfillment_orders.json`). This check runs only for orders already flagged as missing. Results are cached per order ID to avoid redundant calls on re-runs.
+
+---
+
+## Order type classification
+
+Orders can be automatically classified into named types based on their line items. This label appears as a coloured chip in the missing-orders table and is included as an `order_type` column in exported CSV reports.
+
+### Setup
+
+Copy the example file and define your own rules:
+
+```bash
+cp order_types.example.json order_types.json
+```
+
+Edit `order_types.json`:
+
+```json
+{
+  "fallback": "Accessory",
+  "rules": [
+    { "name": "Pro",    "match": "sku_starts_with", "value": "widget-pro-" },
+    { "name": "Bundle", "match": "title_contains",  "value": "starter kit" },
+    { "name": "OEM",    "match": "vendor_is",        "value": "Acme Corp" }
+  ]
+}
+```
+
+Rules are checked against every line item in the order. If any line item matches, that type label is applied. Multiple matched types are joined with ` + ` (e.g. `Pro + Bundle`). Orders with no matching rules receive the `fallback` label.
+
+### Available match types
+
+| Match type | Behaviour |
+|---|---|
+| `sku_starts_with` | SKU starts with the given string (case-insensitive) |
+| `sku_contains` | SKU contains the given string (case-insensitive) |
+| `sku_not_starts_with` | SKU does **not** start with any of the given strings — pass an array for multiple prefixes |
+| `title_contains` | Product title contains the given string (case-insensitive) |
+| `vendor_is` | Product vendor exactly matches the given string (case-insensitive) |
+
+> Classification requires line items to be fetched from Shopify. This happens automatically during audits — no extra configuration needed.
+
+---
+
+## Matching fallback — email + amount
+
+In addition to order-number matching, the comparator builds a secondary ShipStation index keyed by `email + rounded amount`. If an order number lookup fails but a ShipStation order exists with the same customer email and a total within 1 % of the Shopify order total, it is treated as a match. This catches manually-entered ShipStation orders where the order number was typed differently.
 
 ---
 
@@ -162,6 +215,8 @@ The fix: ShipStation orders are now fetched for `startDate` → `endDate + 7 day
 API responses are cached under `cache/` as JSON files keyed by platform and date range. The default TTL is 23 hours (`CACHE_TTL=82800`) — aligned with the daily cron schedule so each run fetches fresh data. Repeated runs within the same day reuse the cache automatically.
 
 The ShipStation cache key includes the extended end date (`endDate + 7 days`), so changing the buffer automatically invalidates the old cache.
+
+The ShipStation cache expiry marker (`expires_at`) uses the same `CACHE_TTL` value configured in `.env`, keeping the meta header consistent with the actual cache behaviour.
 
 To force a fresh fetch: use **Clear all cache** in the Run Audit page, or set `CACHE_TTL=0` in `.env`.
 
