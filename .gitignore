@@ -11,3 +11,4 @@ data/*
 !data/.htaccess
 /temp
 .DS_Store
+.txt

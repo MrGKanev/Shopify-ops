@@ -80,16 +80,32 @@ document.querySelectorAll('.js-localtime').forEach(function(el) {
   });
 })();
 
-// Search / filter
-document.querySelectorAll('.js-search').forEach(function(input) {
-  var tbody = document.querySelector('#' + input.dataset.target);
+// Search / filter (coordinates with type-filter if present)
+function applyTableFilters(targetId) {
+  var tbody  = document.querySelector('#' + targetId);
   if (!tbody) return;
-  input.addEventListener('input', function() {
-    var q = input.value.toLowerCase();
-    tbody.querySelectorAll('tr').forEach(function(tr) {
-      tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
+  var search = document.querySelector('.js-search[data-target="' + targetId + '"]');
+  var type   = document.querySelector('.js-type-filter[data-target="' + targetId + '"]');
+  var q      = search ? search.value.toLowerCase() : '';
+  var t      = type   ? type.value.toLowerCase()   : '';
+  tbody.querySelectorAll('tr').forEach(function(tr) {
+    var text      = tr.textContent.toLowerCase();
+    var typeChip  = tr.querySelector('td .chip[class*="chip-type-"]');
+    var typeText  = typeChip ? typeChip.textContent.trim().toLowerCase() : '';
+    var matchText = !q || text.includes(q);
+    var matchType = !t || typeText === t;
+    tr.style.display = (matchText && matchType) ? '' : 'none';
   });
+}
+
+document.querySelectorAll('.js-search').forEach(function(input) {
+  if (!document.querySelector('#' + input.dataset.target)) return;
+  input.addEventListener('input', function() { applyTableFilters(input.dataset.target); });
+});
+
+document.querySelectorAll('.js-type-filter').forEach(function(sel) {
+  if (!document.querySelector('#' + sel.dataset.target)) return;
+  sel.addEventListener('change', function() { applyTableFilters(sel.dataset.target); });
 });
 
 // Bulk select helpers
