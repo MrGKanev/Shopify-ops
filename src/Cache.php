@@ -61,6 +61,8 @@ class Cache
     /**
      * Was the last remember() call for this prefix a cache hit?
      */
+    public function getTtl(): int { return $this->ttl; }
+
     public function wasHit(string $prefix): bool
     {
         return isset($this->hits[$prefix]);
