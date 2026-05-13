@@ -81,7 +81,7 @@ class ShipStation
         } while ($page <= $totalPages);
 
         // Write meta (TTL marker) — page files ARE the cache now
-        $ttl = $this->cache ? 82800 : 3600; // 23h or 1h fallback
+        $ttl = $this->cache ? $this->cache->getTtl() : 3600;
         file_put_contents($metaFile, json_encode(['expires_at' => time() + $ttl]), LOCK_EX);
 
         $all = $this->mergePageFiles($cpDir);
