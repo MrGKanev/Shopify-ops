@@ -21,7 +21,7 @@
     <?php if ($appLogo): ?>
       <img src="<?= esc($appLogo) ?>" alt="<?= esc($appBrand) ?>" class="mobile-logo">
     <?php else: ?>
-      <?= esc($appBrand) ?> <span style="color:var(--muted);font-weight:400;font-size:.75rem"><?= esc($shopifyStore) ?></span>
+      <?= esc($appBrand) ?> <span class="header-store"><?= esc($shopifyStore) ?></span>
     <?php endif; ?>
   </div>
   <button class="hamburger" id="js-hamburger" aria-label="Menu">
@@ -41,7 +41,7 @@
       <?php else: ?>
         <div class="brand"><?= esc($appBrand) ?></div>
       <?php endif; ?>
-      <div class="store"><span style="text-transform:uppercase;letter-spacing:.05em;font-size:.65rem;opacity:.6">Store</span> <?= esc($shopifyStore) ?></div>
+      <div class="store"><span class="store-label">Store</span> <?= esc($shopifyStore) ?></div>
     </div>
 
     <div class="sidebar-section">Tools</div>
@@ -65,7 +65,7 @@
         <a href="?page=ignored" class="<?= $page === 'ignored' ? 'page-active' : '' ?>">
           Ignored
           <?php if (count($ignoredOrders) > 0): ?>
-            <span class="badge badge-warn" style="font-size:.65rem"><?= count($ignoredOrders) ?></span>
+            <span class="badge badge-warn badge-sm"><?= count($ignoredOrders) ?></span>
           <?php endif; ?>
         </a>
       </li>
@@ -73,7 +73,7 @@
         <a href="?page=pushlog" class="<?= $page === 'pushlog' ? 'page-active' : '' ?>">
           Push Log
           <?php if (count($pushLog) > 0): ?>
-            <span class="badge badge-ok" style="font-size:.65rem"><?= count($pushLog) ?></span>
+            <span class="badge badge-ok badge-sm"><?= count($pushLog) ?></span>
           <?php endif; ?>
         </a>
       </li>
@@ -98,21 +98,17 @@
     <?php endif; ?>
 
     <div class="sidebar-footer">
-      <button class="btn btn-ghost btn-sm btn-full" id="js-theme-toggle" style="margin-bottom:.5rem" type="button">
+      <button class="btn btn-ghost btn-sm btn-full" id="js-theme-toggle" type="button">
         <span id="js-theme-icon">🌙</span> Dark mode
       </button>
-      <form method="post" style="display:inline">
+      <form method="post">
         <input type="hidden" name="action" value="logout">
         <button class="btn btn-ghost btn-sm btn-full" type="submit">Sign out</button>
       </form>
-      <div style="margin-top:.75rem;text-align:center">
-        <a href="https://github.com/mrgkanev/ShipStation-Shopify-Checker"
-           target="_blank" rel="noopener"
-           style="font-size:.7rem;color:var(--muted);text-decoration:none;opacity:.6"
-           title="View on GitHub">
-          ⌥ GitHub
-        </a>
-      </div>
+      <a href="https://github.com/mrgkanev/ShipStation-Shopify-Checker"
+         class="sidebar-github" target="_blank" rel="noopener" title="View on GitHub">
+        ⌥ GitHub
+      </a>
     </div>
   </aside>
 
@@ -134,26 +130,17 @@
 <script src="assets/app.js"></script>
 
 <!-- Dry-run preview modal -->
-<div id="preview-modal" style="display:none;position:fixed;inset:0;z-index:1000;
-     background:rgba(0,0,0,.55);align-items:center;justify-content:center">
-  <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;
-              width:min(700px,95vw);max-height:85vh;display:flex;flex-direction:column;
-              box-shadow:0 8px 32px rgba(0,0,0,.35)">
-    <div style="display:flex;align-items:center;justify-content:space-between;
-                padding:.9rem 1.1rem;border-bottom:1px solid #e2e8f0;
-                background:#f8fafc;border-radius:10px 10px 0 0">
-      <strong id="preview-title" style="font-size:.95rem;color:#1e293b">Preview payload</strong>
-      <button onclick="document.getElementById('preview-modal').style.display='none'"
-              style="background:none;border:none;font-size:1.2rem;cursor:pointer;
-                     color:#64748b;line-height:1">&times;</button>
+<div id="preview-modal">
+  <div class="preview-dialog">
+    <div class="preview-header">
+      <strong id="preview-title">Preview payload</strong>
+      <button class="preview-close"
+              onclick="document.getElementById('preview-modal').style.display='none'">&times;</button>
     </div>
-    <pre id="preview-body"
-         style="margin:0;padding:1rem;overflow:auto;font-size:.78rem;
-                line-height:1.5;flex:1;white-space:pre-wrap;word-break:break-all;
-                background:#ffffff;color:#1e293b">Loading…</pre>
-    <div style="padding:.75rem 1.1rem;border-top:1px solid #e2e8f0;
-                font-size:.78rem;color:#64748b;background:#f8fafc;border-radius:0 0 10px 10px">
-      This is the payload that <em>would</em> be sent to ShipStation — nothing has been pushed yet.
+    <pre id="preview-body">Loading…</pre>
+    <div class="preview-footer">
+      <span>This is the payload that <em>would</em> be sent to ShipStation — nothing has been pushed yet.</span>
+      <button id="preview-copy-btn" class="preview-copy-btn" onclick="copyPreviewPayload()">Copy JSON</button>
     </div>
   </div>
 </div>
@@ -163,8 +150,10 @@ function previewPush(shopifyId, orderLabel) {
   var modal = document.getElementById('preview-modal');
   var body  = document.getElementById('preview-body');
   var title = document.getElementById('preview-title');
+  var btn   = document.getElementById('preview-copy-btn');
   title.textContent = 'Preview payload — ' + orderLabel;
   body.textContent  = 'Loading…';
+  btn.textContent   = 'Copy JSON';
   modal.style.display = 'flex';
 
   var fd = new FormData();
@@ -181,6 +170,18 @@ function previewPush(shopifyId, orderLabel) {
       }
     })
     .catch(function(e) { body.textContent = 'Request failed: ' + e; });
+}
+
+function copyPreviewPayload() {
+  var text = document.getElementById('preview-body').textContent;
+  var btn  = document.getElementById('preview-copy-btn');
+  navigator.clipboard.writeText(text).then(function() {
+    btn.textContent = 'Copied!';
+    setTimeout(function() { btn.textContent = 'Copy JSON'; }, 2000);
+  }).catch(function() {
+    btn.textContent = 'Failed';
+    setTimeout(function() { btn.textContent = 'Copy JSON'; }, 2000);
+  });
 }
 
 document.getElementById('preview-modal').addEventListener('click', function(e) {

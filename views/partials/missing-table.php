@@ -22,9 +22,22 @@ $count   = count($missing);
 $tableId = 'tbl-' . substr(md5($context . $contextVal), 0, 6);
 $formId  = 'bulk-' . substr(md5($context . $contextVal), 0, 6);
 ?>
+<?php
+$allTypes = [];
+foreach ($missing as $r) { $t = classifyOrder($r); if ($t) $allTypes[$t] = true; }
+ksort($allTypes);
+?>
 <div class="search-wrap">
   <input class="js-search" data-target="<?= esc($tableId) ?>"
          placeholder="Filter by order #, email, status…" type="search">
+  <?php if (count($allTypes) > 1): ?>
+  <select class="js-type-filter" data-target="<?= esc($tableId) ?>">
+    <option value="">All types</option>
+    <?php foreach (array_keys($allTypes) as $t): ?>
+      <option value="<?= esc($t) ?>"><?= esc($t) ?></option>
+    <?php endforeach; ?>
+  </select>
+  <?php endif; ?>
 </div>
 
 <?php if ($count > 0): ?>
@@ -59,7 +72,7 @@ $formId  = 'bulk-' . substr(md5($context . $contextVal), 0, 6);
     <table>
       <thead>
         <tr>
-          <th style="width:32px">
+          <th class="col-check">
             <input type="checkbox" class="js-select-all" data-target="<?= esc($tableId) ?>"
                    data-bar="<?= esc($formId) ?>" title="Select all">
           </th>
@@ -70,7 +83,7 @@ $formId  = 'bulk-' . substr(md5($context . $contextVal), 0, 6);
           <th>Type</th>
           <th>Financial</th>
           <th>Email</th>
-          <th style="width:1px"></th>
+          <th class="col-actions"></th>
         </tr>
       </thead>
       <tbody id="<?= esc($tableId) ?>">
@@ -115,27 +128,27 @@ $formId  = 'bulk-' . substr(md5($context . $contextVal), 0, 6);
             <?php elseif ($seenCount === 2): ?>
               <span class="seen-badge seen-warn" title="Appeared in 2 reports">2×</span>
             <?php else: ?>
-              <span style="color:var(--muted);font-size:.78rem">1×</span>
+              <span class="seen-1x">1×</span>
             <?php endif; ?>
           </td>
           <td><?= esc(substr($row['created_at'] ?? '', 0, 10)) ?></td>
-          <td style="font-variant-numeric:tabular-nums"><?= $totalPrice ?></td>
+          <td class="td-price"><?= $totalPrice ?></td>
           <td><span class="chip <?= $typeClass ?>"><?= esc($orderType) ?></span></td>
           <td><span class="chip <?= $chipClass ?>"><?= esc($row['financial_status'] ?? '—') ?></span></td>
-          <td style="color:var(--muted)"><?= esc($row['email'] ?? '—') ?></td>
-          <td style="white-space:nowrap">
+          <td class="td-email"><?= esc($row['email'] ?? '—') ?></td>
+          <td class="td-actions">
             <a class="ignore-btn" href="<?= esc($ssSearchUrl) ?>" target="_blank" rel="noopener"
-               style="margin-right:.3rem;text-decoration:none">Search SS</a>
+               class="action-link">Search SS</a>
             <a class="ignore-btn" href="?page=spotcheck&prefill=<?= urlencode(ltrim($num, '#')) ?>"
-               style="margin-right:.3rem;text-decoration:none">Re-check</a>
+               class="action-link">Re-check</a>
             <?php if ($shopifyId): ?>
             <a class="ignore-btn" href="<?= $adminUrl ?>" target="_blank" rel="noopener"
-               style="margin-right:.3rem;text-decoration:none">Shopify</a>
-            <button class="ignore-btn" type="button" style="margin-right:.3rem"
+               class="action-link">Shopify</a>
+            <button class="ignore-btn action-link" type="button"
                     onclick="previewPush(<?= esc(json_encode($shopifyId)) ?>, <?= esc(json_encode('#' . $num)) ?>)">
               Preview
             </button>
-            <form method="post" style="display:inline" class="js-push-form">
+            <form method="post" class="js-push-form" style="display:inline">
               <input type="hidden" name="action" value="push_to_shipstation">
               <input type="hidden" name="shopify_id" value="<?= esc($shopifyId) ?>">
               <input type="hidden" name="redirect_page" value="<?= esc($context) ?>">
