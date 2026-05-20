@@ -1,7 +1,7 @@
 <?php
 /**
  * Global view-helper functions.
- * Keep all functions at global scope — views call them without qualification.
+ * Keep all functions at global scope - views call them without qualification.
  */
 
 function esc(mixed $v): string

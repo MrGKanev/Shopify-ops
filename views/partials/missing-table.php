@@ -3,12 +3,12 @@
  * Partial: Missing Orders table.
  *
  * Required variables (set before require):
- *   $partialMissing          array   — missing order rows
- *   $partialIgnoredOrders    array   — currently ignored orders
- *   $partialShopifyAdminBase string  — Shopify admin URL base
- *   $partialContext          string  — page context ('reports', 'run', …)
- *   $partialContextVal       string  — context value (date, etc.)
- *   $partialOrderHistory     array   — seen-count history
+ *   $partialMissing          array   - missing order rows
+ *   $partialIgnoredOrders    array   - currently ignored orders
+ *   $partialShopifyAdminBase string  - Shopify admin URL base
+ *   $partialContext          string  - page context ('reports', 'run', …)
+ *   $partialContextVal       string  - context value (date, etc.)
+ *   $partialOrderHistory     array   - seen-count history
  */
 
 $missing          = $partialMissing;
@@ -99,7 +99,7 @@ ksort($allTypes);
           };
           $totalPrice = isset($row['total_price']) && $row['total_price'] !== ''
             ? '$' . number_format((float) $row['total_price'], 2)
-            : '—';
+            : '-';
           $orderType   = classifyOrder($row);
           $typeClass   = 'chip-type-' . (crc32($orderType) % 6 + 6) % 6;
           $adminUrl    = $shopifyId ? $shopifyAdminBase . '/' . esc($shopifyId) : null;
@@ -134,8 +134,8 @@ ksort($allTypes);
           <td><?= esc(substr($row['created_at'] ?? '', 0, 10)) ?></td>
           <td class="td-price"><?= $totalPrice ?></td>
           <td><span class="chip <?= $typeClass ?>"><?= esc($orderType) ?></span></td>
-          <td><span class="chip <?= $chipClass ?>"><?= esc($row['financial_status'] ?? '—') ?></span></td>
-          <td class="td-email"><?= esc($row['email'] ?? '—') ?></td>
+          <td><span class="chip <?= $chipClass ?>"><?= esc($row['financial_status'] ?? '-') ?></span></td>
+          <td class="td-email"><?= esc($row['email'] ?? '-') ?></td>
           <td class="td-actions">
             <a class="ignore-btn" href="<?= esc($ssSearchUrl) ?>" target="_blank" rel="noopener"
                class="action-link">Search SS</a>

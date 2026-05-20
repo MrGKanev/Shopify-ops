@@ -72,7 +72,7 @@ document.querySelectorAll('.js-localtime').forEach(function(el) {
   form.addEventListener('submit', function() {
     overlay.classList.add('active');
     cycle();
-    // Keep overlay up through navigation — beforeunload fires when response arrives
+    // Keep overlay up through navigation - beforeunload fires when response arrives
     window.addEventListener('beforeunload', function() {
       clearTimeout(timer);
       // leave overlay visible so there's no flash before the new page paints
@@ -163,3 +163,16 @@ document.querySelectorAll('.js-ignore-toggle').forEach(function(btn) {
     if (form) form.style.display = form.style.display === 'none' ? 'flex' : 'none';
   });
 });
+
+
+// ── Metafields page ──────────────────────────────────────────────────────────
+function fillSearch(ns, key) {
+  var nsEl  = document.getElementById('js-search-ns');
+  var keyEl = document.getElementById('js-search-key');
+  if (nsEl)  nsEl.value  = ns;
+  if (keyEl) keyEl.value = key;
+  var form = document.getElementById('js-mf-search-form');
+  if (form) { form.scrollIntoView({ behavior: 'smooth', block: 'center' }); keyEl.focus(); }
+  var filter = document.getElementById('js-mf-filter');
+  if (filter) filter.value = ns + '.' + key;
+}

@@ -115,7 +115,7 @@ class Cache
         $files  = glob($this->dir . '/*.json') ?: [];
         $result = [];
         foreach ($files as $f) {
-            // Read only the first 64 bytes — enough to extract expires_at without loading data
+            // Read only the first 64 bytes - enough to extract expires_at without loading data
             $head = fread(fopen($f, 'r'), 64);
             preg_match('/"expires_at"\s*:\s*(\d+)/', $head, $m);
             $exp = isset($m[1]) ? (int) $m[1] : 0;

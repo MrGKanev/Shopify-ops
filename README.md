@@ -43,13 +43,13 @@ Edit `.env` and fill in all required values:
 | `SS_API_SECRET` | ✅ | Same page |
 | `SHOPIFY_STORE` | ✅ | The subdomain part of `yourstore.myshopify.com` |
 | `SHOPIFY_ACCESS_TOKEN` | ✅ | Shopify → Apps → Develop apps → your app → Admin API access token |
-| `WEB_USERNAME` | — | Dashboard login username (default: `admin`) |
+| `WEB_USERNAME` | - | Dashboard login username (default: `admin`) |
 | `WEB_PASSWORD` | ✅ | Choose any password for the dashboard |
-| `CACHE_TTL` | — | Cache duration in seconds (default: `82800` = 23 hours). Set to `0` to disable. |
-| `APP_TITLE` | — | Browser tab title (default: `SS ↔ Shopify Audit`) |
-| `APP_BRAND` | — | Sidebar and login logo text (default: `SS ↔ Shopify`) |
-| `APP_LOGO` | — | URL to an image that replaces the brand text in the sidebar, header, and login page |
-| `DEBUG` | — | Set to `1` to print full stack traces on errors |
+| `CACHE_TTL` | - | Cache duration in seconds (default: `82800` = 23 hours). Set to `0` to disable. |
+| `APP_TITLE` | - | Browser tab title (default: `SS ↔ Shopify Audit`) |
+| `APP_BRAND` | - | Sidebar and login logo text (default: `SS ↔ Shopify`) |
+| `APP_LOGO` | - | URL to an image that replaces the brand text in the sidebar, header, and login page |
+| `DEBUG` | - | Set to `1` to print full stack traces on errors |
 
 #### Creating a Shopify access token
 
@@ -58,7 +58,7 @@ Edit `.env` and fill in all required values:
 3. Go to **Configuration → Admin API integration → Edit**
 4. Enable scopes: `read_orders`, `read_fulfillments`
 5. Click **Save**, then **API credentials → Install app**
-6. Copy the **Admin API access token** — it is shown only once
+6. Copy the **Admin API access token** - it is shown only once
 
 ### 2. Point your web server at the repo
 
@@ -118,11 +118,11 @@ Run once a day at 06:00 and append output to a log file:
 Each missing order row has:
 - A **Shopify admin link** to the order
 - A **Search SS** link that opens ShipStation filtered to that order number
-- A **Type** chip classifying the order (e.g. `Pro`, `Bundle`) based on line-item rules — see [Order type classification](#order-type-classification)
+- A **Type** chip classifying the order (e.g. `Pro`, `Bundle`) based on line-item rules - see [Order type classification](#order-type-classification)
 - A **Seen** badge showing how many reports the order has appeared in (`2×` = yellow, `3×+` = red)
 - An **Ignore** button to permanently exclude it from future reports (with optional reason)
 - A **checkbox** for selecting multiple orders to bulk-ignore in one action
-- A **Preview** button that builds the ShipStation payload and shows it in a modal without sending — useful for verifying the data before pushing
+- A **Preview** button that builds the ShipStation payload and shows it in a modal without sending - useful for verifying the data before pushing
 - A **Push to SS** button that creates the order in ShipStation directly from the dashboard (fetches full order detail from Shopify and posts it to the ShipStation `createorder` endpoint)
 - A **Re-check** link that pre-fills the Spot-check input with that order number for a quick live lookup
 
@@ -134,16 +134,16 @@ The following Shopify orders are intentionally excluded from the comparison.
 
 | Skip reason | Condition | Why |
 |---|---|---|
-| `cancelled` | `cancelled_at` is set | Order was cancelled — never goes to ShipStation |
-| `financial` | `financial_status` is `pending`, `voided`, `refunded`, or `partially_refunded` | Unpaid, reversed, or refunded — not actionable |
+| `cancelled` | `cancelled_at` is set | Order was cancelled - never goes to ShipStation |
+| `financial` | `financial_status` is `pending`, `voided`, `refunded`, or `partially_refunded` | Unpaid, reversed, or refunded - not actionable |
 | `fulfilled` | `fulfillment_status` is `fulfilled` | All items have been shipped; order is complete |
 | `restocked` | `fulfillment_status` is `restocked` | Items returned and restocked after shipment |
-| `on_hold` | Any fulfillment order has `status: on_hold` | Fulfillment deliberately paused — not a missing order |
+| `on_hold` | Any fulfillment order has `status: on_hold` | Fulfillment deliberately paused - not a missing order |
 | `zero_value` | `total_price == 0` | Digital downloads, gift cards, fully-discounted orders |
 | `no_shipping` | `shipping_lines` is empty | No physical shipment needed |
 | `ignored` | Manually dismissed via the dashboard | One-off exceptions added by the team |
 
-> **Note on `on_hold`:** Shopify does not expose hold status on the order object itself — it lives on the Fulfillment Order level and requires a separate API call (`/orders/{id}/fulfillment_orders.json`). This check runs only for orders already flagged as missing. Results are cached per order ID to avoid redundant calls on re-runs.
+> **Note on `on_hold`:** Shopify does not expose hold status on the order object itself - it lives on the Fulfillment Order level and requires a separate API call (`/orders/{id}/fulfillment_orders.json`). This check runs only for orders already flagged as missing. Results are cached per order ID to avoid redundant calls on re-runs.
 
 ---
 
@@ -180,15 +180,15 @@ Rules are checked against every line item in the order. If any line item matches
 |---|---|
 | `sku_starts_with` | SKU starts with the given string (case-insensitive) |
 | `sku_contains` | SKU contains the given string (case-insensitive) |
-| `sku_not_starts_with` | SKU does **not** start with any of the given strings — pass an array for multiple prefixes |
+| `sku_not_starts_with` | SKU does **not** start with any of the given strings - pass an array for multiple prefixes |
 | `title_contains` | Product title contains the given string (case-insensitive) |
 | `vendor_is` | Product vendor exactly matches the given string (case-insensitive) |
 
-> Classification requires line items to be fetched from Shopify. This happens automatically during audits — no extra configuration needed.
+> Classification requires line items to be fetched from Shopify. This happens automatically during audits - no extra configuration needed.
 
 ---
 
-## Matching fallback — email + amount
+## Matching fallback - email + amount
 
 In addition to order-number matching, the comparator builds a secondary ShipStation index keyed by `email + rounded amount`. If an order number lookup fails but a ShipStation order exists with the same customer email and a total within 1 % of the Shopify order total, it is treated as a match. This catches manually-entered ShipStation orders where the order number was typed differently.
 
@@ -198,21 +198,21 @@ In addition to order-number matching, the comparator builds a secondary ShipStat
 
 When ShipStation order numbers use compound formats such as `100042-B2` or `Addon-100031`, two problems arise.
 
-**Problem 1 — normalisation mismatch.**
+**Problem 1 - normalisation mismatch.**
 The original normalisation stripped all non-digit characters and joined the remaining digits together. A number like `100042-B2` would therefore become `1000422` (the trailing `2` from `B2` glues onto the main number), which never matches the Shopify order `100042`.
 
 The fix: the ShipStation index is now built by extracting **every contiguous digit-run** in the order number separately and indexing the order under each one. `100042-B2` is indexed under both `100042` and `2`; `Addon-100031` is indexed under `100031`. Because no real Shopify order number is a single digit, the short segments are harmless.
 
-**Problem 2 — date window gap.**
-Sub-orders (Addon, variant suffixes, etc.) are often created in ShipStation one or more days after the original Shopify order. If the audit window ends on day D and an Addon order is entered into ShipStation on day D+2, it falls outside the fetch window and is invisible to the index — causing a false "missing" result.
+**Problem 2 - date window gap.**
+Sub-orders (Addon, variant suffixes, etc.) are often created in ShipStation one or more days after the original Shopify order. If the audit window ends on day D and an Addon order is entered into ShipStation on day D+2, it falls outside the fetch window and is invisible to the index - causing a false "missing" result.
 
-The fix: ShipStation orders are now fetched for `startDate` → `endDate + 7 days`. Shopify orders are still fetched for the exact window, so the comparison logic is unaffected — the extra SS orders simply sit in the index unused. Seven days was chosen as a conservative buffer; if sub-orders in your workflow are created more than a week after the Shopify order, increase the offset in `audit.php` and `index.php`.
+The fix: ShipStation orders are now fetched for `startDate` → `endDate + 7 days`. Shopify orders are still fetched for the exact window, so the comparison logic is unaffected - the extra SS orders simply sit in the index unused. Seven days was chosen as a conservative buffer; if sub-orders in your workflow are created more than a week after the Shopify order, increase the offset in `audit.php` and `index.php`.
 
 ---
 
 ## Caching
 
-API responses are cached under `cache/` as JSON files keyed by platform and date range. The default TTL is 23 hours (`CACHE_TTL=82800`) — aligned with the daily cron schedule so each run fetches fresh data. Repeated runs within the same day reuse the cache automatically.
+API responses are cached under `cache/` as JSON files keyed by platform and date range. The default TTL is 23 hours (`CACHE_TTL=82800`) - aligned with the daily cron schedule so each run fetches fresh data. Repeated runs within the same day reuse the cache automatically.
 
 The ShipStation cache key includes the extended end date (`endDate + 7 days`), so changing the buffer automatically invalidates the old cache.
 
@@ -239,4 +239,4 @@ To force a fresh fetch: use **Clear all cache** in the Run Audit page, or set `C
 
 ## Dark mode
 
-The dashboard automatically follows the OS preference (`prefers-color-scheme`). There is no manual toggle — dark mode is always on when the system is set to dark.
+The dashboard automatically follows the OS preference (`prefers-color-scheme`). There is no manual toggle - dark mode is always on when the system is set to dark.

@@ -1,6 +1,6 @@
 <?php
 /**
- * Comparator — pure logic, no I/O.
+ * Comparator - pure logic, no I/O.
  */
 class Comparator
 {
@@ -59,20 +59,20 @@ class Comparator
      * Compare Shopify orders against the ShipStation index.
      *
      * Match order (first match wins):
-     *   1. Order number — normalised numeric segments vs SS orderNumber
-     *   2. Email + amount — same customer email and total within 1% tolerance
+     *   1. Order number - normalised numeric segments vs SS orderNumber
+     *   2. Email + amount - same customer email and total within 1% tolerance
      *      (catches orders manually entered in SS with a wrong order number)
      *
      * Skipped reasons (stored in $order['_skip_reason']):
-     *   cancelled     — cancelled_at is set
-     *   financial     — pending / voided / refunded
-     *   fulfilled     — fulfillment_status === 'fulfilled' (fully shipped; already processed)
-     *   restocked     — fulfillment_status === 'restocked' (returned & restocked after shipment)
-     *   on_hold       — fulfillment order has status 'on_hold' (checked post-compare in audit.php
+     *   cancelled     - cancelled_at is set
+     *   financial     - pending / voided / refunded
+     *   fulfilled     - fulfillment_status === 'fulfilled' (fully shipped; already processed)
+     *   restocked     - fulfillment_status === 'restocked' (returned & restocked after shipment)
+     *   on_hold       - fulfillment order has status 'on_hold' (checked post-compare in audit.php
      *                   via Shopify::isOnHold(); requires a separate API call per order)
-     *   zero_value    — total_price == 0 (digital downloads, gift cards)
-     *   no_shipping   — no shipping lines (fulfilled digitally or local pickup)
-     *   ignored       — manually ignored via the web dashboard
+     *   zero_value    - total_price == 0 (digital downloads, gift cards)
+     *   no_shipping   - no shipping lines (fulfilled digitally or local pickup)
+     *   ignored       - manually ignored via the web dashboard
      *
      * @param  array<int, array<string, mixed>>                $shopifyOrders
      * @param  array<string, array<int, array<string, mixed>>> $ssIndex
