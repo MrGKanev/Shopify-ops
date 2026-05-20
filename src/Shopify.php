@@ -3,7 +3,7 @@
  * Shopify Admin REST API client.
  *
  * Fetches all orders in a date range using cursor-based pagination
- * (Link header) — required for stores with > 250 orders per page.
+ * (Link header) - required for stores with > 250 orders per page.
  *
  * API docs: https://shopify.dev/docs/api/admin-rest/latest/resources/order
  */
@@ -103,7 +103,7 @@ class Shopify
     /**
      * Returns true if any fulfillment order for this Shopify order ID has
      * status 'on_hold'. Uses the Fulfillment Orders API (separate endpoint
-     * from orders.json — hold state is not exposed on the order object itself).
+     * from orders.json - hold state is not exposed on the order object itself).
      *
      * Results are cached per order ID to avoid redundant calls during
      * large historical audits.
@@ -129,10 +129,192 @@ class Shopify
         return $check();
     }
 
+    /**
+     * Fetches all metafield definitions for a given owner type via GraphQL (default: ORDER).
+     * REST API does not expose metafield_definitions - GraphQL is required.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function fetchMetafieldDefinitions(string $ownerType = 'ORDER'): array
+    {
+        $query = <<<GQL
+        {
+          metafieldDefinitions(first: 250, ownerType: {$ownerType}) {
+            edges {
+              node {
+                namespace
+                key
+                name
+                description
+                type { name }
+              }
+            }
+          }
+        }
+        GQL;
+
+        $data  = $this->graphql($query);
+        $edges = $data['data']['metafieldDefinitions']['edges'] ?? [];
+        return array_map(fn($e) => $e['node'], $edges);
+    }
+
+    /**
+     * Fetches all metafields for a specific order by its Shopify numeric ID.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getOrderMetafields(string $orderId): array
+    {
+        $data = $this->get("{$this->baseUrl}/orders/{$orderId}/metafields.json");
+        return $data['metafields'] ?? [];
+    }
+
+    /**
+     * Searches orders by metafield value by paginating through orders in a date
+     * range and filtering client-side. Shopify does not support metafield value
+     * filtering in the GraphQL query string, so we fetch each page with the
+     * metafield inline and keep only matching rows.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function searchOrdersByMetafield(
+        string $namespace,
+        string $key,
+        string $value,
+        string $startDate = '',
+        string $endDate   = '',
+        int    $maxPages  = 10
+    ): array {
+        $ns    = addslashes($namespace);
+        $k     = addslashes($key);
+
+        $dateFilter = '';
+        if ($startDate) {
+            $dateFilter .= ' created_at:>=' . $startDate . 'T00:00:00Z';
+        }
+        if ($endDate) {
+            $dateFilter .= ' created_at:<=' . $endDate . 'T23:59:59Z';
+        }
+        $queryStr = trim($dateFilter) ?: '';
+
+        $matches      = [];
+        $cursor       = null;
+        $page         = 0;
+        $totalScanned = 0;
+        $totalWithMf  = 0;
+        $sampleValues = []; // first 5 distinct non-null values seen
+
+        do {
+            $after   = $cursor ? ", after: \"{$cursor}\"" : '';
+            $qFilter = $queryStr ? ", query: \"{$queryStr}\"" : '';
+
+            $gql = <<<GQL
+            {
+              orders(first: 250, sortKey: CREATED_AT, reverse: true{$qFilter}{$after}) {
+                pageInfo { hasNextPage endCursor }
+                edges {
+                  node {
+                    id
+                    legacyResourceId
+                    name
+                    displayFinancialStatus
+                    displayFulfillmentStatus
+                    createdAt
+                    email
+                    totalPriceSet { shopMoney { amount currencyCode } }
+                    metafield(namespace: "{$ns}", key: "{$k}") {
+                      value
+                      type
+                    }
+                  }
+                }
+              }
+            }
+            GQL;
+
+            $data  = $this->graphql($gql);
+            $conn  = $data['data']['orders'] ?? [];
+            $edges = $conn['edges'] ?? [];
+
+            foreach ($edges as $edge) {
+                $node    = $edge['node'];
+                $mfValue = $node['metafield']['value'] ?? null;
+                $totalScanned++;
+
+                if ($mfValue !== null) {
+                    $totalWithMf++;
+                    if (count($sampleValues) < 5 && !in_array($mfValue, $sampleValues, true)) {
+                        $sampleValues[] = $mfValue;
+                    }
+                }
+
+                if ($value === '') {
+                    if ($mfValue !== null) $matches[] = $node;
+                } else {
+                    if ($mfValue !== null && stripos($mfValue, $value) !== false) {
+                        $matches[] = $node;
+                    }
+                }
+            }
+
+            $hasNext = $conn['pageInfo']['hasNextPage'] ?? false;
+            $cursor  = $conn['pageInfo']['endCursor']   ?? null;
+            $page++;
+
+        } while ($hasNext && $cursor && $page < $maxPages);
+
+        return [
+            'matches'      => $matches,
+            'scanned'      => $totalScanned,
+            'with_mf'      => $totalWithMf,
+            'sample_values'=> $sampleValues,
+            'pages'        => $page,
+            'truncated'    => $hasNext,
+        ];
+    }
+
     // ── Private ───────────────────────────────────────────────────────
 
     /**
-     * Single GET request — returns decoded JSON body as array.
+     * Executes a GraphQL query against the Shopify Admin API.
+     *
+     * @return array<string, mixed>
+     */
+    private function graphql(string $query): array
+    {
+        $url     = str_replace('/admin/api/', '/admin/api/', $this->baseUrl) . '/graphql.json';
+        $payload = json_encode(['query' => $query]);
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $payload,
+            CURLOPT_HTTPHEADER     => [
+                "X-Shopify-Access-Token: {$this->token}",
+                'Content-Type: application/json',
+            ],
+            CURLOPT_TIMEOUT        => 30,
+        ]);
+
+        $raw  = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err  = curl_error($ch);
+        if ($err) throw new RuntimeException("Shopify GraphQL cURL error: {$err}");
+        if ($code < 200 || $code >= 300) {
+            throw new RuntimeException("Shopify GraphQL error {$code}: {$raw}");
+        }
+
+        $decoded = json_decode($raw, true);
+        if (isset($decoded['errors'])) {
+            throw new RuntimeException("Shopify GraphQL: " . json_encode($decoded['errors']));
+        }
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * Single GET request - returns decoded JSON body as array.
      * Handles rate limiting (HTTP 429) with automatic retry.
      *
      * @return array<string, mixed>
@@ -163,7 +345,7 @@ class Shopify
             if (preg_match('/Retry-After:\s*(\d+)/i', $headers, $m)) {
                 $retryAfter = (int) $m[1];
             }
-            echo "\n  [Shopify] Rate limited — waiting {$retryAfter}s ...\n";
+            echo "\n  [Shopify] Rate limited - waiting {$retryAfter}s ...\n";
             sleep($retryAfter);
             return $this->get($url);
         }
@@ -205,7 +387,7 @@ class Shopify
             if (preg_match('/Retry-After:\s*(\d+)/i', $headers, $m)) {
                 $retryAfter = (int) $m[1];
             }
-            echo "\n  [Shopify] Rate limited — waiting {$retryAfter}s ...\n";
+            echo "\n  [Shopify] Rate limited - waiting {$retryAfter}s ...\n";
             sleep($retryAfter);
             return $this->getPage($url);
         }

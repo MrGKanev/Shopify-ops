@@ -563,3 +563,25 @@ input[type="checkbox"] { cursor: pointer; accent-color: var(--accent); width: 15
   font-size: .7rem; color: var(--muted); text-decoration: none; opacity: .6;
 }
 .sidebar-footer .btn-full { margin-bottom: .5rem; }
+
+/* ── Metafields page ── */
+.mf-ns-cell  { font-family: monospace; font-size: .82rem; color: var(--muted); }
+.mf-val-cell { font-family: monospace; font-size: .8rem; word-break: break-all; max-width: 280px; }
+.mf-val-cell pre { margin: 0; font-size: .75rem; white-space: pre-wrap; word-break: break-all; }
+.mf-hint     { flex: 2; color: var(--muted); font-size: .78rem; align-self: flex-end; padding-bottom: .15rem; }
+.mf-stats    { margin-top: 1rem; display: flex; flex-direction: column; gap: .5rem; }
+.mf-sample   { margin-right: .35rem; }
+.mf-lookup-row { align-items: center; gap: .75rem; flex-wrap: wrap; margin-top: .75rem; }
+.mf-lookup-field { flex: 1; min-width: 220px; margin-bottom: 0; }
+.mf-filter-input {
+  width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+  padding: .65rem .9rem; color: var(--text); font-size: .875rem;
+  outline: none; transition: border-color .15s;
+}
+.mf-filter-input:focus { border-color: var(--accent); }
+.mf-nested-table { margin-top: .65rem; border-radius: 7px; }
+.spot-detail-muted { color: var(--muted); font-size: .82rem; }
+.date-row-wide   { flex: 2; }
+.label-opt       { font-weight: 400; text-transform: none; letter-spacing: 0; opacity: .7; }
+.btn-submit-end  { flex-shrink: 0; align-self: flex-end; }
+.spot-row-body   { flex: 1; min-width: 0; }

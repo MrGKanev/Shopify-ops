@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title><?= esc($appTitle) ?></title>
+<title><?= esc($appTitle) ?><?= $appStoreNumber ? ' - #' . esc($appStoreNumber) : '' ?></title>
 <link rel="stylesheet" href="assets/app.css">
 <script>
   (function() {
@@ -58,6 +58,9 @@
       </li>
       <li>
         <a href="?page=spotcheck" class="<?= $page === 'spotcheck' ? 'page-active' : '' ?>">Spot-check</a>
+      </li>
+      <li>
+        <a href="?page=metafields" class="<?= $page === 'metafields' ? 'page-active' : '' ?>">Metafields</a>
       </li>
     </ul>
     <div class="sidebar-section">Manage</div>
@@ -115,7 +118,7 @@
 
   <main class="main">
     <?php
-      $allowedPages = ['reports', 'run', 'trends', 'spotcheck', 'ignored', 'pushlog', 'settings'];
+      $allowedPages = ['reports', 'run', 'trends', 'spotcheck', 'metafields', 'ignored', 'pushlog', 'settings'];
       $page         = in_array($page, $allowedPages, true) ? $page : 'reports';
       $pageFile     = __DIR__ . '/page-' . $page . '.php';
       if (file_exists($pageFile)) {
@@ -140,7 +143,7 @@
     </div>
     <pre id="preview-body">Loading…</pre>
     <div class="preview-footer">
-      <span>This is the payload that <em>would</em> be sent to ShipStation — nothing has been pushed yet.</span>
+      <span>This is the payload that <em>would</em> be sent to ShipStation - nothing has been pushed yet.</span>
       <button id="preview-copy-btn" class="preview-copy-btn" onclick="copyPreviewPayload()">Copy JSON</button>
     </div>
   </div>
@@ -152,7 +155,7 @@ function previewPush(shopifyId, orderLabel) {
   var body  = document.getElementById('preview-body');
   var title = document.getElementById('preview-title');
   var btn   = document.getElementById('preview-copy-btn');
-  title.textContent = 'Preview payload — ' + orderLabel;
+  title.textContent = 'Preview payload - ' + orderLabel;
   body.textContent  = 'Loading…';
   btn.textContent   = 'Copy JSON';
   modal.style.display = 'flex';

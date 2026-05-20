@@ -73,14 +73,14 @@ class ShipStation
 
             $totalPages = $data['pages'] ?? $totalPages ?? 1;
 
-            // Write page to disk immediately — survives a crash
+            // Write page to disk immediately - survives a crash
             file_put_contents($cpDir . '/page_' . $page . '.json', json_encode($batch), LOCK_EX);
             unset($batch, $data);
             echo '.';
             $page++;
         } while ($page <= $totalPages);
 
-        // Write meta (TTL marker) — page files ARE the cache now
+        // Write meta (TTL marker) - page files ARE the cache now
         $ttl = $this->cache ? $this->cache->getTtl() : 3600;
         file_put_contents($metaFile, json_encode(['expires_at' => time() + $ttl]), LOCK_EX);
 
@@ -113,7 +113,7 @@ class ShipStation
 
     /**
      * Look up orders in ShipStation that match a given Shopify order number.
-     * (Not cached — targeted lookup, always live.)
+     * (Not cached - targeted lookup, always live.)
      *
      * @return array<int, array<string, mixed>>
      */
@@ -262,10 +262,10 @@ class ShipStation
             throw new RuntimeException("ShipStation cURL error: {$err}");
         }
 
-        // ShipStation rate-limits at 40 req/min — back off on 429
+        // ShipStation rate-limits at 40 req/min - back off on 429
         if ($code === 429) {
             $retryAfter = 60;
-            echo "\n  [ShipStation] Rate limited — waiting {$retryAfter}s ...\n";
+            echo "\n  [ShipStation] Rate limited - waiting {$retryAfter}s ...\n";
             sleep($retryAfter);
             return $this->get($path); // one retry
         }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?= esc($appTitle) ?></title>
+<title><?= esc($appTitle) ?><?= $appStoreNumber ? ' - #' . esc($appStoreNumber) : '' ?></title>
 <link rel="stylesheet" href="assets/app.css">
 <script>(function(){if(localStorage.getItem('theme')==='dark')document.documentElement.setAttribute('data-theme','dark');})();</script>
 </head>
@@ -16,7 +16,11 @@
     <?php else: ?>
       <div class="logo"><?= esc($appBrand) ?></div>
     <?php endif; ?>
-    <div class="sub"><?= esc($appTitle) ?></div>
+    <?php if ($appStoreNumber): ?>
+      <div class="sub">SS #<?= esc($appStoreNumber) ?></div>
+    <?php else: ?>
+      <div class="sub"><?= esc($appTitle) ?></div>
+    <?php endif; ?>
 
     <?php if ($error): ?>
       <div class="error-msg"><?= esc($error) ?></div>

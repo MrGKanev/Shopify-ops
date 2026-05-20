@@ -19,9 +19,10 @@ Env::load(__DIR__ . '/.env');
 $webUsername  = getenv('WEB_USERNAME') ?: 'admin';
 $webPassword  = getenv('WEB_PASSWORD') ?: 'changeme';
 $shopifyStore = getenv('SHOPIFY_STORE') ?: 'N/A';
-$appTitle     = getenv('APP_TITLE') ?: 'ShipStation ↔ Shopify Audit';
-$appBrand     = getenv('APP_BRAND') ?: 'ShipStation ↔ Shopify';
-$appLogo      = getenv('APP_LOGO') ?: '';
+$appTitle       = getenv('APP_TITLE') ?: 'ShipStation ↔ Shopify Audit';
+$appBrand       = getenv('APP_BRAND') ?: 'ShipStation ↔ Shopify';
+$appLogo        = getenv('APP_LOGO') ?: '';
+$appStoreNumber = getenv('APP_STORE_NUMBER') ?: '';
 $reportDir    = __DIR__ . '/reports';
 
 // ── Session / auth ────────────────────────────────────────────────────────────
@@ -340,6 +341,111 @@ if ($authed && $action === 'spotcheck') {
                 $spotError = 'Error: ' . $e->getMessage();
             }
         }
+    }
+}
+
+// ── Metafields ────────────────────────────────────────────────────────────────
+
+$metafieldDefs        = null;
+$metafieldOrders      = null;   // [ ['number' => ..., 'shopify_id' => ..., 'metafields' => [...]] ]
+$metafieldInput       = '';
+$metafieldError       = '';
+$metafieldFilter      = '';     // namespace.key filter
+$metafieldSearch      = null;   // search-by-value results
+$metafieldSearchError = '';
+
+if ($authed && ($_GET['page'] ?? '') === 'metafields') {
+
+    if ($shopifyToken && $shopifyStore !== 'N/A') {
+        $shopifyMeta = new Shopify($shopifyStore, $shopifyToken);
+
+        // Load definitions once
+        try {
+            $metafieldDefs = $shopifyMeta->fetchMetafieldDefinitions('ORDER');
+        } catch (Throwable $e) {
+            $metafieldError = 'Could not load metafield definitions: ' . $e->getMessage();
+        }
+
+        // Handle metafield value search
+        if ($action === 'metafield_search') {
+            $mfNs    = trim($_POST['mf_ns']    ?? '');
+            $mfKey   = trim($_POST['mf_key']   ?? '');
+            $mfVal   = trim($_POST['mf_value'] ?? '');
+            $mfStart = trim($_POST['mf_start'] ?? '');
+            $mfEnd   = trim($_POST['mf_end']   ?? '');
+
+            if (!$mfNs || !$mfKey) {
+                $metafieldSearchError = 'Namespace and key are required.';
+            } else {
+                try {
+                    if (function_exists('set_time_limit')) set_time_limit(120);
+                    $result = $shopifyMeta->searchOrdersByMetafield($mfNs, $mfKey, $mfVal, $mfStart, $mfEnd);
+                    $metafieldSearch = [
+                        'namespace'     => $mfNs,
+                        'key'           => $mfKey,
+                        'value'         => $mfVal,
+                        'start'         => $mfStart,
+                        'end'           => $mfEnd,
+                        'orders'        => $result['matches'],
+                        'scanned'       => $result['scanned'],
+                        'with_mf'       => $result['with_mf'],
+                        'sample_values' => $result['sample_values'],
+                        'pages'         => $result['pages'],
+                        'truncated'     => $result['truncated'],
+                    ];
+                } catch (Throwable $e) {
+                    $metafieldSearchError = $e->getMessage();
+                }
+            }
+        }
+
+        // Handle order lookup form
+        if ($action === 'metafield_lookup') {
+            $metafieldInput  = trim($_POST['mf_orders'] ?? '');
+            $metafieldFilter = trim($_POST['mf_filter'] ?? '');
+            $numbers         = array_filter(array_map('trim', preg_split('/[\s,]+/', $metafieldInput)));
+
+            if (empty($numbers)) {
+                $metafieldError = 'Enter at least one order number.';
+            } elseif (count($numbers) > 20) {
+                $metafieldError = 'Maximum 20 order numbers at once.';
+            } else {
+                $metafieldOrders = [];
+                foreach ($numbers as $num) {
+                    $clean    = ltrim($num, '#');
+                    $shOrders = $shopifyMeta->findByOrderNumber($clean);
+
+                    if (empty($shOrders)) {
+                        $metafieldOrders[] = ['number' => $clean, 'shopify_id' => null, 'metafields' => [], 'found' => false];
+                        continue;
+                    }
+
+                    foreach ($shOrders as $shOrder) {
+                        $oid  = (string) ($shOrder['id'] ?? '');
+                        $mfs  = $oid ? $shopifyMeta->getOrderMetafields($oid) : [];
+
+                        // Apply namespace.key filter if set
+                        if ($metafieldFilter !== '') {
+                            $mfs = array_values(array_filter($mfs, function ($mf) use ($metafieldFilter) {
+                                $nk = ($mf['namespace'] ?? '') . '.' . ($mf['key'] ?? '');
+                                return stripos($nk, $metafieldFilter) !== false
+                                    || stripos((string)($mf['value'] ?? ''), $metafieldFilter) !== false;
+                            }));
+                        }
+
+                        $metafieldOrders[] = [
+                            'number'     => $clean,
+                            'shopify_id' => $oid,
+                            'name'       => $shOrder['name'] ?? ('#' . $clean),
+                            'metafields' => $mfs,
+                            'found'      => true,
+                        ];
+                    }
+                }
+            }
+        }
+    } else {
+        $metafieldError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
     }
 }
 

@@ -176,7 +176,7 @@
   </div>
 
   <?php if (empty($cacheEntries)): ?>
-    <div class="cache-table-wrap"><div class="empty-cache">No cache files yet — run an audit to populate.</div></div>
+    <div class="cache-table-wrap"><div class="empty-cache">No cache files yet - run an audit to populate.</div></div>
   <?php else: ?>
     <div class="cache-table-wrap">
       <table>

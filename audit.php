@@ -1,6 +1,6 @@
 #!/usr/bin/env php
 <?php
-// audit.php — ShipStation ↔ Shopify Order Audit
+// audit.php - ShipStation ↔ Shopify Order Audit
 // Usage: php audit.php [--spot-check 100042,100043]
 
 require_once __DIR__ . '/src/Env.php';
@@ -90,7 +90,7 @@ try {
     $result       = Comparator::compare($shopifyOrders, $ssIndex, $ignoredNumbers, $ssEmailIndex);
 
     // ── Step 4b: On-hold check ────────────────────────────────────
-    // 'on_hold' is not exposed on the order object itself — it lives on
+    // 'on_hold' is not exposed on the order object itself - it lives on
     // the Fulfillment Order level and requires a separate API call per order.
     // We only check the (small) set of orders already flagged as missing to
     // keep the total number of extra requests low (typically 5-10/day).

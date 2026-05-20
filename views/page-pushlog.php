@@ -34,10 +34,10 @@
       </thead>
       <tbody id="pushlog-tbl">
         <?php foreach ($pushLog as $entry):
-          $orderNum  = $entry['order_number'] ?? '—';
+          $orderNum  = $entry['order_number'] ?? '-';
           $shopifyId = $entry['shopify_id']   ?? '';
-          $ssId      = $entry['ss_order_id']  ?? '—';
-          $pushedAt  = $entry['pushed_at']    ?? '—';
+          $ssId      = $entry['ss_order_id']  ?? '-';
+          $pushedAt  = $entry['pushed_at']    ?? '-';
           $adminUrl  = $shopifyId
             ? 'https://' . (str_contains($shopifyStore, '.') ? $shopifyStore : "{$shopifyStore}.myshopify.com") . '/admin/orders/' . esc($shopifyId)
             : null;

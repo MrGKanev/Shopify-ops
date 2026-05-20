@@ -1,6 +1,6 @@
 <?php
 /**
- * Reporter — formats and saves the audit results.
+ * Reporter - formats and saves the audit results.
  */
 class Reporter
 {
@@ -41,7 +41,7 @@ class Reporter
             foreach ($missing as $o) {
                 $num       = $o['order_number'] ?? $o['name'] ?? '?';
                 $date      = substr($o['created_at'] ?? '', 0, 10);
-                $total_p   = isset($o['total_price']) ? '$' . number_format((float)$o['total_price'], 2) : '—';
+                $total_p   = isset($o['total_price']) ? '$' . number_format((float)$o['total_price'], 2) : '-';
                 $financial = $o['financial_status'] ?? '';
                 $email     = $o['email'] ?? '';
 
@@ -106,13 +106,13 @@ class Reporter
         // Plain text
         $txtPath = "{$dir}/missing_{$stamp}.txt";
         $lines   = [
-            "ShipStation missing orders — generated " . date('Y-m-d H:i:s'),
+            "ShipStation missing orders - generated " . date('Y-m-d H:i:s'),
             "Period: {$startDate} -> {$endDate}",
             "Count: " . count($missing),
             "",
         ];
         foreach ($missing as $o) {
-            $total_p = isset($o['total_price']) ? '$' . number_format((float)$o['total_price'], 2) : '—';
+            $total_p = isset($o['total_price']) ? '$' . number_format((float)$o['total_price'], 2) : '-';
             $num     = $o['order_number'] ?? '';
             $name    = $o['name'] ?? '';
             $lines[] = sprintf(

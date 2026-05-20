@@ -98,7 +98,7 @@
     <tbody>
       <?php
         $configKeys = [
-          'SHOPIFY_STORE'        => getenv('SHOPIFY_STORE') ?: '—',
+          'SHOPIFY_STORE'        => getenv('SHOPIFY_STORE') ?: '-',
           'SHOPIFY_ACCESS_TOKEN' => getenv('SHOPIFY_ACCESS_TOKEN') ? '••••••••' : 'Not set',
           'SS_API_KEY'           => getenv('SS_API_KEY')    ? '••••••••' : 'Not set',
           'SS_API_SECRET'        => getenv('SS_API_SECRET') ? '••••••••' : 'Not set',

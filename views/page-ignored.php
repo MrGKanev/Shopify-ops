@@ -89,9 +89,9 @@ uasort($sortedIgnored, fn($a, $b) => strcmp($b['ignored_at'] ?? '', $a['ignored_
       <tbody id="ignored-tbody">
         <?php foreach ($sortedIgnored as $normNum => $info):
           $reason    = $info['reason'] ?? '';
-          $ignoredAt = $info['ignored_at'] ?? '—';
+          $ignoredAt = $info['ignored_at'] ?? '-';
           $history   = $orderHistory[$normNum] ?? null;
-          $seenCount = $history['count'] ?? '—';
+          $seenCount = $history['count'] ?? '-';
         ?>
         <tr>
           <td>
@@ -101,7 +101,7 @@ uasort($sortedIgnored, fn($a, $b) => strcmp($b['ignored_at'] ?? '', $a['ignored_
           </td>
           <td><span class="order-num">#<?= esc($normNum) ?></span></td>
           <td style="color:var(--muted)"><?= esc($ignoredAt) ?></td>
-          <td style="color:var(--muted)"><?= $reason !== '' ? esc($reason) : '<em style="opacity:.5">—</em>' ?></td>
+          <td style="color:var(--muted)"><?= $reason !== '' ? esc($reason) : '<em style="opacity:.5">-</em>' ?></td>
           <td>
             <?php if (is_int($seenCount)): ?>
               <?php if ($seenCount >= 3): ?>
@@ -112,7 +112,7 @@ uasort($sortedIgnored, fn($a, $b) => strcmp($b['ignored_at'] ?? '', $a['ignored_
                 <span style="color:var(--muted);font-size:.78rem">1×</span>
               <?php endif; ?>
             <?php else: ?>
-              <span style="color:var(--muted);font-size:.78rem">—</span>
+              <span style="color:var(--muted);font-size:.78rem">-</span>
             <?php endif; ?>
           </td>
           <td>
