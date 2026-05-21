@@ -417,6 +417,48 @@ class Shopify
     }
 
     /**
+     * Returns Shopify orders with refunded or partially_refunded financial status
+     * in the given date range, including refund line details.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function fetchRefundedOrders(string $startDate, string $endDate): array
+    {
+        $all = [];
+
+        foreach (['refunded', 'partially_refunded'] as $status) {
+            $params = http_build_query([
+                'status'           => 'any',
+                'financial_status' => $status,
+                'created_at_min'   => $startDate . 'T00:00:00-00:00',
+                'created_at_max'   => $endDate   . 'T23:59:59-00:00',
+                'limit'            => self::PAGE_SIZE,
+                'fields'           => 'id,order_number,name,financial_status,fulfillment_status,created_at,email,total_price,refunds',
+            ]);
+
+            $nextUrl = "{$this->baseUrl}/orders.json?{$params}";
+            while ($nextUrl) {
+                [$orders, $nextUrl] = $this->getPage($nextUrl);
+                array_push($all, ...$orders);
+            }
+        }
+
+        // Deduplicate (partially_refunded → refunded overlap is unlikely but safe)
+        $seen   = [];
+        $unique = [];
+        foreach ($all as $o) {
+            $id = $o['id'] ?? null;
+            if ($id && !isset($seen[$id])) {
+                $seen[$id] = true;
+                $unique[]  = $o;
+            }
+        }
+
+        usort($unique, fn($a, $b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
+        return $unique;
+    }
+
+    /**
      * Returns all orders for a given customer email, plus customer summary data.
      * Uses GraphQL email: filter (indexed, fast).
      *

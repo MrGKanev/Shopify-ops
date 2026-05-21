@@ -46,7 +46,7 @@
     </div>
 
     <?php
-      $auditPages  = ['reports', 'run', 'trends', 'dupes'];
+      $auditPages  = ['reports', 'run', 'trends', 'dupes', 'refunds'];
       $searchPages = ['spotcheck', 'metafields', 'tagsearch', 'tagaudit', 'customer'];
       $managePages = ['ignored', 'pushlog'];
       $groupOf = function(string $p) use ($auditPages, $searchPages, $managePages): string {
@@ -70,7 +70,8 @@
           <li><a href="?"           class="<?= $page === 'reports' ? 'page-active' : '' ?>">Reports</a></li>
           <li><a href="?page=run"   class="<?= $page === 'run'     ? 'page-active' : '' ?>">Run Audit</a></li>
           <li><a href="?page=trends" class="<?= $page === 'trends' ? 'page-active' : '' ?>">Trends</a></li>
-          <li><a href="?page=dupes"  class="<?= $page === 'dupes'  ? 'page-active' : '' ?>">Duplicate Detector</a></li>
+          <li><a href="?page=dupes"    class="<?= $page === 'dupes'    ? 'page-active' : '' ?>">Duplicate Detector</a></li>
+          <li><a href="?page=refunds" class="<?= $page === 'refunds'  ? 'page-active' : '' ?>">Refunds Tracker</a></li>
         </ul>
       </div>
 
@@ -156,7 +157,7 @@
 
   <main class="main">
     <?php
-      $allowedPages = ['reports', 'run', 'trends', 'dupes', 'spotcheck', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'ignored', 'pushlog', 'settings'];
+      $allowedPages = ['reports', 'run', 'trends', 'dupes', 'refunds', 'spotcheck', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'ignored', 'pushlog', 'settings'];
       $page         = in_array($page, $allowedPages, true) ? $page : 'reports';
       $pageFile     = __DIR__ . '/' . $page . '.php';
       if (file_exists($pageFile)) {

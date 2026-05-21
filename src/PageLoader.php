@@ -21,6 +21,7 @@ class PageLoader
             'tagaudit'  => self::loadTagAudit($action, $ctx),
             'dupes'     => self::loadDuplicates($action, $ctx),
             'customer'  => self::loadCustomer($action, $ctx),
+            'refunds'   => self::loadRefunds($action, $ctx),
             'settings'  => self::loadSettings($action, $ctx),
             default     => [],
         };
@@ -400,6 +401,124 @@ class PageLoader
         }
 
         return compact('tagAuditResult', 'tagAuditError', 'taStart', 'taEnd');
+    }
+
+    // ── Refunds Tracker ───────────────────────────────────────────────────────
+
+    private static function loadRefunds(string $action, array $ctx): array
+    {
+        $refundsResult = null;
+        $refundsError  = '';
+        $refundsStart  = $_POST['refunds_start'] ?? $_GET['refunds_start'] ?? date('Y-m-d', strtotime('-30 days'));
+        $refundsEnd    = $_POST['refunds_end']   ?? $_GET['refunds_end']   ?? date('Y-m-d');
+
+        if ($action === 'find_refunds') {
+            $refundsStart = trim($_POST['refunds_start'] ?? '');
+            $refundsEnd   = trim($_POST['refunds_end']   ?? '');
+
+            if (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
+                $refundsError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
+            } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $refundsStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $refundsEnd)) {
+                $refundsError = 'Invalid date format. Use YYYY-MM-DD.';
+            } elseif ($refundsStart > $refundsEnd) {
+                $refundsError = 'Start date must be before end date.';
+            } else {
+                try {
+                    if (function_exists('set_time_limit')) set_time_limit(300);
+
+                    $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken'], $ctx['cacheObj']);
+                    ob_start();
+                    try {
+                        $refundedOrders = $shopify->fetchRefundedOrders($refundsStart, $refundsEnd);
+                    } finally {
+                        ob_end_clean();
+                    }
+
+                    // Fetch SS orders for same window (+ 7-day buffer, cached)
+                    // ob_start suppresses the progress echo output from fetchAllOrders
+                    $ssEnd  = date('Y-m-d', strtotime($refundsEnd . ' +7 days'));
+                    $ssRows = [];
+                    if ($ctx['ssKey'] && $ctx['ssSecret']) {
+                        ob_start();
+                        try {
+                            $ss     = new ShipStation($ctx['ssKey'], $ctx['ssSecret'], $ctx['cacheObj']);
+                            $ssRows = $ss->fetchAllOrders($refundsStart, $ssEnd);
+                        } finally {
+                            ob_end_clean();
+                        }
+                    }
+
+                    // Build SS index: normalised order number → array of SS orders
+                    $ssIndex = [];
+                    foreach ($ssRows as $ssO) {
+                        $num = Comparator::normalise((string)($ssO['orderNumber'] ?? ''));
+                        if ($num) $ssIndex[$num][] = $ssO;
+                    }
+
+                    // Cross-reference
+                    $rows = [];
+                    foreach ($refundedOrders as $o) {
+                        $num     = Comparator::normalise((string)($o['order_number'] ?? ltrim($o['name'] ?? '', '#')));
+                        $ssMatch = $ssIndex[$num] ?? [];
+
+                        // Compute total refunded amount
+                        $refundedAmt = 0.0;
+                        foreach ($o['refunds'] ?? [] as $ref) {
+                            foreach ($ref['refund_line_items'] ?? [] as $rli) {
+                                $refundedAmt += (float)($rli['subtotal'] ?? 0);
+                            }
+                            foreach ($ref['transactions'] ?? [] as $tx) {
+                                // Use transactions as fallback if line items empty
+                            }
+                        }
+                        // Fallback: for fully refunded, total_price is the refunded amount
+                        if ($refundedAmt == 0 && ($o['financial_status'] ?? '') === 'refunded') {
+                            $refundedAmt = (float)($o['total_price'] ?? 0);
+                        }
+
+                        $ssStatuses = array_map(fn($s) => $s['orderStatus'] ?? 'unknown', $ssMatch);
+                        $allCancelled = !empty($ssMatch) && count(array_filter($ssStatuses, fn($s) => $s === 'cancelled')) === count($ssMatch);
+                        $anyActive    = !empty(array_filter($ssStatuses, fn($s) => in_array($s, ['awaiting_shipment', 'awaiting_payment', 'on_hold'], true)));
+
+                        $risk = 'ok';
+                        if (empty($ssMatch))   $risk = 'missing';
+                        elseif ($anyActive)    $risk = 'active';
+
+                        $rows[] = [
+                            'shopify_id'      => $o['id'] ?? '',
+                            'order_number'    => $o['name'] ?? ('#' . $num),
+                            'created_at'      => substr($o['created_at'] ?? '', 0, 10),
+                            'email'           => $o['email'] ?? '',
+                            'financial_status'=> $o['financial_status'] ?? '',
+                            'total_price'     => (float)($o['total_price'] ?? 0),
+                            'refunded_amount' => $refundedAmt,
+                            'ss_orders'       => $ssMatch,
+                            'ss_statuses'     => $ssStatuses,
+                            'risk'            => $risk,
+                        ];
+                    }
+
+                    // Sort: risky first
+                    usort($rows, function($a, $b) {
+                        $rankOf = fn($r) => match($r) { 'active' => 0, 'missing' => 1, default => 2 };
+                        return $rankOf($a['risk']) <=> $rankOf($b['risk']);
+                    });
+
+                    $refundsResult = [
+                        'rows'      => $rows,
+                        'start'     => $refundsStart,
+                        'end'       => $refundsEnd,
+                        'has_ss'    => !empty($ssRows),
+                        'active'    => count(array_filter($rows, fn($r) => $r['risk'] === 'active')),
+                        'missing'   => count(array_filter($rows, fn($r) => $r['risk'] === 'missing')),
+                    ];
+                } catch (Throwable $e) {
+                    $refundsError = $e->getMessage();
+                }
+            }
+        }
+
+        return compact('refundsResult', 'refundsError', 'refundsStart', 'refundsEnd');
     }
 
     // ── Customer Lookup ───────────────────────────────────────────────────────

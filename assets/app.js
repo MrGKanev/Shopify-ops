@@ -1,4 +1,4 @@
-// Toast notifications — move .flash elements into the toast container
+// Toast notifications - move .flash elements into the toast container
 (function() {
   var container = document.getElementById('toast-container');
   if (!container) return;
@@ -192,6 +192,40 @@ function fillSearch(ns, key) {
   var filter = document.getElementById('js-mf-filter');
   if (filter) filter.value = ns + '.' + key;
 }
+
+// ── Feature info collapsible ──────────────────────────────────────────────────
+(function() {
+  var STORE_KEY = 'featureInfoOpen';
+  function getState() {
+    try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(e) { return {}; }
+  }
+  function saveState(key, open) {
+    var s = getState(); s[key] = open;
+    localStorage.setItem(STORE_KEY, JSON.stringify(s));
+  }
+
+  document.querySelectorAll('.feature-info').forEach(function(block) {
+    var key  = block.dataset.infoKey || window.location.search || 'default';
+    var body = block.querySelector('.feature-info-body');
+    var btn  = block.querySelector('.feature-info-toggle');
+    if (!body || !btn) return;
+
+    var state = getState();
+    var open  = state[key] === true; // collapsed by default
+
+    function apply(o) {
+      body.classList.toggle('open', o);
+      btn.setAttribute('aria-expanded', o ? 'true' : 'false');
+    }
+    apply(open);
+
+    btn.addEventListener('click', function() {
+      open = !open;
+      apply(open);
+      saveState(key, open);
+    });
+  });
+})();
 
 // ── Order detail expand (Customer Lookup) ─────────────────────────────────────
 var _orderDetailCache = {};

@@ -5,6 +5,20 @@
   </div>
 </div>
 
+<div class="feature-info" data-info-key="dupes">
+  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: Duplicate Detector</button>
+  <div class="feature-info-body">
+  <p><strong>Duplicate Detector</strong> scans Shopify orders in the selected date range and finds pairs where the same customer (email) placed two orders with an identical total within <strong>10 minutes</strong> of each other.</p>
+  <p>Typical cause: the customer clicked "Place order" twice, or the page reloaded after payment. This tool helps catch double-charges before both packages are shipped.</p>
+  <ul>
+    <li>Matching is done by <strong>email + order total</strong> - not by line items.</li>
+    <li>Results show both orders side by side with financial status and the time gap between them.</li>
+    <li>For large date ranges results may be truncated - narrow the period if needed.</li>
+  </ul>
+
+  </div>
+</div>
+
 <div class="run-form">
   <h2>Scan for duplicates</h2>
   <div class="hint">Searches Shopify orders in the date range. Flags pairs with identical email + total placed within 10 minutes of each other.</div>

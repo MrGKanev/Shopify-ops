@@ -5,6 +5,20 @@
   </div>
 </div>
 
+<div class="feature-info" data-info-key="tagaudit">
+  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: Tag Audit</button>
+  <div class="feature-info-body">
+  <p><strong>Tag Audit</strong> paginates through every order in the selected date range and builds a complete inventory of all tags in use - with usage frequency and the most recent order that carried each tag.</p>
+  <p>Use this to audit tag hygiene: find tags that are no longer in use, spot typos or duplicates (<code>Wholesale</code> vs <code>wholesale</code>), and understand which workflow tags are most active.</p>
+  <ul>
+    <li>Results are sorted by <strong>frequency</strong> - most-used tags appear first.</li>
+    <li>Each tag links to Tag Search so you can instantly see all orders with that tag.</li>
+    <li>For large stores or long date ranges the scan may take 30–60 seconds as it pages through all orders.</li>
+  </ul>
+
+  </div>
+</div>
+
 <div class="run-form">
   <h2>Scan tags</h2>
   <div class="hint">Paginates through all orders in the date range and aggregates every tag found. Large stores may take a moment.</div>

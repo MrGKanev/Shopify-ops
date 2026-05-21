@@ -5,6 +5,21 @@
   </div>
 </div>
 
+<div class="feature-info" data-info-key="customer">
+  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: Customer Lookup</button>
+  <div class="feature-info-body">
+  <p><strong>Customer Lookup</strong> shows the complete order history for a customer by email address - every Shopify order they have ever placed, regardless of date.</p>
+  <p>Useful when a customer contacts support and you need a quick overview: how many orders they have, lifetime spend, what tags have been applied, and whether any orders were cancelled.</p>
+  <ul>
+    <li>The summary card shows <strong>order count, total spent, paid orders, and cancelled orders</strong>.</li>
+    <li>The tag cloud aggregates all tags across all orders, sorted by frequency.</li>
+    <li>Each order row is expandable - click it to load <strong>full details</strong>: line items, shipping address, shipping method, discounts, and financial summary.</li>
+    <li>Every order links directly to Spot-check for a live ShipStation cross-reference.</li>
+  </ul>
+
+  </div>
+</div>
+
 <div class="run-form">
   <h2>Search by email</h2>
   <div class="hint">Returns all Shopify orders placed with this email address.</div>
@@ -123,7 +138,7 @@
         </div>
       </div>
       <?php if ($truncated): ?>
-        <div class="hint px-4 pb-2" style="color:var(--warn)">Results truncated — showing first 250+ orders.</div>
+        <div class="hint px-4 pb-2" style="color:var(--warn)">Results truncated - showing first 250+ orders.</div>
       <?php endif; ?>
       <table id="tbl-customer">
         <thead>
