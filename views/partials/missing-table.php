@@ -59,7 +59,12 @@ ksort($allTypes);
 <div class="table-wrap">
   <div class="table-header">
     <h2>Missing Orders</h2>
-    <span><?= $count ?> order<?= $count !== 1 ? 's' : '' ?></span>
+    <div class="flex items-center gap-2">
+      <span><?= $count ?> order<?= $count !== 1 ? 's' : '' ?></span>
+      <?php if ($count > 0): ?>
+        <button class="btn btn-sm btn-ghost" data-csv-btn="#<?= esc($tableId) ?>" data-csv-filename="missing-orders-<?= esc($contextVal ?: date('Y-m-d')) ?>.csv">Export CSV</button>
+      <?php endif; ?>
+    </div>
   </div>
 
   <?php if ($count === 0): ?>
@@ -121,6 +126,7 @@ ksort($allTypes);
             <?php else: ?>
               <span class="order-num">#<?= esc($num) ?></span>
             <?php endif; ?>
+            <button class="copy-btn" data-copy="<?= esc($num) ?>" title="Copy order number">⧉</button>
           </td>
           <td>
             <?php if ($seenCount >= 3): ?>
