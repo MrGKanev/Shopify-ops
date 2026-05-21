@@ -860,6 +860,21 @@ input[type="checkbox"] { @apply cursor-pointer; accent-color: var(--accent); wid
 .feature-info ul { margin: .3rem 0 .45rem 1.1rem; padding: 0; }
 .feature-info li { margin-bottom: .2rem; }
 
+/* ── Order Compare ── */
+.compare-diff-row { background: #fffbeb; @apply dark:bg-[#2a1f00]; }
+.compare-diff-cell { font-weight: 600; color: var(--warn); }
+
+/* ── Tracking Feed ── */
+.tracking-detail { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+
+/* ── Address Scanner ── */
+.addr-issue {
+  display: inline-block; font-size: .75rem; font-weight: 500;
+  padding: .1rem .45rem; border-radius: 4px; line-height: 1.5;
+}
+.addr-issue-critical { background: #fee2e2; color: #b91c1c; @apply dark:bg-[#450a0a] dark:text-[#fca5a5]; }
+.addr-issue-warning  { background: #fef9c3; color: #854d0e; @apply dark:bg-[#422006] dark:text-[#fcd34d]; }
+
 /* ── Refunds Tracker ── */
 .refund-risk-badge {
   display: inline-block; font-size: .75rem; font-weight: 600;

@@ -417,6 +417,33 @@ class Shopify
     }
 
     /**
+     * Fetches paid orders in a date range with full shipping address fields for address validation.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function fetchOrdersForAddressScan(string $startDate, string $endDate): array
+    {
+        $all = [];
+
+        $params = http_build_query([
+            'status'           => 'any',
+            'financial_status' => 'paid,partially_paid',
+            'created_at_min'   => $startDate . 'T00:00:00-00:00',
+            'created_at_max'   => $endDate   . 'T23:59:59-00:00',
+            'limit'            => self::PAGE_SIZE,
+            'fields'           => 'id,order_number,name,created_at,email,financial_status,fulfillment_status,shipping_address,shipping_lines',
+        ]);
+
+        $nextUrl = "{$this->baseUrl}/orders.json?{$params}";
+        while ($nextUrl) {
+            [$orders, $nextUrl] = $this->getPage($nextUrl);
+            array_push($all, ...$orders);
+        }
+
+        return $all;
+    }
+
+    /**
      * Returns Shopify orders with refunded or partially_refunded financial status
      * in the given date range, including refund line details.
      *

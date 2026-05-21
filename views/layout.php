@@ -46,8 +46,8 @@
     </div>
 
     <?php
-      $auditPages  = ['reports', 'run', 'trends', 'dupes', 'refunds'];
-      $searchPages = ['spotcheck', 'metafields', 'tagsearch', 'tagaudit', 'customer'];
+      $auditPages  = ['reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans'];
+      $searchPages = ['spotcheck', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'tracking', 'compare'];
       $managePages = ['ignored', 'pushlog'];
       $groupOf = function(string $p) use ($auditPages, $searchPages, $managePages): string {
           if (in_array($p, $auditPages,  true)) return 'audit';
@@ -71,7 +71,10 @@
           <li><a href="?page=run"   class="<?= $page === 'run'     ? 'page-active' : '' ?>">Run Audit</a></li>
           <li><a href="?page=trends" class="<?= $page === 'trends' ? 'page-active' : '' ?>">Trends</a></li>
           <li><a href="?page=dupes"    class="<?= $page === 'dupes'    ? 'page-active' : '' ?>">Duplicate Detector</a></li>
-          <li><a href="?page=refunds" class="<?= $page === 'refunds'  ? 'page-active' : '' ?>">Refunds Tracker</a></li>
+          <li><a href="?page=refunds"   class="<?= $page === 'refunds'   ? 'page-active' : '' ?>">Refunds Tracker</a></li>
+          <li><a href="?page=addrcheck"  class="<?= $page === 'addrcheck'  ? 'page-active' : '' ?>">Address Scanner</a></li>
+          <li><a href="?page=emailcheck" class="<?= $page === 'emailcheck' ? 'page-active' : '' ?>">Email Checker</a></li>
+          <li><a href="?page=orphans"    class="<?= $page === 'orphans'    ? 'page-active' : '' ?>">Orphan Detector</a></li>
         </ul>
       </div>
 
@@ -86,7 +89,9 @@
           <li><a href="?page=metafields" class="<?= $page === 'metafields' ? 'page-active' : '' ?>">Metafields</a></li>
           <li><a href="?page=tagsearch"  class="<?= $page === 'tagsearch'  ? 'page-active' : '' ?>">Tag Search</a></li>
           <li><a href="?page=tagaudit"   class="<?= $page === 'tagaudit'   ? 'page-active' : '' ?>">Tag Audit</a></li>
-          <li><a href="?page=customer"  class="<?= $page === 'customer'   ? 'page-active' : '' ?>">Customer Lookup</a></li>
+          <li><a href="?page=customer"  class="<?= $page === 'customer'  ? 'page-active' : '' ?>">Customer Lookup</a></li>
+          <li><a href="?page=tracking"  class="<?= $page === 'tracking'  ? 'page-active' : '' ?>">Tracking Feed</a></li>
+          <li><a href="?page=compare"   class="<?= $page === 'compare'   ? 'page-active' : '' ?>">Order Compare</a></li>
         </ul>
       </div>
 
@@ -157,7 +162,7 @@
 
   <main class="main">
     <?php
-      $allowedPages = ['reports', 'run', 'trends', 'dupes', 'refunds', 'spotcheck', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'ignored', 'pushlog', 'settings'];
+      $allowedPages = ['reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'spotcheck', 'tracking', 'compare', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'ignored', 'pushlog', 'settings'];
       $page         = in_array($page, $allowedPages, true) ? $page : 'reports';
       $pageFile     = __DIR__ . '/' . $page . '.php';
       if (file_exists($pageFile)) {

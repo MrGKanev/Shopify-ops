@@ -22,7 +22,12 @@ class PageLoader
             'dupes'     => self::loadDuplicates($action, $ctx),
             'customer'  => self::loadCustomer($action, $ctx),
             'refunds'   => self::loadRefunds($action, $ctx),
-            'settings'  => self::loadSettings($action, $ctx),
+            'addrcheck'  => self::loadAddrCheck($action, $ctx),
+            'tracking'   => self::loadTracking($action, $ctx),
+            'compare'    => self::loadCompare($action, $ctx),
+            'emailcheck' => self::loadEmailCheck($action, $ctx),
+            'orphans'    => self::loadOrphans($action, $ctx),
+            'settings'   => self::loadSettings($action, $ctx),
             default     => [],
         };
 
@@ -403,6 +408,133 @@ class PageLoader
         return compact('tagAuditResult', 'tagAuditError', 'taStart', 'taEnd');
     }
 
+    // ── Address Problem Scanner ───────────────────────────────────────────────
+
+    private static function loadAddrCheck(string $action, array $ctx): array
+    {
+        $addrResult = null;
+        $addrError  = '';
+        $addrStart  = $_POST['addr_start'] ?? $_GET['addr_start'] ?? date('Y-m-d', strtotime('-30 days'));
+        $addrEnd    = $_POST['addr_end']   ?? $_GET['addr_end']   ?? date('Y-m-d');
+
+        if ($action === 'scan_addresses') {
+            $addrStart = trim($_POST['addr_start'] ?? '');
+            $addrEnd   = trim($_POST['addr_end']   ?? '');
+
+            if (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
+                $addrError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
+            } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $addrStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $addrEnd)) {
+                $addrError = 'Invalid date format. Use YYYY-MM-DD.';
+            } elseif ($addrStart > $addrEnd) {
+                $addrError = 'Start date must be before end date.';
+            } else {
+                try {
+                    if (function_exists('set_time_limit')) set_time_limit(180);
+
+                    $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+                    ob_start();
+                    try {
+                        $orders = $shopify->fetchOrdersForAddressScan($addrStart, $addrEnd);
+                    } finally {
+                        ob_end_clean();
+                    }
+
+                    $rows = [];
+                    foreach ($orders as $o) {
+                        $addr   = $o['shipping_address'] ?? null;
+                        $issues = self::checkAddress($addr, $o);
+                        if (!empty($issues)) {
+                            $rows[] = [
+                                'shopify_id'   => $o['id'] ?? '',
+                                'order_number' => $o['name'] ?? '',
+                                'created_at'   => substr($o['created_at'] ?? '', 0, 10),
+                                'email'        => $o['email'] ?? '',
+                                'address'      => $addr,
+                                'issues'       => $issues,
+                                'severity'     => in_array('critical', array_column($issues, 'level')) ? 'critical' : 'warning',
+                            ];
+                        }
+                    }
+
+                    usort($rows, fn($a, $b) =>
+                        ($a['severity'] === 'critical' ? 0 : 1) <=> ($b['severity'] === 'critical' ? 0 : 1)
+                    );
+
+                    $addrResult = [
+                        'rows'     => $rows,
+                        'scanned'  => count($orders),
+                        'start'    => $addrStart,
+                        'end'      => $addrEnd,
+                        'critical' => count(array_filter($rows, fn($r) => $r['severity'] === 'critical')),
+                        'warnings' => count(array_filter($rows, fn($r) => $r['severity'] === 'warning')),
+                    ];
+                } catch (Throwable $e) {
+                    $addrError = $e->getMessage();
+                }
+            }
+        }
+
+        return compact('addrResult', 'addrError', 'addrStart', 'addrEnd');
+    }
+
+    private static function checkAddress(?array $addr, array $order): array
+    {
+        $issues = [];
+
+        if (!$addr) {
+            $issues[] = ['level' => 'critical', 'code' => 'no_address', 'message' => 'No shipping address on this order'];
+            return $issues;
+        }
+
+        $name    = trim(($addr['first_name'] ?? '') . ' ' . ($addr['last_name'] ?? ''));
+        $address1 = trim($addr['address1'] ?? '');
+        $city     = trim($addr['city']     ?? '');
+        $zip      = trim($addr['zip']      ?? '');
+        $country  = strtoupper(trim($addr['country_code'] ?? $addr['country'] ?? ''));
+        $province = trim($addr['province_code'] ?? '');
+        $phone    = trim($addr['phone'] ?? '');
+
+        if (!$name || $name === ' ') {
+            $issues[] = ['level' => 'critical', 'code' => 'no_name', 'message' => 'Missing recipient name'];
+        }
+        if (!$address1) {
+            $issues[] = ['level' => 'critical', 'code' => 'no_address1', 'message' => 'Missing street address'];
+        } elseif (strlen($address1) < 5) {
+            $issues[] = ['level' => 'warning', 'code' => 'short_address', 'message' => 'Street address is suspiciously short'];
+        }
+        if (!$city) {
+            $issues[] = ['level' => 'critical', 'code' => 'no_city', 'message' => 'Missing city'];
+        }
+        if (!$zip) {
+            $issues[] = ['level' => 'critical', 'code' => 'no_zip', 'message' => 'Missing postal / ZIP code'];
+        } elseif ($country === 'US' && !preg_match('/^\d{5}(-\d{4})?$/', $zip)) {
+            $issues[] = ['level' => 'warning', 'code' => 'bad_zip_us', 'message' => 'US ZIP code format invalid (expected 12345 or 12345-6789)'];
+        } elseif ($country === 'CA' && !preg_match('/^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/', $zip)) {
+            $issues[] = ['level' => 'warning', 'code' => 'bad_zip_ca', 'message' => 'Canadian postal code format invalid (expected A1A 1A1)'];
+        }
+        if (!$country) {
+            $issues[] = ['level' => 'critical', 'code' => 'no_country', 'message' => 'Missing country'];
+        }
+        if (in_array($country, ['US', 'CA'], true) && !$province) {
+            $issues[] = ['level' => 'warning', 'code' => 'no_province', 'message' => 'Missing state / province (required for US and CA)'];
+        }
+        if (!$phone) {
+            // Check if any shipping line requires a phone (heuristic: express/overnight carriers)
+            $shippingTitles = implode(' ', array_column($order['shipping_lines'] ?? [], 'title'));
+            if (preg_match('/overnight|express|priority|fedex|ups/i', $shippingTitles)) {
+                $issues[] = ['level' => 'warning', 'code' => 'no_phone_express', 'message' => 'No phone number — carrier may require it for express shipping'];
+            }
+        }
+        if ($address1 && preg_match('/\bP\.?\s*O\.?\s*Box\b/i', $address1)) {
+            $shippingTitles = implode(' ', array_column($order['shipping_lines'] ?? [], 'title'));
+            if (preg_match('/fedex|ups|dhl/i', $shippingTitles)) {
+                $issues[] = ['level' => 'warning', 'code' => 'po_box_carrier', 'message' => 'PO Box address — FedEx/UPS/DHL cannot deliver to PO Boxes'];
+            }
+        }
+
+        return $issues;
+    }
+
     // ── Refunds Tracker ───────────────────────────────────────────────────────
 
     private static function loadRefunds(string $action, array $ctx): array
@@ -584,6 +716,303 @@ class PageLoader
         }
 
         return compact('dupesResult', 'dupesError', 'dupesStart', 'dupesEnd');
+    }
+
+    // ── Shipment Tracking Feed ────────────────────────────────────────────────
+
+    private static function loadTracking(string $action, array $ctx): array
+    {
+        $trackingResults = null;
+        $trackingError   = '';
+        $trackingInput   = trim($_GET['prefill'] ?? '');
+
+        if ($action === 'lookup_tracking') {
+            $trackingInput = trim($_POST['tracking_orders'] ?? '');
+            $numbers = array_filter(array_map('trim', preg_split('/[\s,]+/', $trackingInput)));
+
+            if (empty($numbers)) {
+                $trackingError = 'Enter at least one order number.';
+            } elseif (count($numbers) > 30) {
+                $trackingError = 'Maximum 30 order numbers at once.';
+            } elseif (!$ctx['ssKey'] || !$ctx['ssSecret']) {
+                $trackingError = 'SS_API_KEY / SS_API_SECRET not set in .env.';
+            } else {
+                try {
+                    $ss = new ShipStation($ctx['ssKey'], $ctx['ssSecret']);
+                    $trackingResults = [];
+
+                    $carrierUrls = [
+                        'usps'    => 'https://tools.usps.com/go/TrackConfirmAction?tLabels=',
+                        'fedex'   => 'https://www.fedex.com/fedextrack/?tracknumbers=',
+                        'ups'     => 'https://www.ups.com/track?tracknum=',
+                        'dhl'     => 'https://www.dhl.com/en/express/tracking.html?AWB=',
+                        'stamps_com' => 'https://tools.usps.com/go/TrackConfirmAction?tLabels=',
+                        'ontrac'  => 'https://www.ontrac.com/tracking/?number=',
+                        'lasership' => 'https://www.lasership.com/track/',
+                    ];
+
+                    foreach ($numbers as $num) {
+                        $clean    = ltrim(trim($num), '#');
+                        $ssOrders = $ss->findByOrderNumber($clean);
+
+                        if (empty($ssOrders)) {
+                            $trackingResults[] = [
+                                'number'   => $clean,
+                                'found'    => false,
+                                'shipments' => [],
+                            ];
+                            continue;
+                        }
+
+                        $shipments = [];
+                        foreach ($ssOrders as $o) {
+                            $carrier  = strtolower($o['carrierCode'] ?? '');
+                            $tracking = $o['trackingNumber'] ?? '';
+                            $baseUrl  = $carrierUrls[$carrier] ?? null;
+                            $shipments[] = [
+                                'orderId'        => $o['orderId']        ?? '',
+                                'orderStatus'    => $o['orderStatus']    ?? '',
+                                'carrierCode'    => $o['carrierCode']    ?? '',
+                                'serviceCode'    => $o['serviceCode']    ?? '',
+                                'trackingNumber' => $tracking,
+                                'shipDate'       => $o['shipDate']       ?? '',
+                                'trackingUrl'    => ($baseUrl && $tracking) ? $baseUrl . urlencode($tracking) : null,
+                                'ssUrl'          => $o['orderId'] ? 'https://app.shipstation.com/#!/orders/order-details/' . urlencode($o['orderId']) : null,
+                            ];
+                        }
+
+                        $trackingResults[] = [
+                            'number'    => $clean,
+                            'found'     => true,
+                            'shipments' => $shipments,
+                        ];
+                    }
+                } catch (Throwable $e) {
+                    $trackingError = $e->getMessage();
+                }
+            }
+        }
+
+        return compact('trackingResults', 'trackingError', 'trackingInput');
+    }
+
+    // ── Order Comparison Tool ─────────────────────────────────────────────────
+
+    private static function loadCompare(string $action, array $ctx): array
+    {
+        $compareResult = null;
+        $compareError  = '';
+        $compareA      = trim($_POST['compare_a'] ?? $_GET['a'] ?? '');
+        $compareB      = trim($_POST['compare_b'] ?? $_GET['b'] ?? '');
+
+        if ($action === 'compare_orders') {
+            $compareA = ltrim(trim($_POST['compare_a'] ?? ''), '#');
+            $compareB = ltrim(trim($_POST['compare_b'] ?? ''), '#');
+
+            if (!$compareA || !$compareB) {
+                $compareError = 'Enter two order numbers to compare.';
+            } elseif (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
+                $compareError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
+            } else {
+                try {
+                    $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+                    $ss      = ($ctx['ssKey'] && $ctx['ssSecret'])
+                                 ? new ShipStation($ctx['ssKey'], $ctx['ssSecret']) : null;
+
+                    $fetchOrder = function (string $num) use ($shopify, $ss): array {
+                        $shOrders = $shopify->findByOrderNumber($num);
+                        $shOrder  = !empty($shOrders) ? $shopify->getOrder((string)($shOrders[0]['id'] ?? '')) : null;
+                        $ssOrders = $ss ? $ss->findByOrderNumber($num) : [];
+                        return ['shopify' => $shOrder, 'ss' => $ssOrders, 'num' => $num];
+                    };
+
+                    $orderA = $fetchOrder($compareA);
+                    $orderB = $fetchOrder($compareB);
+
+                    $compareResult = ['a' => $orderA, 'b' => $orderB];
+                } catch (Throwable $e) {
+                    $compareError = $e->getMessage();
+                }
+            }
+        }
+
+        return compact('compareResult', 'compareError', 'compareA', 'compareB');
+    }
+
+    // ── Email Check ───────────────────────────────────────────────────────────
+
+    private static function loadEmailCheck(string $action, array $ctx): array
+    {
+        $emailResult = null;
+        $emailError  = '';
+        $emailStart  = $_POST['email_start'] ?? $_GET['email_start'] ?? date('Y-m-d', strtotime('-30 days'));
+        $emailEnd    = $_POST['email_end']   ?? $_GET['email_end']   ?? date('Y-m-d');
+
+        if ($action === 'scan_emails') {
+            $emailStart = trim($_POST['email_start'] ?? '');
+            $emailEnd   = trim($_POST['email_end']   ?? '');
+
+            if (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
+                $emailError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
+            } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $emailStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $emailEnd)) {
+                $emailError = 'Invalid date format.';
+            } else {
+                try {
+                    if (function_exists('set_time_limit')) set_time_limit(180);
+
+                    $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+                    ob_start();
+                    try {
+                        $orders = $shopify->fetchOrdersForAddressScan($emailStart, $emailEnd);
+                    } finally {
+                        ob_end_clean();
+                    }
+
+                    $disposable = [
+                        'mailinator.com','guerrillamail.com','tempmail.com','throwam.com',
+                        'yopmail.com','sharklasers.com','guerrillamailblock.com','grr.la',
+                        'guerrillamail.info','trashmail.com','trashmail.net','trashmail.org',
+                        'dispostable.com','maildrop.cc','spamgourmet.com','spamgourmet.net',
+                        'mailnull.com','spamcorner.com','10minutemail.com','10minutemail.net',
+                        'fakeinbox.com','mailnesia.com','discard.email','spamspot.com',
+                        'mytemp.email','temp-mail.org','getnada.com','tempr.email',
+                    ];
+
+                    $rows = [];
+                    foreach ($orders as $o) {
+                        $email  = strtolower(trim($o['email'] ?? ''));
+                        $issues = [];
+
+                        if (!$email) {
+                            $issues[] = ['level' => 'critical', 'message' => 'No email address on order'];
+                        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                            $issues[] = ['level' => 'critical', 'message' => 'Invalid email format'];
+                        } else {
+                            $domain = substr($email, strrpos($email, '@') + 1);
+                            if (in_array($domain, $disposable, true)) {
+                                $issues[] = ['level' => 'critical', 'message' => 'Disposable / temporary email domain (' . $domain . ')'];
+                            }
+                            $local = substr($email, 0, strrpos($email, '@'));
+                            if (strlen($local) <= 2) {
+                                $issues[] = ['level' => 'warning', 'message' => 'Very short local part — may be a test address'];
+                            }
+                            if (preg_match('/^(test|noemail|no-?reply|none|null|fake|dummy|xxx|aaa|zzz)\b/i', $local)) {
+                                $issues[] = ['level' => 'warning', 'message' => 'Email looks like a placeholder'];
+                            }
+                            if (preg_match('/(.)\1{4,}/', $local)) {
+                                $issues[] = ['level' => 'warning', 'message' => 'Email has repeated characters — may be keyboard mashing'];
+                            }
+                        }
+
+                        if (!empty($issues)) {
+                            $rows[] = [
+                                'shopify_id'   => $o['id'] ?? '',
+                                'order_number' => $o['name'] ?? '',
+                                'created_at'   => substr($o['created_at'] ?? '', 0, 10),
+                                'email'        => $o['email'] ?? '',
+                                'issues'       => $issues,
+                                'severity'     => in_array('critical', array_column($issues, 'level')) ? 'critical' : 'warning',
+                            ];
+                        }
+                    }
+
+                    usort($rows, fn($a, $b) =>
+                        ($a['severity'] === 'critical' ? 0 : 1) <=> ($b['severity'] === 'critical' ? 0 : 1)
+                    );
+
+                    $emailResult = [
+                        'rows'     => $rows,
+                        'scanned'  => count($orders),
+                        'start'    => $emailStart,
+                        'end'      => $emailEnd,
+                        'critical' => count(array_filter($rows, fn($r) => $r['severity'] === 'critical')),
+                        'warnings' => count(array_filter($rows, fn($r) => $r['severity'] === 'warning')),
+                    ];
+                } catch (Throwable $e) {
+                    $emailError = $e->getMessage();
+                }
+            }
+        }
+
+        return compact('emailResult', 'emailError', 'emailStart', 'emailEnd');
+    }
+
+    // ── SS → Shopify Orphan Detector ──────────────────────────────────────────
+
+    private static function loadOrphans(string $action, array $ctx): array
+    {
+        $orphanResult = null;
+        $orphanError  = '';
+        $orphanStart  = $_POST['orphan_start'] ?? $_GET['orphan_start'] ?? date('Y-m-d', strtotime('-30 days'));
+        $orphanEnd    = $_POST['orphan_end']   ?? $_GET['orphan_end']   ?? date('Y-m-d');
+
+        if ($action === 'find_orphans') {
+            $orphanStart = trim($_POST['orphan_start'] ?? '');
+            $orphanEnd   = trim($_POST['orphan_end']   ?? '');
+
+            if (!$ctx['ssKey'] || !$ctx['ssSecret']) {
+                $orphanError = 'SS_API_KEY / SS_API_SECRET not set in .env.';
+            } elseif (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
+                $orphanError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
+            } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $orphanStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $orphanEnd)) {
+                $orphanError = 'Invalid date format.';
+            } elseif ($orphanStart > $orphanEnd) {
+                $orphanError = 'Start date must be before end date.';
+            } else {
+                try {
+                    if (function_exists('set_time_limit')) set_time_limit(300);
+
+                    ob_start();
+                    try {
+                        $ss      = new ShipStation($ctx['ssKey'], $ctx['ssSecret'], $ctx['cacheObj']);
+                        $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken'], $ctx['cacheObj']);
+                        $ssOrders  = $ss->fetchAllOrders($orphanStart, $orphanEnd);
+                        $shOrders  = $shopify->fetchAllOrders($orphanStart, $orphanEnd);
+                    } finally {
+                        ob_end_clean();
+                    }
+
+                    // Build Shopify index by normalised order number
+                    $shIndex = [];
+                    foreach ($shOrders as $o) {
+                        $num = Comparator::normalise((string)($o['order_number'] ?? ltrim($o['name'] ?? '', '#')));
+                        if ($num) $shIndex[$num] = true;
+                    }
+
+                    $rows = [];
+                    foreach ($ssOrders as $o) {
+                        $num = Comparator::normalise((string)($o['orderNumber'] ?? ''));
+                        if (!$num) continue;
+                        if (!isset($shIndex[$num])) {
+                            $rows[] = [
+                                'ss_order_id'  => $o['orderId']     ?? '',
+                                'order_number' => $o['orderNumber'] ?? '',
+                                'order_status' => $o['orderStatus'] ?? '',
+                                'order_date'   => substr($o['orderDate'] ?? '', 0, 10),
+                                'customer'     => trim(($o['shipTo']['name'] ?? '')),
+                                'email'        => $o['customerEmail'] ?? '',
+                                'total'        => $o['orderTotal']   ?? 0,
+                                'ss_url'       => $o['orderId'] ? 'https://app.shipstation.com/#!/orders/order-details/' . urlencode($o['orderId']) : null,
+                            ];
+                        }
+                    }
+
+                    usort($rows, fn($a, $b) => strcmp($b['order_date'], $a['order_date']));
+
+                    $orphanResult = [
+                        'rows'       => $rows,
+                        'ss_total'   => count($ssOrders),
+                        'sh_total'   => count($shOrders),
+                        'start'      => $orphanStart,
+                        'end'        => $orphanEnd,
+                    ];
+                } catch (Throwable $e) {
+                    $orphanError = $e->getMessage();
+                }
+            }
+        }
+
+        return compact('orphanResult', 'orphanError', 'orphanStart', 'orphanEnd');
     }
 
     // ── Settings ──────────────────────────────────────────────────────────────
