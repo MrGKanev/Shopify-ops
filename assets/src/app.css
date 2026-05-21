@@ -826,6 +826,49 @@ input[type="checkbox"] { @apply cursor-pointer; accent-color: var(--accent); wid
 }
 .input-reason:focus { border-color: var(--accent); }
 
+/* ── Feature info block ── */
+.feature-info {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  margin-bottom: 1.25rem;
+  font-size: .875rem;
+  color: var(--text);
+  line-height: 1.65;
+  overflow: hidden;
+}
+.feature-info-toggle {
+  display: flex; align-items: center; gap: .5rem;
+  width: 100%; padding: .6rem 1.1rem;
+  background: none; border: none; cursor: pointer;
+  font-size: .75rem; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .06em;
+  text-align: left;
+}
+.feature-info-toggle:hover { color: var(--accent); }
+.feature-info-toggle svg { flex-shrink: 0; transition: transform .2s; }
+.feature-info-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+.feature-info-body {
+  padding: 0 1.1rem .85rem;
+  display: none;
+}
+.feature-info-body.open { display: block; }
+.feature-info p { margin: 0 0 .45rem; }
+.feature-info p:last-child { margin-bottom: 0; }
+.feature-info strong { color: var(--text); font-weight: 600; }
+.feature-info ul { margin: .3rem 0 .45rem 1.1rem; padding: 0; }
+.feature-info li { margin-bottom: .2rem; }
+
+/* ── Refunds Tracker ── */
+.refund-risk-badge {
+  display: inline-block; font-size: .75rem; font-weight: 600;
+  padding: .15rem .55rem; border-radius: 20px; white-space: nowrap;
+}
+.refund-risk-active  { background: #fee2e2; color: #b91c1c; @apply dark:bg-[#450a0a] dark:text-[#fca5a5]; }
+.refund-risk-missing { background: #ede9fe; color: #6d28d9; @apply dark:bg-[#2e1065] dark:text-[#c4b5fd]; }
+.refund-risk-ok      { background: #dcfce7; color: #15803d; @apply dark:bg-[#14532d] dark:text-[#86efac]; }
+
 /* ── Customer Lookup ── */
 .customer-card {
   background: var(--surface);

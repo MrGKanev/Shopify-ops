@@ -22,6 +22,21 @@
   </div>
 </div>
 
+<div class="feature-info" data-info-key="run">
+  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: Run Audit</button>
+  <div class="feature-info-body">
+  <p><strong>Run Audit</strong> fetches all paid Shopify orders in the selected date range and compares them against ShipStation - identifying any orders that exist in Shopify but are missing from ShipStation.</p>
+  <p>The audit saves a dated CSV report that appears in the sidebar history and on the Reports page, so you can track which orders reappear across multiple runs.</p>
+  <ul>
+    <li>Shopify orders are filtered to <strong>paid / partially paid</strong> status only - unpaid, cancelled, and test orders are excluded.</li>
+    <li>ShipStation is queried with a <strong>+7 day buffer</strong> beyond the end date to account for orders pushed after the Shopify creation date.</li>
+    <li>Both datasets are cached - re-running the same date range is instant. Use <em>Flush cache</em> on the Settings page to force a fresh fetch.</li>
+    <li>Large ranges (90+ days) may take 30–60 seconds on the first run.</li>
+  </ul>
+
+  </div>
+</div>
+
 <div class="run-form">
   <h2>Date range</h2>
   <div class="hint">Fetches orders from both platforms and shows what's missing in ShipStation. Large ranges (90+ days) may take 30–60 seconds.</div>

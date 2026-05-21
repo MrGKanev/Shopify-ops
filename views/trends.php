@@ -20,6 +20,19 @@ $repeatOffenders = array_slice($repeatOffenders, 0, 20, true);
   </div>
 </div>
 
+<div class="feature-info" data-info-key="trends">
+  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: Trends</button>
+  <div class="feature-info-body">
+  <p><strong>Trends</strong> aggregates data across all saved audit reports to give you a historical view of how your ShipStation sync health has changed over time.</p>
+  <ul>
+    <li><strong>Summary stats</strong> - total missing orders across all runs, average per report, worst single day, and number of all-clear reports.</li>
+    <li><strong>Repeat offenders</strong> - orders that have appeared as missing in 2 or more reports. These are the highest-priority items to investigate, as they have been missed repeatedly.</li>
+  </ul>
+  <p>Data is derived entirely from the local report CSV files - no API calls are made on this page.</p>
+
+  </div>
+</div>
+
 <?php if ($totalReports === 0): ?>
   <div class="no-reports">
     <div class="icon">📊</div>

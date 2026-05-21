@@ -5,6 +5,21 @@
   </div>
 </div>
 
+<div class="feature-info" data-info-key="tagsearch">
+  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: Tag Search</button>
+  <div class="feature-info-body">
+  <p><strong>Tag Search</strong> finds all Shopify orders that carry a specific tag. The lookup uses Shopify's native indexed tag filter, so it is fast even on large stores.</p>
+  <p>Useful for finding all orders in a batch, promotion, or custom workflow - for example <code>wholesale</code>, <code>vip</code>, <code>reorder</code>, or any internal routing tag.</p>
+  <ul>
+    <li>Match is <strong>exact and case-insensitive</strong> - partial matches are not supported.</li>
+    <li>Date range is optional. Without it, the search covers all orders in the store.</li>
+    <li>Results show financial status, fulfilment status, total, and all tags on each order.</li>
+    <li>Results may be truncated for very broad searches - add a date range to narrow them.</li>
+  </ul>
+
+  </div>
+</div>
+
 <div class="run-form">
   <h2>Search by tag</h2>
   <div class="hint">Exact tag match - case-insensitive. Optionally narrow results by date range.</div>
