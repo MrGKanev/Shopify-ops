@@ -20,6 +20,7 @@ class PageLoader
             'tagsearch' => self::loadTagSearch($action, $ctx),
             'tagaudit'  => self::loadTagAudit($action, $ctx),
             'dupes'     => self::loadDuplicates($action, $ctx),
+            'customer'  => self::loadCustomer($action, $ctx),
             'settings'  => self::loadSettings($action, $ctx),
             default     => [],
         };
@@ -399,6 +400,36 @@ class PageLoader
         }
 
         return compact('tagAuditResult', 'tagAuditError', 'taStart', 'taEnd');
+    }
+
+    // ── Customer Lookup ───────────────────────────────────────────────────────
+
+    private static function loadCustomer(string $action, array $ctx): array
+    {
+        $customerResult = null;
+        $customerError  = '';
+        $customerEmail  = trim($_GET['email'] ?? $_POST['customer_email'] ?? '');
+
+        if ($action === 'customer_lookup') {
+            $customerEmail = trim($_POST['customer_email'] ?? '');
+
+            if (!$customerEmail || !filter_var($customerEmail, FILTER_VALIDATE_EMAIL)) {
+                $customerError = 'Enter a valid email address.';
+            } elseif (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
+                $customerError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
+            } else {
+                try {
+                    if (function_exists('set_time_limit')) set_time_limit(120);
+                    $shopify        = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+                    $customerResult = $shopify->lookupCustomer($customerEmail);
+                    $customerResult['email'] = $customerEmail;
+                } catch (Throwable $e) {
+                    $customerError = $e->getMessage();
+                }
+            }
+        }
+
+        return compact('customerResult', 'customerError', 'customerEmail');
     }
 
     // ── Duplicate Detector ────────────────────────────────────────────────────

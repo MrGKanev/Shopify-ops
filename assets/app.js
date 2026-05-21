@@ -193,6 +193,305 @@ function fillSearch(ns, key) {
   if (filter) filter.value = ns + '.' + key;
 }
 
+// ── Order detail expand (Customer Lookup) ─────────────────────────────────────
+var _orderDetailCache = {};
+
+function toggleOrderDetail(orderId, summaryRow) {
+  var detailRow = document.getElementById('od-' + orderId);
+  var panel     = document.getElementById('panel-' + orderId);
+  var icon      = document.getElementById('icon-' + orderId);
+  if (!detailRow || !panel) return;
+
+  var isOpen = detailRow.style.display !== 'none';
+  if (isOpen) {
+    detailRow.style.display = 'none';
+    if (icon) icon.textContent = '▶';
+    return;
+  }
+
+  detailRow.style.display = '';
+  if (icon) icon.textContent = '▼';
+
+  if (_orderDetailCache[orderId]) {
+    panel.innerHTML = _orderDetailCache[orderId];
+    return;
+  }
+
+  panel.innerHTML = '<div class="order-detail-loading">Loading…</div>';
+
+  var fd = new FormData();
+  fd.append('action',     'order_detail');
+  fd.append('shopify_id', orderId);
+
+  fetch('', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) {
+        panel.innerHTML = '<div class="order-detail-loading" style="color:var(--danger)">Error: ' + data.error + '</div>';
+        return;
+      }
+      var html = renderOrderDetail(data.order);
+      _orderDetailCache[orderId] = html;
+      panel.innerHTML = html;
+    })
+    .catch(function(e) {
+      panel.innerHTML = '<div class="order-detail-loading" style="color:var(--danger)">Request failed.</div>';
+    });
+}
+
+function renderOrderDetail(o) {
+  var html = '<div class="od-grid">';
+
+  // ── Line items ──
+  var items = o.line_items || [];
+  html += '<div class="od-section"><div class="od-section-title">Items (' + items.length + ')</div>';
+  html += '<div class="od-items">';
+  items.forEach(function(li) {
+    var price = li.price ? parseFloat(li.price).toFixed(2) : '0.00';
+    html += '<div class="od-item">';
+    html += '<div class="od-item-name">' + esc(li.title || '') + (li.variant_title ? ' <span class="od-variant">· ' + esc(li.variant_title) + '</span>' : '') + '</div>';
+    html += '<div class="od-item-meta">Qty: ' + (li.quantity || 1) + ' &nbsp;·&nbsp; $' + price + ' ea';
+    if (li.sku) html += ' &nbsp;·&nbsp; SKU: ' + esc(li.sku);
+    html += '</div></div>';
+  });
+  html += '</div></div>';
+
+  // ── Shipping address ──
+  var addr = o.shipping_address;
+  if (addr) {
+    html += '<div class="od-section"><div class="od-section-title">Ship to</div>';
+    html += '<div class="od-address">';
+    if (addr.name) html += '<div>' + esc(addr.name) + '</div>';
+    if (addr.address1) html += '<div>' + esc(addr.address1) + '</div>';
+    if (addr.address2) html += '<div>' + esc(addr.address2) + '</div>';
+    html += '<div>' + [addr.city, addr.province_code, addr.zip].filter(Boolean).map(esc).join(', ') + '</div>';
+    if (addr.country) html += '<div>' + esc(addr.country) + '</div>';
+    if (addr.phone) html += '<div class="od-muted">' + esc(addr.phone) + '</div>';
+    html += '</div></div>';
+  }
+
+  // ── Shipping method ──
+  var shipping = (o.shipping_lines || [])[0];
+  if (shipping) {
+    html += '<div class="od-section"><div class="od-section-title">Shipping</div>';
+    html += '<div class="od-address"><div>' + esc(shipping.title || '') + '</div>';
+    if (shipping.price) html += '<div>$' + parseFloat(shipping.price).toFixed(2) + '</div>';
+    html += '</div></div>';
+  }
+
+  // ── Note ──
+  if (o.note) {
+    html += '<div class="od-section"><div class="od-section-title">Note</div>';
+    html += '<div class="od-note">' + esc(o.note) + '</div></div>';
+  }
+
+  // ── Financials ──
+  html += '<div class="od-section"><div class="od-section-title">Summary</div><div class="od-address">';
+  if (o.subtotal_price)  html += '<div class="od-fin-row"><span>Subtotal</span><span>$' + parseFloat(o.subtotal_price).toFixed(2) + '</span></div>';
+  if (o.total_discounts && parseFloat(o.total_discounts) > 0)
+    html += '<div class="od-fin-row" style="color:var(--ok)"><span>Discount</span><span>-$' + parseFloat(o.total_discounts).toFixed(2) + '</span></div>';
+  if (o.total_tax)       html += '<div class="od-fin-row"><span>Tax</span><span>$' + parseFloat(o.total_tax).toFixed(2) + '</span></div>';
+  if (o.total_price)     html += '<div class="od-fin-row" style="font-weight:600"><span>Total</span><span>$' + parseFloat(o.total_price).toFixed(2) + '</span></div>';
+  html += '</div></div>';
+
+  html += '</div>';
+  return html;
+}
+
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── CSV Export ────────────────────────────────────────────────────────────────
+function exportTableCSV(tableSelector, filename) {
+  var table = document.querySelector(tableSelector);
+  if (!table) return;
+  var rows = [];
+  table.querySelectorAll('tr').forEach(function(tr) {
+    var cells = [];
+    tr.querySelectorAll('th, td').forEach(function(td) {
+      // Skip checkbox columns and action columns
+      if (td.querySelector('input[type=checkbox]')) return;
+      if (td.classList.contains('td-actions') || td.classList.contains('col-actions') || td.classList.contains('col-check')) return;
+      var text = td.textContent.replace(/\s+/g, ' ').trim();
+      cells.push('"' + text.replace(/"/g, '""') + '"');
+    });
+    if (cells.length) rows.push(cells.join(','));
+  });
+  var csv = rows.join('\r\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href     = url;
+  a.download = filename || 'export.csv';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
+}
+
+document.querySelectorAll('[data-csv-btn]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    exportTableCSV(btn.dataset.csvBtn, btn.dataset.csvFilename || 'export.csv');
+  });
+});
+
+// ── Quick Copy ────────────────────────────────────────────────────────────────
+document.querySelectorAll('[data-copy]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var text = btn.dataset.copy;
+    navigator.clipboard.writeText(text).then(function() {
+      var orig = btn.textContent;
+      btn.textContent = '✓';
+      setTimeout(function() { btn.textContent = orig; }, 1500);
+    });
+  });
+});
+
+// ── Search History ────────────────────────────────────────────────────────────
+(function() {
+  var HISTORY_KEY = 'searchHistory';
+  var MAX         = 8;
+
+  function getHistory() {
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch(e) { return []; }
+  }
+
+  function saveHistory(list) {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, MAX)));
+  }
+
+  function addToHistory(val) {
+    if (!val || val.length < 2) return;
+    var list = getHistory().filter(function(v) { return v !== val; });
+    list.unshift(val);
+    saveHistory(list);
+  }
+
+  function buildDropdown(input) {
+    var wrap = input.parentNode;
+    wrap.style.position = 'relative';
+    var dd = document.createElement('ul');
+    dd.className = 'search-history-dropdown';
+    dd.style.cssText = 'display:none;position:absolute;top:100%;left:0;right:0;z-index:200;' +
+      'background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);' +
+      'margin-top:2px;padding:4px 0;list-style:none;box-shadow:0 4px 16px rgba(0,0,0,.12);max-height:240px;overflow-y:auto;';
+    wrap.appendChild(dd);
+
+    function show() {
+      var list = getHistory();
+      if (!list.length) return;
+      dd.innerHTML = '';
+      list.forEach(function(v) {
+        var li = document.createElement('li');
+        li.textContent = v;
+        li.style.cssText = 'padding:7px 12px;cursor:pointer;font-size:.875rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+        li.addEventListener('mousedown', function(e) {
+          e.preventDefault();
+          input.value = v;
+          dd.style.display = 'none';
+          input.form && input.form.dispatchEvent(new Event('input'));
+        });
+        li.addEventListener('mouseover', function() { li.style.background = 'var(--bg)'; });
+        li.addEventListener('mouseout',  function() { li.style.background = ''; });
+        dd.appendChild(li);
+      });
+      dd.style.display = 'block';
+    }
+
+    input.addEventListener('focus', show);
+    input.addEventListener('blur',  function() { setTimeout(function() { dd.style.display = 'none'; }, 150); });
+    input.addEventListener('input', function() { if (input.value) dd.style.display = 'none'; else show(); });
+
+    return dd;
+  }
+
+  // Attach to tag search input
+  var tagInput = document.querySelector('input[name="tag_input"]');
+  if (tagInput) {
+    buildDropdown(tagInput);
+    tagInput.form && tagInput.form.addEventListener('submit', function() {
+      addToHistory(tagInput.value.trim());
+    });
+  }
+
+  // Attach to spotcheck textarea (convert newlines to space for history)
+  var spotInput = document.querySelector('textarea[name="orders"]');
+  if (spotInput) {
+    // For spotcheck we save/restore the raw textarea value as one history entry
+    var spotWrap = spotInput.parentNode;
+    spotWrap.style.position = 'relative';
+    var spotDd = document.createElement('ul');
+    spotDd.className = 'search-history-dropdown';
+    spotDd.style.cssText = 'display:none;position:absolute;top:0;left:calc(100% + 8px);z-index:200;' +
+      'background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);' +
+      'padding:4px 0;list-style:none;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:180px;max-height:240px;overflow-y:auto;';
+    var spotLabel = document.createElement('div');
+    spotLabel.textContent = 'Recent';
+    spotLabel.style.cssText = 'padding:4px 12px 2px;font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;';
+    spotDd.appendChild(spotLabel);
+    spotWrap.appendChild(spotDd);
+
+    var SPOT_KEY = 'spotcheckHistory';
+    function getSpotHistory() {
+      try { return JSON.parse(localStorage.getItem(SPOT_KEY) || '[]'); } catch(e) { return []; }
+    }
+    function showSpotHistory() {
+      var list = getSpotHistory();
+      var existing = spotDd.querySelectorAll('li');
+      existing.forEach(function(el) { el.remove(); });
+      if (!list.length) { spotDd.style.display = 'none'; return; }
+      list.forEach(function(v) {
+        var li = document.createElement('li');
+        li.textContent = v.replace(/\n/g, ', ').substring(0, 40) + (v.length > 40 ? '…' : '');
+        li.style.cssText = 'padding:6px 12px;cursor:pointer;font-size:.8rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;';
+        li.title = v;
+        li.addEventListener('mousedown', function(e) {
+          e.preventDefault();
+          spotInput.value = v;
+          spotDd.style.display = 'none';
+        });
+        li.addEventListener('mouseover', function() { li.style.background = 'var(--bg)'; });
+        li.addEventListener('mouseout',  function() { li.style.background = ''; });
+        spotDd.appendChild(li);
+      });
+      spotDd.style.display = 'block';
+    }
+    spotInput.addEventListener('focus', showSpotHistory);
+    spotInput.addEventListener('blur',  function() { setTimeout(function() { spotDd.style.display = 'none'; }, 150); });
+    var spotForms = document.querySelectorAll('form input[name="action"][value="spotcheck"]');
+    spotForms.forEach(function(inp) {
+      inp.form && inp.form.addEventListener('submit', function() {
+        var val = spotInput.value.trim();
+        if (!val) return;
+        var list = getSpotHistory().filter(function(v) { return v !== val; });
+        list.unshift(val);
+        localStorage.setItem(SPOT_KEY, JSON.stringify(list.slice(0, MAX)));
+      });
+    });
+  }
+
+  // Also save tag search from URL on page load (if result is shown)
+  var tagCode = document.querySelector('code');
+  if (tagCode && tagInput) {
+    // already saved on submit
+  }
+})();
+
+// ── Keyboard shortcut: / focuses first search input ───────────────────────────
+(function() {
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== '/') return;
+    var tag = document.activeElement && document.activeElement.tagName.toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+    e.preventDefault();
+    var el = document.querySelector(
+      'input[name="tag_input"], input[name="orders"], textarea[name="orders"], ' +
+      '.js-search, input[type="text"]:not([readonly]), input[type="search"]'
+    );
+    if (el) { el.focus(); el.select && el.select(); }
+  });
+})();
+
 // ── Sidebar collapsible groups ────────────────────────────────────────────────
 (function() {
   var groups = document.querySelectorAll('.nav-group');

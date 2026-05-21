@@ -13,9 +13,13 @@
 <div class="table-wrap">
   <div class="table-header">
     <h2><?= esc($partialTitle) ?></h2>
-    <span><?= count($partialOrders) ?> order<?= count($partialOrders) !== 1 ? 's' : '' ?></span>
+    <div class="flex items-center gap-2">
+      <span><?= count($partialOrders) ?> order<?= count($partialOrders) !== 1 ? 's' : '' ?></span>
+      <button class="btn btn-sm btn-ghost" data-csv-btn="#tbl-gql-<?= md5($partialTitle) ?>" data-csv-filename="<?= esc(strtolower(str_replace(' ', '-', $partialTitle))) ?>.csv">Export CSV</button>
+    </div>
   </div>
-  <table>
+  <?php $gqlTableId = 'tbl-gql-' . md5($partialTitle); ?>
+  <table id="<?= esc($gqlTableId) ?>">
     <thead>
       <tr>
         <th>Order</th>
@@ -39,6 +43,7 @@
           <?php else: ?>
             <?= esc($r['name']) ?>
           <?php endif; ?>
+          <button class="copy-btn" data-copy="<?= esc(ltrim($r['name'], '#')) ?>" title="Copy order number">⧉</button>
         </td>
         <td class="td-email"><?= esc($r['date']) ?></td>
         <td class="td-email"><?= esc($r['email']) ?></td>

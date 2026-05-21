@@ -18,6 +18,7 @@ class Actions
             'import_ignore_csv'   => self::importIgnoreCsv($ctx),
             'push_to_shipstation' => self::pushToShipStation($ctx),
             'preview_push'        => self::previewPush($ctx),
+            'order_detail'        => self::orderDetail($ctx),
             'flush_cache'         => self::flushCache($ctx),
             default               => null,
         };
@@ -138,6 +139,28 @@ class Actions
             $ss      = new ShipStation($ctx['ssKey'] ?: 'preview', $ctx['ssSecret'] ?: 'preview');
             $payload = $ss->buildPayload($shopifyOrder);
             echo json_encode(['payload' => $payload], JSON_PRETTY_PRINT);
+        } catch (Throwable $e) {
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    private static function orderDetail(array $ctx): void
+    {
+        $shopifyId = trim($_POST['shopify_id'] ?? '');
+        header('Content-Type: application/json');
+
+        if (!$shopifyId || !$ctx['shopifyToken']) {
+            echo json_encode(['error' => 'Missing credentials or order ID.']); exit;
+        }
+
+        try {
+            $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+            $order   = $shopify->getOrder($shopifyId);
+            if (empty($order)) {
+                echo json_encode(['error' => "Order {$shopifyId} not found."]); exit;
+            }
+            echo json_encode(['order' => $order]);
         } catch (Throwable $e) {
             echo json_encode(['error' => $e->getMessage()]);
         }

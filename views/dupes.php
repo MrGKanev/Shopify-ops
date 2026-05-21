@@ -53,9 +53,12 @@
     <div class="table-wrap">
       <div class="table-header">
         <h2>Duplicate Pairs</h2>
-        <span><?= count($dupesResult['pairs']) ?> pair<?= count($dupesResult['pairs']) !== 1 ? 's' : '' ?></span>
+        <div class="flex items-center gap-2">
+          <span><?= count($dupesResult['pairs']) ?> pair<?= count($dupesResult['pairs']) !== 1 ? 's' : '' ?></span>
+          <button class="btn btn-sm btn-ghost" data-csv-btn="#tbl-dupes" data-csv-filename="duplicate-pairs.csv">Export CSV</button>
+        </div>
       </div>
-      <table>
+      <table id="tbl-dupes">
         <thead>
           <tr>
             <th>#</th>
@@ -86,6 +89,7 @@
               <?php else: ?>
                 <?= esc($a['name']) ?>
               <?php endif; ?>
+              <button class="copy-btn" data-copy="<?= esc(ltrim($a['name'], '#')) ?>" title="Copy">⧉</button>
               <div class="text-xs text-muted"><?= substr($a['createdAt'], 0, 16) ?></div>
             </td>
             <td>
@@ -94,6 +98,7 @@
               <?php else: ?>
                 <?= esc($b['name']) ?>
               <?php endif; ?>
+              <button class="copy-btn" data-copy="<?= esc(ltrim($b['name'], '#')) ?>" title="Copy">⧉</button>
               <div class="text-xs text-muted"><?= substr($b['createdAt'], 0, 16) ?></div>
             </td>
             <td><?= esc($a['email'] ?? '') ?></td>
