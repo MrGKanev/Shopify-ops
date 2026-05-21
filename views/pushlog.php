@@ -44,15 +44,16 @@
         ?>
         <tr>
           <td class="order-num"><?= esc($orderNum) ?></td>
-          <td style="font-family:monospace;font-size:.8rem;color:var(--muted)">
+          <td class="font-mono text-[.8rem] text-muted">
             <?php if ($adminUrl): ?>
               <a href="<?= $adminUrl ?>" target="_blank" rel="noopener"><?= esc($shopifyId) ?></a>
             <?php else: ?>
               <?= esc($shopifyId) ?>
             <?php endif; ?>
           </td>
-          <td style="font-family:monospace;font-size:.8rem;color:var(--muted)"><?= esc($ssId) ?></td>
-          <td style="font-size:.85rem"><?= esc($pushedAt) ?></td>
+          <td class="font-mono text-[.8rem] text-muted"><?= esc($ssId) ?></td>
+
+          <td class="text-sm"><?= esc($pushedAt) ?></td>
           <td>
             <a class="ignore-btn"
                href="https://app.shipstation.com/#!/orders/all-orders-search-result?quickSearch=<?= urlencode(ltrim($orderNum, '#')) ?>"

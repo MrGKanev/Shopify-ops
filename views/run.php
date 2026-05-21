@@ -27,7 +27,7 @@
   <div class="hint">Fetches orders from both platforms and shows what's missing in ShipStation. Large ranges (90+ days) may take 30–60 seconds.</div>
 
   <?php if ($auditError): ?>
-    <div class="error-msg" style="margin-bottom:.75rem"><?= esc($auditError) ?></div>
+    <div class="error-msg mb-3"><?= esc($auditError) ?></div>
   <?php endif; ?>
 
   <div class="preset-row">
@@ -50,7 +50,7 @@
         <label>To</label>
         <input type="date" id="js-audit-end" name="audit_end" value="<?= esc($auditEnd) ?>" max="<?= date('Y-m-d') ?>">
       </div>
-      <button class="btn" type="submit" style="flex-shrink:0">Run Audit</button>
+      <button class="btn btn-submit-end" type="submit">Run Audit</button>
     </div>
   </form>
 
@@ -78,8 +78,8 @@
 <?php if ($auditResult !== null): ?>
   <?php $missing = $auditResult['missing']; $count = count($missing); ?>
 
-  <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:1rem;flex-wrap:wrap">
-    <span class="duration-note" style="margin:0">Completed in <?= $auditDuration ?>s &mdash; report saved to <code>reports/</code></span>
+  <div class="flex items-center gap-2 flex-wrap mb-4">
+    <span class="duration-note m-0">Completed in <?= $auditDuration ?>s &mdash; report saved to <code>reports/</code></span>
     <span class="source-badge <?= $auditFromCache['shopify'] ? 'cached' : 'live' ?>">
       Shopify: <?= $auditFromCache['shopify'] ? 'from cache' : 'live' ?>
     </span>
@@ -123,12 +123,12 @@
   ?>
 
   <?php if (!empty($auditResult['duplicates'])): ?>
-    <details class="ignored-section" style="margin-top:1.5rem">
+    <details class="ignored-section mt-6">
       <summary>
         ⚠️ <?= count($auditResult['duplicates']) ?> potential duplicate<?= count($auditResult['duplicates']) !== 1 ? 's' : '' ?> detected
-        <span style="font-weight:400;opacity:.7"> — same customer, same amount, within 24 h</span>
+        <span class="label-opt"> - same customer, same amount, within 24 h</span>
       </summary>
-      <div class="table-wrap" style="margin-top:.75rem">
+      <div class="table-wrap mt-3">
         <table>
           <thead>
             <tr>
@@ -218,7 +218,7 @@
         Clear all cache
       </button>
     </form>
-    <span style="font-size:.8rem;color:var(--muted)"><?= count($cacheEntries) ?> file<?= count($cacheEntries) !== 1 ? 's' : '' ?> cached</span>
+    <span class="text-xs text-muted"><?= count($cacheEntries) ?> file<?= count($cacheEntries) !== 1 ? 's' : '' ?> cached</span>
   </div>
 
   <?php if (empty($cacheEntries)): ?>
@@ -238,8 +238,8 @@
         <tbody>
           <?php foreach ($cacheEntries as $e): ?>
           <tr>
-            <td><span class="chip chip-unknown" style="text-transform:capitalize"><?= esc($e['prefix']) ?></span></td>
-            <td style="font-family:monospace;font-size:.78rem;color:var(--muted)"><?= esc(substr($e['file'], 0, 24)) ?>…</td>
+            <td><span class="chip chip-unknown capitalize"><?= esc($e['prefix']) ?></span></td>
+            <td class="font-mono text-[.8rem] text-muted"><?= esc(substr($e['file'], 0, 24)) ?>…</td>
             <td><span class="js-localtime" data-ts="<?= $e['expires_at'] ?>"></span></td>
             <td><?= $e['size_kb'] ?> KB</td>
             <td>

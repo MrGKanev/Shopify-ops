@@ -146,7 +146,7 @@ class Actions
 
     private static function flushCache(array $ctx): void
     {
-        // Handled in PageLoader (needs to return flushed count to view) — no early exit.
+        // Handled in PageLoader (needs to return flushed count to view) - no early exit.
     }
 
     private static function csvDownload(array $ctx): void

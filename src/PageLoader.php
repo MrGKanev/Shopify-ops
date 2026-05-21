@@ -14,12 +14,14 @@ class PageLoader
 
         // Page-specific
         $data += match ($page) {
-            'run'        => self::loadAudit($action, $ctx, $data),
-            'spotcheck'  => self::loadSpotCheck($action, $ctx),
-            'metafields' => self::loadMetafields($action, $ctx),
-            'tagsearch'  => self::loadTagSearch($action, $ctx),
-            'settings'   => self::loadSettings($action, $ctx),
-            default      => [],
+            'run'       => self::loadAudit($action, $ctx, $data),
+            'spotcheck' => self::loadSpotCheck($action, $ctx),
+            'metafields'=> self::loadMetafields($action, $ctx),
+            'tagsearch' => self::loadTagSearch($action, $ctx),
+            'tagaudit'  => self::loadTagAudit($action, $ctx),
+            'dupes'     => self::loadDuplicates($action, $ctx),
+            'settings'  => self::loadSettings($action, $ctx),
+            default     => [],
         };
 
         return $data;
@@ -364,6 +366,74 @@ class PageLoader
         }
 
         return compact('tagSearch', 'tagSearchError', 'tagInput', 'tagStart', 'tagEnd');
+    }
+
+    // ── Tag Audit ─────────────────────────────────────────────────────────────
+
+    private static function loadTagAudit(string $action, array $ctx): array
+    {
+        $tagAuditResult = null;
+        $tagAuditError  = '';
+        $taStart        = $_POST['ta_start'] ?? $_GET['ta_start'] ?? date('Y-m-d', strtotime('-90 days'));
+        $taEnd          = $_POST['ta_end']   ?? $_GET['ta_end']   ?? date('Y-m-d');
+
+        if ($action === 'tag_audit') {
+            $taStart = trim($_POST['ta_start'] ?? '');
+            $taEnd   = trim($_POST['ta_end']   ?? '');
+
+            if (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
+                $tagAuditError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
+            } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $taStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $taEnd)) {
+                $tagAuditError = 'Invalid date format. Use YYYY-MM-DD.';
+            } else {
+                try {
+                    if (function_exists('set_time_limit')) set_time_limit(300);
+                    $shopify        = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+                    $tagAuditResult = $shopify->fetchTagStats($taStart, $taEnd);
+                    $tagAuditResult['start'] = $taStart;
+                    $tagAuditResult['end']   = $taEnd;
+                } catch (Throwable $e) {
+                    $tagAuditError = $e->getMessage();
+                }
+            }
+        }
+
+        return compact('tagAuditResult', 'tagAuditError', 'taStart', 'taEnd');
+    }
+
+    // ── Duplicate Detector ────────────────────────────────────────────────────
+
+    private static function loadDuplicates(string $action, array $ctx): array
+    {
+        $dupesResult = null;
+        $dupesError  = '';
+        $dupesStart  = $_POST['dupes_start'] ?? $_GET['dupes_start'] ?? date('Y-m-d', strtotime('-30 days'));
+        $dupesEnd    = $_POST['dupes_end']   ?? $_GET['dupes_end']   ?? date('Y-m-d');
+
+        if ($action === 'find_dupes') {
+            $dupesStart = trim($_POST['dupes_start'] ?? '');
+            $dupesEnd   = trim($_POST['dupes_end']   ?? '');
+
+            if (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
+                $dupesError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
+            } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dupesStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dupesEnd)) {
+                $dupesError = 'Invalid date format. Use YYYY-MM-DD.';
+            } elseif ($dupesStart > $dupesEnd) {
+                $dupesError = 'Start date must be before end date.';
+            } else {
+                try {
+                    if (function_exists('set_time_limit')) set_time_limit(300);
+                    $shopify     = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+                    $dupesResult = $shopify->findDuplicateOrders($dupesStart, $dupesEnd);
+                    $dupesResult['start'] = $dupesStart;
+                    $dupesResult['end']   = $dupesEnd;
+                } catch (Throwable $e) {
+                    $dupesError = $e->getMessage();
+                }
+            }
+        }
+
+        return compact('dupesResult', 'dupesError', 'dupesStart', 'dupesEnd');
     }
 
     // ── Settings ──────────────────────────────────────────────────────────────

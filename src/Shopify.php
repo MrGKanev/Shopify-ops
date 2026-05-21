@@ -336,6 +336,156 @@ class Shopify
         ];
     }
 
+    /**
+     * Paginates through orders in a date range and returns aggregate tag statistics:
+     * count per tag, last-seen order name and date. Used for the Tag Audit page.
+     *
+     * @return array{tags: list<array>, total_orders: int, truncated: bool, pages: int}
+     */
+    public function fetchTagStats(string $startDate = '', string $endDate = '', int $maxPages = 40): array
+    {
+        $dateFilter = '';
+        if ($startDate) $dateFilter .= ' created_at:>=' . $startDate . 'T00:00:00Z';
+        if ($endDate)   $dateFilter .= ' created_at:<=' . $endDate   . 'T23:59:59Z';
+        $queryStr = trim($dateFilter) ?: '';
+
+        $tagCounts    = [];
+        $tagLastOrder = [];
+        $cursor       = null;
+        $page         = 0;
+        $totalOrders  = 0;
+        $hasNext      = false;
+
+        do {
+            $after   = $cursor ? ", after: \"{$cursor}\"" : '';
+            $qFilter = $queryStr ? ", query: \"{$queryStr}\"" : '';
+
+            $gql = <<<GQL
+            {
+              orders(first: 250, sortKey: CREATED_AT, reverse: true{$qFilter}{$after}) {
+                pageInfo { hasNextPage endCursor }
+                edges {
+                  node {
+                    name
+                    createdAt
+                    tags
+                  }
+                }
+              }
+            }
+            GQL;
+
+            $data  = $this->graphql($gql);
+            $conn  = $data['data']['orders'] ?? [];
+            $edges = $conn['edges'] ?? [];
+
+            foreach ($edges as $e) {
+                $node = $e['node'];
+                $totalOrders++;
+                foreach ($node['tags'] as $tag) {
+                    if ($tag === '') continue;
+                    $tagCounts[$tag] = ($tagCounts[$tag] ?? 0) + 1;
+                    if (!isset($tagLastOrder[$tag]) || $node['createdAt'] > ($tagLastOrder[$tag]['date'] ?? '')) {
+                        $tagLastOrder[$tag] = ['name' => $node['name'], 'date' => $node['createdAt']];
+                    }
+                }
+            }
+
+            $hasNext = $conn['pageInfo']['hasNextPage'] ?? false;
+            $cursor  = $conn['pageInfo']['endCursor']   ?? null;
+            $page++;
+        } while ($hasNext && $cursor && $page < $maxPages);
+
+        arsort($tagCounts);
+
+        $tags = [];
+        foreach ($tagCounts as $tag => $count) {
+            $tags[] = [
+                'tag'        => $tag,
+                'count'      => $count,
+                'last_order' => $tagLastOrder[$tag]['name'] ?? null,
+                'last_date'  => substr($tagLastOrder[$tag]['date'] ?? '', 0, 10),
+            ];
+        }
+
+        return [
+            'tags'         => $tags,
+            'total_orders' => $totalOrders,
+            'truncated'    => $hasNext,
+            'pages'        => $page,
+        ];
+    }
+
+    /**
+     * Finds potential duplicate orders: same email + same total within 10 minutes.
+     * Paginates through the given date range via GraphQL.
+     *
+     * @return array{pairs: list<array>, scanned: int, truncated: bool}
+     */
+    public function findDuplicateOrders(string $startDate, string $endDate): array
+    {
+        $queryStr = 'created_at:>=' . $startDate . 'T00:00:00Z created_at:<=' . $endDate . 'T23:59:59Z';
+        $cursor   = null;
+        $page     = 0;
+        $all      = [];
+        $hasNext  = false;
+
+        do {
+            $after = $cursor ? ", after: \"{$cursor}\"" : '';
+
+            $gql = <<<GQL
+            {
+              orders(first: 250, sortKey: CREATED_AT, reverse: false, query: "{$queryStr}"{$after}) {
+                pageInfo { hasNextPage endCursor }
+                edges {
+                  node {
+                    id
+                    legacyResourceId
+                    name
+                    email
+                    createdAt
+                    displayFinancialStatus
+                    totalPriceSet { shopMoney { amount currencyCode } }
+                  }
+                }
+              }
+            }
+            GQL;
+
+            $data  = $this->graphql($gql);
+            $conn  = $data['data']['orders'] ?? [];
+            foreach ($conn['edges'] ?? [] as $e) $all[] = $e['node'];
+
+            $hasNext = $conn['pageInfo']['hasNextPage'] ?? false;
+            $cursor  = $conn['pageInfo']['endCursor']   ?? null;
+            $page++;
+        } while ($hasNext && $cursor && $page < 40);
+
+        // Group by email + amount, then find pairs within 10 minutes
+        $groups = [];
+        foreach ($all as $order) {
+            $email  = strtolower(trim($order['email'] ?? ''));
+            $amount = $order['totalPriceSet']['shopMoney']['amount'] ?? '0';
+            if (!$email) continue;
+            $groups[$email . '|' . $amount][] = $order;
+        }
+
+        $pairs = [];
+        foreach ($groups as $orders) {
+            if (count($orders) < 2) continue;
+            for ($i = 0; $i < count($orders); $i++) {
+                for ($j = $i + 1; $j < count($orders); $j++) {
+                    $diff = abs(strtotime($orders[$i]['createdAt']) - strtotime($orders[$j]['createdAt']));
+                    if ($diff <= 600) {
+                        $pairs[] = [$orders[$i], $orders[$j]];
+                    }
+                }
+            }
+        }
+
+        return ['pairs' => $pairs, 'scanned' => count($all), 'truncated' => $hasNext];
+    }
+
     // ── Private ───────────────────────────────────────────────────────
 
     /**

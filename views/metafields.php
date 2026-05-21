@@ -10,7 +10,7 @@
 <?php endif; ?>
 
 <!-- ── Definitions ─────────────────────────────────────────────────────── -->
-<div class="table-wrap" style="margin-bottom:1.5rem">
+<div class="table-wrap mb-6">
   <div class="table-header">
     <h2>Order Metafield Definitions</h2>
     <?php if ($metafieldDefs !== null): ?>
@@ -57,17 +57,17 @@
 </div>
 
 <!-- ── Search by value ────────────────────────────────────────────────── -->
-<div class="run-form" style="margin-bottom:1.5rem">
+<div class="run-form">
   <h2>Search orders by metafield value</h2>
   <div class="hint">Find orders that have a specific metafield value. Leave <strong>Value</strong> empty to see all orders with that metafield (useful for checking what values exist).</div>
 
   <?php if ($metafieldSearchError): ?>
-    <div class="error-msg" style="margin-bottom:.75rem"><?= esc($metafieldSearchError) ?></div>
+    <div class="error-msg mb-3"><?= esc($metafieldSearchError) ?></div>
   <?php endif; ?>
 
   <form method="post" id="js-mf-search-form">
     <input type="hidden" name="action" value="metafield_search">
-    <div class="date-row" style="margin-bottom:.75rem">
+    <div class="date-row mb-3">
       <div class="field">
         <label>Namespace</label>
         <input id="js-search-ns" type="text" name="mf_ns"
@@ -101,8 +101,7 @@
                max="<?= date('Y-m-d') ?>">
       </div>
       <div class="mf-hint">
-        Scans orders page by page (up to 2,500 at a time).
-        No date range — scans the most recent 2,500 orders.
+        No date range - scans the most recent 2,500 orders.
       </div>
       <button class="btn btn-submit-end" type="submit">Search</button>
     </div>
@@ -110,18 +109,18 @@
 
   <?php if ($metafieldSearch !== null): ?>
     <div class="mf-stats">
-      <div class="duration-note" style="margin:0">
+      <div class="duration-note m-0">
         Scanned <strong><?= $metafieldSearch['scanned'] ?></strong> orders
         (<?= $metafieldSearch['pages'] ?> page<?= $metafieldSearch['pages'] !== 1 ? 's' : '' ?>) &mdash;
         <strong><?= $metafieldSearch['with_mf'] ?></strong> have metafield
         <code><?= esc($metafieldSearch['namespace']) ?>.<?= esc($metafieldSearch['key']) ?></code>
         &mdash; <strong><?= count($metafieldSearch['orders']) ?></strong> match
         <?php if ($metafieldSearch['truncated']): ?>
-          <span class="source-badge cached">results truncated — set a date range</span>
+          <span class="source-badge cached">results truncated - set a date range</span>
         <?php endif; ?>
       </div>
       <?php if (!empty($metafieldSearch['sample_values'])): ?>
-        <div class="duration-note" style="margin:0">
+        <div class="duration-note m-0">
           Sample values:
           <?php foreach ($metafieldSearch['sample_values'] as $sv): ?>
             <code class="mf-sample"><?= esc($sv) ?></code>
@@ -134,7 +133,7 @@
 
 <?php if ($metafieldSearch !== null): ?>
   <?php if (empty($metafieldSearch['orders'])): ?>
-    <div class="table-wrap" style="margin-bottom:1.5rem">
+    <div class="table-wrap mb-6">
       <div class="empty">
         <div class="icon">🔍</div>
         <h3>No orders found</h3>
@@ -158,7 +157,7 @@
   <div class="hint">Enter order numbers to fetch all their metafield values. Optionally filter by namespace.key or value text.</div>
 
   <?php if ($metafieldError && !$metafieldSearch): ?>
-    <div class="error-msg" style="margin-bottom:.75rem"><?= esc($metafieldError) ?></div>
+    <div class="error-msg mb-3"><?= esc($metafieldError) ?></div>
   <?php endif; ?>
 
   <form method="post">
@@ -177,7 +176,7 @@
 </div>
 
 <?php if ($metafieldOrders !== null): ?>
-  <div class="spot-results" style="margin-top:1rem">
+  <div class="spot-results mt-4">
     <?php foreach ($metafieldOrders as $mo): ?>
       <div class="spot-row <?= $mo['found'] ? 'found' : 'missing' ?>">
         <div class="spot-row-body">
@@ -204,7 +203,7 @@
                   <?php foreach ($mo['metafields'] as $mf): ?>
                   <tr>
                     <td class="mf-ns-cell"><?= esc($mf['namespace'] ?? '-') ?></td>
-                    <td class="mf-ns-cell" style="color:var(--text)"><?= esc($mf['key'] ?? '-') ?></td>
+                    <td class="mf-key-cell"><?= esc($mf['key'] ?? '-') ?></td>
                     <td><span class="chip chip-unknown"><?= esc($mf['type'] ?? '-') ?></span></td>
                     <td class="mf-val-cell"><?= renderMetafieldValue($mf['value'] ?? '') ?></td>
                   </tr>

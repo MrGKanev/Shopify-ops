@@ -25,11 +25,11 @@ $repeatOffenders = array_slice($repeatOffenders, 0, 20, true);
     <div class="icon">📊</div>
     <h2>No data yet</h2>
     <p>Run your first audit to start seeing trends.</p>
-    <a class="btn" href="?page=run" style="margin-top:1rem">Run first audit</a>
+    <a class="btn mt-4" href="?page=run">Run first audit</a>
   </div>
 <?php else: ?>
 
-<div class="stats" style="margin-bottom:2rem">
+<div class="stats mb-8">
   <div class="stat-card">
     <div class="label">Reports</div>
     <div class="value accent"><?= $totalReports ?></div>
@@ -60,16 +60,14 @@ $repeatOffenders = array_slice($repeatOffenders, 0, 20, true);
   $historySlice = array_reverse($reports);
   $maxCount     = max(1, max(array_column($historySlice, 'count')));
 ?>
-<div style="margin-bottom:.4rem;font-size:.75rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.07em">
-  Missing orders over time
-</div>
-<div class="history" style="margin-bottom:2rem;height:120px;align-items:flex-end">
+<div class="section-label">Missing orders over time</div>
+<div class="history mb-8 h-[120px]">
   <?php foreach ($historySlice as $r):
     $pct   = max(6, round(($r['count'] / $maxCount) * 100));
     $color = $r['count'] === 0 ? 'var(--ok)' : 'var(--warn)';
   ?>
     <a href="?date=<?= esc($r['date']) ?>"
-       style="flex:1;display:block;text-decoration:none;min-width:0"
+       class="flex-1 block no-underline min-w-0"
        title="<?= esc($r['date']) ?>: <?= $r['count'] ?> missing">
       <div class="history-bar" style="height:<?= $pct ?>px;background:<?= $color ?>"></div>
       <?php if ($totalReports <= 20): ?>
@@ -81,13 +79,13 @@ $repeatOffenders = array_slice($repeatOffenders, 0, 20, true);
 <?php endif; ?>
 
 <?php if (!empty($repeatOffenders)): ?>
-<div class="table-wrap" style="margin-bottom:2rem">
-  <div class="table-header" style="align-items:flex-start;flex-direction:column;gap:.5rem">
-    <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+<div class="table-wrap mb-8">
+  <div class="table-header table-header-col">
+    <div class="flex items-center justify-between w-full">
       <h2>Repeat Offenders</h2>
       <span><?= count($repeatOffenders) ?> order<?= count($repeatOffenders) !== 1 ? 's' : '' ?></span>
     </div>
-    <p style="font-size:.8rem;color:var(--muted);margin:0">
+    <p class="text-muted-sm m-0">
       Orders that appeared as missing in 2 or more reports. These are prime candidates to investigate or bulk-ignore.
     </p>
   </div>
@@ -96,7 +94,7 @@ $repeatOffenders = array_slice($repeatOffenders, 0, 20, true);
     <input type="hidden" name="action" value="bulk_ignore_orders">
     <input type="hidden" name="redirect_page" value="trends">
 
-    <div class="bulk-bar" id="bar-repeat" style="display:flex">
+    <div class="bulk-bar !flex" id="bar-repeat">
       <span class="bulk-count" id="cnt-repeat">Select to bulk-ignore</span>
       <input type="text" name="reason" placeholder="Reason (optional)" class="bulk-reason">
       <button class="btn btn-sm btn-danger" type="submit">Ignore selected</button>
@@ -105,7 +103,7 @@ $repeatOffenders = array_slice($repeatOffenders, 0, 20, true);
     <table>
       <thead>
         <tr>
-          <th style="width:32px">
+          <th class="col-check">
             <input type="checkbox" class="js-select-all" data-target="repeat-tbody" data-bar="repeat" title="Select all">
           </th>
           <th>Order #</th>
@@ -141,8 +139,8 @@ $repeatOffenders = array_slice($repeatOffenders, 0, 20, true);
               <span class="seen-badge seen-warn"><?= $h['count'] ?>×</span>
             <?php endif; ?>
           </td>
-          <td style="color:var(--muted)"><?= esc($h['first']) ?></td>
-          <td style="color:var(--muted)"><?= esc($h['last']) ?></td>
+          <td class="td-muted"><?= esc($h['first']) ?></td>
+          <td class="td-muted"><?= esc($h['last']) ?></td>
           <td>
             <?php if ($isIgnored): ?>
               <span class="chip chip-unknown">Ignored</span>
@@ -157,9 +155,9 @@ $repeatOffenders = array_slice($repeatOffenders, 0, 20, true);
   </form>
 </div>
 <?php else: ?>
-  <div class="no-reports" style="padding:2rem">
+  <div class="no-reports no-reports-sm">
     <div class="icon">✅</div>
-    <h2 style="color:var(--ok)">No repeat offenders</h2>
+    <h2 class="tc-ok">No repeat offenders</h2>
     <p>No order has appeared as missing in more than one report.</p>
   </div>
 <?php endif; ?>

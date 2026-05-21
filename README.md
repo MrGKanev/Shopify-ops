@@ -1,6 +1,8 @@
 # Shopify Ops
 
-A self-hosted Shopify operations toolkit. Password-protected web dashboard with tools for order auditing, metafield inspection, tag-based search, and duplicate detection. Runs on plain PHP — no framework, no build step.
+A self-hosted Shopify operations toolkit built around a **ShipStation integration**. Continuously syncs and audits Shopify orders against ShipStation - surfacing missing orders, enabling direct pushes from the dashboard, and providing tools for metafield inspection, tag-based search, and duplicate detection. Runs on plain PHP - no framework, no build step.
+
+> **ShipStation is a core dependency.** The audit engine, push log, and order matching all rely on the ShipStation API. You will need valid ShipStation API credentials to use the audit and push features.
 
 ---
 
@@ -13,7 +15,7 @@ A self-hosted Shopify operations toolkit. Password-protected web dashboard with 
 | **Trends** | Aggregated stats across all reports: average missing count, worst day, repeat offenders. Includes a full history chart and bulk-ignore table. |
 | **Spot-check** | Look up one or more specific order numbers live in ShipStation and/or Shopify. |
 | **Metafields** | Browse order metafield definitions. Search orders by metafield value. Look up all metafields on a specific order. |
-| **Tag Search** | Find all Shopify orders with a specific tag — fast, native index, no full scan needed. |
+| **Tag Search** | Find all Shopify orders with a specific tag - fast, native index, no full scan needed. |
 | **Ignored** | View and manage all ignored orders. Bulk-unignore with checkboxes. Import via CSV. |
 | **Push Log** | Full history of every order pushed to ShipStation from the dashboard. |
 | **Settings** | Test API connectivity, view current `.env` config, manage banned IPs. |
@@ -46,8 +48,8 @@ A self-hosted Shopify operations toolkit. Password-protected web dashboard with 
 ### 1. Clone & configure
 
 ```bash
-git clone https://github.com/mrgkanev/ShipStation-Shopify-Checker.git
-cd ShipStation-Shopify-Checker
+git clone https://github.com/MrGKanev/Shopify-ops.git
+cd Shopify-ops/
 cp .env.example .env
 ```
 
@@ -60,12 +62,12 @@ Edit `.env`:
 | `SS_API_KEY` | ✅ | ShipStation → Settings → API |
 | `SS_API_SECRET` | ✅ | Same page |
 | `WEB_PASSWORD` | ✅ | Dashboard login password |
-| `WEB_USERNAME` | — | Login username (default: `admin`) |
-| `CACHE_TTL` | — | Cache duration in seconds (default: `82800` = 23 h). Set to `0` to disable. |
-| `APP_TITLE` | — | Browser tab title (default: `Shopify Ops`) |
-| `APP_BRAND` | — | Sidebar / login text (default: `Shopify Ops`) |
-| `APP_LOGO` | — | URL to an image that replaces the brand text |
-| `APP_STORE_NUMBER` | — | ShipStation store number — shown as subtitle on login and in the browser tab |
+| `WEB_USERNAME` | - | Login username (default: `admin`) |
+| `CACHE_TTL` | - | Cache duration in seconds (default: `82800` = 23 h). Set to `0` to disable. |
+| `APP_TITLE` | - | Browser tab title (default: `Shopify Ops`) |
+| `APP_BRAND` | - | Sidebar / login text (default: `Shopify Ops`) |
+| `APP_LOGO` | - | URL to an image that replaces the brand text |
+| `APP_STORE_NUMBER` | - | ShipStation store number - shown as subtitle on login and in the browser tab |
 
 #### Creating a Shopify access token
 
@@ -73,7 +75,7 @@ Edit `.env`:
 2. **Create an app**, then **Configuration → Admin API integration → Edit**
 3. Enable scopes: `read_orders`, `read_fulfillments`, `read_metaobjects`
 4. **Save** → **API credentials → Install app**
-5. Copy the **Admin API access token** — shown only once
+5. Copy the **Admin API access token** - shown only once
 
 ### 2. Run locally
 
@@ -116,7 +118,7 @@ Exit codes: `0` = all clear, `1` = missing orders found, `2` = script error.
 | `no_shipping` | `shipping_lines` is empty |
 | `ignored` | Manually dismissed via the dashboard |
 
-> **`on_hold`** is not exposed on the order object — it lives on the Fulfillment Order level and requires a separate API call, cached per order ID.
+> **`on_hold`** is not exposed on the order object - it lives on the Fulfillment Order level and requires a separate API call, cached per order ID.
 
 ---
 
@@ -130,9 +132,9 @@ After each audit, Shopify orders are scanned for potential duplicates: same cust
 
 The **Metafields** page has three sections:
 
-- **Definitions** — lists all order metafield definitions from the store (via GraphQL)
-- **Search by value** — paginate through orders in a date range and filter by metafield value client-side. Leave Value empty to see all orders that have a given metafield set.
-- **Lookup by order number** — fetch all metafields for one or more specific orders
+- **Definitions** - lists all order metafield definitions from the store (via GraphQL)
+- **Search by value** - paginate through orders in a date range and filter by metafield value client-side. Leave Value empty to see all orders that have a given metafield set.
+- **Lookup by order number** - fetch all metafields for one or more specific orders
 
 ---
 
@@ -179,7 +181,7 @@ In addition to order-number matching, a secondary ShipStation index is keyed by 
 
 ## ShipStation fetch buffer
 
-ShipStation orders are fetched for `startDate → endDate + 7 days`. Sub-orders (Addon, variant suffixes, etc.) are often entered into ShipStation a few days after the original Shopify order — the buffer prevents false "missing" results. Shopify orders are still fetched for the exact window, so comparison logic is unaffected.
+ShipStation orders are fetched for `startDate → endDate + 7 days`. Sub-orders (Addon, variant suffixes, etc.) are often entered into ShipStation a few days after the original Shopify order - the buffer prevents false "missing" results. Shopify orders are still fetched for the exact window, so comparison logic is unaffected.
 
 The ShipStation order number index extracts every contiguous digit-run separately, so compound formats like `100042-B2` or `Addon-100031` resolve to their Shopify counterpart correctly.
 

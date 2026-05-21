@@ -10,7 +10,7 @@
   <div class="hint">One per line, or comma-separated. The # prefix is optional.</div>
 
   <?php if ($spotError): ?>
-    <div class="error-msg" style="margin-bottom:.75rem"><?= esc($spotError) ?></div>
+    <div class="error-msg mb-3"><?= esc($spotError) ?></div>
   <?php endif; ?>
 
   <form method="post">
@@ -40,8 +40,8 @@
     $shFoundCount = count(array_filter($spotResults, fn($r) => $r['shopify_found']));
     $total        = count($spotResults);
   ?>
-  <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem">
-    <span style="font-size:.85rem;color:var(--muted)"><?= $total ?> checked &mdash;</span>
+  <div class="flex items-center gap-2 flex-wrap mb-4">
+    <span class="text-xs text-muted"><?= $total ?> checked &mdash;</span>
     <?php if ($checkSS): ?>
       <span class="source-badge <?= $ssFoundCount > 0 ? 'live' : 'cached' ?>">
         ShipStation: <?= $ssFoundCount ?>/<?= $total ?> found
@@ -64,7 +64,7 @@
       $rowClass = $allFound ? 'found' : ($anyFound ? 'partial' : 'missing');
     ?>
       <div class="spot-row <?= $rowClass ?>">
-        <div style="flex:1;min-width:0">
+        <div class="spot-row-body">
           <div class="spot-num">#<?= esc($sc['number']) ?></div>
 
           <?php if ($sc['ss_orders'] !== null): ?>

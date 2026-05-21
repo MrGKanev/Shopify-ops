@@ -1,3 +1,19 @@
+// Toast notifications — move .flash elements into the toast container
+(function() {
+  var container = document.getElementById('toast-container');
+  if (!container) return;
+  document.querySelectorAll('.flash').forEach(function(el) {
+    el.classList.add('toast');
+    if (el.classList.contains('flash-ok'))  el.classList.add('toast-ok');
+    if (el.classList.contains('flash-err')) el.classList.add('toast-err');
+    container.appendChild(el);
+    setTimeout(function() {
+      el.classList.add('toast-dismiss');
+      setTimeout(function() { if (el.parentNode) el.remove(); }, 300);
+    }, 4500);
+  });
+})();
+
 // Local timezone for cache expiry timestamps
 document.querySelectorAll('.js-localtime').forEach(function(el) {
   var ts = parseInt(el.dataset.ts, 10);
@@ -190,13 +206,7 @@ function fillSearch(ns, key) {
     var items = getItems(group);
     if (!items) return;
     group.classList.add('open');
-    // Set exact height so transition is smooth — no jump
     items.style.height = items.scrollHeight + 'px';
-    if (!animate) {
-      // Instant open on page load (no transition flash)
-      items.style.transition = 'none';
-      requestAnimationFrame(function() { items.style.transition = ''; });
-    }
   }
 
   function closeGroup(group) {
@@ -216,7 +226,7 @@ function fillSearch(ns, key) {
     if (g.querySelector('.page-active')) currentActiveGroup = g.dataset.group;
   });
 
-  // Restore saved open/closed state — but only when still in the same active group.
+  // Restore saved open/closed state - but only when still in the same active group.
   // If the user navigated to a different section, discard saved state so stale
   // groups don't keep popping open.
   var saved = {};
@@ -232,9 +242,13 @@ function fillSearch(ns, key) {
   }
 
   function toggleGroup(group) {
-    group.classList.contains('open') ? closeGroup(group) : openGroup(group, true);
+    group.classList.contains('open') ? closeGroup(group) : openGroup(group);
     saveState();
   }
+
+  // Disable all transitions during initial setup to prevent flash
+  var nav = document.getElementById('js-sidebar-nav');
+  if (nav) nav.classList.add('nav-init');
 
   groups.forEach(function(group) {
     var items = getItems(group);
@@ -245,5 +259,12 @@ function fillSearch(ns, key) {
 
     var toggle = group.querySelector('.nav-group-toggle');
     if (toggle) toggle.addEventListener('click', function() { toggleGroup(group); });
+  });
+
+  // Re-enable transitions only after two frames (guarantees browser has painted)
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      if (nav) nav.classList.remove('nav-init');
+    });
   });
 })();
