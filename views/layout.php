@@ -46,8 +46,8 @@
     </div>
 
     <?php
-      $auditPages  = ['reports', 'run', 'trends'];
-      $searchPages = ['spotcheck', 'metafields', 'tagsearch'];
+      $auditPages  = ['reports', 'run', 'trends', 'dupes'];
+      $searchPages = ['spotcheck', 'metafields', 'tagsearch', 'tagaudit'];
       $managePages = ['ignored', 'pushlog'];
       $groupOf = function(string $p) use ($auditPages, $searchPages, $managePages): string {
           if (in_array($p, $auditPages,  true)) return 'audit';
@@ -70,6 +70,7 @@
           <li><a href="?"           class="<?= $page === 'reports' ? 'page-active' : '' ?>">Reports</a></li>
           <li><a href="?page=run"   class="<?= $page === 'run'     ? 'page-active' : '' ?>">Run Audit</a></li>
           <li><a href="?page=trends" class="<?= $page === 'trends' ? 'page-active' : '' ?>">Trends</a></li>
+          <li><a href="?page=dupes"  class="<?= $page === 'dupes'  ? 'page-active' : '' ?>">Duplicate Detector</a></li>
         </ul>
       </div>
 
@@ -83,6 +84,7 @@
           <li><a href="?page=spotcheck"  class="<?= $page === 'spotcheck'  ? 'page-active' : '' ?>">Spot-check</a></li>
           <li><a href="?page=metafields" class="<?= $page === 'metafields' ? 'page-active' : '' ?>">Metafields</a></li>
           <li><a href="?page=tagsearch"  class="<?= $page === 'tagsearch'  ? 'page-active' : '' ?>">Tag Search</a></li>
+          <li><a href="?page=tagaudit"   class="<?= $page === 'tagaudit'   ? 'page-active' : '' ?>">Tag Audit</a></li>
         </ul>
       </div>
 
@@ -114,7 +116,7 @@
 
       <!-- Settings (standalone) -->
       <div class="nav-group-standalone">
-        <a href="?page=settings" class="nav-group-toggle <?= $page === 'settings' ? 'nav-group-active' : '' ?>" style="text-decoration:none">
+        <a href="?page=settings" class="nav-group-toggle no-underline <?= $page === 'settings' ? 'nav-group-active' : '' ?>">
           <span>Settings</span>
         </a>
       </div>
@@ -144,16 +146,16 @@
         <input type="hidden" name="action" value="logout">
         <button class="btn btn-ghost btn-sm btn-full" type="submit">Sign out</button>
       </form>
-      <a href="https://github.com/mrgkanev/ShipStation-Shopify-Checker"
+      <a href="https://github.com/MrGKanev/Shopify-ops"
          class="sidebar-github" target="_blank" rel="noopener" title="View on GitHub">
-        ⌥ GitHub
+        Shopify Ops v1.1.0
       </a>
     </div>
   </aside>
 
   <main class="main">
     <?php
-      $allowedPages = ['reports', 'run', 'trends', 'spotcheck', 'metafields', 'tagsearch', 'ignored', 'pushlog', 'settings'];
+      $allowedPages = ['reports', 'run', 'trends', 'dupes', 'spotcheck', 'metafields', 'tagsearch', 'tagaudit', 'ignored', 'pushlog', 'settings'];
       $page         = in_array($page, $allowedPages, true) ? $page : 'reports';
       $pageFile     = __DIR__ . '/' . $page . '.php';
       if (file_exists($pageFile)) {
@@ -166,6 +168,7 @@
 
 </div>
 
+<div id="toast-container"></div>
 <script src="assets/app.js"></script>
 
 <!-- Dry-run preview modal -->

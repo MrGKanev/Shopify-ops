@@ -3,11 +3,11 @@
  * Partial: GraphQL order results table.
  *
  * Required variables:
- *   $partialOrders       — array of GraphQL order nodes
- *   $partialTitle        — string, table header title
- *   $partialExtraHeader  — string|null, extra column header (null = no extra column)
- *   $partialExtraCell    — Closure(array $o): string|null, renders extra column content
- *   $shopifyAdminBase    — from global scope
+ *   $partialOrders       - array of GraphQL order nodes
+ *   $partialTitle        - string, table header title
+ *   $partialExtraHeader  - string|null, extra column header (null = no extra column)
+ *   $partialExtraCell    - Closure(array $o): string|null, renders extra column content
+ *   $shopifyAdminBase    - from global scope
  */
 ?>
 <div class="table-wrap">

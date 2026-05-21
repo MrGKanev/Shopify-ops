@@ -7,8 +7,8 @@
   </div>
   <?php if ($selectedReport): ?>
     <?php $count = $selectedReport['count']; ?>
-    <div style="display:flex;align-items:center;gap:.75rem">
-      <span class="badge <?= $count > 0 ? 'badge-warn' : 'badge-ok' ?>" style="font-size:.85rem;padding:.3rem .75rem">
+    <div class="flex items-center gap-3">
+      <span class="badge text-[.85rem] py-1 px-3 <?= $count > 0 ? 'badge-warn' : 'badge-ok' ?>">
         <?= $count ?> missing
       </span>
       <a class="btn btn-sm btn-ghost"
@@ -26,7 +26,7 @@
   <div class="no-reports">
     <div class="icon">📭</div>
     <h2>No reports yet</h2>
-    <p style="margin-bottom:1.25rem">No audit reports found. Run your first audit to see which Shopify orders are missing in ShipStation.</p>
+    <p class="mb-5">No audit reports found. Run your first audit to see which Shopify orders are missing in ShipStation.</p>
     <a class="btn" href="?page=run">Run first audit</a>
   </div>
 
@@ -38,7 +38,7 @@
       $historySlice = array_slice(array_reverse($reports), 0, 30);
       $maxCount = max(1, max(array_column($historySlice, 'count')));
     ?>
-    <div style="margin-bottom:.5rem;font-size:.75rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.07em">History</div>
+    <div class="text-xs font-bold uppercase mb-2 text-muted tracking-[.07em]">History</div>
     <div class="history history-compact">
       <?php foreach ($historySlice as $r): ?>
         <?php
@@ -46,7 +46,7 @@
           $color  = $r['count'] === 0 ? 'var(--ok)' : 'var(--warn)';
           $active = $r['date'] === $selectedDate ? 'selected' : '';
         ?>
-        <a href="?date=<?= esc($r['date']) ?>" style="flex:1;display:block;text-decoration:none">
+        <a href="?date=<?= esc($r['date']) ?>" class="flex-1 block no-underline">
           <div class="history-bar <?= $active ?>"
                style="height:<?= $pct ?>px;background:<?= $color ?>"
                title="<?= esc($r['date']) ?>: <?= $r['count'] ?> missing"></div>

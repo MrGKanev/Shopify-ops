@@ -148,7 +148,7 @@ ksort($allTypes);
                     onclick="previewPush(<?= esc(json_encode($shopifyId)) ?>, <?= esc(json_encode('#' . $num)) ?>)">
               Preview
             </button>
-            <form method="post" class="js-push-form" style="display:inline">
+            <form method="post" class="js-push-form inline">
               <input type="hidden" name="action" value="push_to_shipstation">
               <input type="hidden" name="shopify_id" value="<?= esc($shopifyId) ?>">
               <input type="hidden" name="redirect_page" value="<?= esc($context) ?>">
@@ -161,12 +161,12 @@ ksort($allTypes);
             <?php endif; ?>
             <button class="ignore-btn js-ignore-toggle" data-order="<?= esc($normNum) ?>">Ignore</button>
             <div id="ignore-form-<?= esc($normNum) ?>" class="ignore-form-row" style="display:none">
-              <form method="post" style="display:contents">
+              <form method="post" class="contents">
                 <input type="hidden" name="action" value="ignore_order">
                 <input type="hidden" name="order_number" value="<?= esc($num) ?>">
                 <input type="hidden" name="redirect_page" value="<?= esc($context) ?>">
                 <input type="hidden" name="redirect_date" value="<?= esc($contextVal) ?>">
-                <input type="text" name="reason" placeholder="Reason (optional)" style="width:150px">
+                <input type="text" name="reason" placeholder="Reason (optional)" class="input-reason">
                 <button class="btn btn-sm btn-danger" type="submit">Confirm</button>
               </form>
             </div>

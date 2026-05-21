@@ -12,3 +12,7 @@ data/*
 /temp
 *.DS_Store
 /*.txt
+
+# Node / pnpm
+node_modules/
+pnpm-lock.yaml

@@ -67,7 +67,7 @@ function gqlOrderRow(array $o, string $shopifyAdminBase): array
 }
 
 /**
- * Renders a metafield value — pretty-prints JSON, escapes plain text.
+ * Renders a metafield value - pretty-prints JSON, escapes plain text.
  */
 function renderMetafieldValue(string $value): string
 {
