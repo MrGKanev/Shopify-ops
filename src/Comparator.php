@@ -244,4 +244,61 @@ class Comparator
 
         return $matched ? implode(' + ', array_keys($matched)) : $fallback;
     }
+
+    /**
+     * Finds potential duplicate Shopify orders: same customer email + same rounded
+     * total price, placed within 24 hours of each other.
+     *
+     * Returns only groups of 2+ orders, sorted by most-recent first.
+     *
+     * @param  array<int, array<string, mixed>> $shopifyOrders
+     * @return array<int, array{email: string, amount: string, orders: array}>
+     */
+    public static function findDuplicates(array $shopifyOrders): array
+    {
+        $groups = [];
+        foreach ($shopifyOrders as $order) {
+            $email  = strtolower(trim($order['email'] ?? ''));
+            $amount = round((float) ($order['total_price'] ?? 0), 0);
+            if (!$email || $amount <= 0) continue;
+            $key = $email . '|' . $amount;
+            $groups[$key][] = $order;
+        }
+
+        $duplicates = [];
+        foreach ($groups as $key => $orders) {
+            if (count($orders) < 2) continue;
+
+            // Sort by created_at ascending for window comparison
+            usort($orders, fn($a, $b) => strcmp($a['created_at'] ?? '', $b['created_at'] ?? ''));
+
+            // Slide a 24-hour window: keep only clusters where at least two orders
+            // are within 24 h of each other
+            $cluster = [$orders[0]];
+            for ($i = 1; $i < count($orders); $i++) {
+                $prev = strtotime($orders[$i - 1]['created_at'] ?? '0');
+                $curr = strtotime($orders[$i]['created_at']     ?? '0');
+                if ($curr - $prev <= 86400) {
+                    $cluster[] = $orders[$i];
+                } else {
+                    if (count($cluster) >= 2) {
+                        [$email, $amount] = explode('|', $key);
+                        $duplicates[] = ['email' => $email, 'amount' => $amount, 'orders' => array_reverse($cluster)];
+                    }
+                    $cluster = [$orders[$i]];
+                }
+            }
+            if (count($cluster) >= 2) {
+                [$email, $amount] = explode('|', $key);
+                $duplicates[] = ['email' => $email, 'amount' => $amount, 'orders' => array_reverse($cluster)];
+            }
+        }
+
+        // Sort by most recent duplicate first
+        usort($duplicates, fn($a, $b) =>
+            strcmp($b['orders'][0]['created_at'] ?? '', $a['orders'][0]['created_at'] ?? '')
+        );
+
+        return $duplicates;
+    }
 }

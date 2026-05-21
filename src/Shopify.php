@@ -170,6 +170,69 @@ class Shopify
     }
 
     /**
+     * Searches orders by Shopify tag via GraphQL. The `tag:` filter is natively
+     * supported in the orders query string, so this is a fast indexed lookup.
+     *
+     * @return array{matches: array, scanned: int, pages: int, truncated: bool}
+     */
+    public function searchOrdersByTag(
+        string $tag,
+        string $startDate = '',
+        string $endDate   = '',
+        int    $maxPages  = 20
+    ): array {
+        $safeTag    = addslashes($tag);
+        $dateFilter = '';
+        if ($startDate) $dateFilter .= ' created_at:>=' . $startDate . 'T00:00:00Z';
+        if ($endDate)   $dateFilter .= ' created_at:<=' . $endDate   . 'T23:59:59Z';
+        $queryStr = 'tag:"' . $safeTag . '"' . ($dateFilter ? ' ' . trim($dateFilter) : '');
+
+        $matches = [];
+        $cursor  = null;
+        $page    = 0;
+
+        do {
+            $after = $cursor ? ", after: \"{$cursor}\"" : '';
+            $gql   = <<<GQL
+            {
+              orders(first: 250, sortKey: CREATED_AT, reverse: true, query: "{$queryStr}"{$after}) {
+                pageInfo { hasNextPage endCursor }
+                edges {
+                  node {
+                    id
+                    legacyResourceId
+                    name
+                    displayFinancialStatus
+                    displayFulfillmentStatus
+                    createdAt
+                    email
+                    tags
+                    totalPriceSet { shopMoney { amount currencyCode } }
+                  }
+                }
+              }
+            }
+            GQL;
+
+            $data    = $this->graphql($gql);
+            $conn    = $data['data']['orders'] ?? [];
+            $edges   = $conn['edges'] ?? [];
+            foreach ($edges as $e) $matches[] = $e['node'];
+
+            $hasNext = $conn['pageInfo']['hasNextPage'] ?? false;
+            $cursor  = $conn['pageInfo']['endCursor']   ?? null;
+            $page++;
+        } while ($hasNext && $cursor && $page < $maxPages);
+
+        return [
+            'matches'   => $matches,
+            'scanned'   => count($matches),
+            'pages'     => $page,
+            'truncated' => $hasNext,
+        ];
+    }
+
+    /**
      * Searches orders by metafield value by paginating through orders in a date
      * range and filtering client-side. Shopify does not support metafield value
      * filtering in the GraphQL query string, so we fetch each page with the

@@ -176,3 +176,74 @@ function fillSearch(ns, key) {
   var filter = document.getElementById('js-mf-filter');
   if (filter) filter.value = ns + '.' + key;
 }
+
+// ── Sidebar collapsible groups ────────────────────────────────────────────────
+(function() {
+  var groups = document.querySelectorAll('.nav-group');
+  if (!groups.length) return;
+
+  function getItems(group) {
+    return group.querySelector('.nav-group-items');
+  }
+
+  function openGroup(group, animate) {
+    var items = getItems(group);
+    if (!items) return;
+    group.classList.add('open');
+    // Set exact height so transition is smooth — no jump
+    items.style.height = items.scrollHeight + 'px';
+    if (!animate) {
+      // Instant open on page load (no transition flash)
+      items.style.transition = 'none';
+      requestAnimationFrame(function() { items.style.transition = ''; });
+    }
+  }
+
+  function closeGroup(group) {
+    var items = getItems(group);
+    if (!items) return;
+    // Pin current height before collapsing so transition starts from the right value
+    items.style.height = items.scrollHeight + 'px';
+    requestAnimationFrame(function() {
+      items.style.height = '0';
+      group.classList.remove('open');
+    });
+  }
+
+  // Which group contains the currently active page
+  var currentActiveGroup = '';
+  groups.forEach(function(g) {
+    if (g.querySelector('.page-active')) currentActiveGroup = g.dataset.group;
+  });
+
+  // Restore saved open/closed state — but only when still in the same active group.
+  // If the user navigated to a different section, discard saved state so stale
+  // groups don't keep popping open.
+  var saved = {};
+  if (localStorage.getItem('navActiveGroup') === currentActiveGroup) {
+    try { saved = JSON.parse(localStorage.getItem('navGroups') || '{}'); } catch(e) {}
+  }
+
+  function saveState() {
+    var state = {};
+    groups.forEach(function(g) { state[g.dataset.group] = g.classList.contains('open'); });
+    localStorage.setItem('navGroups',      JSON.stringify(state));
+    localStorage.setItem('navActiveGroup', currentActiveGroup);
+  }
+
+  function toggleGroup(group) {
+    group.classList.contains('open') ? closeGroup(group) : openGroup(group, true);
+    saveState();
+  }
+
+  groups.forEach(function(group) {
+    var items = getItems(group);
+    if (items) items.style.height = '0';
+
+    var isActive = group.dataset.group === currentActiveGroup;
+    if (isActive || saved[group.dataset.group]) openGroup(group, false);
+
+    var toggle = group.querySelector('.nav-group-toggle');
+    if (toggle) toggle.addEventListener('click', function() { toggleGroup(group); });
+  });
+})();

@@ -34,3 +34,46 @@ function classifyOrder(array $order): string
     if (!empty($order['order_type'])) return $order['order_type'];
     return Comparator::classifyOrder($order);
 }
+
+/**
+ * Prepares display variables for a single GraphQL order node.
+ * Used by metafields.php, tagsearch.php and any future GraphQL order tables.
+ *
+ * @return array{url:string|null, name:string, date:string, email:string,
+ *               finChip:string, finLabel:string, fulLabel:string,
+ *               amount:string|null, currency:string, legacyId:string}
+ */
+function gqlOrderRow(array $o, string $shopifyAdminBase): array
+{
+    $legacyId = $o['legacyResourceId'] ?? '';
+    $fin      = strtolower($o['displayFinancialStatus'] ?? '');
+    return [
+        'legacyId' => $legacyId,
+        'url'      => $legacyId ? $shopifyAdminBase . '/' . $legacyId : null,
+        'name'     => $o['name'] ?? '-',
+        'date'     => !empty($o['createdAt']) ? date('Y-m-d', strtotime($o['createdAt'])) : '-',
+        'email'    => $o['email'] ?? '-',
+        'finChip'  => match($fin) {
+            'paid'                        => 'chip-paid',
+            'partially_paid'              => 'chip-partial',
+            'unpaid', 'pending'           => 'chip-unpaid',
+            default                       => 'chip-unknown',
+        },
+        'finLabel' => $o['displayFinancialStatus']   ?? '-',
+        'fulLabel' => $o['displayFulfillmentStatus'] ?? '-',
+        'amount'   => $o['totalPriceSet']['shopMoney']['amount']       ?? null,
+        'currency' => $o['totalPriceSet']['shopMoney']['currencyCode'] ?? '',
+    ];
+}
+
+/**
+ * Renders a metafield value — pretty-prints JSON, escapes plain text.
+ */
+function renderMetafieldValue(string $value): string
+{
+    $decoded = json_decode($value, true);
+    if ($decoded !== null) {
+        return '<pre class="mf-val-pre">' . esc(json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) . '</pre>';
+    }
+    return esc($value);
+}
