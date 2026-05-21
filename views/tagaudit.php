@@ -72,7 +72,7 @@
           <?php foreach ($tagAuditResult['tags'] as $row):
             $isOrphan = $row['count'] === 1 && $row['last_date'] < $cutoffDate;
           ?>
-          <tr class="<?= $isOrphan ? 'tr-orphan' : '' ?>">
+          <tr class="<?= $isOrphan ? 'opacity-55' : '' ?>">
             <td>
               <code><?= esc($row['tag']) ?></code>
               <?php if ($isOrphan): ?>
@@ -85,7 +85,7 @@
               <?php if ($row['last_order']): ?>
                 <?= esc($row['last_order']) ?>
               <?php else: ?>
-                <span class="td-muted">-</span>
+                <span class="text-muted">-</span>
               <?php endif; ?>
             </td>
             <td>
