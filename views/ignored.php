@@ -99,8 +99,8 @@ uasort($sortedIgnored, fn($a, $b) => strcmp($b['ignored_at'] ?? '', $a['ignored_
                    onchange="updateBulkBar('ignored')">
           </td>
           <td><span class="order-num">#<?= esc($normNum) ?></span></td>
-          <td class="td-muted"><?= esc($ignoredAt) ?></td>
-          <td class="td-muted"><?= $reason !== '' ? esc($reason) : '<em class="dim">-</em>' ?></td>
+          <td class="text-muted"><?= esc($ignoredAt) ?></td>
+          <td class="text-muted"><?= $reason !== '' ? esc($reason) : '<em class="opacity-50">-</em>' ?></td>
           <td>
             <?php if (is_int($seenCount)): ?>
               <?php if ($seenCount >= 3): ?>
@@ -108,10 +108,10 @@ uasort($sortedIgnored, fn($a, $b) => strcmp($b['ignored_at'] ?? '', $a['ignored_
               <?php elseif ($seenCount >= 2): ?>
                 <span class="seen-badge seen-warn"><?= $seenCount ?>×</span>
               <?php else: ?>
-                <span class="text-muted-sm">1×</span>
+                <span class="text-xs text-muted">1×</span>
               <?php endif; ?>
             <?php else: ?>
-              <span class="text-muted-sm">-</span>
+              <span class="text-xs text-muted">-</span>
             <?php endif; ?>
           </td>
           <td>

@@ -60,7 +60,7 @@ $repeatOffenders = array_slice($repeatOffenders, 0, 20, true);
   $historySlice = array_reverse($reports);
   $maxCount     = max(1, max(array_column($historySlice, 'count')));
 ?>
-<div class="section-label">Missing orders over time</div>
+<div class="text-xs font-bold uppercase mb-2 text-muted tracking-[.07em]">Missing orders over time</div>
 <div class="history mb-8 h-[120px]">
   <?php foreach ($historySlice as $r):
     $pct   = max(6, round(($r['count'] / $maxCount) * 100));
@@ -80,12 +80,12 @@ $repeatOffenders = array_slice($repeatOffenders, 0, 20, true);
 
 <?php if (!empty($repeatOffenders)): ?>
 <div class="table-wrap mb-8">
-  <div class="table-header table-header-col">
+  <div class="table-header !flex-col !items-start gap-2">
     <div class="flex items-center justify-between w-full">
       <h2>Repeat Offenders</h2>
       <span><?= count($repeatOffenders) ?> order<?= count($repeatOffenders) !== 1 ? 's' : '' ?></span>
     </div>
-    <p class="text-muted-sm m-0">
+    <p class="text-xs text-muted m-0">
       Orders that appeared as missing in 2 or more reports. These are prime candidates to investigate or bulk-ignore.
     </p>
   </div>
@@ -139,8 +139,8 @@ $repeatOffenders = array_slice($repeatOffenders, 0, 20, true);
               <span class="seen-badge seen-warn"><?= $h['count'] ?>×</span>
             <?php endif; ?>
           </td>
-          <td class="td-muted"><?= esc($h['first']) ?></td>
-          <td class="td-muted"><?= esc($h['last']) ?></td>
+          <td class="text-muted"><?= esc($h['first']) ?></td>
+          <td class="text-muted"><?= esc($h['last']) ?></td>
           <td>
             <?php if ($isIgnored): ?>
               <span class="chip chip-unknown">Ignored</span>
@@ -155,9 +155,9 @@ $repeatOffenders = array_slice($repeatOffenders, 0, 20, true);
   </form>
 </div>
 <?php else: ?>
-  <div class="no-reports no-reports-sm">
+  <div class="no-reports p-8">
     <div class="icon">✅</div>
-    <h2 class="tc-ok">No repeat offenders</h2>
+    <h2 class="text-ok">No repeat offenders</h2>
     <p>No order has appeared as missing in more than one report.</p>
   </div>
 <?php endif; ?>

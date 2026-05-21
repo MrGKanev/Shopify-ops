@@ -203,7 +203,7 @@
                   <?php foreach ($mo['metafields'] as $mf): ?>
                   <tr>
                     <td class="mf-ns-cell"><?= esc($mf['namespace'] ?? '-') ?></td>
-                    <td class="mf-key-cell"><?= esc($mf['key'] ?? '-') ?></td>
+                    <td class="font-mono text-[.82rem]"><?= esc($mf['key'] ?? '-') ?></td>
                     <td><span class="chip chip-unknown"><?= esc($mf['type'] ?? '-') ?></span></td>
                     <td class="mf-val-cell"><?= renderMetafieldValue($mf['value'] ?? '') ?></td>
                   </tr>

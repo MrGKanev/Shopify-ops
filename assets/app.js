@@ -254,8 +254,7 @@ function fillSearch(ns, key) {
     var items = getItems(group);
     if (items) items.style.height = '0';
 
-    var isActive = group.dataset.group === currentActiveGroup;
-    if (isActive || saved[group.dataset.group]) openGroup(group, false);
+    openGroup(group, false);
 
     var toggle = group.querySelector('.nav-group-toggle');
     if (toggle) toggle.addEventListener('click', function() { toggleGroup(group); });
