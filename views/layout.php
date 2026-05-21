@@ -45,46 +45,81 @@
       <div class="store"><span class="store-label">Store</span> <?= esc($shopifyStore) ?></div>
     </div>
 
-    <div class="sidebar-section">Tools</div>
-    <ul class="sidebar-nav">
-      <li>
-        <a href="?" class="<?= $page === 'reports' ? 'page-active' : '' ?>">Reports</a>
-      </li>
-      <li>
-        <a href="?page=run" class="<?= $page === 'run' ? 'page-active' : '' ?>">Run Audit</a>
-      </li>
-      <li>
-        <a href="?page=trends" class="<?= $page === 'trends' ? 'page-active' : '' ?>">Trends</a>
-      </li>
-      <li>
-        <a href="?page=spotcheck" class="<?= $page === 'spotcheck' ? 'page-active' : '' ?>">Spot-check</a>
-      </li>
-      <li>
-        <a href="?page=metafields" class="<?= $page === 'metafields' ? 'page-active' : '' ?>">Metafields</a>
-      </li>
-    </ul>
-    <div class="sidebar-section">Manage</div>
-    <ul class="sidebar-nav">
-      <li>
-        <a href="?page=ignored" class="<?= $page === 'ignored' ? 'page-active' : '' ?>">
-          Ignored
-          <?php if (count($ignoredOrders) > 0): ?>
-            <span class="badge badge-warn badge-sm"><?= count($ignoredOrders) ?></span>
-          <?php endif; ?>
+    <?php
+      $auditPages  = ['reports', 'run', 'trends'];
+      $searchPages = ['spotcheck', 'metafields', 'tagsearch'];
+      $managePages = ['ignored', 'pushlog'];
+      $groupOf = function(string $p) use ($auditPages, $searchPages, $managePages): string {
+          if (in_array($p, $auditPages,  true)) return 'audit';
+          if (in_array($p, $searchPages, true)) return 'search';
+          if (in_array($p, $managePages, true)) return 'manage';
+          return 'settings';
+      };
+      $activeGroup = $groupOf($page);
+    ?>
+
+    <nav class="sidebar-groups" id="js-sidebar-nav">
+
+      <!-- Audit -->
+      <div class="nav-group" data-group="audit">
+        <button class="nav-group-toggle <?= $activeGroup === 'audit' ? 'nav-group-active' : '' ?>" type="button">
+          <span>Audit</span>
+          <svg class="nav-arrow" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <ul class="nav-group-items">
+          <li><a href="?"           class="<?= $page === 'reports' ? 'page-active' : '' ?>">Reports</a></li>
+          <li><a href="?page=run"   class="<?= $page === 'run'     ? 'page-active' : '' ?>">Run Audit</a></li>
+          <li><a href="?page=trends" class="<?= $page === 'trends' ? 'page-active' : '' ?>">Trends</a></li>
+        </ul>
+      </div>
+
+      <!-- Search -->
+      <div class="nav-group" data-group="search">
+        <button class="nav-group-toggle <?= $activeGroup === 'search' ? 'nav-group-active' : '' ?>" type="button">
+          <span>Search</span>
+          <svg class="nav-arrow" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <ul class="nav-group-items">
+          <li><a href="?page=spotcheck"  class="<?= $page === 'spotcheck'  ? 'page-active' : '' ?>">Spot-check</a></li>
+          <li><a href="?page=metafields" class="<?= $page === 'metafields' ? 'page-active' : '' ?>">Metafields</a></li>
+          <li><a href="?page=tagsearch"  class="<?= $page === 'tagsearch'  ? 'page-active' : '' ?>">Tag Search</a></li>
+        </ul>
+      </div>
+
+      <!-- Manage -->
+      <div class="nav-group" data-group="manage">
+        <button class="nav-group-toggle <?= $activeGroup === 'manage' ? 'nav-group-active' : '' ?>" type="button">
+          <span>Manage</span>
+          <svg class="nav-arrow" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <ul class="nav-group-items">
+          <li>
+            <a href="?page=ignored" class="<?= $page === 'ignored' ? 'page-active' : '' ?>">
+              Ignored
+              <?php if (count($ignoredOrders) > 0): ?>
+                <span class="badge badge-warn badge-sm"><?= count($ignoredOrders) ?></span>
+              <?php endif; ?>
+            </a>
+          </li>
+          <li>
+            <a href="?page=pushlog" class="<?= $page === 'pushlog' ? 'page-active' : '' ?>">
+              Push Log
+              <?php if (count($pushLog) > 0): ?>
+                <span class="badge badge-ok badge-sm"><?= count($pushLog) ?></span>
+              <?php endif; ?>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Settings (standalone) -->
+      <div class="nav-group-standalone">
+        <a href="?page=settings" class="nav-group-toggle <?= $page === 'settings' ? 'nav-group-active' : '' ?>" style="text-decoration:none">
+          <span>Settings</span>
         </a>
-      </li>
-      <li>
-        <a href="?page=pushlog" class="<?= $page === 'pushlog' ? 'page-active' : '' ?>">
-          Push Log
-          <?php if (count($pushLog) > 0): ?>
-            <span class="badge badge-ok badge-sm"><?= count($pushLog) ?></span>
-          <?php endif; ?>
-        </a>
-      </li>
-      <li>
-        <a href="?page=settings" class="<?= $page === 'settings' ? 'page-active' : '' ?>">Settings</a>
-      </li>
-    </ul>
+      </div>
+
+    </nav>
 
     <?php if (!empty($reports)): ?>
       <div class="sidebar-section">History</div>
@@ -118,13 +153,13 @@
 
   <main class="main">
     <?php
-      $allowedPages = ['reports', 'run', 'trends', 'spotcheck', 'metafields', 'ignored', 'pushlog', 'settings'];
+      $allowedPages = ['reports', 'run', 'trends', 'spotcheck', 'metafields', 'tagsearch', 'ignored', 'pushlog', 'settings'];
       $page         = in_array($page, $allowedPages, true) ? $page : 'reports';
-      $pageFile     = __DIR__ . '/page-' . $page . '.php';
+      $pageFile     = __DIR__ . '/' . $page . '.php';
       if (file_exists($pageFile)) {
           require $pageFile;
       } else {
-          require __DIR__ . '/page-reports.php';
+          require __DIR__ . '/reports.php';
       }
     ?>
   </main>

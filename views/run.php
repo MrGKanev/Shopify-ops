@@ -122,6 +122,52 @@
     require __DIR__ . '/partials/missing-table.php';
   ?>
 
+  <?php if (!empty($auditResult['duplicates'])): ?>
+    <details class="ignored-section" style="margin-top:1.5rem">
+      <summary>
+        ⚠️ <?= count($auditResult['duplicates']) ?> potential duplicate<?= count($auditResult['duplicates']) !== 1 ? 's' : '' ?> detected
+        <span style="font-weight:400;opacity:.7"> — same customer, same amount, within 24 h</span>
+      </summary>
+      <div class="table-wrap" style="margin-top:.75rem">
+        <table>
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Amount</th>
+              <th>Orders</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($auditResult['duplicates'] as $dup): ?>
+            <tr>
+              <td class="td-email"><?= esc($dup['email']) ?></td>
+              <td class="td-price">$<?= number_format((float)$dup['amount'], 2) ?></td>
+              <td>
+                <div class="spot-matches">
+                  <?php foreach ($dup['orders'] as $do):
+                    $doUrl = !empty($do['id']) ? $shopifyAdminBase . '/' . $do['id'] : null;
+                    $doDate = $do['created_at'] ? date('Y-m-d H:i', strtotime($do['created_at'])) : '';
+                  ?>
+                    <?php if ($doUrl): ?>
+                      <a class="spot-match-tag spot-match-tag-sh" href="<?= esc($doUrl) ?>" target="_blank" rel="noopener">
+                        <?= esc($do['name'] ?? $do['order_number'] ?? '?') ?> &middot; <?= esc($doDate) ?>
+                      </a>
+                    <?php else: ?>
+                      <span class="spot-match-tag spot-match-tag-sh">
+                        <?= esc($do['name'] ?? $do['order_number'] ?? '?') ?> &middot; <?= esc($doDate) ?>
+                      </span>
+                    <?php endif; ?>
+                  <?php endforeach; ?>
+                </div>
+              </td>
+            </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </details>
+  <?php endif; ?>
+
   <?php if (!empty($auditResult['ignored'])): ?>
     <details class="ignored-section">
       <summary><?= count($auditResult['ignored']) ?> ignored order<?= count($auditResult['ignored']) !== 1 ? 's' : '' ?> (excluded from results)</summary>

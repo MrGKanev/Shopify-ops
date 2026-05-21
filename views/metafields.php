@@ -142,66 +142,13 @@
       </div>
     </div>
   <?php else: ?>
-    <div class="table-wrap" style="margin-bottom:1.5rem">
-      <div class="table-header">
-        <h2>Results</h2>
-        <span><?= count($metafieldSearch['orders']) ?> order<?= count($metafieldSearch['orders']) !== 1 ? 's' : '' ?></span>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Order</th>
-            <th>Date</th>
-            <th>Email</th>
-            <th>Financial</th>
-            <th>Fulfillment</th>
-            <th>Total</th>
-            <th>Value</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($metafieldSearch['orders'] as $o):
-            $legacyId = $o['legacyResourceId'] ?? '';
-            $shUrl    = $legacyId ? $shopifyAdminBase . '/' . $legacyId : null;
-            $mfVal    = $o['metafield']['value'] ?? '-';
-            $decoded  = json_decode($mfVal, true);
-            $amount   = $o['totalPriceSet']['shopMoney']['amount']       ?? null;
-            $currency = $o['totalPriceSet']['shopMoney']['currencyCode'] ?? '';
-            $date     = $o['createdAt'] ? date('Y-m-d', strtotime($o['createdAt'])) : '-';
-            $fin      = strtolower($o['displayFinancialStatus'] ?? '');
-            $finChip  = match($fin) { 'paid' => 'chip-paid', 'partially_paid' => 'chip-partial', 'unpaid', 'pending' => 'chip-unpaid', default => 'chip-unknown' };
-          ?>
-          <tr>
-            <td class="order-num">
-              <?php if ($shUrl): ?>
-                <a href="<?= esc($shUrl) ?>" target="_blank" rel="noopener"><?= esc($o['name'] ?? '-') ?></a>
-              <?php else: ?>
-                <?= esc($o['name'] ?? '-') ?>
-              <?php endif; ?>
-            </td>
-            <td class="td-email"><?= esc($date) ?></td>
-            <td class="td-email"><?= esc($o['email'] ?? '-') ?></td>
-            <td><span class="chip <?= $finChip ?>"><?= esc($o['displayFinancialStatus'] ?? '-') ?></span></td>
-            <td><span class="chip chip-unknown"><?= esc($o['displayFulfillmentStatus'] ?? '-') ?></span></td>
-            <td class="td-price"><?= $amount !== null ? $currency . ' ' . number_format((float)$amount, 2) : '-' ?></td>
-            <td class="mf-val-cell">
-              <?php if ($decoded !== null): ?>
-                <pre><?= esc(json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) ?></pre>
-              <?php else: ?>
-                <?= esc($mfVal) ?>
-              <?php endif; ?>
-            </td>
-            <td class="td-actions">
-              <?php if ($legacyId): ?>
-                <a class="ignore-btn" href="?page=spotcheck&prefill=<?= urlencode($o['name'] ?? '') ?>">Spot-check</a>
-              <?php endif; ?>
-            </td>
-          </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
+    <?php
+      $partialOrders      = $metafieldSearch['orders'];
+      $partialTitle       = 'Results';
+      $partialExtraHeader = 'Value';
+      $partialExtraCell   = fn($o) => renderMetafieldValue($o['metafield']['value'] ?? '-');
+      require __DIR__ . '/partials/gql-orders-table.php';
+    ?>
   <?php endif; ?>
 <?php endif; ?>
 
@@ -254,21 +201,12 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <?php foreach ($mo['metafields'] as $mf):
-                    $val     = $mf['value'] ?? '';
-                    $decoded = json_decode($val, true);
-                  ?>
+                  <?php foreach ($mo['metafields'] as $mf): ?>
                   <tr>
                     <td class="mf-ns-cell"><?= esc($mf['namespace'] ?? '-') ?></td>
                     <td class="mf-ns-cell" style="color:var(--text)"><?= esc($mf['key'] ?? '-') ?></td>
                     <td><span class="chip chip-unknown"><?= esc($mf['type'] ?? '-') ?></span></td>
-                    <td class="mf-val-cell">
-                      <?php if ($decoded !== null): ?>
-                        <pre><?= esc(json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) ?></pre>
-                      <?php else: ?>
-                        <?= esc($val) ?>
-                      <?php endif; ?>
-                    </td>
+                    <td class="mf-val-cell"><?= renderMetafieldValue($mf['value'] ?? '') ?></td>
                   </tr>
                   <?php endforeach; ?>
                 </tbody>
