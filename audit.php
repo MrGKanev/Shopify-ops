@@ -3,6 +3,7 @@
 // audit.php - ShipStation ↔ Shopify Order Audit
 // Usage: php audit.php [--spot-check 100042,100043]
 
+require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/src/Env.php';
 require_once __DIR__ . '/src/Cache.php';
 require_once __DIR__ . '/src/ShipStation.php';
