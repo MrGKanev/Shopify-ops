@@ -16,6 +16,8 @@
 </head>
 <body>
 
+<div id="js-loading-bar"></div>
+
 <!-- Mobile header (hidden on desktop) -->
 <header class="mobile-header">
   <div class="brand">

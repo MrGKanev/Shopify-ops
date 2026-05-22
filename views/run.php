@@ -1,20 +1,3 @@
-<!-- Audit loading overlay -->
-<div class="audit-loading" id="js-audit-loading">
-  <div class="spinner"></div>
-  <div class="loading-title">Running audit…</div>
-  <div class="loading-steps">
-    <div class="loading-step" id="lstep-shopify">
-      <div class="step-dot"></div> Fetching Shopify orders
-    </div>
-    <div class="loading-step" id="lstep-ss">
-      <div class="step-dot"></div> Fetching ShipStation orders
-    </div>
-    <div class="loading-step" id="lstep-compare">
-      <div class="step-dot"></div> Comparing &amp; saving report
-    </div>
-  </div>
-</div>
-
 <div class="topbar">
   <div>
     <h1>Run Audit</h1>
@@ -69,25 +52,7 @@
     </div>
   </form>
 
-  <script>
-  document.querySelectorAll('.preset-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      var days = parseInt(this.dataset.days);
-      var end  = new Date();
-      var start = new Date();
-      start.setDate(end.getDate() - days + 1);
-      var fmt = function(d) {
-        return d.getFullYear() + '-' +
-          String(d.getMonth()+1).padStart(2,'0') + '-' +
-          String(d.getDate()).padStart(2,'0');
-      };
-      document.getElementById('js-audit-start').value = fmt(start);
-      document.getElementById('js-audit-end').value   = fmt(end);
-      document.querySelectorAll('.preset-btn').forEach(function(b){ b.classList.remove('preset-btn-active'); });
-      this.classList.add('preset-btn-active');
-    });
-  });
-  </script>
+
 </div>
 
 <?php if ($auditResult !== null): ?>

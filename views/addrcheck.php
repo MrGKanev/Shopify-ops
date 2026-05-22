@@ -12,7 +12,7 @@
     <p>Issues are split into two severity levels:</p>
     <ul>
       <li><strong>Critical</strong> — the address is almost certainly undeliverable: missing street, city, ZIP, country, or recipient name.</li>
-      <li><strong>Warning</strong> — the address may cause problems: invalid ZIP format for US/CA, missing state/province, PO Box with a carrier that can't deliver there, or no phone number on an express shipment.</li>
+      <li><strong>Warning</strong> — the address may cause problems: invalid ZIP format for US/CA, missing state/province, PO Box address (always flagged — use the <em>PO Box only</em> filter to isolate these), or no phone number on an express shipment.</li>
     </ul>
     <p>Critical issues are sorted to the top. Each row links directly to the Shopify order and to Spot-check for a live ShipStation cross-reference.</p>
   </div>
@@ -70,7 +70,10 @@
       <div class="table-header">
         <h2>Address Issues</h2>
         <div class="flex items-center gap-2">
-          <span><?= count($addrResult['rows']) ?> order<?= count($addrResult['rows']) !== 1 ? 's' : '' ?></span>
+          <span id="addr-count"><?= count($addrResult['rows']) ?> order<?= count($addrResult['rows']) !== 1 ? 's' : '' ?></span>
+          <label class="flex items-center gap-1 text-sm cursor-pointer select-none">
+            <input type="checkbox" id="filter-pobox"> PO Box only
+          </label>
           <button class="btn btn-sm btn-ghost" data-csv-btn="#tbl-addrcheck"
                   data-csv-filename="address-issues-<?= esc($addrResult['start']) ?>.csv">Export CSV</button>
         </div>
@@ -99,8 +102,9 @@
               $addr['country_code'] ?? '',
             ]));
             $recipientName = trim(($addr['first_name'] ?? '') . ' ' . ($addr['last_name'] ?? ''));
+            $isPoBox = !empty(array_filter($row['issues'], fn($i) => in_array($i['code'], ['po_box', 'po_box_carrier'])));
           ?>
-          <tr>
+          <tr<?= $isPoBox ? ' data-pobox="1"' : '' ?>>
             <td class="order-num">
               <?php if ($adminUrl): ?>
                 <a href="<?= $adminUrl ?>" target="_blank" rel="noopener"><?= esc($row['order_number']) ?></a>
@@ -149,3 +153,21 @@
     </div>
   <?php endif; ?>
 <?php endif; ?>
+
+<script>
+(function () {
+  const cb = document.getElementById('filter-pobox');
+  if (!cb) return;
+  cb.addEventListener('change', function () {
+    const rows  = document.querySelectorAll('#tbl-addrcheck tbody tr');
+    let visible = 0;
+    rows.forEach(function (tr) {
+      const show = !cb.checked || tr.dataset.pobox === '1';
+      tr.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    const countEl = document.getElementById('addr-count');
+    if (countEl) countEl.textContent = visible + ' order' + (visible !== 1 ? 's' : '');
+  });
+}());
+</script>

@@ -525,10 +525,12 @@ class PageLoader
                 $issues[] = ['level' => 'warning', 'code' => 'no_phone_express', 'message' => 'No phone number — carrier may require it for express shipping'];
             }
         }
-        if ($address1 && preg_match('/\bP\.?\s*O\.?\s*Box\b/i', $address1)) {
+        if ($address1 && preg_match('/\b(P\.?\s*O\.?\s*B(ox)?|Post\s+Office\s+Box)\b/i', $address1)) {
             $shippingTitles = implode(' ', array_column($order['shipping_lines'] ?? [], 'title'));
             if (preg_match('/fedex|ups|dhl/i', $shippingTitles)) {
-                $issues[] = ['level' => 'warning', 'code' => 'po_box_carrier', 'message' => 'PO Box address — FedEx/UPS/DHL cannot deliver to PO Boxes'];
+                $issues[] = ['level' => 'warning', 'code' => 'po_box_carrier', 'message' => 'PO Box — carrier cannot deliver (FedEx/UPS/DHL do not deliver to PO Boxes)'];
+            } else {
+                $issues[] = ['level' => 'warning', 'code' => 'po_box', 'message' => 'PO Box address — confirm your shipping carrier accepts PO Box deliveries'];
             }
         }
 
