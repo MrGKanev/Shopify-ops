@@ -426,8 +426,9 @@ class Shopify
         $all = [];
 
         $params = http_build_query([
-            'status'           => 'any',
-            'financial_status' => 'paid,partially_paid',
+            'status'             => 'any',
+            'financial_status'   => 'paid,partially_paid',
+            'fulfillment_status' => 'unfulfilled,partial',
             'created_at_min'   => $startDate . 'T00:00:00-00:00',
             'created_at_max'   => $endDate   . 'T23:59:59-00:00',
             'limit'            => self::PAGE_SIZE,
