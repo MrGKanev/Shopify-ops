@@ -217,44 +217,57 @@ class ShipStation
 
     // ── Private ───────────────────────────────────────────────────────
 
-    /** @return array<string, mixed> */
-    private function post(string $path, array $body): array
+    /**
+     * Shared cURL setup with auth headers and 429 retry (60s default for ShipStation).
+     * Pass CURLOPT_POST / CURLOPT_POSTFIELDS via $extraOpts for POST requests.
+     *
+     * @return array{raw: string, code: int}
+     */
+    private function makeCurlRequest(string $url, array $extraOpts = []): array
     {
-        $url = self::BASE_URL . $path;
-        $json = json_encode($body);
-
         $ch = curl_init($url);
-        curl_setopt_array($ch, [
+        curl_setopt_array($ch, $extraOpts + [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => $json,
             CURLOPT_HTTPHEADER     => [
                 'Authorization: Basic ' . $this->auth,
                 'Content-Type: application/json',
             ],
-            CURLOPT_TIMEOUT        => 30,
+            CURLOPT_TIMEOUT => 30,
         ]);
 
-        $body_raw = curl_exec($ch);
-        $code     = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $err      = curl_error($ch);
+        $raw  = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err  = curl_error($ch);
+        curl_close($ch);
 
-        if ($err) {
-            throw new RuntimeException("ShipStation cURL error: {$err}");
-        }
+        if ($err) throw new RuntimeException("ShipStation cURL error: {$err}");
 
+        // ShipStation rate-limits at 40 req/min - back off on 429
         if ($code === 429) {
-            sleep(60);
-            return $this->post($path, $body);
+            $retryAfter = 60;
+            echo "\n  [ShipStation] Rate limited - waiting {$retryAfter}s ...\n";
+            sleep($retryAfter);
+            return $this->makeCurlRequest($url, $extraOpts);
         }
+
+        return ['raw' => $raw, 'code' => $code];
+    }
+
+    /** @return array<string, mixed> */
+    private function post(string $path, array $body): array
+    {
+        ['raw' => $raw, 'code' => $code] = $this->makeCurlRequest(self::BASE_URL . $path, [
+            CURLOPT_POST       => true,
+            CURLOPT_POSTFIELDS => json_encode($body),
+        ]);
 
         if ($code < 200 || $code >= 300) {
-            throw new RuntimeException("ShipStation API error {$code}: {$body_raw}");
+            throw new RuntimeException("ShipStation API error {$code}: {$raw}");
         }
 
-        $decoded = json_decode($body_raw, true);
+        $decoded = json_decode($raw, true);
         if (!is_array($decoded)) {
-            throw new RuntimeException("ShipStation returned non-JSON: {$body_raw}");
+            throw new RuntimeException("ShipStation returned non-JSON: {$raw}");
         }
 
         return $decoded;
@@ -263,41 +276,15 @@ class ShipStation
     /** @return array<string, mixed> */
     private function get(string $path): array
     {
-        $url = self::BASE_URL . $path;
-
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER     => [
-                'Authorization: Basic ' . $this->auth,
-                'Content-Type: application/json',
-            ],
-            CURLOPT_TIMEOUT        => 30,
-        ]);
-
-        $body = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $err  = curl_error($ch);
-
-        if ($err) {
-            throw new RuntimeException("ShipStation cURL error: {$err}");
-        }
-
-        // ShipStation rate-limits at 40 req/min - back off on 429
-        if ($code === 429) {
-            $retryAfter = 60;
-            echo "\n  [ShipStation] Rate limited - waiting {$retryAfter}s ...\n";
-            sleep($retryAfter);
-            return $this->get($path); // one retry
-        }
+        ['raw' => $raw, 'code' => $code] = $this->makeCurlRequest(self::BASE_URL . $path);
 
         if ($code < 200 || $code >= 300) {
-            throw new RuntimeException("ShipStation API error {$code}: {$body}");
+            throw new RuntimeException("ShipStation API error {$code}: {$raw}");
         }
 
-        $decoded = json_decode($body, true);
+        $decoded = json_decode($raw, true);
         if (!is_array($decoded)) {
-            throw new RuntimeException("ShipStation returned non-JSON: {$body}");
+            throw new RuntimeException("ShipStation returned non-JSON: {$raw}");
         }
 
         return $decoded;

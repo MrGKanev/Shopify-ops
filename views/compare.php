@@ -1,13 +1,6 @@
-<div class="topbar">
-  <div>
-    <h1>Order Compare</h1>
-    <div class="meta">Place two orders side by side and highlight their differences</div>
-  </div>
-</div>
+<?= topbar('Order Compare', 'Place two orders side by side and highlight their differences') ?>
 
-<div class="feature-info" data-info-key="compare">
-  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: Order Compare</button>
-  <div class="feature-info-body">
+<?= featureInfoStart('compare', 'Order Compare') ?>
     <p><strong>Order Compare</strong> fetches two orders from Shopify (and ShipStation if available) and displays them side by side so differences are immediately visible.</p>
     <p>Most useful when investigating duplicate orders, re-orders from the same customer, or when a customer claims their order details are wrong.</p>
     <ul>
@@ -15,8 +8,7 @@
       <li>Fields that differ between the two orders are <strong>highlighted</strong>.</li>
       <li>ShipStation status is shown if credentials are configured.</li>
     </ul>
-  </div>
-</div>
+<?= featureInfoEnd() ?>
 
 <div class="run-form">
   <h2>Enter two order numbers</h2>

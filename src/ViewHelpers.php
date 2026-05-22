@@ -53,17 +53,63 @@ function gqlOrderRow(array $o, string $shopifyAdminBase): array
         'name'     => $o['name'] ?? '-',
         'date'     => !empty($o['createdAt']) ? date('Y-m-d', strtotime($o['createdAt'])) : '-',
         'email'    => $o['email'] ?? '-',
-        'finChip'  => match($fin) {
-            'paid'                        => 'chip-paid',
-            'partially_paid'              => 'chip-partial',
-            'unpaid', 'pending'           => 'chip-unpaid',
-            default                       => 'chip-unknown',
-        },
+        'finChip'  => financialChip($fin),
         'finLabel' => $o['displayFinancialStatus']   ?? '-',
         'fulLabel' => $o['displayFulfillmentStatus'] ?? '-',
         'amount'   => $o['totalPriceSet']['shopMoney']['amount']       ?? null,
         'currency' => $o['totalPriceSet']['shopMoney']['currencyCode'] ?? '',
     ];
+}
+
+function formatPrice(float|string|null $amount): string
+{
+    if ($amount === null || $amount === '') return '—';
+    return '$' . number_format((float) $amount, 2);
+}
+
+function financialChip(string $status): string
+{
+    return match(strtolower($status)) {
+        'paid'                   => 'chip-paid',
+        'partially_paid'         => 'chip-partial',
+        'unpaid', 'pending'      => 'chip-unpaid',
+        default                  => 'chip-unknown',
+    };
+}
+
+function formatAddressLine(?array $addr): string
+{
+    if ($addr === null) return '';
+    return implode(', ', array_filter([
+        trim(($addr['address1'] ?? '') . ' ' . ($addr['address2'] ?? '')),
+        $addr['city']          ?? '',
+        $addr['province_code'] ?? $addr['state']   ?? '',
+        $addr['zip']           ?? $addr['postalCode'] ?? '',
+        $addr['country_code']  ?? $addr['country'] ?? '',
+    ]));
+}
+
+function topbar(string $title, string $meta = ''): string
+{
+    return '<div class="topbar"><div>'
+        . '<h1>' . esc($title) . '</h1>'
+        . ($meta ? '<div class="meta">' . esc($meta) . '</div>' : '')
+        . '</div></div>';
+}
+
+function featureInfoStart(string $key, string $label): string
+{
+    return '<div class="feature-info" data-info-key="' . esc($key) . '">'
+        . '<button class="feature-info-toggle" aria-expanded="false">'
+        . '<svg width="12" height="12" viewBox="0 0 10 6" fill="none">'
+        . '<path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'
+        . '</svg> About: ' . esc($label) . '</button>'
+        . '<div class="feature-info-body">';
+}
+
+function featureInfoEnd(): string
+{
+    return '</div></div>';
 }
 
 /**

@@ -1,13 +1,6 @@
-<div class="topbar">
-  <div>
-    <h1>Address Scanner</h1>
-    <div class="meta">Find paid orders with incomplete or potentially invalid shipping addresses</div>
-  </div>
-</div>
+<?= topbar('Address Scanner', 'Find paid orders with incomplete or potentially invalid shipping addresses') ?>
 
-<div class="feature-info" data-info-key="addrcheck">
-  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: Address Scanner</button>
-  <div class="feature-info-body">
+<?= featureInfoStart('addrcheck', 'Address Scanner') ?>
     <p><strong>Address Scanner</strong> fetches all paid Shopify orders in the selected date range and runs a set of validation checks on each shipping address — flagging orders that may fail delivery before they are ever shipped.</p>
     <p>Issues are split into two severity levels:</p>
     <ul>
@@ -15,8 +8,7 @@
       <li><strong>Warning</strong> — the address may cause problems: invalid ZIP format for US/CA, missing state/province, PO Box address (always flagged — use the <em>PO Box only</em> filter to isolate these), or no phone number on an express shipment.</li>
     </ul>
     <p>Critical issues are sorted to the top. Each row links directly to the Shopify order and to Spot-check for a live ShipStation cross-reference.</p>
-  </div>
-</div>
+<?= featureInfoEnd() ?>
 
 <div class="run-form">
   <h2>Scan date range</h2>
@@ -28,17 +20,11 @@
 
   <form method="post">
     <input type="hidden" name="action" value="scan_addresses">
-    <div class="date-row">
-      <div class="field">
-        <label>From</label>
-        <input type="date" name="addr_start" value="<?= esc($addrStart) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <div class="field">
-        <label>To</label>
-        <input type="date" name="addr_end" value="<?= esc($addrEnd) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <button class="btn btn-submit-end" type="submit">Scan</button>
-    </div>
+    <?php
+    $partialStartName = 'addr_start'; $partialStartVal = $addrStart;
+    $partialEndName   = 'addr_end';   $partialEndVal   = $addrEnd;
+    require __DIR__ . '/partials/_date-range.php';
+    ?>
     <div class="filter-row">
       <label class="toggle-pill">
         <input type="checkbox" name="po_box_only" value="1"<?= !empty($poBoxOnly) ? ' checked' : '' ?>>
@@ -109,13 +95,7 @@
           <?php foreach ($addrResult['rows'] as $row):
             $adminUrl = $row['shopify_id'] ? $shopifyAdminBase . '/' . esc($row['shopify_id']) : null;
             $addr     = $row['address'];
-            $addrLine = implode(', ', array_filter([
-              trim(($addr['address1'] ?? '') . ' ' . ($addr['address2'] ?? '')),
-              $addr['city'] ?? '',
-              $addr['province_code'] ?? '',
-              $addr['zip'] ?? '',
-              $addr['country_code'] ?? '',
-            ]));
+            $addrLine = formatAddressLine($addr);
             $recipientName = trim(($addr['first_name'] ?? '') . ' ' . ($addr['last_name'] ?? ''));
           ?>
           <tr>

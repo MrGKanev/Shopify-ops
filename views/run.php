@@ -1,13 +1,6 @@
-<div class="topbar">
-  <div>
-    <h1>Run Audit</h1>
-    <div class="meta">Compare Shopify vs ShipStation for any date range</div>
-  </div>
-</div>
+<?= topbar('Run Audit', 'Compare Shopify vs ShipStation for any date range') ?>
 
-<div class="feature-info" data-info-key="run">
-  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: Run Audit</button>
-  <div class="feature-info-body">
+<?= featureInfoStart('run', 'Run Audit') ?>
   <p><strong>Run Audit</strong> fetches all paid Shopify orders in the selected date range and compares them against ShipStation - identifying any orders that exist in Shopify but are missing from ShipStation.</p>
   <p>The audit saves a dated CSV report that appears in the sidebar history and on the Reports page, so you can track which orders reappear across multiple runs.</p>
   <ul>
@@ -16,9 +9,7 @@
     <li>Both datasets are cached - re-running the same date range is instant. Use <em>Flush cache</em> on the Settings page to force a fresh fetch.</li>
     <li>Large ranges (90+ days) may take 30–60 seconds on the first run.</li>
   </ul>
-
-  </div>
-</div>
+<?= featureInfoEnd() ?>
 
 <div class="run-form">
   <h2>Date range</h2>

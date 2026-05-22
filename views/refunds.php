@@ -1,13 +1,6 @@
-<div class="topbar">
-  <div>
-    <h1>Refunds Tracker</h1>
-    <div class="meta">Refunded Shopify orders cross-checked against ShipStation status</div>
-  </div>
-</div>
+<?= topbar('Refunds Tracker', 'Refunded Shopify orders cross-checked against ShipStation status') ?>
 
-<div class="feature-info" data-info-key="refunds">
-  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: Refunds Tracker</button>
-  <div class="feature-info-body">
+<?= featureInfoStart('refunds', 'Refunds Tracker') ?>
   <p><strong>Refunds Tracker</strong> fetches all <em>refunded</em> and <em>partially refunded</em> Shopify orders in the selected date range and cross-checks them against ShipStation - to verify whether the corresponding SS order has been cancelled or is still active.</p>
   <p>The risk: Shopify has already returned the customer's money, but ShipStation may still ship the package. This tool identifies exactly those cases so they can be acted on before fulfilment.</p>
   <ul>
@@ -17,8 +10,7 @@
   </ul>
   <p>Rows are sorted by risk level - the most critical appear first. ShipStation data is cached alongside the regular audit, so re-scanning the same date range is instant.</p>
 
-  </div>
-</div>
+<?= featureInfoEnd() ?>
 
 <div class="run-form">
   <h2>Scan refunded orders</h2>
@@ -30,17 +22,11 @@
 
   <form method="post">
     <input type="hidden" name="action" value="find_refunds">
-    <div class="date-row">
-      <div class="field">
-        <label>From</label>
-        <input type="date" name="refunds_start" value="<?= esc($refundsStart) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <div class="field">
-        <label>To</label>
-        <input type="date" name="refunds_end" value="<?= esc($refundsEnd) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <button class="btn btn-submit-end" type="submit">Scan</button>
-    </div>
+    <?php
+$partialStartName = 'refunds_start'; $partialStartVal = $refundsStart;
+$partialEndName   = 'refunds_end';   $partialEndVal   = $refundsEnd;
+require __DIR__ . '/partials/_date-range.php';
+?>
   </form>
 
   <?php if ($refundsResult !== null): ?>
@@ -129,7 +115,7 @@
             <td><?= esc($row['created_at']) ?></td>
             <td class="td-email"><?= esc($row['email']) ?></td>
             <td><span class="chip <?= $finChip ?>"><?= esc($finLabel) ?></span></td>
-            <td class="td-price">$<?= number_format($row['total_price'], 2) ?></td>
+            <td class="td-price"><?= formatPrice($row['total_price']) ?></td>
             <td class="td-price">
               <?php if ($row['refunded_amount'] > 0): ?>
                 <span style="color:var(--danger)">-$<?= number_format($row['refunded_amount'], 2) ?></span>

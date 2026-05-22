@@ -1,3 +1,9 @@
+function on(selector, event, handler) {
+  document.querySelectorAll(selector).forEach(function(el) {
+    el.addEventListener(event, handler);
+  });
+}
+
 // Toast notifications - move .flash elements into the toast container
 (function() {
   var container = document.getElementById('toast-container');
@@ -381,21 +387,18 @@ function exportTableCSV(tableSelector, filename) {
   setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
 }
 
-document.querySelectorAll('[data-csv-btn]').forEach(function(btn) {
-  btn.addEventListener('click', function() {
-    exportTableCSV(btn.dataset.csvBtn, btn.dataset.csvFilename || 'export.csv');
-  });
+on('[data-csv-btn]', 'click', function() {
+  exportTableCSV(this.dataset.csvBtn, this.dataset.csvFilename || 'export.csv');
 });
 
 // ── Quick Copy ────────────────────────────────────────────────────────────────
-document.querySelectorAll('[data-copy]').forEach(function(btn) {
-  btn.addEventListener('click', function() {
-    var text = btn.dataset.copy;
-    navigator.clipboard.writeText(text).then(function() {
-      var orig = btn.textContent;
-      btn.textContent = '✓';
-      setTimeout(function() { btn.textContent = orig; }, 1500);
-    });
+on('[data-copy]', 'click', function() {
+  var btn  = this;
+  var text = btn.dataset.copy;
+  navigator.clipboard.writeText(text).then(function() {
+    var orig = btn.textContent;
+    btn.textContent = '✓';
+    setTimeout(function() { btn.textContent = orig; }, 1500);
   });
 });
 

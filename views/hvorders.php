@@ -1,17 +1,9 @@
-<div class="topbar">
-  <div>
-    <h1>High-Value No Phone</h1>
-    <div class="meta">Paid, unfulfilled high-value orders missing a shipping phone number</div>
-  </div>
-</div>
+<?= topbar('High-Value No Phone', 'Paid, unfulfilled high-value orders missing a shipping phone number') ?>
 
-<div class="feature-info" data-info-key="hvorders">
-  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: High-Value No Phone</button>
-  <div class="feature-info-body">
+<?= featureInfoStart('hvorders', 'High-Value No Phone') ?>
     <p><strong>High-Value No Phone</strong> finds paid, unfulfilled orders above a threshold where the shipping address has no phone number. Carriers often require a phone for high-value shipments.</p>
     <p>Use this to proactively reach out to customers before shipping to collect a phone number and avoid carrier rejections or delayed deliveries.</p>
-  </div>
-</div>
+<?= featureInfoEnd() ?>
 
 <div class="run-form">
   <h2>Scan date range</h2>
@@ -83,13 +75,7 @@
           <?php foreach ($hvResult['rows'] as $row):
             $adminUrl = $row['shopify_id'] ? $shopifyAdminBase . '/' . esc($row['shopify_id']) : null;
             $addr     = $row['address'];
-            $addrLine = implode(', ', array_filter([
-              trim(($addr['address1'] ?? '') . ' ' . ($addr['address2'] ?? '')),
-              $addr['city'] ?? '',
-              $addr['province_code'] ?? '',
-              $addr['zip'] ?? '',
-              $addr['country_code'] ?? '',
-            ]));
+            $addrLine = formatAddressLine($addr);
             $recipientName = trim(($addr['first_name'] ?? '') . ' ' . ($addr['last_name'] ?? ''));
           ?>
           <tr>
@@ -117,7 +103,7 @@
                 <div class="text-xs text-muted"><?= esc($addrLine) ?></div>
               <?php endif; ?>
             </td>
-            <td class="td-price"><strong>$<?= number_format($row['total'], 2) ?></strong></td>
+            <td class="td-price"><strong><?= formatPrice($row['total']) ?></strong></td>
             <td class="td-actions">
               <?php if ($adminUrl): ?>
                 <a class="ignore-btn" href="<?= $adminUrl ?>" target="_blank" rel="noopener">Edit in Shopify</a>

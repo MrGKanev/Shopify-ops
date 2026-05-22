@@ -1,13 +1,6 @@
-<div class="topbar">
-  <div>
-    <h1>Customer Lookup</h1>
-    <div class="meta">Full order history for a customer by email</div>
-  </div>
-</div>
+<?= topbar('Customer Lookup', 'Full order history for a customer by email') ?>
 
-<div class="feature-info" data-info-key="customer">
-  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: Customer Lookup</button>
-  <div class="feature-info-body">
+<?= featureInfoStart('customer', 'Customer Lookup') ?>
   <p><strong>Customer Lookup</strong> shows the complete order history for a customer by email address - every Shopify order they have ever placed, regardless of date.</p>
   <p>Useful when a customer contacts support and you need a quick overview: how many orders they have, lifetime spend, what tags have been applied, and whether any orders were cancelled.</p>
   <ul>
@@ -17,8 +10,7 @@
     <li>Every order links directly to Spot-check for a live ShipStation cross-reference.</li>
   </ul>
 
-  </div>
-</div>
+<?= featureInfoEnd() ?>
 
 <div class="run-form">
   <h2>Search by email</h2>
