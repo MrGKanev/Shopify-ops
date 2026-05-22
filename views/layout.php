@@ -48,8 +48,8 @@
     </div>
 
     <?php
-      $auditPages  = ['reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges'];
-      $searchPages = ['spotcheck', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'tracking', 'compare'];
+      $auditPages  = ['hub-audit', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges'];
+      $searchPages = ['hub-search', 'spotcheck', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'tracking', 'compare'];
       $managePages = ['ignored', 'pushlog'];
       $groupOf = function(string $p) use ($auditPages, $searchPages, $managePages): string {
           if (in_array($p, $auditPages,  true)) return 'audit';
@@ -58,81 +58,40 @@
           return 'settings';
       };
       $activeGroup = $groupOf($page);
+
+      $pageTitles = [
+          'reports' => 'Reports', 'run' => 'Run Audit', 'trends' => 'Trends',
+          'dupes' => 'Duplicate Detector', 'refunds' => 'Refunds Tracker',
+          'addrcheck' => 'Address Scanner', 'emailcheck' => 'Email Checker',
+          'orphans' => 'Orphan Detector', 'hvorders' => 'High-Value No Phone',
+          'repeatrefunds' => 'Repeat Refunds', 'failedship' => 'Voided Shipments',
+          'addrchanges' => 'Address Changes',
+          'spotcheck' => 'Spot-check', 'metafields' => 'Metafields',
+          'tagsearch' => 'Tag Search', 'tagaudit' => 'Tag Audit',
+          'customer' => 'Customer Lookup', 'tracking' => 'Tracking Feed',
+          'compare' => 'Order Compare',
+          'ignored' => 'Ignored Orders', 'pushlog' => 'Push Log',
+      ];
+      $hubPages = ['hub-audit', 'hub-search'];
     ?>
 
-    <nav class="sidebar-groups" id="js-sidebar-nav">
+    <nav class="flat-nav">
 
-      <!-- Audit -->
-      <div class="nav-group" data-group="audit">
-        <button class="nav-group-toggle <?= $activeGroup === 'audit' ? 'nav-group-active' : '' ?>" type="button">
-          <span>Audit</span>
-          <svg class="nav-arrow" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <ul class="nav-group-items">
-          <li><a href="?"           class="<?= $page === 'reports' ? 'page-active' : '' ?>">Reports</a></li>
-          <li><a href="?page=run"   class="<?= $page === 'run'     ? 'page-active' : '' ?>">Run Audit</a></li>
-          <li><a href="?page=trends" class="<?= $page === 'trends' ? 'page-active' : '' ?>">Trends</a></li>
-          <li><a href="?page=dupes"    class="<?= $page === 'dupes'    ? 'page-active' : '' ?>">Duplicate Detector</a></li>
-          <li><a href="?page=refunds"   class="<?= $page === 'refunds'   ? 'page-active' : '' ?>">Refunds Tracker</a></li>
-          <li><a href="?page=addrcheck"  class="<?= $page === 'addrcheck'  ? 'page-active' : '' ?>">Address Scanner</a></li>
-          <li><a href="?page=emailcheck" class="<?= $page === 'emailcheck' ? 'page-active' : '' ?>">Email Checker</a></li>
-          <li><a href="?page=orphans"       class="<?= $page === 'orphans'       ? 'page-active' : '' ?>">Orphan Detector</a></li>
-          <li><a href="?page=hvorders"      class="<?= $page === 'hvorders'      ? 'page-active' : '' ?>">High-Value No Phone</a></li>
-          <li><a href="?page=repeatrefunds" class="<?= $page === 'repeatrefunds' ? 'page-active' : '' ?>">Repeat Refunds</a></li>
-          <li><a href="?page=failedship"    class="<?= $page === 'failedship'    ? 'page-active' : '' ?>">Voided Shipments</a></li>
-          <li><a href="?page=addrchanges"   class="<?= $page === 'addrchanges'   ? 'page-active' : '' ?>">Address Changes</a></li>
-        </ul>
-      </div>
-
-      <!-- Search -->
-      <div class="nav-group" data-group="search">
-        <button class="nav-group-toggle <?= $activeGroup === 'search' ? 'nav-group-active' : '' ?>" type="button">
-          <span>Search</span>
-          <svg class="nav-arrow" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <ul class="nav-group-items">
-          <li><a href="?page=spotcheck"  class="<?= $page === 'spotcheck'  ? 'page-active' : '' ?>">Spot-check</a></li>
-          <li><a href="?page=metafields" class="<?= $page === 'metafields' ? 'page-active' : '' ?>">Metafields</a></li>
-          <li><a href="?page=tagsearch"  class="<?= $page === 'tagsearch'  ? 'page-active' : '' ?>">Tag Search</a></li>
-          <li><a href="?page=tagaudit"   class="<?= $page === 'tagaudit'   ? 'page-active' : '' ?>">Tag Audit</a></li>
-          <li><a href="?page=customer"  class="<?= $page === 'customer'  ? 'page-active' : '' ?>">Customer Lookup</a></li>
-          <li><a href="?page=tracking"  class="<?= $page === 'tracking'  ? 'page-active' : '' ?>">Tracking Feed</a></li>
-          <li><a href="?page=compare"   class="<?= $page === 'compare'   ? 'page-active' : '' ?>">Order Compare</a></li>
-        </ul>
-      </div>
-
-      <!-- Manage -->
-      <div class="nav-group" data-group="manage">
-        <button class="nav-group-toggle <?= $activeGroup === 'manage' ? 'nav-group-active' : '' ?>" type="button">
-          <span>Manage</span>
-          <svg class="nav-arrow" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <ul class="nav-group-items">
-          <li>
-            <a href="?page=ignored" class="<?= $page === 'ignored' ? 'page-active' : '' ?>">
-              Ignored
-              <?php if (count($ignoredOrders) > 0): ?>
-                <span class="badge badge-warn badge-sm"><?= count($ignoredOrders) ?></span>
-              <?php endif; ?>
-            </a>
-          </li>
-          <li>
-            <a href="?page=pushlog" class="<?= $page === 'pushlog' ? 'page-active' : '' ?>">
-              Push Log
-              <?php if (count($pushLog) > 0): ?>
-                <span class="badge badge-ok badge-sm"><?= count($pushLog) ?></span>
-              <?php endif; ?>
-            </a>
-          </li>
-        </ul>
-      </div>
-
-      <!-- Settings (standalone) -->
-      <div class="nav-group-standalone">
-        <a href="?page=settings" class="nav-group-toggle no-underline <?= $page === 'settings' ? 'nav-group-active' : '' ?>">
-          <span>Settings</span>
-        </a>
-      </div>
+      <a href="?page=hub-audit" class="flat-nav-link <?= $activeGroup === 'audit'  ? 'active' : '' ?>">
+        <span class="flat-nav-icon">📋</span> Audit
+      </a>
+      <a href="?page=hub-search" class="flat-nav-link <?= $activeGroup === 'search' ? 'active' : '' ?>">
+        <span class="flat-nav-icon">🔎</span> Search &amp; Lookup
+      </a>
+      <a href="?page=ignored" class="flat-nav-link <?= $activeGroup === 'manage'  ? 'active' : '' ?>">
+        <span class="flat-nav-icon">📂</span> Manage
+        <?php if (count($ignoredOrders) > 0): ?>
+          <span class="badge badge-warn badge-sm" style="margin-left:auto"><?= count($ignoredOrders) ?></span>
+        <?php endif; ?>
+      </a>
+      <a href="?page=settings" class="flat-nav-link <?= $page === 'settings' ? 'active' : '' ?>">
+        <span class="flat-nav-icon">⚙</span> Settings
+      </a>
 
     </nav>
 
@@ -161,20 +120,31 @@
       </form>
       <a href="https://github.com/MrGKanev/Shopify-ops"
          class="sidebar-github" target="_blank" rel="noopener" title="View on GitHub">
-        Shopify Ops v1.1.0
+        Shopify Ops v1.2.0
       </a>
     </div>
   </aside>
 
   <main class="main">
     <?php
-      $allowedPages = ['reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'spotcheck', 'tracking', 'compare', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'ignored', 'pushlog', 'settings'];
-      $page         = in_array($page, $allowedPages, true) ? $page : 'reports';
+      $allowedPages = ['hub-audit', 'hub-search', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'spotcheck', 'tracking', 'compare', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'ignored', 'pushlog', 'settings'];
+      $page         = in_array($page, $allowedPages, true) ? $page : 'hub-audit';
       $pageFile     = __DIR__ . '/' . $page . '.php';
+
+      // Breadcrumb — shown on tool pages (not hub or settings)
+      if (!in_array($page, $hubPages, true) && $page !== 'settings' && isset($pageTitles[$page])) {
+          $hubLink  = $activeGroup === 'search' ? '?page=hub-search' : '?page=hub-audit';
+          $hubLabel = $activeGroup === 'search' ? 'Search &amp; Lookup' : 'Audit';
+          if ($activeGroup === 'manage') { $hubLink = '?page=ignored'; $hubLabel = 'Manage'; }
+          echo '<div class="breadcrumb"><a href="' . $hubLink . '">' . $hubLabel . '</a>'
+             . '<span class="breadcrumb-sep">›</span>'
+             . '<span>' . esc($pageTitles[$page]) . '</span></div>';
+      }
+
       if (file_exists($pageFile)) {
           require $pageFile;
       } else {
-          require __DIR__ . '/reports.php';
+          require __DIR__ . '/hub-audit.php';
       }
     ?>
   </main>
