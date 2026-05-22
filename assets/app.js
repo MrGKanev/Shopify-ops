@@ -180,10 +180,6 @@ document.querySelectorAll('.js-select-all').forEach(function(master) {
   function apply(dark) {
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
     if (icon) icon.textContent = dark ? '☀️' : '🌙';
-    btn.querySelector('span + span') || (btn.lastChild.textContent = dark ? ' Light mode' : ' Dark mode');
-    btn.childNodes.forEach(function(n) {
-      if (n.nodeType === 3) n.textContent = dark ? ' Light mode' : ' Dark mode';
-    });
   }
 
   var isDark = localStorage.getItem('theme') === 'dark';
