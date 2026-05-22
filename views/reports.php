@@ -38,21 +38,80 @@
       $historySlice = array_slice(array_reverse($reports), 0, 30);
       $maxCount = max(1, max(array_column($historySlice, 'count')));
     ?>
-    <div class="text-xs font-bold uppercase mb-2 text-muted tracking-[.07em]">History</div>
-    <div class="history history-compact">
-      <?php foreach ($historySlice as $r): ?>
-        <?php
-          $pct    = max(6, round(($r['count'] / $maxCount) * 56));
-          $color  = $r['count'] === 0 ? 'var(--ok)' : 'var(--warn)';
-          $active = $r['date'] === $selectedDate ? 'selected' : '';
-        ?>
-        <a href="?date=<?= esc($r['date']) ?>" class="flex-1 block no-underline">
-          <div class="history-bar <?= $active ?>"
-               style="height:<?= $pct ?>px;background:<?= $color ?>"
-               title="<?= esc($r['date']) ?>: <?= $r['count'] ?> missing"></div>
-          <div class="history-label"><?= substr($r['date'], 5) ?></div>
-        </a>
-      <?php endforeach; ?>
+    <?php
+      $sparkPoints = $historySlice; // oldest first
+      $n     = count($sparkPoints);
+      /* SVG coordinate space — only used for line/fill, not dots */
+      $svgW  = 1000; $svgH = 200;
+      $padL  = 0;    $padR = 0; $padT = 10; $padB = 0;
+      $plotW = $svgW; $plotH = $svgH - $padT - $padB;
+
+      /* % positions for HTML overlay dots */
+      $ptPct = [];
+      foreach ($sparkPoints as $i => $r) {
+        $xPct = $n > 1 ? ($i / ($n - 1)) * 100 : 50;
+        $yPct = $maxCount > 0 ? (1 - $r['count'] / $maxCount) * 100 : 100;
+        $ptPct[] = [$xPct, $yPct, $r];
+      }
+
+      /* SVG polyline using same % mapping */
+      $toSvg   = fn($xp,$yp) => round($xp/100*$svgW,1).','.round($padT+$yp/100*$plotH,1);
+      $polyPts = implode(' ', array_map(fn($p) => $toSvg($p[0],$p[1]), $ptPct));
+      $fillPath = 'M0,'.($svgH);
+      foreach ($ptPct as $p) $fillPath .= ' L'.$toSvg($p[0],$p[1]);
+      $fillPath .= ' L'.$svgW.','.$svgH.' Z';
+
+      $labelStep = max(1, (int)ceil($n / 8));
+    ?>
+    <div class="sparkline-wrap">
+      <div class="sparkline-header">
+        <span class="sparkline-title">History</span>
+        <span class="sparkline-peak"><?= $maxCount ?> peak missing</span>
+      </div>
+      <div class="sparkline-body">
+        <!-- y-axis -->
+        <div class="spk-yaxis">
+          <span><?= $maxCount ?></span>
+          <span><?= round($maxCount / 2) ?></span>
+          <span>0</span>
+        </div>
+        <!-- chart area -->
+        <div class="spk-area">
+          <!-- SVG: line + fill only, stretches freely -->
+          <svg class="spk-svg" viewBox="0 0 <?= $svgW ?> <?= $svgH ?>"
+               preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="spk-fill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="var(--warn)" stop-opacity=".2"/>
+                <stop offset="100%" stop-color="var(--warn)" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path d="<?= $fillPath ?>" fill="url(#spk-fill)"/>
+            <polyline points="<?= $polyPts ?>" class="spk-line" fill="none"/>
+          </svg>
+
+          <!-- HTML dots — perfectly circular regardless of SVG stretch -->
+          <?php foreach ($ptPct as $i => [$xPct, $yPct, $r]): ?>
+            <?php $sel = $r['date'] === $selectedDate; ?>
+            <a href="?date=<?= esc($r['date']) ?>"
+               class="spk-dot<?= $sel ? ' spk-dot-selected' : '' ?>"
+               style="left:<?= round($xPct,2) ?>%;top:<?= round($yPct,2) ?>%;
+                      background:<?= $r['count'] === 0 ? 'var(--ok)' : 'var(--warn)' ?>"
+               title="<?= esc($r['date']) ?>: <?= $r['count'] ?> missing"></a>
+          <?php endforeach; ?>
+
+          <!-- x-axis labels -->
+          <div class="spk-xlabels">
+            <?php foreach ($ptPct as $i => [$xPct, , $r]): ?>
+              <?php if ($i % $labelStep === 0 || $i === $n - 1): ?>
+                <a href="?date=<?= esc($r['date']) ?>" class="spk-xlabel<?= $r['date'] === $selectedDate ? ' spk-xlabel-active' : '' ?>" style="left:<?= round($xPct,2) ?>%">
+                  <?= substr($r['date'], 5) ?>
+                </a>
+              <?php endif; ?>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      </div>
     </div>
   <?php endif; ?>
 

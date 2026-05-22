@@ -39,11 +39,16 @@
 
   <aside class="sidebar" id="js-sidebar">
     <div class="sidebar-header">
-      <?php if ($appLogo): ?>
-        <img src="<?= esc($appLogo) ?>" alt="<?= esc($appBrand) ?>" class="sidebar-logo">
-      <?php else: ?>
-        <div class="brand"><?= esc($appBrand) ?></div>
-      <?php endif; ?>
+      <div class="sidebar-header-top">
+        <?php if ($appLogo): ?>
+          <img src="<?= esc($appLogo) ?>" alt="<?= esc($appBrand) ?>" class="sidebar-logo">
+        <?php else: ?>
+          <div class="brand"><?= esc($appBrand) ?></div>
+        <?php endif; ?>
+        <button class="theme-icon-btn" id="js-theme-toggle" type="button" title="Toggle theme">
+          <span id="js-theme-icon">🌙</span>
+        </button>
+      </div>
       <div class="store"><span class="store-label">Store</span> <?= esc($shopifyStore) ?></div>
     </div>
 
@@ -111,9 +116,6 @@
     <?php endif; ?>
 
     <div class="sidebar-footer">
-      <button class="btn btn-ghost btn-sm btn-full" id="js-theme-toggle" type="button">
-        <span id="js-theme-icon">🌙</span> Dark mode
-      </button>
       <form method="post">
         <input type="hidden" name="action" value="logout">
         <button class="btn btn-ghost btn-sm btn-full" type="submit">Sign out</button>
