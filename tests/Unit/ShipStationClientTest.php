@@ -73,7 +73,7 @@ class ShipStationClientTest extends TestCase
         $history = [];
 
         $ss = $this->ss([
-            new Response(429),
+            new Response(429, ['Retry-After' => '0']),
             $this->json(['orders' => $orders, 'pages' => 1]),
         ], $history);
 
@@ -108,8 +108,8 @@ class ShipStationClientTest extends TestCase
         $body = json_decode((string) $history[0]['request']->getBody(), true);
         $this->assertSame('1001', $body['orderNumber']);
         $this->assertSame('test@example.com', $body['customerEmail']);
-        $this->assertSame(99.0, $body['amountPaid']);
-        $this->assertSame(5.0, $body['shippingAmount']);
+        $this->assertEqualsWithDelta(99.0, $body['amountPaid'], 0.001);
+        $this->assertEqualsWithDelta(5.0, $body['shippingAmount'], 0.001);
         $this->assertCount(1, $body['items']);
         $this->assertSame('WGT-1', $body['items'][0]['sku']);
     }

@@ -17,3 +17,4 @@ data/*
 node_modules/
 pnpm-lock.yaml
 /vendor
+.phpunit.result.cache
