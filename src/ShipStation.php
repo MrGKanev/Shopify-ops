@@ -1,4 +1,9 @@
 <?php
+
+use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Client;
+use Psr\Http\Message\ResponseInterface;
+
 /**
  * ShipStation API client.
  *
@@ -12,11 +17,17 @@ class ShipStation
 
     private readonly string $auth;
     private readonly ?Cache $cache;
+    private readonly ClientInterface $http;
 
-    public function __construct(string $apiKey, string $apiSecret, ?Cache $cache = null)
-    {
+    public function __construct(
+        string $apiKey,
+        string $apiSecret,
+        ?Cache $cache = null,
+        ?ClientInterface $http = null
+    ) {
         $this->auth  = base64_encode("{$apiKey}:{$apiSecret}");
         $this->cache = $cache;
+        $this->http  = $http ?? new Client();
     }
 
     // ── Public ────────────────────────────────────────────────────────
@@ -218,48 +229,33 @@ class ShipStation
     // ── Private ───────────────────────────────────────────────────────
 
     /**
-     * Shared cURL setup with auth headers and 429 retry (60s default for ShipStation).
-     * Pass CURLOPT_POST / CURLOPT_POSTFIELDS via $extraOpts for POST requests.
-     *
-     * @return array{raw: string, code: int}
+     * Sends a request with auth headers.
+     * ShipStation rate-limits at 40 req/min — backs off 60s on 429.
      */
-    private function makeCurlRequest(string $url, array $extraOpts = []): array
+    private function request(string $method, string $path, array $options = []): ResponseInterface
     {
-        $ch = curl_init($url);
-        curl_setopt_array($ch, $extraOpts + [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER     => [
-                'Authorization: Basic ' . $this->auth,
-                'Content-Type: application/json',
-            ],
-            CURLOPT_TIMEOUT => 30,
-        ]);
+        $options['http_errors']                  = false;
+        $options['timeout']                      = $options['timeout'] ?? 30;
+        $options['headers']['Authorization']     = 'Basic ' . $this->auth;
+        $options['headers']['Content-Type']    ??= 'application/json';
 
-        $raw  = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $err  = curl_error($ch);
-        curl_close($ch);
+        $response = $this->http->request($method, self::BASE_URL . $path, $options);
 
-        if ($err) throw new RuntimeException("ShipStation cURL error: {$err}");
-
-        // ShipStation rate-limits at 40 req/min - back off on 429
-        if ($code === 429) {
-            $retryAfter = 60;
-            echo "\n  [ShipStation] Rate limited - waiting {$retryAfter}s ...\n";
-            sleep($retryAfter);
-            return $this->makeCurlRequest($url, $extraOpts);
+        if ($response->getStatusCode() === 429) {
+            echo "\n  [ShipStation] Rate limited - waiting 60s ...\n";
+            sleep(60);
+            return $this->request($method, $path, $options);
         }
 
-        return ['raw' => $raw, 'code' => $code];
+        return $response;
     }
 
     /** @return array<string, mixed> */
     private function post(string $path, array $body): array
     {
-        ['raw' => $raw, 'code' => $code] = $this->makeCurlRequest(self::BASE_URL . $path, [
-            CURLOPT_POST       => true,
-            CURLOPT_POSTFIELDS => json_encode($body),
-        ]);
+        $response = $this->request('POST', $path, ['json' => $body]);
+        $code     = $response->getStatusCode();
+        $raw      = (string) $response->getBody();
 
         if ($code < 200 || $code >= 300) {
             throw new RuntimeException("ShipStation API error {$code}: {$raw}");
@@ -276,7 +272,9 @@ class ShipStation
     /** @return array<string, mixed> */
     private function get(string $path): array
     {
-        ['raw' => $raw, 'code' => $code] = $this->makeCurlRequest(self::BASE_URL . $path);
+        $response = $this->request('GET', $path);
+        $code     = $response->getStatusCode();
+        $raw      = (string) $response->getBody();
 
         if ($code < 200 || $code >= 300) {
             throw new RuntimeException("ShipStation API error {$code}: {$raw}");

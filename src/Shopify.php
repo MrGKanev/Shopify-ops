@@ -1,4 +1,9 @@
 <?php
+
+use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Client;
+use Psr\Http\Message\ResponseInterface;
+
 /**
  * Shopify Admin REST API client.
  *
@@ -14,13 +19,19 @@ class Shopify
     private readonly string $baseUrl;
     private readonly string $token;
     private readonly ?Cache $cache;
+    private readonly ClientInterface $http;
 
-    public function __construct(string $store, string $accessToken, ?Cache $cache = null)
-    {
+    public function __construct(
+        string $store,
+        string $accessToken,
+        ?Cache $cache = null,
+        ?ClientInterface $http = null
+    ) {
         $host = str_contains($store, '.') ? $store : "{$store}.myshopify.com";
         $this->baseUrl = "https://{$host}/admin/api/2025-04";
         $this->token   = $accessToken;
         $this->cache   = $cache;
+        $this->http    = $http ?? new Client();
     }
 
     // ── Public ────────────────────────────────────────────────────────
@@ -676,44 +687,26 @@ class Shopify
     // ── Private ───────────────────────────────────────────────────────
 
     /**
-     * Shared cURL setup with auth headers, 429 retry, and header capture.
-     * Pass CURLOPT_POST / CURLOPT_POSTFIELDS via $extraOpts for non-GET requests.
-     *
-     * @return array{raw: string, code: int, headerSize: int}
+     * Sends a request with auth headers and handles 429 retry automatically.
+     * Pass 'json' in $options for POST bodies (Guzzle encodes + sets Content-Type).
      */
-    private function makeCurlRequest(string $url, array $extraOpts = []): array
+    private function request(string $method, string $url, array $options = []): ResponseInterface
     {
-        $ch = curl_init($url);
-        curl_setopt_array($ch, $extraOpts + [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HEADER         => true,
-            CURLOPT_HTTPHEADER     => [
-                "X-Shopify-Access-Token: {$this->token}",
-                'Content-Type: application/json',
-            ],
-            CURLOPT_TIMEOUT => 30,
-        ]);
+        $options['http_errors']                        = false;
+        $options['timeout']                            = $options['timeout'] ?? 30;
+        $options['headers']['X-Shopify-Access-Token']  = $this->token;
+        $options['headers']['Content-Type']           ??= 'application/json';
 
-        $raw        = curl_exec($ch);
-        $code       = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $err        = curl_error($ch);
-        $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-        curl_close($ch);
+        $response = $this->http->request($method, $url, $options);
 
-        if ($err) throw new RuntimeException("Shopify cURL error: {$err}");
-
-        if ($code === 429) {
-            $headers    = substr($raw, 0, $headerSize);
-            $retryAfter = 10;
-            if (preg_match('/Retry-After:\s*(\d+)/i', $headers, $m)) {
-                $retryAfter = (int) $m[1];
-            }
+        if ($response->getStatusCode() === 429) {
+            $retryAfter = (int) ($response->getHeaderLine('Retry-After') ?: 10);
             echo "\n  [Shopify] Rate limited - waiting {$retryAfter}s ...\n";
             sleep($retryAfter);
-            return $this->makeCurlRequest($url, $extraOpts);
+            return $this->request($method, $url, $options);
         }
 
-        return ['raw' => $raw, 'code' => $code, 'headerSize' => $headerSize];
+        return $response;
     }
 
     /**
@@ -723,19 +716,17 @@ class Shopify
      */
     private function graphql(string $query): array
     {
-        $url     = $this->baseUrl . '/graphql.json';
-        $payload = json_encode(['query' => $query]);
-
-        ['raw' => $raw, 'code' => $code, 'headerSize' => $headerSize] = $this->makeCurlRequest($url, [
-            CURLOPT_POST       => true,
-            CURLOPT_POSTFIELDS => $payload,
+        $response = $this->request('POST', $this->baseUrl . '/graphql.json', [
+            'json' => ['query' => $query],
         ]);
 
+        $code = $response->getStatusCode();
+        $body = (string) $response->getBody();
+
         if ($code < 200 || $code >= 300) {
-            throw new RuntimeException("Shopify GraphQL error {$code}: " . substr($raw, $headerSize));
+            throw new RuntimeException("Shopify GraphQL error {$code}: {$body}");
         }
 
-        $body    = substr($raw, $headerSize);
         $decoded = json_decode($body, true);
         if (isset($decoded['errors'])) {
             throw new RuntimeException("Shopify GraphQL: " . json_encode($decoded['errors']));
@@ -745,43 +736,42 @@ class Shopify
     }
 
     /**
-     * Single GET request - returns decoded JSON body as array.
+     * Single GET request — returns decoded JSON body as array.
      *
      * @return array<string, mixed>
      */
     private function get(string $url): array
     {
-        ['raw' => $raw, 'code' => $code, 'headerSize' => $headerSize] = $this->makeCurlRequest($url);
+        $response = $this->request('GET', $url);
+        $code     = $response->getStatusCode();
+        $body     = (string) $response->getBody();
 
         if ($code < 200 || $code >= 300) {
-            throw new RuntimeException("Shopify API error {$code}: " . substr($raw, $headerSize));
+            throw new RuntimeException("Shopify API error {$code}: {$body}");
         }
 
-        $body    = substr($raw, $headerSize);
-        $decoded = json_decode($body, true);
-
-        return is_array($decoded) ? $decoded : [];
+        return json_decode($body, true) ?? [];
     }
 
     /** @return array{0: array<int, array<string, mixed>>, 1: string|null} */
     private function getPage(string $url, string $rootKey = 'orders'): array
     {
-        ['raw' => $raw, 'code' => $code, 'headerSize' => $headerSize] = $this->makeCurlRequest($url);
+        $response = $this->request('GET', $url);
+        $code     = $response->getStatusCode();
+        $body     = (string) $response->getBody();
 
         if ($code < 200 || $code >= 300) {
-            throw new RuntimeException("Shopify API error {$code}: " . substr($raw, $headerSize));
+            throw new RuntimeException("Shopify API error {$code}: {$body}");
         }
 
-        $headers = substr($raw, 0, $headerSize);
-        $body    = substr($raw, $headerSize);
         $decoded = json_decode($body, true);
-
         if (!isset($decoded[$rootKey])) {
             throw new RuntimeException("Shopify unexpected response (key={$rootKey}): {$body}");
         }
 
         $nextUrl = null;
-        if (preg_match('/<([^>]+)>;\s*rel="next"/i', $headers, $m)) {
+        $link    = $response->getHeaderLine('Link');
+        if ($link && preg_match('/<([^>]+)>;\s*rel="next"/i', $link, $m)) {
             $nextUrl = $m[1];
         }
 
