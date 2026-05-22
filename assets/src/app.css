@@ -535,38 +535,43 @@ input[type="checkbox"] { @apply cursor-pointer; accent-color: var(--accent); wid
 .ignored-num    { @apply font-mono font-bold; font-size: .85rem; }
 .ignored-reason { @apply text-xs; color: var(--muted); }
 
-/* ── Audit loading overlay ── */
-.audit-loading {
-  @apply hidden fixed inset-0 z-[500] flex-col items-center justify-center gap-5;
-  background: rgba(248,249,251,.88);
-  backdrop-filter: blur(3px);
-  @apply dark:bg-[rgba(15,17,23,.88)];
+/* ── Generic top loading bar ── */
+#js-loading-bar {
+  position: fixed; top: 0; left: 0; z-index: 9999;
+  height: 3px; width: 0;
+  background: var(--accent);
+  transition: width .2s ease;
+  pointer-events: none;
 }
-.audit-loading.active { @apply flex; }
-.audit-loading .spinner {
-  @apply rounded-full;
-  width: 44px; height: 44px;
-  border: 4px solid var(--border);
-  border-top-color: var(--accent);
-  animation: spin .8s linear infinite;
+#js-loading-bar.running {
+  animation: loadbar 2.4s ease-in-out forwards;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
-.audit-loading .loading-title { @apply font-bold text-base; color: var(--text); }
-.audit-loading .loading-steps { @apply flex flex-col gap-1.5; min-width: 220px; }
-.loading-step {
-  @apply flex items-center gap-2.5 text-sm transition-colors;
-  color: var(--muted);
+@keyframes loadbar {
+  0%   { width: 0; }
+  40%  { width: 65%; }
+  70%  { width: 82%; }
+  100% { width: 92%; }
 }
-.loading-step.active { color: var(--accent); font-weight: 600; }
-.loading-step.done   { color: var(--ok); }
-.loading-step .step-dot {
-  @apply rounded-full flex-shrink-0 transition-colors;
-  width: 8px; height: 8px;
-  background: var(--border);
-}
-.loading-step.active .step-dot { background: var(--accent); }
-.loading-step.done   .step-dot { background: var(--ok); }
 
+/* ── Generic button loading state ── */
+.btn-loading {
+  opacity: .7;
+  pointer-events: none;
+  cursor: not-allowed;
+  position: relative;
+  padding-left: 2.2rem !important;
+}
+.btn-loading::before {
+  content: '';
+  position: absolute;
+  left: .7rem; top: 50%;
+  transform: translateY(-50%);
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: spin .7s linear infinite;
+}
 /* ── Mobile header ── */
 .mobile-header {
   @apply hidden sticky top-0 z-[200] border-b items-center justify-between;

@@ -53,48 +53,64 @@ document.querySelectorAll('.js-localtime').forEach(function(el) {
   });
 })();
 
-// Audit loading overlay
+// ── Audit preset buttons ──────────────────────────────────────────────────────
 (function() {
-  var form    = document.getElementById('js-audit-form');
-  var overlay = document.getElementById('js-audit-loading');
-  if (!form || !overlay) return;
-
-  var stepIds = ['lstep-shopify', 'lstep-ss', 'lstep-compare'];
-  var current = 0;
-  var timer;
-
-  function activateStep(i) {
-    if (i > 0) {
-      var prev = document.getElementById(stepIds[i - 1]);
-      if (prev) { prev.classList.remove('active'); prev.classList.add('done'); }
-    }
-    var el = document.getElementById(stepIds[i]);
-    if (el) el.classList.add('active');
-  }
-
-  function cycle() {
-    if (current < stepIds.length) {
-      activateStep(current);
-      current++;
-      // cycle through steps every ~8s while waiting for server
-      timer = setTimeout(cycle, 8000);
-    } else {
-      // all steps "done", keep last one active so it doesn't go blank
-      var last = document.getElementById(stepIds[stepIds.length - 1]);
-      if (last) { last.classList.remove('active'); last.classList.add('done'); }
-    }
-  }
-
-  form.addEventListener('submit', function() {
-    overlay.classList.add('active');
-    cycle();
-    // Keep overlay up through navigation - beforeunload fires when response arrives
-    window.addEventListener('beforeunload', function() {
-      clearTimeout(timer);
-      // leave overlay visible so there's no flash before the new page paints
+  document.querySelectorAll('.preset-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var days  = parseInt(this.dataset.days);
+      var end   = new Date();
+      var start = new Date();
+      start.setDate(end.getDate() - days + 1);
+      var fmt = function(d) {
+        return d.getFullYear() + '-' +
+          String(d.getMonth() + 1).padStart(2, '0') + '-' +
+          String(d.getDate()).padStart(2, '0');
+      };
+      var s = document.getElementById('js-audit-start');
+      var e = document.getElementById('js-audit-end');
+      if (s) s.value = fmt(start);
+      if (e) e.value = fmt(end);
+      document.querySelectorAll('.preset-btn').forEach(function(b) { b.classList.remove('preset-btn-active'); });
+      this.classList.add('preset-btn-active');
     });
   });
 })();
+
+// ── Generic form loading state (top bar + button spinner) ─────────────────────
+(function() {
+  var HEAVY = {
+    run_audit: true, spotcheck: true, find_dupes: true, find_refunds: true,
+    scan_addresses: true, scan_emails: true, find_orphans: true, tag_audit: true,
+    tag_search: true, compare_orders: true, customer_lookup: true,
+    metafield_search: true, metafield_lookup: true, lookup_tracking: true
+  };
+
+  var bar = document.getElementById('js-loading-bar');
+
+  document.querySelectorAll('form').forEach(function(form) {
+    var actionInput = form.querySelector('input[name="action"]');
+    if (!actionInput || !HEAVY[actionInput.value]) return;
+
+    form.addEventListener('submit', function() {
+      // Top bar
+      if (bar) { bar.style.width = '0'; bar.classList.add('running'); }
+
+      // Disable + spinner on the submit button
+      var btn = form.querySelector('[type="submit"]');
+      if (btn) {
+        btn.dataset.origText = btn.textContent;
+        btn.classList.add('btn-loading');
+        btn.disabled = true;
+      }
+
+      // Keep bar visible until new page paints
+      window.addEventListener('beforeunload', function() {
+        if (bar) { bar.style.width = '100%'; bar.style.transition = 'none'; }
+      });
+    });
+  });
+})();
+
 
 // Search / filter (coordinates with type-filter if present)
 function applyTableFilters(targetId) {
