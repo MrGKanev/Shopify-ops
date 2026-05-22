@@ -48,7 +48,7 @@
     </div>
 
     <?php
-      $auditPages  = ['reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans'];
+      $auditPages  = ['reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges'];
       $searchPages = ['spotcheck', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'tracking', 'compare'];
       $managePages = ['ignored', 'pushlog'];
       $groupOf = function(string $p) use ($auditPages, $searchPages, $managePages): string {
@@ -76,7 +76,11 @@
           <li><a href="?page=refunds"   class="<?= $page === 'refunds'   ? 'page-active' : '' ?>">Refunds Tracker</a></li>
           <li><a href="?page=addrcheck"  class="<?= $page === 'addrcheck'  ? 'page-active' : '' ?>">Address Scanner</a></li>
           <li><a href="?page=emailcheck" class="<?= $page === 'emailcheck' ? 'page-active' : '' ?>">Email Checker</a></li>
-          <li><a href="?page=orphans"    class="<?= $page === 'orphans'    ? 'page-active' : '' ?>">Orphan Detector</a></li>
+          <li><a href="?page=orphans"       class="<?= $page === 'orphans'       ? 'page-active' : '' ?>">Orphan Detector</a></li>
+          <li><a href="?page=hvorders"      class="<?= $page === 'hvorders'      ? 'page-active' : '' ?>">High-Value No Phone</a></li>
+          <li><a href="?page=repeatrefunds" class="<?= $page === 'repeatrefunds' ? 'page-active' : '' ?>">Repeat Refunds</a></li>
+          <li><a href="?page=failedship"    class="<?= $page === 'failedship'    ? 'page-active' : '' ?>">Voided Shipments</a></li>
+          <li><a href="?page=addrchanges"   class="<?= $page === 'addrchanges'   ? 'page-active' : '' ?>">Address Changes</a></li>
         </ul>
       </div>
 
@@ -164,7 +168,7 @@
 
   <main class="main">
     <?php
-      $allowedPages = ['reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'spotcheck', 'tracking', 'compare', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'ignored', 'pushlog', 'settings'];
+      $allowedPages = ['reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'spotcheck', 'tracking', 'compare', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'ignored', 'pushlog', 'settings'];
       $page         = in_array($page, $allowedPages, true) ? $page : 'reports';
       $pageFile     = __DIR__ . '/' . $page . '.php';
       if (file_exists($pageFile)) {

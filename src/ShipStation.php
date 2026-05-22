@@ -194,6 +194,27 @@ class ShipStation
         ];
     }
 
+    public function fetchVoidedShipments(string $startDate, string $endDate): array
+    {
+        $all  = [];
+        $page = 1;
+        do {
+            $params = http_build_query([
+                'voidDate_start' => $startDate . ' 00:00:00',
+                'voidDate_end'   => $endDate   . ' 23:59:59',
+                'pageSize'       => 500,
+                'page'           => $page,
+            ]);
+            $result = $this->get("/shipments?{$params}");
+            $items  = $result['shipments'] ?? [];
+            if (empty($items)) break;
+            array_push($all, ...$items);
+            $total = $result['total'] ?? 0;
+            $page++;
+        } while (count($all) < $total);
+        return $all;
+    }
+
     // ── Private ───────────────────────────────────────────────────────
 
     /** @return array<string, mixed> */
