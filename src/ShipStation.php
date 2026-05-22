@@ -242,8 +242,10 @@ class ShipStation
         $response = $this->http->request($method, self::BASE_URL . $path, $options);
 
         if ($response->getStatusCode() === 429) {
-            echo "\n  [ShipStation] Rate limited - waiting 60s ...\n";
-            sleep(60);
+            $h          = $response->getHeaderLine('Retry-After');
+            $retryAfter = $h !== '' ? (int) $h : 60;
+            echo "\n  [ShipStation] Rate limited - waiting {$retryAfter}s ...\n";
+            sleep($retryAfter);
             return $this->request($method, $path, $options);
         }
 
