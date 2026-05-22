@@ -1,17 +1,9 @@
-<div class="topbar">
-  <div>
-    <h1>Repeat Refunds</h1>
-    <div class="meta">Customers with multiple refunded orders in a date range</div>
-  </div>
-</div>
+<?= topbar('Repeat Refunds', 'Customers with multiple refunded orders in a date range') ?>
 
-<div class="feature-info" data-info-key="repeatrefunds">
-  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: Repeat Refunds</button>
-  <div class="feature-info-body">
+<?= featureInfoStart('repeatrefunds', 'Repeat Refunds') ?>
     <p><strong>Repeat Refunds</strong> identifies customers who have received refunds on two or more orders within the selected date range. This can help spot patterns of abuse, serial returners, or persistent fulfilment issues with a specific customer segment.</p>
     <p>Results are grouped by email address and sorted by refund count descending. Click through to the Customer page for a full order history.</p>
-  </div>
-</div>
+<?= featureInfoEnd() ?>
 
 <div class="run-form">
   <h2>Scan date range</h2>
@@ -83,7 +75,7 @@
           <tr>
             <td class="td-email"><?= esc($row['email']) ?></td>
             <td><strong><?= (int)$row['refund_count'] ?></strong></td>
-            <td class="td-price">$<?= number_format($row['total_refunded'], 2) ?></td>
+            <td class="td-price"><?= formatPrice($row['total_refunded']) ?></td>
             <td>
               <div class="flex flex-wrap gap-1">
                 <?php foreach ($row['orders'] as $o):

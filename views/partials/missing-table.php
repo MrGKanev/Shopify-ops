@@ -96,15 +96,10 @@ ksort($allTypes);
           $num       = (string) ($row['order_number'] ?? $row['name'] ?? '?');
           $shopifyId = $row['id'] ?? $row['shopify_id'] ?? '';
           $financial = strtolower($row['financial_status'] ?? '');
-          $chipClass = match($financial) {
-            'paid'           => 'chip-paid',
-            'partially_paid' => 'chip-partial',
-            'unpaid'         => 'chip-unpaid',
-            default          => 'chip-unknown',
-          };
+          $chipClass  = financialChip($financial);
           $totalPrice = isset($row['total_price']) && $row['total_price'] !== ''
-            ? '$' . number_format((float) $row['total_price'], 2)
-            : '-';
+              ? formatPrice($row['total_price'])
+              : '-';
           $orderType   = classifyOrder($row);
           $typeClass   = 'chip-type-' . (crc32($orderType) % 6 + 6) % 6;
           $adminUrl    = $shopifyId ? $shopifyAdminBase . '/' . esc($shopifyId) : null;

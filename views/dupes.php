@@ -1,13 +1,6 @@
-<div class="topbar">
-  <div>
-    <h1>Duplicate Detector</h1>
-    <div class="meta">Find orders from the same customer with the same total placed within 10 minutes</div>
-  </div>
-</div>
+<?= topbar('Duplicate Detector', 'Find orders from the same customer with the same total placed within 10 minutes') ?>
 
-<div class="feature-info" data-info-key="dupes">
-  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: Duplicate Detector</button>
-  <div class="feature-info-body">
+<?= featureInfoStart('dupes', 'Duplicate Detector') ?>
   <p><strong>Duplicate Detector</strong> scans Shopify orders in the selected date range and finds pairs where the same customer (email) placed two orders with an identical total within <strong>10 minutes</strong> of each other.</p>
   <p>Typical cause: the customer clicked "Place order" twice, or the page reloaded after payment. This tool helps catch double-charges before both packages are shipped.</p>
   <ul>
@@ -16,8 +9,7 @@
     <li>For large date ranges results may be truncated - narrow the period if needed.</li>
   </ul>
 
-  </div>
-</div>
+<?= featureInfoEnd() ?>
 
 <div class="run-form">
   <h2>Scan for duplicates</h2>
@@ -29,17 +21,11 @@
 
   <form method="post">
     <input type="hidden" name="action" value="find_dupes">
-    <div class="date-row">
-      <div class="field">
-        <label>From</label>
-        <input type="date" name="dupes_start" value="<?= esc($dupesStart) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <div class="field">
-        <label>To</label>
-        <input type="date" name="dupes_end" value="<?= esc($dupesEnd) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <button class="btn btn-submit-end" type="submit">Scan</button>
-    </div>
+    <?php
+$partialStartName = 'dupes_start'; $partialStartVal = $dupesStart;
+$partialEndName   = 'dupes_end';   $partialEndVal   = $dupesEnd;
+require __DIR__ . '/partials/_date-range.php';
+?>
   </form>
 
   <?php if ($dupesResult !== null): ?>

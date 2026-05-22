@@ -1,13 +1,6 @@
-<div class="topbar">
-  <div>
-    <h1>Spot-check Orders</h1>
-    <div class="meta">Look up specific order numbers live in ShipStation and/or Shopify</div>
-  </div>
-</div>
+<?= topbar('Spot-check Orders', 'Look up specific order numbers live in ShipStation and/or Shopify') ?>
 
-<div class="feature-info" data-info-key="spotcheck">
-  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: Spot-check Orders</button>
-  <div class="feature-info-body">
+<?= featureInfoStart('spotcheck', 'Spot-check Orders') ?>
   <p><strong>Spot-check Orders</strong> performs a live lookup of one or more specific order numbers in ShipStation and/or Shopify - without running a full audit. Results are always fetched fresh, never from cache.</p>
   <p>Use this to quickly verify a single order after a customer enquiry, or to manually re-check orders that appeared in a previous audit report.</p>
   <ul>
@@ -16,8 +9,7 @@
     <li>Results show found/not-found per platform, financial status, and a direct link to the order in each system.</li>
   </ul>
 
-  </div>
-</div>
+<?= featureInfoEnd() ?>
 
 <div class="spot-form">
   <h2>Enter order numbers</h2>

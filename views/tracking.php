@@ -1,13 +1,6 @@
-<div class="topbar">
-  <div>
-    <h1>Tracking Feed</h1>
-    <div class="meta">Look up shipment tracking info for orders via ShipStation</div>
-  </div>
-</div>
+<?= topbar('Tracking Feed', 'Look up shipment tracking info for orders via ShipStation') ?>
 
-<div class="feature-info" data-info-key="tracking">
-  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: Tracking Feed</button>
-  <div class="feature-info-body">
+<?= featureInfoStart('tracking', 'Tracking Feed') ?>
     <p><strong>Tracking Feed</strong> looks up one or more order numbers in ShipStation and shows tracking details — carrier, tracking number, ship date — with a direct link to the carrier's tracking page.</p>
     <p>Useful for quickly answering "where is my order?" without leaving the app or navigating through ShipStation's interface.</p>
     <ul>
@@ -16,8 +9,7 @@
       <li>If an order has multiple shipments (split fulfilment), all are shown.</li>
       <li>Orders not yet shipped will show their current ShipStation status.</li>
     </ul>
-  </div>
-</div>
+<?= featureInfoEnd() ?>
 
 <div class="spot-form">
   <h2>Enter order numbers</h2>

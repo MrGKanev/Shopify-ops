@@ -1,13 +1,6 @@
-<div class="topbar">
-  <div>
-    <h1>Tag Search</h1>
-    <div class="meta">Find all orders with a specific Shopify tag</div>
-  </div>
-</div>
+<?= topbar('Tag Search', 'Find all orders with a specific Shopify tag') ?>
 
-<div class="feature-info" data-info-key="tagsearch">
-  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: Tag Search</button>
-  <div class="feature-info-body">
+<?= featureInfoStart('tagsearch', 'Tag Search') ?>
   <p><strong>Tag Search</strong> finds all Shopify orders that carry a specific tag. The lookup uses Shopify's native indexed tag filter, so it is fast even on large stores.</p>
   <p>Useful for finding all orders in a batch, promotion, or custom workflow - for example <code>wholesale</code>, <code>vip</code>, <code>reorder</code>, or any internal routing tag.</p>
   <ul>
@@ -17,8 +10,7 @@
     <li>Results may be truncated for very broad searches - add a date range to narrow them.</li>
   </ul>
 
-  </div>
-</div>
+<?= featureInfoEnd() ?>
 
 <div class="run-form">
   <h2>Search by tag</h2>

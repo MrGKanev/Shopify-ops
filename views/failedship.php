@@ -1,15 +1,8 @@
-<div class="topbar">
-  <div>
-    <h1>Voided Shipments</h1>
-    <div class="meta">ShipStation shipments that were voided in the selected date range</div>
-  </div>
-</div>
+<?= topbar('Voided Shipments', 'ShipStation shipments that were voided in the selected date range') ?>
 
-<div class="feature-info" data-info-key="failedship">
-  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: Voided Shipments</button>
-  <div class="feature-info-body">
-  </div>
-</div>
+<?= featureInfoStart('failedship', 'Voided Shipments') ?>
+    <p><strong>Voided Shipments</strong> fetches shipments from ShipStation that were voided in the selected date range. Voided labels often indicate a failed delivery, a return, or a label that was created in error. Use this to proactively follow up with customers.</p>
+<?= featureInfoEnd() ?>
 
 <div class="run-form">
   <h2>Scan date range</h2>
@@ -21,17 +14,11 @@
 
   <form method="post">
     <input type="hidden" name="action" value="scan_failed_shipments">
-    <div class="date-row">
-      <div class="field">
-        <label>From</label>
-        <input type="date" name="fs_start" value="<?= esc($fsStart) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <div class="field">
-        <label>To</label>
-        <input type="date" name="fs_end" value="<?= esc($fsEnd) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <button class="btn btn-submit-end" type="submit">Scan</button>
-    </div>
+    <?php
+$partialStartName = 'fs_start'; $partialStartVal = $fsStart;
+$partialEndName   = 'fs_end';   $partialEndVal   = $fsEnd;
+require __DIR__ . '/partials/_date-range.php';
+?>
   </form>
 
   <?php if ($fsResult !== null): ?>

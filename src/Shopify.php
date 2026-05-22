@@ -187,48 +187,42 @@ class Shopify
         if ($endDate)   $dateFilter .= ' created_at:<=' . $endDate   . 'T23:59:59Z';
         $queryStr = 'tag:"' . $safeTag . '"' . ($dateFilter ? ' ' . trim($dateFilter) : '');
 
-        $matches = [];
-        $cursor  = null;
-        $page    = 0;
-
-        do {
-            $after = $cursor ? ", after: \"{$cursor}\"" : '';
-            $gql   = <<<GQL
-            {
-              orders(first: 250, sortKey: CREATED_AT, reverse: true, query: "{$queryStr}"{$after}) {
-                pageInfo { hasNextPage endCursor }
-                edges {
-                  node {
-                    id
-                    legacyResourceId
-                    name
-                    displayFinancialStatus
-                    displayFulfillmentStatus
-                    createdAt
-                    email
-                    tags
-                    totalPriceSet { shopMoney { amount currencyCode } }
-                  }
-                }
+        $matches  = [];
+        $template = <<<GQL
+        {
+          orders(first: 250, sortKey: CREATED_AT, reverse: true, query: "{$queryStr}"{{AFTER}}) {
+            pageInfo { hasNextPage endCursor }
+            edges {
+              node {
+                id
+                legacyResourceId
+                name
+                displayFinancialStatus
+                displayFulfillmentStatus
+                createdAt
+                email
+                tags
+                totalPriceSet { shopMoney { amount currencyCode } }
               }
             }
-            GQL;
+          }
+        }
+        GQL;
 
-            $data    = $this->graphql($gql);
-            $conn    = $data['data']['orders'] ?? [];
-            $edges   = $conn['edges'] ?? [];
-            foreach ($edges as $e) $matches[] = $e['node'];
-
-            $hasNext = $conn['pageInfo']['hasNextPage'] ?? false;
-            $cursor  = $conn['pageInfo']['endCursor']   ?? null;
-            $page++;
-        } while ($hasNext && $cursor && $page < $maxPages);
+        ['truncated' => $truncated, 'pages' => $pages] = $this->paginateGraphQL(
+            $template,
+            'orders',
+            function (array $edges) use (&$matches) {
+                foreach ($edges as $e) $matches[] = $e['node'];
+            },
+            $maxPages
+        );
 
         return [
             'matches'   => $matches,
             'scanned'   => count($matches),
-            'pages'     => $page,
-            'truncated' => $hasNext,
+            'pages'     => $pages,
+            'truncated' => $truncated,
         ];
     }
 
@@ -248,91 +242,78 @@ class Shopify
         string $endDate   = '',
         int    $maxPages  = 10
     ): array {
-        $ns    = addslashes($namespace);
-        $k     = addslashes($key);
+        $ns = addslashes($namespace);
+        $k  = addslashes($key);
 
         $dateFilter = '';
-        if ($startDate) {
-            $dateFilter .= ' created_at:>=' . $startDate . 'T00:00:00Z';
-        }
-        if ($endDate) {
-            $dateFilter .= ' created_at:<=' . $endDate . 'T23:59:59Z';
-        }
-        $queryStr = trim($dateFilter) ?: '';
+        if ($startDate) $dateFilter .= ' created_at:>=' . $startDate . 'T00:00:00Z';
+        if ($endDate)   $dateFilter .= ' created_at:<=' . $endDate   . 'T23:59:59Z';
+        $qFilter = trim($dateFilter) ? ', query: "' . trim($dateFilter) . '"' : '';
 
         $matches      = [];
-        $cursor       = null;
-        $page         = 0;
         $totalScanned = 0;
         $totalWithMf  = 0;
-        $sampleValues = []; // first 5 distinct non-null values seen
+        $sampleValues = [];
 
-        do {
-            $after   = $cursor ? ", after: \"{$cursor}\"" : '';
-            $qFilter = $queryStr ? ", query: \"{$queryStr}\"" : '';
-
-            $gql = <<<GQL
-            {
-              orders(first: 250, sortKey: CREATED_AT, reverse: true{$qFilter}{$after}) {
-                pageInfo { hasNextPage endCursor }
-                edges {
-                  node {
-                    id
-                    legacyResourceId
-                    name
-                    displayFinancialStatus
-                    displayFulfillmentStatus
-                    createdAt
-                    email
-                    totalPriceSet { shopMoney { amount currencyCode } }
-                    metafield(namespace: "{$ns}", key: "{$k}") {
-                      value
-                      type
-                    }
-                  }
+        $template = <<<GQL
+        {
+          orders(first: 250, sortKey: CREATED_AT, reverse: true{$qFilter}{{AFTER}}) {
+            pageInfo { hasNextPage endCursor }
+            edges {
+              node {
+                id
+                legacyResourceId
+                name
+                displayFinancialStatus
+                displayFulfillmentStatus
+                createdAt
+                email
+                totalPriceSet { shopMoney { amount currencyCode } }
+                metafield(namespace: "{$ns}", key: "{$k}") {
+                  value
+                  type
                 }
               }
             }
-            GQL;
+          }
+        }
+        GQL;
 
-            $data  = $this->graphql($gql);
-            $conn  = $data['data']['orders'] ?? [];
-            $edges = $conn['edges'] ?? [];
+        ['truncated' => $truncated, 'pages' => $pages] = $this->paginateGraphQL(
+            $template,
+            'orders',
+            function (array $edges) use (&$matches, &$totalScanned, &$totalWithMf, &$sampleValues, $value) {
+                foreach ($edges as $edge) {
+                    $node    = $edge['node'];
+                    $mfValue = $node['metafield']['value'] ?? null;
+                    $totalScanned++;
 
-            foreach ($edges as $edge) {
-                $node    = $edge['node'];
-                $mfValue = $node['metafield']['value'] ?? null;
-                $totalScanned++;
+                    if ($mfValue !== null) {
+                        $totalWithMf++;
+                        if (count($sampleValues) < 5 && !in_array($mfValue, $sampleValues, true)) {
+                            $sampleValues[] = $mfValue;
+                        }
+                    }
 
-                if ($mfValue !== null) {
-                    $totalWithMf++;
-                    if (count($sampleValues) < 5 && !in_array($mfValue, $sampleValues, true)) {
-                        $sampleValues[] = $mfValue;
+                    if ($value === '') {
+                        if ($mfValue !== null) $matches[] = $node;
+                    } else {
+                        if ($mfValue !== null && stripos($mfValue, $value) !== false) {
+                            $matches[] = $node;
+                        }
                     }
                 }
-
-                if ($value === '') {
-                    if ($mfValue !== null) $matches[] = $node;
-                } else {
-                    if ($mfValue !== null && stripos($mfValue, $value) !== false) {
-                        $matches[] = $node;
-                    }
-                }
-            }
-
-            $hasNext = $conn['pageInfo']['hasNextPage'] ?? false;
-            $cursor  = $conn['pageInfo']['endCursor']   ?? null;
-            $page++;
-
-        } while ($hasNext && $cursor && $page < $maxPages);
+            },
+            $maxPages
+        );
 
         return [
-            'matches'      => $matches,
-            'scanned'      => $totalScanned,
-            'with_mf'      => $totalWithMf,
-            'sample_values'=> $sampleValues,
-            'pages'        => $page,
-            'truncated'    => $hasNext,
+            'matches'       => $matches,
+            'scanned'       => $totalScanned,
+            'with_mf'       => $totalWithMf,
+            'sample_values' => $sampleValues,
+            'pages'         => $pages,
+            'truncated'     => $truncated,
         ];
     }
 
@@ -347,54 +328,45 @@ class Shopify
         $dateFilter = '';
         if ($startDate) $dateFilter .= ' created_at:>=' . $startDate . 'T00:00:00Z';
         if ($endDate)   $dateFilter .= ' created_at:<=' . $endDate   . 'T23:59:59Z';
-        $queryStr = trim($dateFilter) ?: '';
+        $qFilter = trim($dateFilter) ? ', query: "' . trim($dateFilter) . '"' : '';
 
         $tagCounts    = [];
         $tagLastOrder = [];
-        $cursor       = null;
-        $page         = 0;
         $totalOrders  = 0;
-        $hasNext      = false;
 
-        do {
-            $after   = $cursor ? ", after: \"{$cursor}\"" : '';
-            $qFilter = $queryStr ? ", query: \"{$queryStr}\"" : '';
-
-            $gql = <<<GQL
-            {
-              orders(first: 250, sortKey: CREATED_AT, reverse: true{$qFilter}{$after}) {
-                pageInfo { hasNextPage endCursor }
-                edges {
-                  node {
-                    name
-                    createdAt
-                    tags
-                  }
-                }
+        $template = <<<GQL
+        {
+          orders(first: 250, sortKey: CREATED_AT, reverse: true{$qFilter}{{AFTER}}) {
+            pageInfo { hasNextPage endCursor }
+            edges {
+              node {
+                name
+                createdAt
+                tags
               }
             }
-            GQL;
+          }
+        }
+        GQL;
 
-            $data  = $this->graphql($gql);
-            $conn  = $data['data']['orders'] ?? [];
-            $edges = $conn['edges'] ?? [];
-
-            foreach ($edges as $e) {
-                $node = $e['node'];
-                $totalOrders++;
-                foreach ($node['tags'] as $tag) {
-                    if ($tag === '') continue;
-                    $tagCounts[$tag] = ($tagCounts[$tag] ?? 0) + 1;
-                    if (!isset($tagLastOrder[$tag]) || $node['createdAt'] > ($tagLastOrder[$tag]['date'] ?? '')) {
-                        $tagLastOrder[$tag] = ['name' => $node['name'], 'date' => $node['createdAt']];
+        ['truncated' => $truncated, 'pages' => $pages] = $this->paginateGraphQL(
+            $template,
+            'orders',
+            function (array $edges) use (&$tagCounts, &$tagLastOrder, &$totalOrders) {
+                foreach ($edges as $e) {
+                    $node = $e['node'];
+                    $totalOrders++;
+                    foreach ($node['tags'] as $tag) {
+                        if ($tag === '') continue;
+                        $tagCounts[$tag] = ($tagCounts[$tag] ?? 0) + 1;
+                        if (!isset($tagLastOrder[$tag]) || $node['createdAt'] > ($tagLastOrder[$tag]['date'] ?? '')) {
+                            $tagLastOrder[$tag] = ['name' => $node['name'], 'date' => $node['createdAt']];
+                        }
                     }
                 }
-            }
-
-            $hasNext = $conn['pageInfo']['hasNextPage'] ?? false;
-            $cursor  = $conn['pageInfo']['endCursor']   ?? null;
-            $page++;
-        } while ($hasNext && $cursor && $page < $maxPages);
+            },
+            $maxPages
+        );
 
         arsort($tagCounts);
 
@@ -411,8 +383,8 @@ class Shopify
         return [
             'tags'         => $tags,
             'total_orders' => $totalOrders,
-            'truncated'    => $hasNext,
-            'pages'        => $page,
+            'truncated'    => $truncated,
+            'pages'        => $pages,
         ];
     }
 
@@ -582,58 +554,50 @@ class Shopify
         $safeEmail = addslashes(strtolower(trim($email)));
         $orders    = [];
         $customer  = null;
-        $cursor    = null;
-        $page      = 0;
-        $hasNext   = false;
 
-        do {
-            $after = $cursor ? ", after: \"{$cursor}\"" : '';
-
-            $gql = <<<GQL
-            {
-              orders(first: 250, sortKey: CREATED_AT, reverse: true, query: "email:\"{$safeEmail}\"{$after}") {
-                pageInfo { hasNextPage endCursor }
-                edges {
-                  node {
-                    id
-                    legacyResourceId
-                    name
-                    displayFinancialStatus
-                    displayFulfillmentStatus
-                    cancelledAt
-                    createdAt
-                    email
-                    tags
-                    totalPriceSet { shopMoney { amount currencyCode } }
-                    customer {
-                      id
-                      firstName
-                      lastName
-                      createdAt
-                      verifiedEmail
-                    }
-                  }
+        $template = <<<GQL
+        {
+          orders(first: 250, sortKey: CREATED_AT, reverse: true, query: "email:\"{$safeEmail}\""{{AFTER}}) {
+            pageInfo { hasNextPage endCursor }
+            edges {
+              node {
+                id
+                legacyResourceId
+                name
+                displayFinancialStatus
+                displayFulfillmentStatus
+                cancelledAt
+                createdAt
+                email
+                tags
+                totalPriceSet { shopMoney { amount currencyCode } }
+                customer {
+                  id
+                  firstName
+                  lastName
+                  createdAt
+                  verifiedEmail
                 }
               }
             }
-            GQL;
+          }
+        }
+        GQL;
 
-            $data  = $this->graphql($gql);
-            $conn  = $data['data']['orders'] ?? [];
-            $edges = $conn['edges'] ?? [];
-
-            foreach ($edges as $e) {
-                $node = $e['node'];
-                if ($customer === null && isset($node['customer'])) {
-                    $customer = $node['customer'];
+        ['truncated' => $truncated] = $this->paginateGraphQL(
+            $template,
+            'orders',
+            function (array $edges) use (&$orders, &$customer) {
+                foreach ($edges as $e) {
+                    $node = $e['node'];
+                    if ($customer === null && isset($node['customer'])) {
+                        $customer = $node['customer'];
+                    }
+                    $orders[] = $node;
                 }
-                $orders[] = $node;
-            }
-
-            $hasNext = $conn['pageInfo']['hasNextPage'] ?? false;
-            $cursor  = $conn['pageInfo']['endCursor']   ?? null;
-            $page++;
-        } while ($hasNext && $cursor && $page < $maxPages);
+            },
+            $maxPages
+        );
 
         $totalSpent = 0.0;
         $currency   = 'USD';
@@ -642,7 +606,7 @@ class Shopify
             $currency    = $o['totalPriceSet']['shopMoney']['currencyCode'] ?? $currency;
         }
 
-        return compact('orders', 'customer', 'totalSpent', 'currency') + ['truncated' => $hasNext];
+        return compact('orders', 'customer', 'totalSpent', 'currency') + ['truncated' => $truncated];
     }
 
     /**
@@ -654,41 +618,35 @@ class Shopify
     public function findDuplicateOrders(string $startDate, string $endDate): array
     {
         $queryStr = 'created_at:>=' . $startDate . 'T00:00:00Z created_at:<=' . $endDate . 'T23:59:59Z';
-        $cursor   = null;
-        $page     = 0;
         $all      = [];
-        $hasNext  = false;
 
-        do {
-            $after = $cursor ? ", after: \"{$cursor}\"" : '';
-
-            $gql = <<<GQL
-            {
-              orders(first: 250, sortKey: CREATED_AT, reverse: false, query: "{$queryStr}"{$after}) {
-                pageInfo { hasNextPage endCursor }
-                edges {
-                  node {
-                    id
-                    legacyResourceId
-                    name
-                    email
-                    createdAt
-                    displayFinancialStatus
-                    totalPriceSet { shopMoney { amount currencyCode } }
-                  }
-                }
+        $template = <<<GQL
+        {
+          orders(first: 250, sortKey: CREATED_AT, reverse: false, query: "{$queryStr}"{{AFTER}}) {
+            pageInfo { hasNextPage endCursor }
+            edges {
+              node {
+                id
+                legacyResourceId
+                name
+                email
+                createdAt
+                displayFinancialStatus
+                totalPriceSet { shopMoney { amount currencyCode } }
               }
             }
-            GQL;
+          }
+        }
+        GQL;
 
-            $data  = $this->graphql($gql);
-            $conn  = $data['data']['orders'] ?? [];
-            foreach ($conn['edges'] ?? [] as $e) $all[] = $e['node'];
-
-            $hasNext = $conn['pageInfo']['hasNextPage'] ?? false;
-            $cursor  = $conn['pageInfo']['endCursor']   ?? null;
-            $page++;
-        } while ($hasNext && $cursor && $page < 40);
+        ['truncated' => $truncated] = $this->paginateGraphQL(
+            $template,
+            'orders',
+            function (array $edges) use (&$all) {
+                foreach ($edges as $e) $all[] = $e['node'];
+            },
+            40
+        );
 
         // Group by email + amount, then find pairs within 10 minutes
         $groups = [];
@@ -712,72 +670,35 @@ class Shopify
             }
         }
 
-        return ['pairs' => $pairs, 'scanned' => count($all), 'truncated' => $hasNext];
+        return ['pairs' => $pairs, 'scanned' => count($all), 'truncated' => $truncated];
     }
 
     // ── Private ───────────────────────────────────────────────────────
 
     /**
-     * Executes a GraphQL query against the Shopify Admin API.
+     * Shared cURL setup with auth headers, 429 retry, and header capture.
+     * Pass CURLOPT_POST / CURLOPT_POSTFIELDS via $extraOpts for non-GET requests.
      *
-     * @return array<string, mixed>
+     * @return array{raw: string, code: int, headerSize: int}
      */
-    private function graphql(string $query): array
-    {
-        $url     = str_replace('/admin/api/', '/admin/api/', $this->baseUrl) . '/graphql.json';
-        $payload = json_encode(['query' => $query]);
-
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => $payload,
-            CURLOPT_HTTPHEADER     => [
-                "X-Shopify-Access-Token: {$this->token}",
-                'Content-Type: application/json',
-            ],
-            CURLOPT_TIMEOUT        => 30,
-        ]);
-
-        $raw  = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $err  = curl_error($ch);
-        if ($err) throw new RuntimeException("Shopify GraphQL cURL error: {$err}");
-        if ($code < 200 || $code >= 300) {
-            throw new RuntimeException("Shopify GraphQL error {$code}: {$raw}");
-        }
-
-        $decoded = json_decode($raw, true);
-        if (isset($decoded['errors'])) {
-            throw new RuntimeException("Shopify GraphQL: " . json_encode($decoded['errors']));
-        }
-
-        return is_array($decoded) ? $decoded : [];
-    }
-
-    /**
-     * Single GET request - returns decoded JSON body as array.
-     * Handles rate limiting (HTTP 429) with automatic retry.
-     *
-     * @return array<string, mixed>
-     */
-    private function get(string $url): array
+    private function makeCurlRequest(string $url, array $extraOpts = []): array
     {
         $ch = curl_init($url);
-        curl_setopt_array($ch, [
+        curl_setopt_array($ch, $extraOpts + [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HEADER         => true,
             CURLOPT_HTTPHEADER     => [
                 "X-Shopify-Access-Token: {$this->token}",
                 'Content-Type: application/json',
             ],
-            CURLOPT_TIMEOUT        => 30,
+            CURLOPT_TIMEOUT => 30,
         ]);
 
         $raw        = curl_exec($ch);
         $code       = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $err        = curl_error($ch);
         $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+        curl_close($ch);
 
         if ($err) throw new RuntimeException("Shopify cURL error: {$err}");
 
@@ -789,8 +710,48 @@ class Shopify
             }
             echo "\n  [Shopify] Rate limited - waiting {$retryAfter}s ...\n";
             sleep($retryAfter);
-            return $this->get($url);
+            return $this->makeCurlRequest($url, $extraOpts);
         }
+
+        return ['raw' => $raw, 'code' => $code, 'headerSize' => $headerSize];
+    }
+
+    /**
+     * Executes a GraphQL query against the Shopify Admin API.
+     *
+     * @return array<string, mixed>
+     */
+    private function graphql(string $query): array
+    {
+        $url     = $this->baseUrl . '/graphql.json';
+        $payload = json_encode(['query' => $query]);
+
+        ['raw' => $raw, 'code' => $code, 'headerSize' => $headerSize] = $this->makeCurlRequest($url, [
+            CURLOPT_POST       => true,
+            CURLOPT_POSTFIELDS => $payload,
+        ]);
+
+        if ($code < 200 || $code >= 300) {
+            throw new RuntimeException("Shopify GraphQL error {$code}: " . substr($raw, $headerSize));
+        }
+
+        $body    = substr($raw, $headerSize);
+        $decoded = json_decode($body, true);
+        if (isset($decoded['errors'])) {
+            throw new RuntimeException("Shopify GraphQL: " . json_encode($decoded['errors']));
+        }
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * Single GET request - returns decoded JSON body as array.
+     *
+     * @return array<string, mixed>
+     */
+    private function get(string $url): array
+    {
+        ['raw' => $raw, 'code' => $code, 'headerSize' => $headerSize] = $this->makeCurlRequest($url);
 
         if ($code < 200 || $code >= 300) {
             throw new RuntimeException("Shopify API error {$code}: " . substr($raw, $headerSize));
@@ -805,34 +766,7 @@ class Shopify
     /** @return array{0: array<int, array<string, mixed>>, 1: string|null} */
     private function getPage(string $url, string $rootKey = 'orders'): array
     {
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HEADER         => true,
-            CURLOPT_HTTPHEADER     => [
-                "X-Shopify-Access-Token: {$this->token}",
-                'Content-Type: application/json',
-            ],
-            CURLOPT_TIMEOUT        => 30,
-        ]);
-
-        $raw        = curl_exec($ch);
-        $code       = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $err        = curl_error($ch);
-        $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-
-        if ($err) throw new RuntimeException("Shopify cURL error: {$err}");
-
-        if ($code === 429) {
-            $headers    = substr($raw, 0, $headerSize);
-            $retryAfter = 10;
-            if (preg_match('/Retry-After:\s*(\d+)/i', $headers, $m)) {
-                $retryAfter = (int) $m[1];
-            }
-            echo "\n  [Shopify] Rate limited - waiting {$retryAfter}s ...\n";
-            sleep($retryAfter);
-            return $this->getPage($url);
-        }
+        ['raw' => $raw, 'code' => $code, 'headerSize' => $headerSize] = $this->makeCurlRequest($url);
 
         if ($code < 200 || $code >= 300) {
             throw new RuntimeException("Shopify API error {$code}: " . substr($raw, $headerSize));
@@ -852,5 +786,41 @@ class Shopify
         }
 
         return [$decoded[$rootKey], $nextUrl];
+    }
+
+    /**
+     * Runs a paginated GraphQL query, calling $processor with each page's edges.
+     * The query template must contain {{AFTER}} where the cursor argument goes
+     * (e.g. `orders(first: 250, query: "..."{{AFTER}}) {`).
+     *
+     * @param  callable(array $edges): void $processor
+     * @return array{truncated: bool, pages: int}
+     */
+    private function paginateGraphQL(
+        string   $queryTemplate,
+        string   $rootKey,
+        callable $processor,
+        int      $maxPages = 20
+    ): array {
+        $cursor  = null;
+        $page    = 0;
+        $hasNext = false;
+
+        do {
+            $after = $cursor ? ", after: \"{$cursor}\"" : '';
+            $gql   = str_replace('{{AFTER}}', $after, $queryTemplate);
+
+            $data    = $this->graphql($gql);
+            $conn    = $data['data'][$rootKey] ?? [];
+            $edges   = $conn['edges'] ?? [];
+
+            $processor($edges);
+
+            $hasNext = $conn['pageInfo']['hasNextPage'] ?? false;
+            $cursor  = $conn['pageInfo']['endCursor']   ?? null;
+            $page++;
+        } while ($hasNext && $cursor && $page < $maxPages);
+
+        return ['truncated' => $hasNext, 'pages' => $page];
     }
 }

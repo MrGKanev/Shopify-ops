@@ -1,21 +1,13 @@
-<div class="topbar">
-  <div>
-    <h1>Email Checker</h1>
-    <div class="meta">Find orders with invalid, disposable, or suspicious email addresses</div>
-  </div>
-</div>
+<?= topbar('Email Checker', 'Find orders with invalid, disposable, or suspicious email addresses') ?>
 
-<div class="feature-info" data-info-key="emailcheck">
-  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: Email Checker</button>
-  <div class="feature-info-body">
+<?= featureInfoStart('emailcheck', 'Email Checker') ?>
     <p><strong>Email Checker</strong> scans paid Shopify orders in the selected date range and flags those with email addresses that are likely to cause delivery failures — shipping confirmations, tracking updates, and receipts will never reach the customer.</p>
     <ul>
       <li><strong>Critical</strong> — missing email, invalid format, or a known disposable/temporary domain (Mailinator, YOPmail, 10MinuteMail, etc.).</li>
       <li><strong>Warning</strong> — placeholder-looking addresses (test@, noemail@), very short local parts, or suspicious repeated characters.</li>
     </ul>
     <p>Catching these early lets you reach out to the customer via phone or correct the email before the order ships.</p>
-  </div>
-</div>
+<?= featureInfoEnd() ?>
 
 <div class="run-form">
   <h2>Scan date range</h2>
@@ -27,17 +19,11 @@
 
   <form method="post">
     <input type="hidden" name="action" value="scan_emails">
-    <div class="date-row">
-      <div class="field">
-        <label>From</label>
-        <input type="date" name="email_start" value="<?= esc($emailStart) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <div class="field">
-        <label>To</label>
-        <input type="date" name="email_end" value="<?= esc($emailEnd) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <button class="btn btn-submit-end" type="submit">Scan</button>
-    </div>
+    <?php
+$partialStartName = 'email_start'; $partialStartVal = $emailStart;
+$partialEndName   = 'email_end';   $partialEndVal   = $emailEnd;
+require __DIR__ . '/partials/_date-range.php';
+?>
   </form>
 
   <?php if ($emailResult !== null): ?>

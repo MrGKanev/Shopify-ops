@@ -1,13 +1,6 @@
-<div class="topbar">
-  <div>
-    <h1>Metafields</h1>
-    <div class="meta">Browse order metafield definitions and search by value</div>
-  </div>
-</div>
+<?= topbar('Metafields', 'Browse order metafield definitions and search by value') ?>
 
-<div class="feature-info" data-info-key="metafields">
-  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: Metafields</button>
-  <div class="feature-info-body">
+<?= featureInfoStart('metafields', 'Metafields') ?>
   <p><strong>Metafields</strong> gives you visibility into the custom data stored on Shopify orders. It has two modes:</p>
   <ul>
     <li><strong>Search by value</strong> - find all orders where a specific metafield (namespace + key) contains a given value. Leave the value empty to see all orders that have the metafield set at all, which is useful for sampling what values exist.</li>
@@ -15,8 +8,7 @@
   </ul>
   <p>The definitions table at the top lists all metafield schemas configured in your Shopify store, so you can click any definition to pre-fill the search form.</p>
 
-  </div>
-</div>
+<?= featureInfoEnd() ?>
 
 <?php if ($metafieldError): ?>
   <div class="error-msg"><?= esc($metafieldError) ?></div>

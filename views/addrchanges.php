@@ -1,21 +1,13 @@
-<div class="topbar">
-  <div>
-    <h1>Address Changes</h1>
-    <div class="meta">Orders whose shipping address was edited after the order was placed</div>
-  </div>
-</div>
+<?= topbar('Address Changes', 'Orders whose shipping address was edited after the order was placed') ?>
 
-<div class="feature-info" data-info-key="addrchanges">
-  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: Address Changes</button>
-  <div class="feature-info-body">
+<?= featureInfoStart('addrchanges', 'Address Changes') ?>
     <p><strong>Address Changes</strong> uses Shopify's Events API to find orders where the shipping address was modified after the order was placed. This is useful for catching last-minute customer requests, fraudulent address swaps, or support edits that may not have reached ShipStation in time.</p>
     <ul>
       <li>Only orders with an explicit <em>shipping address updated</em> event are returned — not just any order edit.</li>
       <li>The <strong>Changed</strong> column shows when the address was last modified, not when the order was created.</li>
       <li>Large date ranges may take longer as the Events API is paginated separately from orders.</li>
     </ul>
-  </div>
-</div>
+<?= featureInfoEnd() ?>
 
 <div class="run-form">
   <h2>Scan date range</h2>
@@ -27,17 +19,11 @@
 
   <form method="post">
     <input type="hidden" name="action" value="scan_addr_changes">
-    <div class="date-row">
-      <div class="field">
-        <label>From</label>
-        <input type="date" name="ac_start" value="<?= esc($acStart) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <div class="field">
-        <label>To</label>
-        <input type="date" name="ac_end" value="<?= esc($acEnd) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <button class="btn btn-submit-end" type="submit">Scan</button>
-    </div>
+    <?php
+$partialStartName = 'ac_start'; $partialStartVal = $acStart;
+$partialEndName   = 'ac_end';   $partialEndVal   = $acEnd;
+require __DIR__ . '/partials/_date-range.php';
+?>
   </form>
 
   <?php if ($acResult !== null): ?>
@@ -104,7 +90,7 @@
                 <div class="text-xs text-muted"><?= esc($row['addr_line']) ?></div>
               <?php endif; ?>
             </td>
-            <td class="td-price">$<?= number_format((float)$row['total'], 2) ?></td>
+            <td class="td-price"><?= formatPrice($row['total']) ?></td>
             <td>
               <div class="flex flex-col gap-1">
                 <span class="chip chip-unknown capitalize"><?= esc($row['financial']) ?></span>

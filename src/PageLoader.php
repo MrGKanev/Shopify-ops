@@ -125,15 +125,13 @@ class PageLoader
             $auditStart = $_POST['audit_start'] ?? '';
             $auditEnd   = $_POST['audit_end']   ?? '';
 
-            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $auditStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $auditEnd)) {
-                $auditError = 'Invalid date format. Use YYYY-MM-DD.';
-            } elseif ($auditStart > $auditEnd) {
-                $auditError = 'Start date must be before end date.';
+            if ($err = self::validateDates($auditStart, $auditEnd)) {
+                $auditError = $err;
             } elseif (!$ctx['ssKey'] || !$ctx['ssSecret'] || !$ctx['shopifyToken']) {
                 $auditError = 'API credentials missing in .env.';
             } else {
                 try {
-                    if (function_exists('set_time_limit')) set_time_limit(600);
+                    self::setLimits(600);
                     ini_set('memory_limit', '512M');
                     $t0 = microtime(true);
 
@@ -200,8 +198,8 @@ class PageLoader
                 $checkSh  = in_array($spotMode, ['both', 'shopify'], true)
                     && $ctx['shopifyToken'] && $ctx['shopifyStore'] !== 'N/A';
 
-                if ($checkSS && (!$ctx['ssKey'] || !$ctx['ssSecret'])) {
-                    $spotError = 'SS_API_KEY / SS_API_SECRET not set in .env.';
+                if ($checkSS && ($err = self::requireSS($ctx))) {
+                    $spotError = $err;
                 } else {
                     try {
                         $ss      = $checkSS ? new ShipStation($ctx['ssKey'], $ctx['ssSecret']) : null;
@@ -247,8 +245,8 @@ class PageLoader
         $metafieldSearch      = null;
         $metafieldSearchError = '';
 
-        if (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
-            $metafieldError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
+        if ($err = self::requireShopify($ctx)) {
+            $metafieldError = $err;
             return compact('metafieldDefs', 'metafieldOrders', 'metafieldInput', 'metafieldError',
                            'metafieldFilter', 'metafieldSearch', 'metafieldSearchError');
         }
@@ -272,7 +270,7 @@ class PageLoader
                 $metafieldSearchError = 'Namespace and key are required.';
             } else {
                 try {
-                    if (function_exists('set_time_limit')) set_time_limit(120);
+                    self::setLimits(120);
                     $result = $shopifyMeta->searchOrdersByMetafield($mfNs, $mfKey, $mfVal, $mfStart, $mfEnd);
                     $metafieldSearch = [
                         'namespace'     => $mfNs,
@@ -358,11 +356,11 @@ class PageLoader
 
             if (!$tagInput) {
                 $tagSearchError = 'Enter at least one tag.';
-            } elseif (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
-                $tagSearchError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
+            } elseif ($err = self::requireShopify($ctx)) {
+                $tagSearchError = $err;
             } else {
                 try {
-                    if (function_exists('set_time_limit')) set_time_limit(120);
+                    self::setLimits(120);
                     $shopifyTag = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
                     $tagResult  = $shopifyTag->searchOrdersByTag($tagInput, $tagStart, $tagEnd);
                     $tagSearch  = array_merge($tagResult, [
@@ -385,20 +383,19 @@ class PageLoader
     {
         $tagAuditResult = null;
         $tagAuditError  = '';
-        $taStart        = $_POST['ta_start'] ?? $_GET['ta_start'] ?? date('Y-m-d', strtotime('-90 days'));
-        $taEnd          = $_POST['ta_end']   ?? $_GET['ta_end']   ?? date('Y-m-d');
+        [$taStart, $taEnd] = self::extractDateRange('ta', 90);
 
         if ($action === 'tag_audit') {
             $taStart = trim($_POST['ta_start'] ?? '');
             $taEnd   = trim($_POST['ta_end']   ?? '');
 
-            if (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
-                $tagAuditError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
-            } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $taStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $taEnd)) {
-                $tagAuditError = 'Invalid date format. Use YYYY-MM-DD.';
+            if ($err = self::requireShopify($ctx)) {
+                $tagAuditError = $err;
+            } elseif ($err = self::validateDates($taStart, $taEnd)) {
+                $tagAuditError = $err;
             } else {
                 try {
-                    if (function_exists('set_time_limit')) set_time_limit(300);
+                    self::setLimits(300);
                     $shopify        = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
                     $tagAuditResult = $shopify->fetchTagStats($taStart, $taEnd);
                     $tagAuditResult['start'] = $taStart;
@@ -418,32 +415,26 @@ class PageLoader
     {
         $addrResult      = null;
         $addrError       = '';
-        $addrStart       = $_POST['addr_start'] ?? $_GET['addr_start'] ?? date('Y-m-d', strtotime('-30 days'));
-        $addrEnd         = $_POST['addr_end']   ?? $_GET['addr_end']   ?? date('Y-m-d');
+        [$addrStart, $addrEnd] = self::extractDateRange('addr');
         $unfulfilledOnly = (bool)($_POST['unfulfilled_only'] ?? false);
 
         if ($action === 'scan_addresses') {
             $addrStart = trim($_POST['addr_start'] ?? '');
             $addrEnd   = trim($_POST['addr_end']   ?? '');
 
-            if (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
-                $addrError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
-            } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $addrStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $addrEnd)) {
-                $addrError = 'Invalid date format. Use YYYY-MM-DD.';
-            } elseif ($addrStart > $addrEnd) {
-                $addrError = 'Start date must be before end date.';
+            if ($err = self::requireShopify($ctx)) {
+                $addrError = $err;
+            } elseif ($err = self::validateDates($addrStart, $addrEnd)) {
+                $addrError = $err;
             } else {
                 try {
-                    if (function_exists('set_time_limit')) set_time_limit(180);
+                    self::setLimits(180);
 
                     $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
-                    ob_start();
-                    try {
-                        $unfulfilledOnly = (bool)($_POST['unfulfilled_only'] ?? false);
-                        $orders = $shopify->fetchOrdersForAddressScan($addrStart, $addrEnd, $unfulfilledOnly);
-                    } finally {
-                        ob_end_clean();
-                    }
+                    $unfulfilledOnly = (bool)($_POST['unfulfilled_only'] ?? false);
+                    $orders = self::suppressOutput(
+                        fn() => $shopify->fetchOrdersForAddressScan($addrStart, $addrEnd, $unfulfilledOnly)
+                    );
 
                     $rows = [];
                     foreach ($orders as $o) {
@@ -453,7 +444,7 @@ class PageLoader
                             $rows[] = [
                                 'shopify_id'   => $o['id'] ?? '',
                                 'order_number' => $o['name'] ?? '',
-                                'created_at'   => substr($o['created_at'] ?? '', 0, 10),
+                                'created_at'   => self::dateOnly($o['created_at'] ?? ''),
                                 'email'        => $o['email'] ?? '',
                                 'address'      => $addr,
                                 'issues'       => $issues,
@@ -538,7 +529,6 @@ class PageLoader
             $issues[] = ['level' => 'warning', 'code' => 'no_province', 'message' => 'Missing state / province (required for US and CA)'];
         }
         if (!$phone) {
-            // Check if any shipping line requires a phone (heuristic: express/overnight carriers)
             $shippingTitles = implode(' ', array_column($order['shipping_lines'] ?? [], 'title'));
             if (preg_match('/overnight|express|priority|fedex|ups/i', $shippingTitles)) {
                 $issues[] = ['level' => 'warning', 'code' => 'no_phone_express', 'message' => 'No phone number — carrier may require it for express shipping'];
@@ -562,85 +552,66 @@ class PageLoader
     {
         $refundsResult = null;
         $refundsError  = '';
-        $refundsStart  = $_POST['refunds_start'] ?? $_GET['refunds_start'] ?? date('Y-m-d', strtotime('-30 days'));
-        $refundsEnd    = $_POST['refunds_end']   ?? $_GET['refunds_end']   ?? date('Y-m-d');
+        [$refundsStart, $refundsEnd] = self::extractDateRange('refunds');
 
         if ($action === 'find_refunds') {
             $refundsStart = trim($_POST['refunds_start'] ?? '');
             $refundsEnd   = trim($_POST['refunds_end']   ?? '');
 
-            if (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
-                $refundsError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
-            } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $refundsStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $refundsEnd)) {
-                $refundsError = 'Invalid date format. Use YYYY-MM-DD.';
-            } elseif ($refundsStart > $refundsEnd) {
-                $refundsError = 'Start date must be before end date.';
+            if ($err = self::requireShopify($ctx)) {
+                $refundsError = $err;
+            } elseif ($err = self::validateDates($refundsStart, $refundsEnd)) {
+                $refundsError = $err;
             } else {
                 try {
-                    if (function_exists('set_time_limit')) set_time_limit(300);
+                    self::setLimits(300);
 
                     $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken'], $ctx['cacheObj']);
-                    ob_start();
-                    try {
-                        $refundedOrders = $shopify->fetchRefundedOrders($refundsStart, $refundsEnd);
-                    } finally {
-                        ob_end_clean();
-                    }
+                    $refundedOrders = self::suppressOutput(
+                        fn() => $shopify->fetchRefundedOrders($refundsStart, $refundsEnd)
+                    );
 
-                    // Fetch SS orders for same window (+ 7-day buffer, cached)
-                    // ob_start suppresses the progress echo output from fetchAllOrders
                     $ssEnd  = date('Y-m-d', strtotime($refundsEnd . ' +7 days'));
                     $ssRows = [];
                     if ($ctx['ssKey'] && $ctx['ssSecret']) {
-                        ob_start();
-                        try {
-                            $ss     = new ShipStation($ctx['ssKey'], $ctx['ssSecret'], $ctx['cacheObj']);
-                            $ssRows = $ss->fetchAllOrders($refundsStart, $ssEnd);
-                        } finally {
-                            ob_end_clean();
-                        }
+                        $ssRows = self::suppressOutput(function () use ($ctx, $refundsStart, $ssEnd) {
+                            $ss = new ShipStation($ctx['ssKey'], $ctx['ssSecret'], $ctx['cacheObj']);
+                            return $ss->fetchAllOrders($refundsStart, $ssEnd);
+                        });
                     }
 
-                    // Build SS index: normalised order number → array of SS orders
                     $ssIndex = [];
                     foreach ($ssRows as $ssO) {
                         $num = Comparator::normalise((string)($ssO['orderNumber'] ?? ''));
                         if ($num) $ssIndex[$num][] = $ssO;
                     }
 
-                    // Cross-reference
                     $rows = [];
                     foreach ($refundedOrders as $o) {
                         $num     = Comparator::normalise((string)($o['order_number'] ?? ltrim($o['name'] ?? '', '#')));
                         $ssMatch = $ssIndex[$num] ?? [];
 
-                        // Compute total refunded amount
                         $refundedAmt = 0.0;
                         foreach ($o['refunds'] ?? [] as $ref) {
                             foreach ($ref['refund_line_items'] ?? [] as $rli) {
                                 $refundedAmt += (float)($rli['subtotal'] ?? 0);
                             }
-                            foreach ($ref['transactions'] ?? [] as $tx) {
-                                // Use transactions as fallback if line items empty
-                            }
                         }
-                        // Fallback: for fully refunded, total_price is the refunded amount
                         if ($refundedAmt == 0 && ($o['financial_status'] ?? '') === 'refunded') {
                             $refundedAmt = (float)($o['total_price'] ?? 0);
                         }
 
                         $ssStatuses = array_map(fn($s) => $s['orderStatus'] ?? 'unknown', $ssMatch);
-                        $allCancelled = !empty($ssMatch) && count(array_filter($ssStatuses, fn($s) => $s === 'cancelled')) === count($ssMatch);
-                        $anyActive    = !empty(array_filter($ssStatuses, fn($s) => in_array($s, ['awaiting_shipment', 'awaiting_payment', 'on_hold'], true)));
+                        $anyActive  = !empty(array_filter($ssStatuses, fn($s) => in_array($s, ['awaiting_shipment', 'awaiting_payment', 'on_hold'], true)));
 
                         $risk = 'ok';
-                        if (empty($ssMatch))   $risk = 'missing';
-                        elseif ($anyActive)    $risk = 'active';
+                        if (empty($ssMatch)) $risk = 'missing';
+                        elseif ($anyActive)  $risk = 'active';
 
                         $rows[] = [
                             'shopify_id'      => $o['id'] ?? '',
                             'order_number'    => $o['name'] ?? ('#' . $num),
-                            'created_at'      => substr($o['created_at'] ?? '', 0, 10),
+                            'created_at'      => self::dateOnly($o['created_at'] ?? ''),
                             'email'           => $o['email'] ?? '',
                             'financial_status'=> $o['financial_status'] ?? '',
                             'total_price'     => (float)($o['total_price'] ?? 0),
@@ -651,19 +622,18 @@ class PageLoader
                         ];
                     }
 
-                    // Sort: risky first
                     usort($rows, function($a, $b) {
                         $rankOf = fn($r) => match($r) { 'active' => 0, 'missing' => 1, default => 2 };
                         return $rankOf($a['risk']) <=> $rankOf($b['risk']);
                     });
 
                     $refundsResult = [
-                        'rows'      => $rows,
-                        'start'     => $refundsStart,
-                        'end'       => $refundsEnd,
-                        'has_ss'    => !empty($ssRows),
-                        'active'    => count(array_filter($rows, fn($r) => $r['risk'] === 'active')),
-                        'missing'   => count(array_filter($rows, fn($r) => $r['risk'] === 'missing')),
+                        'rows'    => $rows,
+                        'start'   => $refundsStart,
+                        'end'     => $refundsEnd,
+                        'has_ss'  => !empty($ssRows),
+                        'active'  => count(array_filter($rows, fn($r) => $r['risk'] === 'active')),
+                        'missing' => count(array_filter($rows, fn($r) => $r['risk'] === 'missing')),
                     ];
                 } catch (Throwable $e) {
                     $refundsError = $e->getMessage();
@@ -687,11 +657,11 @@ class PageLoader
 
             if (!$customerEmail || !filter_var($customerEmail, FILTER_VALIDATE_EMAIL)) {
                 $customerError = 'Enter a valid email address.';
-            } elseif (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
-                $customerError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
+            } elseif ($err = self::requireShopify($ctx)) {
+                $customerError = $err;
             } else {
                 try {
-                    if (function_exists('set_time_limit')) set_time_limit(120);
+                    self::setLimits(120);
                     $shopify        = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
                     $customerResult = $shopify->lookupCustomer($customerEmail);
                     $customerResult['email'] = $customerEmail;
@@ -710,22 +680,19 @@ class PageLoader
     {
         $dupesResult = null;
         $dupesError  = '';
-        $dupesStart  = $_POST['dupes_start'] ?? $_GET['dupes_start'] ?? date('Y-m-d', strtotime('-30 days'));
-        $dupesEnd    = $_POST['dupes_end']   ?? $_GET['dupes_end']   ?? date('Y-m-d');
+        [$dupesStart, $dupesEnd] = self::extractDateRange('dupes');
 
         if ($action === 'find_dupes') {
             $dupesStart = trim($_POST['dupes_start'] ?? '');
             $dupesEnd   = trim($_POST['dupes_end']   ?? '');
 
-            if (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
-                $dupesError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
-            } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dupesStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dupesEnd)) {
-                $dupesError = 'Invalid date format. Use YYYY-MM-DD.';
-            } elseif ($dupesStart > $dupesEnd) {
-                $dupesError = 'Start date must be before end date.';
+            if ($err = self::requireShopify($ctx)) {
+                $dupesError = $err;
+            } elseif ($err = self::validateDates($dupesStart, $dupesEnd)) {
+                $dupesError = $err;
             } else {
                 try {
-                    if (function_exists('set_time_limit')) set_time_limit(300);
+                    self::setLimits(300);
                     $shopify     = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
                     $dupesResult = $shopify->findDuplicateOrders($dupesStart, $dupesEnd);
                     $dupesResult['start'] = $dupesStart;
@@ -755,8 +722,8 @@ class PageLoader
                 $trackingError = 'Enter at least one order number.';
             } elseif (count($numbers) > 30) {
                 $trackingError = 'Maximum 30 order numbers at once.';
-            } elseif (!$ctx['ssKey'] || !$ctx['ssSecret']) {
-                $trackingError = 'SS_API_KEY / SS_API_SECRET not set in .env.';
+            } elseif ($err = self::requireSS($ctx)) {
+                $trackingError = $err;
             } else {
                 try {
                     $ss = new ShipStation($ctx['ssKey'], $ctx['ssSecret']);
@@ -777,11 +744,7 @@ class PageLoader
                         $ssOrders = $ss->findByOrderNumber($clean);
 
                         if (empty($ssOrders)) {
-                            $trackingResults[] = [
-                                'number'   => $clean,
-                                'found'    => false,
-                                'shipments' => [],
-                            ];
+                            $trackingResults[] = ['number' => $clean, 'found' => false, 'shipments' => []];
                             continue;
                         }
 
@@ -802,11 +765,7 @@ class PageLoader
                             ];
                         }
 
-                        $trackingResults[] = [
-                            'number'    => $clean,
-                            'found'     => true,
-                            'shipments' => $shipments,
-                        ];
+                        $trackingResults[] = ['number' => $clean, 'found' => true, 'shipments' => $shipments];
                     }
                 } catch (Throwable $e) {
                     $trackingError = $e->getMessage();
@@ -832,8 +791,8 @@ class PageLoader
 
             if (!$compareA || !$compareB) {
                 $compareError = 'Enter two order numbers to compare.';
-            } elseif (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
-                $compareError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
+            } elseif ($err = self::requireShopify($ctx)) {
+                $compareError = $err;
             } else {
                 try {
                     $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
@@ -847,10 +806,7 @@ class PageLoader
                         return ['shopify' => $shOrder, 'ss' => $ssOrders, 'num' => $num];
                     };
 
-                    $orderA = $fetchOrder($compareA);
-                    $orderB = $fetchOrder($compareB);
-
-                    $compareResult = ['a' => $orderA, 'b' => $orderB];
+                    $compareResult = ['a' => $fetchOrder($compareA), 'b' => $fetchOrder($compareB)];
                 } catch (Throwable $e) {
                     $compareError = $e->getMessage();
                 }
@@ -866,28 +822,24 @@ class PageLoader
     {
         $emailResult = null;
         $emailError  = '';
-        $emailStart  = $_POST['email_start'] ?? $_GET['email_start'] ?? date('Y-m-d', strtotime('-30 days'));
-        $emailEnd    = $_POST['email_end']   ?? $_GET['email_end']   ?? date('Y-m-d');
+        [$emailStart, $emailEnd] = self::extractDateRange('email');
 
         if ($action === 'scan_emails') {
             $emailStart = trim($_POST['email_start'] ?? '');
             $emailEnd   = trim($_POST['email_end']   ?? '');
 
-            if (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
-                $emailError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
-            } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $emailStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $emailEnd)) {
-                $emailError = 'Invalid date format.';
+            if ($err = self::requireShopify($ctx)) {
+                $emailError = $err;
+            } elseif ($err = self::validateDates($emailStart, $emailEnd)) {
+                $emailError = $err;
             } else {
                 try {
-                    if (function_exists('set_time_limit')) set_time_limit(180);
+                    self::setLimits(180);
 
                     $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
-                    ob_start();
-                    try {
-                        $orders = $shopify->fetchOrdersForAddressScan($emailStart, $emailEnd);
-                    } finally {
-                        ob_end_clean();
-                    }
+                    $orders  = self::suppressOutput(
+                        fn() => $shopify->fetchOrdersForAddressScan($emailStart, $emailEnd)
+                    );
 
                     $disposable = [
                         'mailinator.com','guerrillamail.com','tempmail.com','throwam.com',
@@ -929,7 +881,7 @@ class PageLoader
                             $rows[] = [
                                 'shopify_id'   => $o['id'] ?? '',
                                 'order_number' => $o['name'] ?? '',
-                                'created_at'   => substr($o['created_at'] ?? '', 0, 10),
+                                'created_at'   => self::dateOnly($o['created_at'] ?? ''),
                                 'email'        => $o['email'] ?? '',
                                 'issues'       => $issues,
                                 'severity'     => in_array('critical', array_column($issues, 'level')) ? 'critical' : 'warning',
@@ -964,36 +916,28 @@ class PageLoader
     {
         $orphanResult = null;
         $orphanError  = '';
-        $orphanStart  = $_POST['orphan_start'] ?? $_GET['orphan_start'] ?? date('Y-m-d', strtotime('-30 days'));
-        $orphanEnd    = $_POST['orphan_end']   ?? $_GET['orphan_end']   ?? date('Y-m-d');
+        [$orphanStart, $orphanEnd] = self::extractDateRange('orphan');
 
         if ($action === 'find_orphans') {
             $orphanStart = trim($_POST['orphan_start'] ?? '');
             $orphanEnd   = trim($_POST['orphan_end']   ?? '');
 
-            if (!$ctx['ssKey'] || !$ctx['ssSecret']) {
-                $orphanError = 'SS_API_KEY / SS_API_SECRET not set in .env.';
-            } elseif (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
-                $orphanError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
-            } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $orphanStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $orphanEnd)) {
-                $orphanError = 'Invalid date format.';
-            } elseif ($orphanStart > $orphanEnd) {
-                $orphanError = 'Start date must be before end date.';
+            if ($err = self::requireSS($ctx)) {
+                $orphanError = $err;
+            } elseif ($err = self::requireShopify($ctx)) {
+                $orphanError = $err;
+            } elseif ($err = self::validateDates($orphanStart, $orphanEnd)) {
+                $orphanError = $err;
             } else {
                 try {
-                    if (function_exists('set_time_limit')) set_time_limit(300);
+                    self::setLimits(300);
 
-                    ob_start();
-                    try {
+                    [$ssOrders, $shOrders] = self::suppressOutput(function () use ($ctx, $orphanStart, $orphanEnd) {
                         $ss      = new ShipStation($ctx['ssKey'], $ctx['ssSecret'], $ctx['cacheObj']);
                         $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken'], $ctx['cacheObj']);
-                        $ssOrders  = $ss->fetchAllOrders($orphanStart, $orphanEnd);
-                        $shOrders  = $shopify->fetchAllOrders($orphanStart, $orphanEnd);
-                    } finally {
-                        ob_end_clean();
-                    }
+                        return [$ss->fetchAllOrders($orphanStart, $orphanEnd), $shopify->fetchAllOrders($orphanStart, $orphanEnd)];
+                    });
 
-                    // Build Shopify index by normalised order number
                     $shIndex = [];
                     foreach ($shOrders as $o) {
                         $num = Comparator::normalise((string)($o['order_number'] ?? ltrim($o['name'] ?? '', '#')));
@@ -1003,29 +947,27 @@ class PageLoader
                     $rows = [];
                     foreach ($ssOrders as $o) {
                         $num = Comparator::normalise((string)($o['orderNumber'] ?? ''));
-                        if (!$num) continue;
-                        if (!isset($shIndex[$num])) {
-                            $rows[] = [
-                                'ss_order_id'  => $o['orderId']     ?? '',
-                                'order_number' => $o['orderNumber'] ?? '',
-                                'order_status' => $o['orderStatus'] ?? '',
-                                'order_date'   => substr($o['orderDate'] ?? '', 0, 10),
-                                'customer'     => trim(($o['shipTo']['name'] ?? '')),
-                                'email'        => $o['customerEmail'] ?? '',
-                                'total'        => $o['orderTotal']   ?? 0,
-                                'ss_url'       => $o['orderId'] ? 'https://app.shipstation.com/#!/orders/order-details/' . urlencode($o['orderId']) : null,
-                            ];
-                        }
+                        if (!$num || isset($shIndex[$num])) continue;
+                        $rows[] = [
+                            'ss_order_id'  => $o['orderId']     ?? '',
+                            'order_number' => $o['orderNumber'] ?? '',
+                            'order_status' => $o['orderStatus'] ?? '',
+                            'order_date'   => self::dateOnly($o['orderDate'] ?? ''),
+                            'customer'     => trim(($o['shipTo']['name'] ?? '')),
+                            'email'        => $o['customerEmail'] ?? '',
+                            'total'        => $o['orderTotal']   ?? 0,
+                            'ss_url'       => $o['orderId'] ? 'https://app.shipstation.com/#!/orders/order-details/' . urlencode($o['orderId']) : null,
+                        ];
                     }
 
                     usort($rows, fn($a, $b) => strcmp($b['order_date'], $a['order_date']));
 
                     $orphanResult = [
-                        'rows'       => $rows,
-                        'ss_total'   => count($ssOrders),
-                        'sh_total'   => count($shOrders),
-                        'start'      => $orphanStart,
-                        'end'        => $orphanEnd,
+                        'rows'     => $rows,
+                        'ss_total' => count($ssOrders),
+                        'sh_total' => count($shOrders),
+                        'start'    => $orphanStart,
+                        'end'      => $orphanEnd,
                     ];
                 } catch (Throwable $e) {
                     $orphanError = $e->getMessage();
@@ -1042,8 +984,7 @@ class PageLoader
     {
         $hvResult = null;
         $hvError  = '';
-        $hvStart  = $_POST['hv_start'] ?? $_GET['hv_start'] ?? date('Y-m-d', strtotime('-30 days'));
-        $hvEnd    = $_POST['hv_end']   ?? $_GET['hv_end']   ?? date('Y-m-d');
+        [$hvStart, $hvEnd] = self::extractDateRange('hv');
         $hvMin    = (int)($_POST['hv_min'] ?? $_GET['hv_min'] ?? 200);
 
         if ($action === 'scan_hvorders') {
@@ -1051,19 +992,15 @@ class PageLoader
             $hvEnd   = trim($_POST['hv_end']   ?? '');
             $hvMin   = max(0, (int)($_POST['hv_min'] ?? 200));
 
-            if (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
-                $hvError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
-            } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $hvStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $hvEnd)) {
-                $hvError = 'Invalid date format.';
-            } elseif ($hvStart > $hvEnd) {
-                $hvError = 'Start date must be before end date.';
+            if ($err = self::requireShopify($ctx)) {
+                $hvError = $err;
+            } elseif ($err = self::validateDates($hvStart, $hvEnd)) {
+                $hvError = $err;
             } else {
                 try {
-                    if (function_exists('set_time_limit')) set_time_limit(180);
+                    self::setLimits(180);
                     $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
-                    ob_start();
-                    try { $orders = $shopify->fetchOrdersForHighValue($hvStart, $hvEnd); }
-                    finally { ob_end_clean(); }
+                    $orders  = self::suppressOutput(fn() => $shopify->fetchOrdersForHighValue($hvStart, $hvEnd));
 
                     $rows = [];
                     foreach ($orders as $o) {
@@ -1074,7 +1011,7 @@ class PageLoader
                         $rows[] = [
                             'shopify_id'   => $o['id'] ?? '',
                             'order_number' => $o['name'] ?? '',
-                            'created_at'   => substr($o['created_at'] ?? '', 0, 10),
+                            'created_at'   => self::dateOnly($o['created_at'] ?? ''),
                             'email'        => $o['email'] ?? '',
                             'total'        => $total,
                             'address'      => $addr,
@@ -1096,8 +1033,7 @@ class PageLoader
     {
         $rrResult   = null;
         $rrError    = '';
-        $rrStart    = $_POST['rr_start']    ?? $_GET['rr_start']    ?? date('Y-m-d', strtotime('-90 days'));
-        $rrEnd      = $_POST['rr_end']      ?? $_GET['rr_end']      ?? date('Y-m-d');
+        [$rrStart, $rrEnd] = self::extractDateRange('rr', 90);
         $rrMinCount = (int)($_POST['rr_min_count'] ?? $_GET['rr_min_count'] ?? 2);
 
         if ($action === 'scan_repeat_refunds') {
@@ -1105,21 +1041,16 @@ class PageLoader
             $rrEnd      = trim($_POST['rr_end']   ?? '');
             $rrMinCount = max(2, (int)($_POST['rr_min_count'] ?? 2));
 
-            if (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
-                $rrError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
-            } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $rrStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $rrEnd)) {
-                $rrError = 'Invalid date format.';
-            } elseif ($rrStart > $rrEnd) {
-                $rrError = 'Start date must be before end date.';
+            if ($err = self::requireShopify($ctx)) {
+                $rrError = $err;
+            } elseif ($err = self::validateDates($rrStart, $rrEnd)) {
+                $rrError = $err;
             } else {
                 try {
-                    if (function_exists('set_time_limit')) set_time_limit(300);
-                    $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken'], $ctx['cacheObj']);
-                    ob_start();
-                    try { $refundedOrders = $shopify->fetchRefundedOrders($rrStart, $rrEnd); }
-                    finally { ob_end_clean(); }
+                    self::setLimits(300);
+                    $shopify       = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken'], $ctx['cacheObj']);
+                    $refundedOrders = self::suppressOutput(fn() => $shopify->fetchRefundedOrders($rrStart, $rrEnd));
 
-                    // Group by email
                     $byEmail = [];
                     foreach ($refundedOrders as $o) {
                         $email = strtolower(trim($o['email'] ?? ''));
@@ -1135,7 +1066,7 @@ class PageLoader
                         $byEmail[$email][] = [
                             'order_number' => $o['name'] ?? '',
                             'shopify_id'   => $o['id'] ?? '',
-                            'created_at'   => substr($o['created_at'] ?? '', 0, 10),
+                            'created_at'   => self::dateOnly($o['created_at'] ?? ''),
                             'refunded_amt' => $refundedAmt,
                         ];
                     }
@@ -1169,26 +1100,21 @@ class PageLoader
     {
         $fsResult = null;
         $fsError  = '';
-        $fsStart  = $_POST['fs_start'] ?? $_GET['fs_start'] ?? date('Y-m-d', strtotime('-30 days'));
-        $fsEnd    = $_POST['fs_end']   ?? $_GET['fs_end']   ?? date('Y-m-d');
+        [$fsStart, $fsEnd] = self::extractDateRange('fs');
 
         if ($action === 'scan_failed_shipments') {
             $fsStart = trim($_POST['fs_start'] ?? '');
             $fsEnd   = trim($_POST['fs_end']   ?? '');
 
-            if (!$ctx['ssKey'] || !$ctx['ssSecret']) {
-                $fsError = 'SHIPSTATION_API_KEY / SHIPSTATION_API_SECRET not set in .env.';
-            } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fsStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fsEnd)) {
-                $fsError = 'Invalid date format.';
-            } elseif ($fsStart > $fsEnd) {
-                $fsError = 'Start date must be before end date.';
+            if ($err = self::requireSS($ctx)) {
+                $fsError = str_replace('SS_API_KEY / SS_API_SECRET', 'SHIPSTATION_API_KEY / SHIPSTATION_API_SECRET', $err);
+            } elseif ($err = self::validateDates($fsStart, $fsEnd)) {
+                $fsError = $err;
             } else {
                 try {
-                    if (function_exists('set_time_limit')) set_time_limit(180);
-                    $ss = new ShipStation($ctx['ssKey'], $ctx['ssSecret']);
-                    ob_start();
-                    try { $shipments = $ss->fetchVoidedShipments($fsStart, $fsEnd); }
-                    finally { ob_end_clean(); }
+                    self::setLimits(180);
+                    $ss        = new ShipStation($ctx['ssKey'], $ctx['ssSecret']);
+                    $shipments = self::suppressOutput(fn() => $ss->fetchVoidedShipments($fsStart, $fsEnd));
 
                     $rows = [];
                     foreach ($shipments as $s) {
@@ -1199,8 +1125,8 @@ class PageLoader
                             'tracking'        => $s['trackingNumber'] ?? '',
                             'carrier'         => $s['carrierCode']    ?? '',
                             'service'         => $s['serviceCode']    ?? '',
-                            'ship_date'       => substr($s['shipDate']  ?? '', 0, 10),
-                            'void_date'       => substr($s['voidDate']  ?? '', 0, 10),
+                            'ship_date'       => self::dateOnly($s['shipDate']  ?? ''),
+                            'void_date'       => self::dateOnly($s['voidDate']  ?? ''),
                             'ship_to_name'    => trim(($addr['name'] ?? '')),
                             'ship_to_city'    => $addr['city']       ?? '',
                             'ship_to_state'   => $addr['state']      ?? '',
@@ -1224,26 +1150,21 @@ class PageLoader
     {
         $acResult = null;
         $acError  = '';
-        $acStart  = $_POST['ac_start'] ?? $_GET['ac_start'] ?? date('Y-m-d', strtotime('-30 days'));
-        $acEnd    = $_POST['ac_end']   ?? $_GET['ac_end']   ?? date('Y-m-d');
+        [$acStart, $acEnd] = self::extractDateRange('ac');
 
         if ($action === 'scan_addr_changes') {
             $acStart = trim($_POST['ac_start'] ?? '');
             $acEnd   = trim($_POST['ac_end']   ?? '');
 
-            if (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
-                $acError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
-            } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $acStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $acEnd)) {
-                $acError = 'Invalid date format.';
-            } elseif ($acStart > $acEnd) {
-                $acError = 'Start date must be before end date.';
+            if ($err = self::requireShopify($ctx)) {
+                $acError = $err;
+            } elseif ($err = self::validateDates($acStart, $acEnd)) {
+                $acError = $err;
             } else {
                 try {
-                    if (function_exists('set_time_limit')) set_time_limit(240);
+                    self::setLimits(240);
                     $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
-                    ob_start();
-                    try { $entries = $shopify->fetchOrdersWithAddressChanges($acStart, $acEnd); }
-                    finally { ob_end_clean(); }
+                    $entries = self::suppressOutput(fn() => $shopify->fetchOrdersWithAddressChanges($acStart, $acEnd));
 
                     $rows = [];
                     foreach ($entries as $e) {
@@ -1259,7 +1180,7 @@ class PageLoader
                         $rows[] = [
                             'shopify_id'   => $o['id']           ?? '',
                             'order_number' => $o['name']         ?? '',
-                            'created_at'   => substr($o['created_at']  ?? '', 0, 10),
+                            'created_at'   => self::dateOnly($o['created_at']  ?? ''),
                             'changed_at'   => substr($e['changed_at']  ?? '', 0, 16),
                             'email'        => $o['email']        ?? '',
                             'total'        => $o['total_price']  ?? '',
@@ -1333,5 +1254,59 @@ class PageLoader
         }
 
         return compact('connResults', 'cacheEntries', 'cacheFlushed', 'cacheTtl');
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private static function dateOnly(string $dt): string
+    {
+        return substr($dt, 0, 10);
+    }
+
+    private static function setLimits(int $secs = 300): void
+    {
+        if (function_exists('set_time_limit')) set_time_limit($secs);
+    }
+
+    private static function extractDateRange(string $prefix, int $defaultDays = 30): array
+    {
+        $start = $_POST["{$prefix}_start"] ?? $_GET["{$prefix}_start"] ?? date('Y-m-d', strtotime("-{$defaultDays} days"));
+        $end   = $_POST["{$prefix}_end"]   ?? $_GET["{$prefix}_end"]   ?? date('Y-m-d');
+        return [$start, $end];
+    }
+
+    private static function validateDates(string $start, string $end): ?string
+    {
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $start) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $end)) {
+            return 'Invalid date format. Use YYYY-MM-DD.';
+        }
+        if ($start > $end) {
+            return 'Start date must be before end date.';
+        }
+        return null;
+    }
+
+    private static function requireShopify(array $ctx): ?string
+    {
+        return (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A')
+            ? 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.'
+            : null;
+    }
+
+    private static function requireSS(array $ctx): ?string
+    {
+        return (!$ctx['ssKey'] || !$ctx['ssSecret'])
+            ? 'SS_API_KEY / SS_API_SECRET not set in .env.'
+            : null;
+    }
+
+    private static function suppressOutput(callable $fn): mixed
+    {
+        ob_start();
+        try {
+            return $fn();
+        } finally {
+            ob_end_clean();
+        }
     }
 }

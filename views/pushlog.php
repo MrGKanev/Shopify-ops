@@ -1,9 +1,4 @@
-<div class="topbar">
-  <div>
-    <h1>Push Log</h1>
-    <div class="meta">History of orders pushed to ShipStation from this dashboard</div>
-  </div>
-</div>
+<?= topbar('Push Log', 'History of orders pushed to ShipStation from this dashboard') ?>
 
 <div class="table-wrap">
   <div class="table-header">

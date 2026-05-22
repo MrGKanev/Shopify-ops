@@ -1,9 +1,4 @@
-<div class="topbar">
-  <div>
-    <h1>Settings</h1>
-    <div class="meta">Configuration and connectivity</div>
-  </div>
-</div>
+<?= topbar('Settings', 'Configuration and connectivity') ?>
 
 <div class="run-form">
   <h2>API Connection Test</h2>

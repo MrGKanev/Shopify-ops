@@ -1,13 +1,6 @@
-<div class="topbar">
-  <div>
-    <h1>Orphan Detector</h1>
-    <div class="meta">ShipStation orders with no matching Shopify order</div>
-  </div>
-</div>
+<?= topbar('Orphan Detector', 'ShipStation orders with no matching Shopify order') ?>
 
-<div class="feature-info" data-info-key="orphans">
-  <button class="feature-info-toggle" aria-expanded="false"><svg width="12" height="12" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> About: Orphan Detector</button>
-  <div class="feature-info-body">
+<?= featureInfoStart('orphans', 'Orphan Detector') ?>
     <p><strong>Orphan Detector</strong> is the reverse of the standard audit. Instead of finding Shopify orders missing from ShipStation, it finds <em>ShipStation orders that have no matching Shopify order</em> in the same date range.</p>
     <p>Orphan orders in ShipStation typically indicate one of the following:</p>
     <ul>
@@ -18,8 +11,7 @@
       <li>Potential <strong>data entry errors</strong> — wrong order number entered in SS.</li>
     </ul>
     <p>Matching is done by normalised order number. Both datasets are cached, so re-scanning the same range is instant.</p>
-  </div>
-</div>
+<?= featureInfoEnd() ?>
 
 <div class="run-form">
   <h2>Scan date range</h2>
@@ -31,17 +23,11 @@
 
   <form method="post">
     <input type="hidden" name="action" value="find_orphans">
-    <div class="date-row">
-      <div class="field">
-        <label>From</label>
-        <input type="date" name="orphan_start" value="<?= esc($orphanStart) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <div class="field">
-        <label>To</label>
-        <input type="date" name="orphan_end" value="<?= esc($orphanEnd) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <button class="btn btn-submit-end" type="submit">Scan</button>
-    </div>
+    <?php
+$partialStartName = 'orphan_start'; $partialStartVal = $orphanStart;
+$partialEndName   = 'orphan_end';   $partialEndVal   = $orphanEnd;
+require __DIR__ . '/partials/_date-range.php';
+?>
   </form>
 
   <?php if ($orphanResult !== null): ?>
@@ -109,7 +95,7 @@
             <td><?= esc($row['customer'] ?: '—') ?></td>
             <td class="td-email"><?= esc($row['email'] ?: '—') ?></td>
             <td><span class="chip <?= $statusChip ?>"><?= esc(str_replace('_', ' ', $row['order_status'])) ?></span></td>
-            <td class="td-price"><?= $row['total'] ? '$' . number_format((float)$row['total'], 2) : '—' ?></td>
+            <td class="td-price"><?= formatPrice($row['total'] ?: null) ?></td>
             <td class="td-actions">
               <?php if ($row['ss_url']): ?>
                 <a class="ignore-btn" href="<?= esc($row['ss_url']) ?>" target="_blank" rel="noopener">Open in SS</a>
