@@ -324,6 +324,7 @@ tbody td         { @apply text-sm align-middle; padding: .75rem 1.25rem; }
 
 .date-row            { @apply flex gap-3 items-end flex-wrap; }
 .date-row .field     { @apply mb-0 flex-1; min-width: 140px; }
+.filter-row          { @apply flex gap-4 flex-wrap items-center mt-3; padding-top: .75rem; border-top: 1px solid var(--border); }
 .date-row input[type=date] {
   @apply w-full border rounded-lg text-sm outline-none appearance-none;
   background: var(--bg);
@@ -457,6 +458,27 @@ tbody td         { @apply text-sm align-middle; padding: .75rem 1.25rem; }
 
 /* ── Checkbox ── */
 input[type="checkbox"] { @apply cursor-pointer; accent-color: var(--accent); width: 15px; height: 15px; }
+
+/* ── Toggle pill ── */
+.toggle-pill {
+  @apply flex items-center gap-2 cursor-pointer select-none;
+  height: 2.625rem; /* matches date input height */
+}
+.toggle-pill input[type="checkbox"] { @apply sr-only; }
+.toggle-pill-track {
+  @apply relative flex-shrink-0 rounded-full transition-colors duration-200;
+  width: 36px; height: 20px;
+  background: var(--border);
+}
+.toggle-pill input:checked ~ .toggle-pill-track { background: var(--accent); }
+.toggle-pill-thumb {
+  @apply absolute top-[3px] left-[3px] rounded-full transition-transform duration-200;
+  width: 14px; height: 14px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.toggle-pill input:checked ~ .toggle-pill-track .toggle-pill-thumb { transform: translateX(16px); }
+.toggle-pill-label { @apply text-sm font-medium; color: var(--text); }
 
 /* ── Search / filter bar ── */
 .search-wrap { @apply flex gap-2 items-center flex-wrap mb-4; }

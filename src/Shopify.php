@@ -421,21 +421,23 @@ class Shopify
      *
      * @return array<int, array<string, mixed>>
      */
-    public function fetchOrdersForAddressScan(string $startDate, string $endDate): array
+    public function fetchOrdersForAddressScan(string $startDate, string $endDate, bool $unfulfilledOnly = false): array
     {
         $all = [];
 
-        $params = http_build_query([
-            'status'             => 'any',
-            'financial_status'   => 'paid,partially_paid',
-            'fulfillment_status' => 'unfulfilled,partial',
+        $query = [
+            'status'           => 'any',
+            'financial_status' => 'paid,partially_paid',
             'created_at_min'   => $startDate . 'T00:00:00-00:00',
             'created_at_max'   => $endDate   . 'T23:59:59-00:00',
             'limit'            => self::PAGE_SIZE,
             'fields'           => 'id,order_number,name,created_at,email,financial_status,fulfillment_status,shipping_address,shipping_lines',
-        ]);
+        ];
+        if ($unfulfilledOnly) {
+            $query['fulfillment_status'] = 'unfulfilled,partial';
+        }
 
-        $nextUrl = "{$this->baseUrl}/orders.json?{$params}";
+        $nextUrl = "{$this->baseUrl}/orders.json?" . http_build_query($query);
         while ($nextUrl) {
             [$orders, $nextUrl] = $this->getPage($nextUrl);
             array_push($all, ...$orders);
@@ -450,6 +452,89 @@ class Shopify
      *
      * @return array<int, array<string, mixed>>
      */
+    public function fetchOrdersForHighValue(string $startDate, string $endDate): array
+    {
+        $all = [];
+        $params = http_build_query([
+            'status'             => 'any',
+            'financial_status'   => 'paid,partially_paid',
+            'fulfillment_status' => 'unfulfilled,partial',
+            'created_at_min'     => $startDate . 'T00:00:00-00:00',
+            'created_at_max'     => $endDate   . 'T23:59:59-00:00',
+            'limit'              => self::PAGE_SIZE,
+            'fields'             => 'id,order_number,name,created_at,email,total_price,shipping_address,shipping_lines',
+        ]);
+        $nextUrl = "{$this->baseUrl}/orders.json?{$params}";
+        while ($nextUrl) {
+            [$orders, $nextUrl] = $this->getPage($nextUrl);
+            array_push($all, ...$orders);
+        }
+        return $all;
+    }
+
+    /**
+     * Fetches orders whose shipping address was changed after the order was placed.
+     * Strategy: paginate /events.json for Order events in the window, filter for
+     * address-change messages, then fetch the matching orders by ID in one batch call.
+     *
+     * @return array<int, array<string, mixed>>  each entry has 'order' + 'changed_at'
+     */
+    public function fetchOrdersWithAddressChanges(string $startDate, string $endDate): array
+    {
+        // 1. Walk all Order events in the window
+        $params  = http_build_query([
+            'subject_type'   => 'Order',
+            'created_at_min' => $startDate . 'T00:00:00-00:00',
+            'created_at_max' => $endDate   . 'T23:59:59-00:00',
+            'limit'          => self::PAGE_SIZE,
+        ]);
+        $nextUrl = "{$this->baseUrl}/events.json?{$params}";
+
+        // subject_id => most-recent change timestamp
+        $changed = [];
+        while ($nextUrl) {
+            [$page, $nextUrl] = $this->getPage($nextUrl, 'events');
+            foreach ($page as $ev) {
+                $msg = strtolower($ev['message'] ?? '');
+                // Shopify logs address edits as: "Shipping address was updated to …"
+                if (str_contains($msg, 'shipping address') || str_contains($msg, 'address was')) {
+                    $id = (string)($ev['subject_id'] ?? '');
+                    if (!$id) continue;
+                    // keep the latest event timestamp per order
+                    $ts = $ev['created_at'] ?? '';
+                    if (!isset($changed[$id]) || $ts > $changed[$id]) {
+                        $changed[$id] = $ts;
+                    }
+                }
+            }
+        }
+
+        if (empty($changed)) return [];
+
+        // 2. Fetch the matching orders in batches of 250
+        $ids    = array_keys($changed);
+        $orders = [];
+        foreach (array_chunk($ids, 250) as $chunk) {
+            $p = http_build_query([
+                'ids'    => implode(',', $chunk),
+                'status' => 'any',
+                'limit'  => 250,
+                'fields' => 'id,order_number,name,created_at,email,total_price,financial_status,fulfillment_status,shipping_address',
+            ]);
+            $data = $this->get("{$this->baseUrl}/orders.json?{$p}");
+            foreach ($data['orders'] ?? [] as $o) {
+                $orders[] = [
+                    'order'      => $o,
+                    'changed_at' => $changed[(string)$o['id']] ?? '',
+                ];
+            }
+        }
+
+        usort($orders, fn($a, $b) => strcmp($b['changed_at'], $a['changed_at']));
+
+        return $orders;
+    }
+
     public function fetchRefundedOrders(string $startDate, string $endDate): array
     {
         $all = [];
@@ -718,7 +803,7 @@ class Shopify
     }
 
     /** @return array{0: array<int, array<string, mixed>>, 1: string|null} */
-    private function getPage(string $url): array
+    private function getPage(string $url, string $rootKey = 'orders'): array
     {
         $ch = curl_init($url);
         curl_setopt_array($ch, [
@@ -757,8 +842,8 @@ class Shopify
         $body    = substr($raw, $headerSize);
         $decoded = json_decode($body, true);
 
-        if (!isset($decoded['orders'])) {
-            throw new RuntimeException("Shopify unexpected response: {$body}");
+        if (!isset($decoded[$rootKey])) {
+            throw new RuntimeException("Shopify unexpected response (key={$rootKey}): {$body}");
         }
 
         $nextUrl = null;
@@ -766,6 +851,6 @@ class Shopify
             $nextUrl = $m[1];
         }
 
-        return [$decoded['orders'], $nextUrl];
+        return [$decoded[$rootKey], $nextUrl];
     }
 }

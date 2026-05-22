@@ -82,7 +82,9 @@ document.querySelectorAll('.js-localtime').forEach(function(el) {
     run_audit: true, spotcheck: true, find_dupes: true, find_refunds: true,
     scan_addresses: true, scan_emails: true, find_orphans: true, tag_audit: true,
     tag_search: true, compare_orders: true, customer_lookup: true,
-    metafield_search: true, metafield_lookup: true, lookup_tracking: true
+    metafield_search: true, metafield_lookup: true, lookup_tracking: true,
+    scan_hvorders: true, scan_repeat_refunds: true, scan_failed_shipments: true,
+    scan_addr_changes: true
   };
 
   var bar = document.getElementById('js-loading-bar');

@@ -39,13 +39,31 @@
       </div>
       <button class="btn btn-submit-end" type="submit">Scan</button>
     </div>
+    <div class="filter-row">
+      <label class="toggle-pill">
+        <input type="checkbox" name="po_box_only" value="1"<?= !empty($poBoxOnly) ? ' checked' : '' ?>>
+        <span class="toggle-pill-track"><span class="toggle-pill-thumb"></span></span>
+        <span class="toggle-pill-label">PO Box only</span>
+      </label>
+      <label class="toggle-pill">
+        <input type="checkbox" name="unfulfilled_only" value="1"<?= !empty($unfulfilledOnly) ? ' checked' : '' ?>>
+        <span class="toggle-pill-track"><span class="toggle-pill-thumb"></span></span>
+        <span class="toggle-pill-label">Unfulfilled only</span>
+      </label>
+    </div>
   </form>
 
   <?php if ($addrResult !== null): ?>
     <div class="duration-note mt-4 mb-0 flex items-center gap-3 flex-wrap">
-      <span>Scanned <strong><?= $addrResult['scanned'] ?></strong> orders
-        (<?= esc($addrResult['start']) ?> → <?= esc($addrResult['end']) ?>)
-        &mdash; <strong><?= count($addrResult['rows']) ?></strong> with address issues</span>
+      <?php if (!empty($addrResult['po_box_only'])): ?>
+        <span>Scanned <strong><?= $addrResult['scanned'] ?></strong> orders
+          (<?= esc($addrResult['start']) ?> → <?= esc($addrResult['end']) ?>)
+          &mdash; <strong><?= count($addrResult['rows']) ?></strong> PO Box orders</span>
+      <?php else: ?>
+        <span>Scanned <strong><?= $addrResult['scanned'] ?></strong> orders
+          (<?= esc($addrResult['start']) ?> → <?= esc($addrResult['end']) ?>)
+          &mdash; <strong><?= count($addrResult['rows']) ?></strong> with address issues</span>
+      <?php endif; ?>
       <?php if ($addrResult['critical'] > 0): ?>
         <span class="refund-risk-badge refund-risk-active"><?= $addrResult['critical'] ?> critical</span>
       <?php endif; ?>
@@ -70,10 +88,7 @@
       <div class="table-header">
         <h2>Address Issues</h2>
         <div class="flex items-center gap-2">
-          <span id="addr-count"><?= count($addrResult['rows']) ?> order<?= count($addrResult['rows']) !== 1 ? 's' : '' ?></span>
-          <label class="flex items-center gap-1 text-sm cursor-pointer select-none">
-            <input type="checkbox" id="filter-pobox"> PO Box only
-          </label>
+          <span><?= count($addrResult['rows']) ?> order<?= count($addrResult['rows']) !== 1 ? 's' : '' ?></span>
           <button class="btn btn-sm btn-ghost" data-csv-btn="#tbl-addrcheck"
                   data-csv-filename="address-issues-<?= esc($addrResult['start']) ?>.csv">Export CSV</button>
         </div>
@@ -102,9 +117,8 @@
               $addr['country_code'] ?? '',
             ]));
             $recipientName = trim(($addr['first_name'] ?? '') . ' ' . ($addr['last_name'] ?? ''));
-            $isPoBox = !empty(array_filter($row['issues'], fn($i) => in_array($i['code'], ['po_box', 'po_box_carrier'])));
           ?>
-          <tr<?= $isPoBox ? ' data-pobox="1"' : '' ?>>
+          <tr>
             <td class="order-num">
               <?php if ($adminUrl): ?>
                 <a href="<?= $adminUrl ?>" target="_blank" rel="noopener"><?= esc($row['order_number']) ?></a>
@@ -153,21 +167,3 @@
     </div>
   <?php endif; ?>
 <?php endif; ?>
-
-<script>
-(function () {
-  const cb = document.getElementById('filter-pobox');
-  if (!cb) return;
-  cb.addEventListener('change', function () {
-    const rows  = document.querySelectorAll('#tbl-addrcheck tbody tr');
-    let visible = 0;
-    rows.forEach(function (tr) {
-      const show = !cb.checked || tr.dataset.pobox === '1';
-      tr.style.display = show ? '' : 'none';
-      if (show) visible++;
-    });
-    const countEl = document.getElementById('addr-count');
-    if (countEl) countEl.textContent = visible + ' order' + (visible !== 1 ? 's' : '');
-  });
-}());
-</script>

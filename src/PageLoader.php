@@ -26,8 +26,12 @@ class PageLoader
             'tracking'   => self::loadTracking($action, $ctx),
             'compare'    => self::loadCompare($action, $ctx),
             'emailcheck' => self::loadEmailCheck($action, $ctx),
-            'orphans'    => self::loadOrphans($action, $ctx),
-            'settings'   => self::loadSettings($action, $ctx),
+            'orphans'       => self::loadOrphans($action, $ctx),
+            'hvorders'      => self::loadHvOrders($action, $ctx),
+            'repeatrefunds' => self::loadRepeatRefunds($action, $ctx),
+            'failedship'    => self::loadFailedShipments($action, $ctx),
+            'addrchanges'   => self::loadAddrChanges($action, $ctx),
+            'settings'      => self::loadSettings($action, $ctx),
             default     => [],
         };
 
@@ -412,10 +416,11 @@ class PageLoader
 
     private static function loadAddrCheck(string $action, array $ctx): array
     {
-        $addrResult = null;
-        $addrError  = '';
-        $addrStart  = $_POST['addr_start'] ?? $_GET['addr_start'] ?? date('Y-m-d', strtotime('-30 days'));
-        $addrEnd    = $_POST['addr_end']   ?? $_GET['addr_end']   ?? date('Y-m-d');
+        $addrResult      = null;
+        $addrError       = '';
+        $addrStart       = $_POST['addr_start'] ?? $_GET['addr_start'] ?? date('Y-m-d', strtotime('-30 days'));
+        $addrEnd         = $_POST['addr_end']   ?? $_GET['addr_end']   ?? date('Y-m-d');
+        $unfulfilledOnly = (bool)($_POST['unfulfilled_only'] ?? false);
 
         if ($action === 'scan_addresses') {
             $addrStart = trim($_POST['addr_start'] ?? '');
@@ -434,7 +439,8 @@ class PageLoader
                     $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
                     ob_start();
                     try {
-                        $orders = $shopify->fetchOrdersForAddressScan($addrStart, $addrEnd);
+                        $unfulfilledOnly = (bool)($_POST['unfulfilled_only'] ?? false);
+                        $orders = $shopify->fetchOrdersForAddressScan($addrStart, $addrEnd, $unfulfilledOnly);
                     } finally {
                         ob_end_clean();
                     }
@@ -460,13 +466,24 @@ class PageLoader
                         ($a['severity'] === 'critical' ? 0 : 1) <=> ($b['severity'] === 'critical' ? 0 : 1)
                     );
 
+                    $poBoxOnly = (bool)($_POST['po_box_only'] ?? false);
+                    if ($poBoxOnly) {
+                        $rows = array_values(array_filter($rows, function ($r) {
+                            foreach ($r['issues'] as $issue) {
+                                if (in_array($issue['code'], ['po_box', 'po_box_carrier'], true)) return true;
+                            }
+                            return false;
+                        }));
+                    }
+
                     $addrResult = [
-                        'rows'     => $rows,
-                        'scanned'  => count($orders),
-                        'start'    => $addrStart,
-                        'end'      => $addrEnd,
-                        'critical' => count(array_filter($rows, fn($r) => $r['severity'] === 'critical')),
-                        'warnings' => count(array_filter($rows, fn($r) => $r['severity'] === 'warning')),
+                        'rows'      => $rows,
+                        'scanned'   => count($orders),
+                        'start'     => $addrStart,
+                        'end'       => $addrEnd,
+                        'critical'  => count(array_filter($rows, fn($r) => $r['severity'] === 'critical')),
+                        'warnings'  => count(array_filter($rows, fn($r) => $r['severity'] === 'warning')),
+                        'po_box_only' => $poBoxOnly,
                     ];
                 } catch (Throwable $e) {
                     $addrError = $e->getMessage();
@@ -474,7 +491,9 @@ class PageLoader
             }
         }
 
-        return compact('addrResult', 'addrError', 'addrStart', 'addrEnd');
+        $poBoxOnly       = (bool)($_POST['po_box_only']      ?? false);
+        $unfulfilledOnly = (bool)($_POST['unfulfilled_only'] ?? false);
+        return compact('addrResult', 'addrError', 'addrStart', 'addrEnd', 'poBoxOnly', 'unfulfilledOnly');
     }
 
     private static function checkAddress(?array $addr, array $order): array
@@ -525,7 +544,7 @@ class PageLoader
                 $issues[] = ['level' => 'warning', 'code' => 'no_phone_express', 'message' => 'No phone number — carrier may require it for express shipping'];
             }
         }
-        if ($address1 && preg_match('/\b(P\.?\s*O\.?\s*B(ox)?|Post\s+Office\s+Box)\b/i', $address1)) {
+        if ($address1 && preg_match('/\bbox\b/i', $address1)) {
             $shippingTitles = implode(' ', array_column($order['shipping_lines'] ?? [], 'title'));
             if (preg_match('/fedex|ups|dhl/i', $shippingTitles)) {
                 $issues[] = ['level' => 'warning', 'code' => 'po_box_carrier', 'message' => 'PO Box — carrier cannot deliver (FedEx/UPS/DHL do not deliver to PO Boxes)'];
@@ -1015,6 +1034,250 @@ class PageLoader
         }
 
         return compact('orphanResult', 'orphanError', 'orphanStart', 'orphanEnd');
+    }
+
+    // ── High-Value Orders Without Phone ──────────────────────────────────────
+
+    private static function loadHvOrders(string $action, array $ctx): array
+    {
+        $hvResult = null;
+        $hvError  = '';
+        $hvStart  = $_POST['hv_start'] ?? $_GET['hv_start'] ?? date('Y-m-d', strtotime('-30 days'));
+        $hvEnd    = $_POST['hv_end']   ?? $_GET['hv_end']   ?? date('Y-m-d');
+        $hvMin    = (int)($_POST['hv_min'] ?? $_GET['hv_min'] ?? 200);
+
+        if ($action === 'scan_hvorders') {
+            $hvStart = trim($_POST['hv_start'] ?? '');
+            $hvEnd   = trim($_POST['hv_end']   ?? '');
+            $hvMin   = max(0, (int)($_POST['hv_min'] ?? 200));
+
+            if (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
+                $hvError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
+            } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $hvStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $hvEnd)) {
+                $hvError = 'Invalid date format.';
+            } elseif ($hvStart > $hvEnd) {
+                $hvError = 'Start date must be before end date.';
+            } else {
+                try {
+                    if (function_exists('set_time_limit')) set_time_limit(180);
+                    $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+                    ob_start();
+                    try { $orders = $shopify->fetchOrdersForHighValue($hvStart, $hvEnd); }
+                    finally { ob_end_clean(); }
+
+                    $rows = [];
+                    foreach ($orders as $o) {
+                        $addr  = $o['shipping_address'] ?? null;
+                        $phone = trim($addr['phone'] ?? '');
+                        $total = (float)($o['total_price'] ?? 0);
+                        if ($phone || $total < $hvMin) continue;
+                        $rows[] = [
+                            'shopify_id'   => $o['id'] ?? '',
+                            'order_number' => $o['name'] ?? '',
+                            'created_at'   => substr($o['created_at'] ?? '', 0, 10),
+                            'email'        => $o['email'] ?? '',
+                            'total'        => $total,
+                            'address'      => $addr,
+                        ];
+                    }
+                    usort($rows, fn($a, $b) => $b['total'] <=> $a['total']);
+                    $hvResult = ['rows' => $rows, 'scanned' => count($orders), 'start' => $hvStart, 'end' => $hvEnd, 'min' => $hvMin];
+                } catch (Throwable $e) {
+                    $hvError = $e->getMessage();
+                }
+            }
+        }
+        return compact('hvResult', 'hvError', 'hvStart', 'hvEnd', 'hvMin');
+    }
+
+    // ── Repeat Refund Customers ───────────────────────────────────────────────
+
+    private static function loadRepeatRefunds(string $action, array $ctx): array
+    {
+        $rrResult   = null;
+        $rrError    = '';
+        $rrStart    = $_POST['rr_start']    ?? $_GET['rr_start']    ?? date('Y-m-d', strtotime('-90 days'));
+        $rrEnd      = $_POST['rr_end']      ?? $_GET['rr_end']      ?? date('Y-m-d');
+        $rrMinCount = (int)($_POST['rr_min_count'] ?? $_GET['rr_min_count'] ?? 2);
+
+        if ($action === 'scan_repeat_refunds') {
+            $rrStart    = trim($_POST['rr_start'] ?? '');
+            $rrEnd      = trim($_POST['rr_end']   ?? '');
+            $rrMinCount = max(2, (int)($_POST['rr_min_count'] ?? 2));
+
+            if (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
+                $rrError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
+            } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $rrStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $rrEnd)) {
+                $rrError = 'Invalid date format.';
+            } elseif ($rrStart > $rrEnd) {
+                $rrError = 'Start date must be before end date.';
+            } else {
+                try {
+                    if (function_exists('set_time_limit')) set_time_limit(300);
+                    $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken'], $ctx['cacheObj']);
+                    ob_start();
+                    try { $refundedOrders = $shopify->fetchRefundedOrders($rrStart, $rrEnd); }
+                    finally { ob_end_clean(); }
+
+                    // Group by email
+                    $byEmail = [];
+                    foreach ($refundedOrders as $o) {
+                        $email = strtolower(trim($o['email'] ?? ''));
+                        if (!$email) continue;
+                        $refundedAmt = 0.0;
+                        foreach ($o['refunds'] ?? [] as $ref) {
+                            foreach ($ref['transactions'] ?? [] as $tx) {
+                                if (($tx['kind'] ?? '') === 'refund' && ($tx['status'] ?? '') === 'success') {
+                                    $refundedAmt += (float)($tx['amount'] ?? 0);
+                                }
+                            }
+                        }
+                        $byEmail[$email][] = [
+                            'order_number' => $o['name'] ?? '',
+                            'shopify_id'   => $o['id'] ?? '',
+                            'created_at'   => substr($o['created_at'] ?? '', 0, 10),
+                            'refunded_amt' => $refundedAmt,
+                        ];
+                    }
+
+                    $rows = [];
+                    foreach ($byEmail as $email => $orders) {
+                        if (count($orders) < $rrMinCount) continue;
+                        $totalRefunded = array_sum(array_column($orders, 'refunded_amt'));
+                        usort($orders, fn($a, $b) => strcmp($b['created_at'], $a['created_at']));
+                        $rows[] = [
+                            'email'          => $email,
+                            'refund_count'   => count($orders),
+                            'total_refunded' => $totalRefunded,
+                            'orders'         => $orders,
+                        ];
+                    }
+                    usort($rows, fn($a, $b) => $b['refund_count'] <=> $a['refund_count']);
+
+                    $rrResult = ['rows' => $rows, 'scanned' => count($refundedOrders), 'start' => $rrStart, 'end' => $rrEnd, 'min_count' => $rrMinCount];
+                } catch (Throwable $e) {
+                    $rrError = $e->getMessage();
+                }
+            }
+        }
+        return compact('rrResult', 'rrError', 'rrStart', 'rrEnd', 'rrMinCount');
+    }
+
+    // ── Voided / Failed Shipments ─────────────────────────────────────────────
+
+    private static function loadFailedShipments(string $action, array $ctx): array
+    {
+        $fsResult = null;
+        $fsError  = '';
+        $fsStart  = $_POST['fs_start'] ?? $_GET['fs_start'] ?? date('Y-m-d', strtotime('-30 days'));
+        $fsEnd    = $_POST['fs_end']   ?? $_GET['fs_end']   ?? date('Y-m-d');
+
+        if ($action === 'scan_failed_shipments') {
+            $fsStart = trim($_POST['fs_start'] ?? '');
+            $fsEnd   = trim($_POST['fs_end']   ?? '');
+
+            if (!$ctx['ssKey'] || !$ctx['ssSecret']) {
+                $fsError = 'SHIPSTATION_API_KEY / SHIPSTATION_API_SECRET not set in .env.';
+            } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fsStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fsEnd)) {
+                $fsError = 'Invalid date format.';
+            } elseif ($fsStart > $fsEnd) {
+                $fsError = 'Start date must be before end date.';
+            } else {
+                try {
+                    if (function_exists('set_time_limit')) set_time_limit(180);
+                    $ss = new ShipStation($ctx['ssKey'], $ctx['ssSecret']);
+                    ob_start();
+                    try { $shipments = $ss->fetchVoidedShipments($fsStart, $fsEnd); }
+                    finally { ob_end_clean(); }
+
+                    $rows = [];
+                    foreach ($shipments as $s) {
+                        $addr = $s['shipTo'] ?? null;
+                        $rows[] = [
+                            'order_number'    => $s['orderNumber'] ?? '',
+                            'shipment_id'     => $s['shipmentId']  ?? '',
+                            'tracking'        => $s['trackingNumber'] ?? '',
+                            'carrier'         => $s['carrierCode']    ?? '',
+                            'service'         => $s['serviceCode']    ?? '',
+                            'ship_date'       => substr($s['shipDate']  ?? '', 0, 10),
+                            'void_date'       => substr($s['voidDate']  ?? '', 0, 10),
+                            'ship_to_name'    => trim(($addr['name'] ?? '')),
+                            'ship_to_city'    => $addr['city']       ?? '',
+                            'ship_to_state'   => $addr['state']      ?? '',
+                            'ship_to_zip'     => $addr['postalCode'] ?? '',
+                            'ship_to_country' => $addr['country']    ?? '',
+                        ];
+                    }
+                    usort($rows, fn($a, $b) => strcmp($b['void_date'], $a['void_date']));
+                    $fsResult = ['rows' => $rows, 'start' => $fsStart, 'end' => $fsEnd];
+                } catch (Throwable $e) {
+                    $fsError = $e->getMessage();
+                }
+            }
+        }
+        return compact('fsResult', 'fsError', 'fsStart', 'fsEnd');
+    }
+
+    // ── Address Changes ───────────────────────────────────────────────────────
+
+    private static function loadAddrChanges(string $action, array $ctx): array
+    {
+        $acResult = null;
+        $acError  = '';
+        $acStart  = $_POST['ac_start'] ?? $_GET['ac_start'] ?? date('Y-m-d', strtotime('-30 days'));
+        $acEnd    = $_POST['ac_end']   ?? $_GET['ac_end']   ?? date('Y-m-d');
+
+        if ($action === 'scan_addr_changes') {
+            $acStart = trim($_POST['ac_start'] ?? '');
+            $acEnd   = trim($_POST['ac_end']   ?? '');
+
+            if (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
+                $acError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
+            } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $acStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $acEnd)) {
+                $acError = 'Invalid date format.';
+            } elseif ($acStart > $acEnd) {
+                $acError = 'Start date must be before end date.';
+            } else {
+                try {
+                    if (function_exists('set_time_limit')) set_time_limit(240);
+                    $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+                    ob_start();
+                    try { $entries = $shopify->fetchOrdersWithAddressChanges($acStart, $acEnd); }
+                    finally { ob_end_clean(); }
+
+                    $rows = [];
+                    foreach ($entries as $e) {
+                        $o    = $e['order'];
+                        $addr = $o['shipping_address'] ?? null;
+                        $addrLine = $addr ? implode(', ', array_filter([
+                            $addr['address1'] ?? '',
+                            $addr['city']     ?? '',
+                            $addr['province_code'] ?? '',
+                            $addr['zip']      ?? '',
+                            $addr['country_code'] ?? '',
+                        ])) : '';
+                        $rows[] = [
+                            'shopify_id'   => $o['id']           ?? '',
+                            'order_number' => $o['name']         ?? '',
+                            'created_at'   => substr($o['created_at']  ?? '', 0, 10),
+                            'changed_at'   => substr($e['changed_at']  ?? '', 0, 16),
+                            'email'        => $o['email']        ?? '',
+                            'total'        => $o['total_price']  ?? '',
+                            'financial'    => $o['financial_status']    ?? '',
+                            'fulfillment'  => $o['fulfillment_status']  ?? '',
+                            'addr_name'    => trim(($addr['first_name'] ?? '') . ' ' . ($addr['last_name'] ?? '')),
+                            'addr_line'    => $addrLine,
+                        ];
+                    }
+
+                    $acResult = ['rows' => $rows, 'start' => $acStart, 'end' => $acEnd];
+                } catch (Throwable $e) {
+                    $acError = $e->getMessage();
+                }
+            }
+        }
+
+        return compact('acResult', 'acError', 'acStart', 'acEnd');
     }
 
     // ── Settings ──────────────────────────────────────────────────────────────
