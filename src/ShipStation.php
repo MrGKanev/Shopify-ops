@@ -226,6 +226,18 @@ class ShipStation
         return $all;
     }
 
+    /**
+     * Fetches all shipments for a given order number (not cached - live lookup).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getOrderShipments(string $orderNumber): array
+    {
+        $params = http_build_query(['orderNumber' => $orderNumber, 'pageSize' => 100]);
+        $data   = $this->get("/shipments?{$params}");
+        return $data['shipments'] ?? [];
+    }
+
     // ── Private ───────────────────────────────────────────────────────
 
     /**

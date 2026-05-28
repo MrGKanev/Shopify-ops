@@ -684,6 +684,18 @@ class Shopify
         return ['pairs' => $pairs, 'scanned' => count($all), 'truncated' => $truncated];
     }
 
+    /**
+     * Fetches the event/audit log for a specific order.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getOrderEvents(string $orderId): array
+    {
+        $params = http_build_query(['limit' => 250]);
+        $data   = $this->get("{$this->baseUrl}/orders/{$orderId}/events.json?{$params}");
+        return $data['events'] ?? [];
+    }
+
     // ── Private ───────────────────────────────────────────────────────
 
     /**
