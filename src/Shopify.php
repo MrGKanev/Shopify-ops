@@ -518,6 +518,93 @@ class Shopify
         return $orders;
     }
 
+    /**
+     * Finds orders that had content edits (line items, notes, custom attributes, discounts)
+     * after placement, using the Events API. Returns orders sorted by edit date desc.
+     *
+     * Each entry: shopify_id, order_number, created_at, edited_at, diff_mins,
+     *             email, total, financial, fulfillment, edit_summary (string[])
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function fetchEditedOrders(string $startDate, string $endDate): array
+    {
+        $params  = http_build_query([
+            'subject_type'   => 'Order',
+            'created_at_min' => $startDate . 'T00:00:00-00:00',
+            'created_at_max' => $endDate   . 'T23:59:59-00:00',
+            'limit'          => self::PAGE_SIZE,
+        ]);
+        $nextUrl = "{$this->baseUrl}/events.json?{$params}";
+
+        $byOrder = [];
+        while ($nextUrl) {
+            [$page, $nextUrl] = $this->getPage($nextUrl, 'events');
+            foreach ($page as $ev) {
+                $verb = strtolower($ev['verb']    ?? '');
+                $msg  = strtolower($ev['message'] ?? '');
+                $isEdit = $verb === 'edit_complete'
+                    || str_contains($msg, 'was edited')
+                    || str_contains($msg, 'were edited')
+                    || str_contains($msg, 'item was added')
+                    || str_contains($msg, 'item was removed')
+                    || str_contains($msg, 'discount was added')
+                    || str_contains($msg, 'discount was removed')
+                    || str_contains($msg, 'note was updated')
+                    || str_contains($msg, 'custom attributes');
+                if (!$isEdit) continue;
+
+                $id = (string)($ev['subject_id'] ?? '');
+                if (!$id) continue;
+                $ts = $ev['created_at'] ?? '';
+                if (!isset($byOrder[$id])) {
+                    $byOrder[$id] = ['latest_at' => $ts, 'summary' => []];
+                } elseif ($ts > $byOrder[$id]['latest_at']) {
+                    $byOrder[$id]['latest_at'] = $ts;
+                }
+                $short = ucfirst($ev['message'] ?? '');
+                if (count($byOrder[$id]['summary']) < 4 && !in_array($short, $byOrder[$id]['summary'], true)) {
+                    $byOrder[$id]['summary'][] = $short;
+                }
+            }
+        }
+
+        if (empty($byOrder)) return [];
+
+        $rows = [];
+        foreach (array_chunk(array_keys($byOrder), 250) as $chunk) {
+            $p = http_build_query([
+                'ids'    => implode(',', $chunk),
+                'status' => 'any',
+                'limit'  => 250,
+                'fields' => 'id,order_number,name,created_at,updated_at,email,total_price,financial_status,fulfillment_status',
+            ]);
+            $data = $this->get("{$this->baseUrl}/orders.json?{$p}");
+            foreach ($data['orders'] ?? [] as $o) {
+                $oid       = (string)$o['id'];
+                $ev        = $byOrder[$oid] ?? [];
+                $createdTs = strtotime($o['created_at'] ?? '');
+                $editedTs  = strtotime($ev['latest_at']  ?? '');
+                $diffMins  = ($createdTs && $editedTs) ? max(0, (int)(($editedTs - $createdTs) / 60)) : 0;
+                $rows[] = [
+                    'shopify_id'   => $oid,
+                    'order_number' => $o['name']                ?? '',
+                    'created_at'   => substr($o['created_at']   ?? '', 0, 10),
+                    'edited_at'    => substr($ev['latest_at']   ?? '', 0, 16),
+                    'diff_mins'    => $diffMins,
+                    'email'        => $o['email']               ?? '',
+                    'total'        => $o['total_price']         ?? '',
+                    'financial'    => $o['financial_status']    ?? '',
+                    'fulfillment'  => $o['fulfillment_status']  ?? '',
+                    'edit_summary' => $ev['summary']            ?? [],
+                ];
+            }
+        }
+
+        usort($rows, fn($a, $b) => strcmp($b['edited_at'], $a['edited_at']));
+        return $rows;
+    }
+
     public function fetchRefundedOrders(string $startDate, string $endDate): array
     {
         $all = [];

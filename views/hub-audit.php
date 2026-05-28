@@ -14,6 +14,7 @@ $tools = [
     ['page' => 'repeatrefunds', 'icon' => '♻',  'name' => 'Repeat Refunds',      'desc' => 'Customers with multiple refunded orders in a date range'],
     ['page' => 'failedship',    'icon' => '🚫', 'name' => 'Voided Shipments',    'desc' => 'ShipStation shipments voided in the selected date range'],
     ['page' => 'addrchanges',   'icon' => '🔀', 'name' => 'Address Changes',     'desc' => 'Orders whose shipping address was edited after placement'],
+    ['page' => 'orderedits',    'icon' => '✏️',  'name' => 'Order Edit History',  'desc' => 'Orders with post-placement edits: line items, discounts, notes or custom attributes'],
 ];
 ?>
 <div class="hub-grid">

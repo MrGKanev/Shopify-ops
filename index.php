@@ -6,6 +6,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/src/Env.php';
 require_once __DIR__ . '/src/Auth.php';
+require_once __DIR__ . '/src/Stores.php';
 require_once __DIR__ . '/src/IgnoreList.php';
 require_once __DIR__ . '/src/PushLog.php';
 require_once __DIR__ . '/src/Cache.php';
@@ -18,19 +19,7 @@ require_once __DIR__ . '/src/Actions.php';
 require_once __DIR__ . '/src/PageLoader.php';
 
 Env::load(__DIR__ . '/.env');
-
-$webUsername    = getenv('WEB_USERNAME')        ?: 'admin';
-$webPassword    = getenv('WEB_PASSWORD')        ?: 'changeme';
-$shopifyStore   = getenv('SHOPIFY_STORE')       ?: 'N/A';
-$shopifyToken   = getenv('SHOPIFY_ACCESS_TOKEN')?: '';
-$ssKey          = getenv('SS_API_KEY')          ?: '';
-$ssSecret       = getenv('SS_API_SECRET')       ?: '';
-$appTitle       = getenv('APP_TITLE')           ?: 'Shopify Ops';
-$appBrand       = getenv('APP_BRAND')           ?: 'Shopify Ops';
-$appLogo        = getenv('APP_LOGO')            ?: '';
-$appStoreNumber = getenv('APP_STORE_NUMBER')    ?: '';
-$cacheTtl       = (int) (getenv('CACHE_TTL')   ?: 82800);
-$reportDir      = __DIR__ . '/reports';
+Stores::init(__DIR__);
 
 // ── Session / auth ────────────────────────────────────────────────────────────
 
@@ -41,7 +30,7 @@ $error  = '';
 
 if ($action === 'login') {
     $ip    = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    $error = Auth::attempt($_POST['username'] ?? '', $_POST['password'] ?? '', $webUsername, $webPassword, $ip);
+    $error = Auth::attempt($_POST['username'] ?? '', $_POST['password'] ?? '', getenv('WEB_USERNAME') ?: 'admin', getenv('WEB_PASSWORD') ?: 'changeme', $ip);
     if ($error === '') {
         $_SESSION['authed'] = true;
         header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
@@ -57,13 +46,51 @@ if ($action === 'logout') {
 
 $authed = !empty($_SESSION['authed']);
 
+// ── Store config (multi-store or single .env) ─────────────────────────────────
+
+if (Stores::isMultiStore()) {
+    $activeStore    = Stores::getActive();
+    $shopifyStore   = $activeStore['shopify_store']  ?? 'N/A';
+    $shopifyToken   = $activeStore['shopify_token']  ?? '';
+    $ssKey          = $activeStore['ss_key']         ?? '';
+    $ssSecret       = $activeStore['ss_secret']      ?? '';
+    $appStoreNumber = $activeStore['store_number']   ?? '';
+    $storeId        = $activeStore['id']             ?? 'default';
+    $storeLabel     = $activeStore['label']          ?? $shopifyStore;
+    $allStores      = Stores::all();
+} else {
+    $shopifyStore   = getenv('SHOPIFY_STORE')        ?: 'N/A';
+    $shopifyToken   = getenv('SHOPIFY_ACCESS_TOKEN') ?: '';
+    $ssKey          = getenv('SS_API_KEY')           ?: '';
+    $ssSecret       = getenv('SS_API_SECRET')        ?: '';
+    $appStoreNumber = getenv('APP_STORE_NUMBER')     ?: '';
+    $storeId        = '';
+    $storeLabel     = '';
+    $allStores      = [];
+}
+
+$webUsername = getenv('WEB_USERNAME') ?: 'admin';
+$webPassword = getenv('WEB_PASSWORD') ?: 'changeme';
+$appTitle    = getenv('APP_TITLE')    ?: 'Shopify Ops';
+$appBrand    = getenv('APP_BRAND')    ?: 'Shopify Ops';
+$appLogo     = getenv('APP_LOGO')     ?: '';
+$cacheTtl    = (int) (getenv('CACHE_TTL') ?: 82800);
+
+$reportDir = __DIR__ . '/reports' . ($storeId ? "/{$storeId}" : '');
+$cacheDir  = __DIR__ . '/cache'   . ($storeId ? "/{$storeId}" : '');
+$dataDir   = __DIR__ . '/data'    . ($storeId ? "/{$storeId}" : '');
+
 // ── Shared setup ──────────────────────────────────────────────────────────────
 
 $cacheObj      = null;
 $ignoredOrders = [];
 
 if ($authed) {
-    $cacheObj      = new Cache(__DIR__ . '/cache', $cacheTtl);
+    $cacheObj = new Cache($cacheDir, $cacheTtl);
+    if ($storeId) {
+        IgnoreList::setDataDir($dataDir);
+        PushLog::setDataDir($dataDir);
+    }
     $ignoredOrders = IgnoreList::load();
 }
 

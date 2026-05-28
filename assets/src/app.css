@@ -1202,6 +1202,33 @@ td:hover .copy-btn,
 @keyframes toast-in  { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes toast-out { to   { opacity: 0; transform: translateY(8px); } }
 
+/* ── Sidebar search ── */
+.sidebar-search {
+  padding: .4rem .75rem .5rem;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-search form { margin: 0; }
+.sidebar-search-input {
+  @apply w-full text-xs rounded-lg outline-none transition-colors;
+  padding: .35rem .6rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.sidebar-search-input:focus { border-color: var(--accent); }
+.sidebar-search-input::placeholder { color: var(--muted); }
+
+/* ── Store switcher ── */
+.store-switcher { margin-top: .4rem; }
+.store-select {
+  @apply w-full text-xs rounded-lg cursor-pointer outline-none;
+  padding: .3rem .45rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.store-select:focus { border-color: var(--accent); }
+
 /* ── Flat sidebar nav ── */
 .flat-nav { @apply py-2 px-2 flex flex-col gap-0.5; }
 .flat-nav-link {

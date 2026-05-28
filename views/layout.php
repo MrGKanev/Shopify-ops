@@ -50,11 +50,23 @@
         </button>
       </div>
       <div class="store"><span class="store-label">Store</span> <?= esc($shopifyStore) ?></div>
+      <?php if (!empty($allStores) && count($allStores) > 1): ?>
+        <form method="post" class="store-switcher">
+          <input type="hidden" name="action" value="switch_store">
+          <select name="store_id" class="store-select" onchange="this.form.submit()" title="Switch store">
+            <?php foreach ($allStores as $s): ?>
+              <option value="<?= esc($s['id']) ?>" <?= (($s['id'] ?? '') === ($storeId ?? '')) ? 'selected' : '' ?>>
+                <?= esc($s['label'] ?? $s['shopify_store'] ?? $s['id']) ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+        </form>
+      <?php endif; ?>
     </div>
 
     <?php
-      $auditPages  = ['hub-audit', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges'];
-      $searchPages = ['hub-search', 'spotcheck', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'tracking', 'compare', 'timeline'];
+      $auditPages  = ['hub-audit', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'orderedits'];
+      $searchPages = ['hub-search', 'spotcheck', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'tracking', 'compare', 'timeline', 'globalsearch'];
       $managePages = ['ignored', 'pushlog'];
       $groupOf = function(string $p) use ($auditPages, $searchPages, $managePages): string {
           if (in_array($p, $auditPages,  true)) return 'audit';
@@ -71,11 +83,13 @@
           'orphans' => 'Orphan Detector', 'hvorders' => 'High-Value No Phone',
           'repeatrefunds' => 'Repeat Refunds', 'failedship' => 'Voided Shipments',
           'addrchanges' => 'Address Changes',
+          'orderedits'  => 'Order Edit History',
           'spotcheck' => 'Spot-check', 'metafields' => 'Metafields',
           'tagsearch' => 'Tag Search', 'tagaudit' => 'Tag Audit',
           'customer' => 'Customer Lookup', 'tracking' => 'Tracking Feed',
           'compare'   => 'Order Compare',
-          'timeline'  => 'Order Timeline',
+          'timeline'     => 'Order Timeline',
+          'globalsearch' => 'Global Search',
           'ignored' => 'Ignored Orders', 'pushlog' => 'Push Log',
       ];
       $hubPages = ['hub-audit', 'hub-search'];
@@ -100,6 +114,16 @@
       </a>
 
     </nav>
+
+    <div class="sidebar-search">
+      <form method="get" action="">
+        <input type="hidden" name="page" value="globalsearch">
+        <input type="text" name="q" class="sidebar-search-input"
+               placeholder="Search order #…"
+               value="<?= esc(($page === 'globalsearch') ? ($_GET['q'] ?? '') : '') ?>"
+               autocomplete="off" spellcheck="false">
+      </form>
+    </div>
 
     <?php if (!empty($reports)): ?>
       <div class="sidebar-section">History</div>
@@ -130,7 +154,7 @@
 
   <main class="main">
     <?php
-      $allowedPages = ['hub-audit', 'hub-search', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'spotcheck', 'tracking', 'compare', 'timeline', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'ignored', 'pushlog', 'settings'];
+      $allowedPages = ['hub-audit', 'hub-search', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'orderedits', 'spotcheck', 'tracking', 'compare', 'timeline', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'ignored', 'pushlog', 'settings', 'globalsearch'];
       $page         = in_array($page, $allowedPages, true) ? $page : 'hub-audit';
       $pageFile     = __DIR__ . '/' . $page . '.php';
 

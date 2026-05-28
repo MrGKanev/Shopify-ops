@@ -10,6 +10,7 @@ class Actions
         if (!$ctx['authed']) return;
 
         match ($action) {
+            'switch_store'        => self::switchStore($ctx),
             'unban_ip'            => self::unbanIp($ctx),
             'ignore_order'        => self::ignoreOrder($ctx),
             'unignore_order'      => self::unignoreOrder($ctx),
@@ -29,6 +30,14 @@ class Actions
     }
 
     // ── Handlers ──────────────────────────────────────────────────────────────
+
+    private static function switchStore(array $ctx): void
+    {
+        if (!class_exists('Stores') || !Stores::isMultiStore()) return;
+        Stores::setActive($_POST['store_id'] ?? '');
+        header('Location: ?');
+        exit;
+    }
 
     private static function unbanIp(array $ctx): void
     {

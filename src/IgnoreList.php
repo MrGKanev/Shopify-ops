@@ -5,7 +5,17 @@
  */
 class IgnoreList
 {
-    private const string FILE = __DIR__ . '/../data/ignored.json';
+    private static string $customFile = '';
+
+    public static function setDataDir(string $dir): void
+    {
+        self::$customFile = rtrim($dir, '/') . '/ignored.json';
+    }
+
+    private static function file(): string
+    {
+        return self::$customFile ?: (__DIR__ . '/../data/ignored.json');
+    }
 
     // ── Read ──────────────────────────────────────────────────────────
 
@@ -16,7 +26,7 @@ class IgnoreList
      */
     public static function load(): array
     {
-        $file = self::FILE;
+        $file = self::file();
         if (!file_exists($file)) {
             return [];
         }
@@ -126,7 +136,7 @@ class IgnoreList
      */
     private static function write(callable $mutator): void
     {
-        $file = self::FILE;
+        $file = self::file();
         if (!is_dir(dirname($file))) {
             mkdir(dirname($file), 0755, true);
         }

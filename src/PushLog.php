@@ -4,7 +4,17 @@
  */
 class PushLog
 {
-    private const string FILE = __DIR__ . '/../data/push_log.json';
+    private static string $customFile = '';
+
+    public static function setDataDir(string $dir): void
+    {
+        self::$customFile = rtrim($dir, '/') . '/push_log.json';
+    }
+
+    private static function file(): string
+    {
+        return self::$customFile ?: (__DIR__ . '/../data/push_log.json');
+    }
 
     /**
      * Append a single entry to the push log.
@@ -13,7 +23,7 @@ class PushLog
      */
     public static function append(array $entry): void
     {
-        $file = self::FILE;
+        $file = self::file();
         if (!is_dir(dirname($file))) {
             mkdir(dirname($file), 0755, true);
         }
@@ -34,7 +44,7 @@ class PushLog
      */
     public static function all(): array
     {
-        $file = self::FILE;
+        $file = self::file();
         if (!file_exists($file)) {
             return [];
         }
