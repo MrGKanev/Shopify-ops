@@ -1,4 +1,5 @@
 .env
+stores.json
 order_types.json
 cache/
 logs/

@@ -14,8 +14,9 @@ class PageLoader
 
         // Page-specific
         $data += match ($page) {
-            'run'       => self::loadAudit($action, $ctx, $data),
-            'spotcheck' => self::loadSpotCheck($action, $ctx),
+            'run'         => self::loadAudit($action, $ctx, $data),
+            'globalsearch'=> self::loadGlobalSearch($ctx, $data),
+            'spotcheck'   => self::loadSpotCheck($action, $ctx),
             'metafields'=> self::loadMetafields($action, $ctx),
             'tagsearch' => self::loadTagSearch($action, $ctx),
             'tagaudit'  => self::loadTagAudit($action, $ctx),
@@ -32,6 +33,7 @@ class PageLoader
             'failedship'    => self::loadFailedShipments($action, $ctx),
             'addrchanges'   => self::loadAddrChanges($action, $ctx),
             'timeline'      => self::loadTimeline($action, $ctx),
+            'orderedits'    => self::loadOrderEdits($action, $ctx),
             'settings'      => self::loadSettings($action, $ctx),
             default     => [],
         };
@@ -1543,9 +1545,74 @@ class PageLoader
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+    // ── Order Edit History ────────────────────────────────────────────────────
+
+    private static function loadOrderEdits(string $action, array $ctx): array
+    {
+        $oeResult = null;
+        $oeError  = '';
+        [$oeStart, $oeEnd] = self::extractDateRange('oe', 30);
+
+        if ($action === 'scan_order_edits') {
+            $oeStart = trim($_POST['oe_start'] ?? '');
+            $oeEnd   = trim($_POST['oe_end']   ?? '');
+
+            if ($err = self::requireShopify($ctx)) {
+                $oeError = $err;
+            } elseif ($err = self::validateDates($oeStart, $oeEnd)) {
+                $oeError = $err;
+            } else {
+                try {
+                    self::setLimits(240);
+                    $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+                    $rows    = self::suppressOutput(fn() => $shopify->fetchEditedOrders($oeStart, $oeEnd));
+                    $oeResult = ['rows' => $rows, 'start' => $oeStart, 'end' => $oeEnd];
+                } catch (Throwable $e) {
+                    $oeError = $e->getMessage();
+                }
+            }
+        }
+
+        return compact('oeResult', 'oeError', 'oeStart', 'oeEnd');
+    }
+
     private static function dateOnly(string $dt): string
     {
         return substr($dt, 0, 10);
+    }
+
+    // ── Global Search ─────────────────────────────────────────────────────────
+
+    private static function loadGlobalSearch(array $ctx, array $globalData): array
+    {
+        $q         = trim($_GET['q'] ?? '');
+        $gsResults = null;
+
+        if ($q !== '') {
+            $norm = Comparator::normalise($q);
+            $gsResults = ['query' => $q, 'reports' => [], 'push' => [], 'ignored' => []];
+
+            foreach (($globalData['orderHistory'] ?? []) as $num => $entry) {
+                if ($norm && (str_contains($num, $norm) || str_contains($norm, $num))) {
+                    $gsResults['reports'][] = ['number' => $num] + $entry;
+                }
+            }
+
+            foreach (($globalData['pushLog'] ?? []) as $entry) {
+                $entryNorm = Comparator::normalise($entry['order_number'] ?? '');
+                if ($norm && ($entryNorm === $norm || str_contains($entryNorm, $norm) || str_contains($norm, $entryNorm))) {
+                    $gsResults['push'][] = $entry;
+                }
+            }
+
+            foreach (($ctx['ignoredOrders'] ?? []) as $num => $entry) {
+                if ($norm && (str_contains($num, $norm) || str_contains($norm, $num))) {
+                    $gsResults['ignored'][] = ['number' => $num] + $entry;
+                }
+            }
+        }
+
+        return compact('gsResults');
     }
 
     private static function setLimits(int $secs = 300): void
