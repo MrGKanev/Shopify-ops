@@ -38,6 +38,14 @@
       </div>
       <button class="btn btn-full" type="submit">Sign in</button>
     </form>
+
+    <?php if ($isLocalhost): ?>
+      <div class="login-dev-sep">or</div>
+      <form method="post">
+        <input type="hidden" name="action" value="dev_login">
+        <button class="btn btn-full login-dev-btn" type="submit">Quick login (localhost)</button>
+      </form>
+    <?php endif; ?>
   </div>
 </div>
 

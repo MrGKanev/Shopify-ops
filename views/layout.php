@@ -66,7 +66,7 @@
 
     <?php
       $auditPages  = ['hub-audit', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'orderedits'];
-      $searchPages = ['hub-search', 'spotcheck', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'tracking', 'compare', 'timeline', 'globalsearch'];
+      $searchPages = ['hub-search', 'spotcheck', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'tracking', 'compare', 'timeline', 'globalsearch', 'packingslip'];
       $managePages = ['ignored', 'pushlog'];
       $groupOf = function(string $p) use ($auditPages, $searchPages, $managePages): string {
           if (in_array($p, $auditPages,  true)) return 'audit';
@@ -90,6 +90,7 @@
           'compare'   => 'Order Compare',
           'timeline'     => 'Order Timeline',
           'globalsearch' => 'Global Search',
+          'packingslip'  => 'Packing Slip Preview',
           'ignored' => 'Ignored Orders', 'pushlog' => 'Push Log',
       ];
       $hubPages = ['hub-audit', 'hub-search'];
@@ -154,7 +155,7 @@
 
   <main class="main">
     <?php
-      $allowedPages = ['hub-audit', 'hub-search', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'orderedits', 'spotcheck', 'tracking', 'compare', 'timeline', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'ignored', 'pushlog', 'settings', 'globalsearch'];
+      $allowedPages = ['hub-audit', 'hub-search', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'orderedits', 'spotcheck', 'tracking', 'compare', 'timeline', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'ignored', 'pushlog', 'settings', 'globalsearch', 'packingslip'];
       $page         = in_array($page, $allowedPages, true) ? $page : 'hub-audit';
       $pageFile     = __DIR__ . '/' . $page . '.php';
 
