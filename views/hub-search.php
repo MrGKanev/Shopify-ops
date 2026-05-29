@@ -9,7 +9,8 @@ $tools = [
     ['page' => 'metafields', 'icon' => '🗂',  'name' => 'Metafields',        'desc' => 'Browse metafield definitions and search orders by value'],
     ['page' => 'tracking',   'icon' => '🚚', 'name' => 'Tracking Feed',     'desc' => 'Shipment tracking info for orders via ShipStation'],
     ['page' => 'compare',    'icon' => '⚖',  'name' => 'Order Compare',     'desc' => 'Two orders side by side with differences highlighted'],
-    ['page' => 'timeline',   'icon' => '📅', 'name' => 'Order Timeline',    'desc' => 'Full chronological history of a single order: Shopify events + ShipStation shipments'],
+    ['page' => 'timeline',     'icon' => '📅', 'name' => 'Order Timeline',      'desc' => 'Full chronological history of a single order: Shopify events + ShipStation shipments'],
+    ['page' => 'packingslip',  'icon' => '🖨',  'name' => 'Packing Slip Preview', 'desc' => 'Visualise a ShipStation packing slip for any order — without logging in'],
 ];
 ?>
 <div class="hub-grid">
