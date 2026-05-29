@@ -44,9 +44,9 @@
 
   $fmtDate = fn($d) => $d ? date('n/j/Y', strtotime($d)) : '';
 
-  // Internal SS / GPO option names to hide from packing slip
-  $hiddenOptNames = [' has gpo', ' gpo product group', ' gpo parent product group', ' gpo field name',
-                     ' gpo options', ' gpo addon products', 'fulfillment_status'];
+  // Internal SS / GPO option names to hide from packing slip (trimmed for comparison)
+  $hiddenOptNames = ['has gpo', 'gpo product group', 'gpo parent product group', 'gpo field name',
+                     'gpo options', 'gpo addon products', 'fulfillment_status'];
   $isHidden = fn(string $n): bool => in_array(strtolower(trim($n)), $hiddenOptNames, true);
 
   // Detect Shopify JSON-array values: ["something"] or ["a","b"]
