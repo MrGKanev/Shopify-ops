@@ -187,7 +187,7 @@ class Comparator
         return compact('missing', 'found', 'skipped', 'ignored');
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────
+    // ── Public helpers ────────────────────────────────────────────────
 
     /** Strip leading # and whitespace; keep digits only. */
     public static function normalise(string $raw): string
@@ -202,14 +202,7 @@ class Comparator
      */
     public static function classifyOrder(array $order): string
     {
-        static $config = null;
-        if ($config === null) {
-            $file   = __DIR__ . '/../order_types.json';
-            $config = file_exists($file)
-                ? (json_decode(file_get_contents($file), true) ?: [])
-                : [];
-        }
-
+        $config   = self::getOrderTypesConfig();
         $rules    = $config['rules']    ?? [];
         $fallback = $config['fallback'] ?? 'Other';
 
@@ -217,25 +210,9 @@ class Comparator
 
         $matched = [];
         foreach ($rules as $rule) {
-            $name  = $rule['name']  ?? 'Unknown';
-            $match = $rule['match'] ?? '';
-            $value = $rule['value'] ?? '';
-
+            $name = $rule['name'] ?? 'Unknown';
             foreach ($order['line_items'] ?? [] as $li) {
-                $sku    = strtolower($li['sku']   ?? '');
-                $title  = strtolower($li['title'] ?? '');
-                $vendor = strtolower($li['vendor'] ?? '');
-
-                $hit = match($match) {
-                    'sku_starts_with'     => str_starts_with($sku, strtolower((string)$value)),
-                    'sku_contains'        => str_contains($sku, strtolower((string)$value)),
-                    'sku_not_starts_with' => !array_filter((array)$value, fn($p) => str_starts_with($sku, strtolower($p))),
-                    'title_contains'      => str_contains($title, strtolower((string)$value)),
-                    'vendor_is'           => $vendor === strtolower((string)$value),
-                    default               => false,
-                };
-
-                if ($hit) {
+                if (self::lineItemHit($li, $rule['match'] ?? '', $rule['value'] ?? '')) {
                     $matched[$name] = true;
                     break;
                 }
@@ -243,6 +220,106 @@ class Comparator
         }
 
         return $matched ? implode(' + ', array_keys($matched)) : $fallback;
+    }
+
+    /**
+     * Returns missing required items for each matched rule type.
+     *
+     * Rules can optionally define a `required_items` array. When a rule triggers
+     * (i.e. the order contains that type), every required item is checked against
+     * the order's line items using the same match engine as classification rules.
+     * Any item that cannot be matched is included in the returned array.
+     *
+     * Returns [] when no rule matches or all required items are present.
+     * Format: [ 'RuleName' => ['Missing Label A', 'Missing Label B'], … ]
+     *
+     * Example order_types.json rule:
+     *   {
+     *     "name": "Z1", "match": "sku_starts_with", "value": "zerno-z1-",
+     *     "required_items": [
+     *       { "label": "Accent Piece", "match": "title_contains", "value": "accent piece" },
+     *       { "label": "Funnel Cap",   "match": "title_contains", "value": "funnel cap" },
+     *       { "label": "Burr Set",     "match": "title_contains", "value": "burr set" }
+     *     ]
+     *   }
+     *
+     * @return array<string, string[]>  rule name → list of missing item labels
+     */
+    public static function findMissingRequired(array $order): array
+    {
+        $config = self::getOrderTypesConfig();
+        $rules  = $config['rules'] ?? [];
+        $result = [];
+
+        foreach ($rules as $rule) {
+            $required = $rule['required_items'] ?? [];
+            if (empty($required)) continue;
+
+            // Skip if this rule doesn't match the order
+            $typeMatched = false;
+            foreach ($order['line_items'] ?? [] as $li) {
+                if (self::lineItemHit($li, $rule['match'] ?? '', $rule['value'] ?? '')) {
+                    $typeMatched = true;
+                    break;
+                }
+            }
+            if (!$typeMatched) continue;
+
+            // Collect required items absent from the order
+            $missing = [];
+            foreach ($required as $req) {
+                $found = false;
+                foreach ($order['line_items'] ?? [] as $li) {
+                    if (self::lineItemHit($li, $req['match'] ?? '', $req['value'] ?? '')) {
+                        $found = true;
+                        break;
+                    }
+                }
+                if (!$found) {
+                    $missing[] = $req['label'];
+                }
+            }
+
+            if (!empty($missing)) {
+                $result[$rule['name']] = $missing;
+            }
+        }
+
+        return $result;
+    }
+
+    // ── Private helpers ───────────────────────────────────────────────
+
+    /** Loads order_types.json once per process. */
+    private static function getOrderTypesConfig(): array
+    {
+        static $config = null;
+        if ($config === null) {
+            $file   = __DIR__ . '/../order_types.json';
+            $config = file_exists($file)
+                ? (json_decode(file_get_contents($file), true) ?: [])
+                : [];
+        }
+        return $config;
+    }
+
+    /** Tests whether a single line item matches a rule's match type and value. */
+    private static function lineItemHit(array $li, string $match, mixed $value): bool
+    {
+        $sku    = strtolower($li['sku']    ?? '');
+        $title  = strtolower($li['title']  ?? '');
+        $vendor = strtolower($li['vendor'] ?? '');
+
+        return match($match) {
+            'sku_starts_with'     => is_array($value)
+                                        ? (bool)array_filter($value, fn($p) => str_starts_with($sku, strtolower((string)$p)))
+                                        : str_starts_with($sku, strtolower((string)$value)),
+            'sku_contains'        => str_contains($sku, strtolower((string)$value)),
+            'sku_not_starts_with' => !array_filter((array)$value, fn($p) => str_starts_with($sku, strtolower($p))),
+            'title_contains'      => str_contains($title, strtolower((string)$value)),
+            'vendor_is'           => $vendor === strtolower((string)$value),
+            default               => false,
+        };
     }
 
     /**

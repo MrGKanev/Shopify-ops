@@ -304,6 +304,7 @@ tbody td         { @apply text-sm align-middle; padding: .75rem 1.25rem; }
 .chip-type-3  { background: #fecdd3; color: #881337; @apply dark:bg-[#4c0519] dark:text-[#fda4af]; }
 .chip-type-4  { background: #e2e8f0; color: #1e293b; @apply dark:bg-[#1e2130] dark:text-muted; }
 .chip-type-5  { background: #99f6e4; color: #134e4a; @apply dark:bg-[#042f2e] dark:text-[#5eead4]; }
+.chip-warn    { background: #fed7aa; color: #9a3412; @apply dark:bg-[#431407] dark:text-[#fb923c]; }
 
 /* ── Empty state ── */
 .empty      { @apply text-center py-14 px-4; color: var(--muted); }

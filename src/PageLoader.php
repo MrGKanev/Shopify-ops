@@ -34,6 +34,7 @@ class PageLoader
             'addrchanges'   => self::loadAddrChanges($action, $ctx),
             'timeline'      => self::loadTimeline($action, $ctx),
             'orderedits'    => self::loadOrderEdits($action, $ctx),
+            'bundlecheck'   => self::loadBundleCheck($action, $ctx),
             'packingslip'   => self::loadPackingSlip($action, $ctx),
             'settings'      => self::loadSettings($action, $ctx),
             default     => [],
@@ -1487,6 +1488,76 @@ class PageLoader
         $ordered   = strtotime($order['created_at']);
         $fulfilled = strtotime($fulfillments[0]['created_at']);
         return max(0, (int) round(($fulfilled - $ordered) / 86400));
+    }
+
+    // ── Bundle / Required Items Check ─────────────────────────────────────────
+
+    private static function loadBundleCheck(string $action, array $ctx): array
+    {
+        $bcResult = null;
+        $bcError  = '';
+        [$bcStart, $bcEnd] = self::extractDateRange('bc', 30);
+
+        if ($action === 'scan_bundle') {
+            $bcStart = trim($_POST['bc_start'] ?? '');
+            $bcEnd   = trim($_POST['bc_end']   ?? '');
+
+            if ($err = self::requireShopify($ctx)) {
+                $bcError = $err;
+            } elseif ($err = self::validateDates($bcStart, $bcEnd)) {
+                $bcError = $err;
+            } else {
+                try {
+                    self::setLimits(300);
+
+                    $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken'], $ctx['cacheObj']);
+                    $orders  = self::suppressOutput(fn() => $shopify->fetchAllOrders($bcStart, $bcEnd));
+
+                    $rows = [];
+                    foreach ($orders as $o) {
+                        if (!empty($o['cancelled_at'])) continue;
+                        $fin = $o['financial_status'] ?? '';
+                        if (in_array($fin, ['pending', 'voided', 'refunded', 'partially_refunded'], true)) continue;
+                        if ((float)($o['total_price'] ?? 0) == 0) continue;
+                        if (($o['shipping_lines'] ?? []) === []) continue;
+
+                        $missingReq = Comparator::findMissingRequired($o);
+                        if (empty($missingReq)) continue;
+
+                        $missingParts = [];
+                        foreach ($missingReq as $typeName => $items) {
+                            $missingParts[] = (count($missingReq) > 1 ? "{$typeName}: " : '') . implode(', ', $items);
+                        }
+
+                        $rows[] = [
+                            'shopify_id'         => $o['id']                 ?? '',
+                            'order_number'       => $o['name']               ?? '',
+                            'created_at'         => self::dateOnly($o['created_at']         ?? ''),
+                            'email'              => $o['email']              ?? '',
+                            'financial_status'   => $o['financial_status']   ?? '',
+                            'fulfillment_status' => $o['fulfillment_status'] ?? '',
+                            'total'              => $o['total_price']        ?? 0,
+                            'order_type'         => Comparator::classifyOrder($o),
+                            'missing_required'   => $missingReq,
+                            'missing_text'       => implode('; ', $missingParts),
+                        ];
+                    }
+
+                    usort($rows, fn($a, $b) => strcmp($b['created_at'], $a['created_at']));
+
+                    $bcResult = [
+                        'rows'    => $rows,
+                        'scanned' => count($orders),
+                        'start'   => $bcStart,
+                        'end'     => $bcEnd,
+                    ];
+                } catch (Throwable $e) {
+                    $bcError = $e->getMessage();
+                }
+            }
+        }
+
+        return compact('bcResult', 'bcError', 'bcStart', 'bcEnd');
     }
 
     // ── Settings ──────────────────────────────────────────────────────────────

@@ -90,7 +90,7 @@ document.querySelectorAll('.js-localtime').forEach(function(el) {
     tag_search: true, compare_orders: true, customer_lookup: true,
     metafield_search: true, metafield_lookup: true, lookup_tracking: true,
     scan_hvorders: true, scan_repeat_refunds: true, scan_failed_shipments: true,
-    scan_addr_changes: true
+    scan_addr_changes: true, scan_bundle: true
   };
 
   var bar = document.getElementById('js-loading-bar');

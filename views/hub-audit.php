@@ -15,6 +15,7 @@ $tools = [
     ['page' => 'failedship',    'icon' => '🚫', 'name' => 'Voided Shipments',    'desc' => 'ShipStation shipments voided in the selected date range'],
     ['page' => 'addrchanges',   'icon' => '🔀', 'name' => 'Address Changes',     'desc' => 'Orders whose shipping address was edited after placement'],
     ['page' => 'orderedits',    'icon' => '✏️',  'name' => 'Order Edit History',  'desc' => 'Orders with post-placement edits: line items, discounts, notes or custom attributes'],
+    ['page' => 'bundlecheck',   'icon' => '🧩', 'name' => 'Bundle Check',         'desc' => 'bundled orders missing required companion items (Addon items)'],
 ];
 ?>
 <div class="hub-grid">
