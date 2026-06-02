@@ -16,6 +16,8 @@ $tools = [
     ['page' => 'addrchanges',   'icon' => '🔀', 'name' => 'Address Changes',     'desc' => 'Orders whose shipping address was edited after placement'],
     ['page' => 'orderedits',    'icon' => '✏️',  'name' => 'Order Edit History',  'desc' => 'Orders with post-placement edits: line items, discounts, notes or custom attributes'],
     ['page' => 'bundlecheck',   'icon' => '🧩', 'name' => 'Bundle Check',         'desc' => 'bundled orders missing required companion items (Addon items)'],
+    ['page' => 'productcheck', 'icon' => '🖼',  'name' => 'Product Completeness', 'desc' => 'Active products missing images, descriptions, or variant SKUs'],
+    ['page' => 'skudupes',     'icon' => '🔑', 'name' => 'SKU Duplicates',        'desc' => 'Variants sharing the same SKU across your product catalog'],
 ];
 ?>
 <div class="hub-grid">

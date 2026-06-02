@@ -35,6 +35,8 @@ class PageLoader
             'timeline'      => self::loadTimeline($action, $ctx),
             'orderedits'    => self::loadOrderEdits($action, $ctx),
             'bundlecheck'   => self::loadBundleCheck($action, $ctx),
+            'productcheck'  => self::loadProductCheck($action, $ctx),
+            'skudupes'      => self::loadSkuDupes($action, $ctx),
             'packingslip'   => self::loadPackingSlip($action, $ctx),
             'settings'      => self::loadSettings($action, $ctx),
             default     => [],
@@ -1559,6 +1561,137 @@ class PageLoader
 
         $bcConfig = Comparator::getOrderTypesConfig();
         return compact('bcResult', 'bcError', 'bcStart', 'bcEnd', 'bcConfig');
+    }
+
+    // ── Product Check ─────────────────────────────────────────────────────────
+
+    private static function loadProductCheck(string $action, array $ctx): array
+    {
+        $pcResult = null;
+        $pcError  = '';
+
+        if ($action === 'scan_products') {
+            if ($err = self::requireShopify($ctx)) {
+                $pcError = $err;
+            } else {
+                try {
+                    self::setLimits(120);
+                    $shopify  = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken'], $ctx['cacheObj']);
+                    $products = self::suppressOutput(fn() => $shopify->fetchAllProducts());
+                    $scanned  = count($products);
+                    $rows     = [];
+
+                    foreach ($products as $p) {
+                        $issues = [];
+
+                        if (empty($p['images'])) {
+                            $issues[] = ['level' => 'warning', 'message' => 'No product images'];
+                        }
+
+                        $desc = trim(strip_tags($p['body_html'] ?? ''));
+                        if ($desc === '') {
+                            $issues[] = ['level' => 'warning', 'message' => 'No description'];
+                        }
+
+                        $variantCount   = count($p['variants'] ?? []);
+                        $missingSkuCount = 0;
+                        foreach ($p['variants'] ?? [] as $v) {
+                            if (trim($v['sku'] ?? '') === '') {
+                                $missingSkuCount++;
+                            }
+                        }
+                        if ($missingSkuCount > 0) {
+                            $label = $missingSkuCount . ' of ' . $variantCount . ' variant' . ($variantCount !== 1 ? 's' : '') . ' missing SKU';
+                            $issues[] = ['level' => 'critical', 'message' => $label];
+                        }
+
+                        if (!empty($issues)) {
+                            $rows[] = [
+                                'id'       => (string)($p['id'] ?? ''),
+                                'title'    => $p['title']        ?? '',
+                                'vendor'   => $p['vendor']       ?? '',
+                                'type'     => $p['product_type'] ?? '',
+                                'status'   => $p['status']       ?? '',
+                                'images'   => count($p['images']   ?? []),
+                                'variants' => $variantCount,
+                                'issues'   => $issues,
+                                'severity' => in_array('critical', array_column($issues, 'level')) ? 'critical' : 'warning',
+                            ];
+                        }
+                    }
+
+                    $pcResult = [
+                        'rows'     => $rows,
+                        'scanned'  => $scanned,
+                        'critical' => count(array_filter($rows, fn($r) => $r['severity'] === 'critical')),
+                        'warnings' => count(array_filter($rows, fn($r) => $r['severity'] === 'warning')),
+                    ];
+                } catch (Throwable $e) {
+                    $pcError = $e->getMessage();
+                }
+            }
+        }
+
+        return compact('pcResult', 'pcError');
+    }
+
+    // ── SKU Duplicate Detector ────────────────────────────────────────────────
+
+    private static function loadSkuDupes(string $action, array $ctx): array
+    {
+        $sdResult = null;
+        $sdError  = '';
+
+        if ($action === 'scan_skudupes') {
+            if ($err = self::requireShopify($ctx)) {
+                $sdError = $err;
+            } else {
+                try {
+                    self::setLimits(120);
+                    $shopify  = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken'], $ctx['cacheObj']);
+                    $products = self::suppressOutput(fn() => $shopify->fetchAllProducts('any'));
+
+                    $skuMap       = [];
+                    $totalVariants = 0;
+                    foreach ($products as $p) {
+                        foreach ($p['variants'] ?? [] as $v) {
+                            $totalVariants++;
+                            $sku = trim($v['sku'] ?? '');
+                            if ($sku === '') continue;
+                            $skuMap[$sku][] = [
+                                'product_id'    => (string)($p['id'] ?? ''),
+                                'product_title' => $p['title'] ?? '',
+                                'product_status'=> $p['status'] ?? '',
+                                'variant_title' => $v['title'] ?? '',
+                            ];
+                        }
+                    }
+
+                    $rows = [];
+                    foreach ($skuMap as $sku => $variants) {
+                        if (count($variants) > 1) {
+                            $rows[] = [
+                                'sku'      => $sku,
+                                'count'    => count($variants),
+                                'variants' => $variants,
+                            ];
+                        }
+                    }
+
+                    usort($rows, fn($a, $b) => $b['count'] - $a['count']);
+
+                    $sdResult = [
+                        'rows'     => $rows,
+                        'scanned'  => count($products),
+                        'variants' => $totalVariants,
+                    ];
+                } catch (Throwable $e) {
+                    $sdError = $e->getMessage();
+                }
+            }
+        }
+
+        return compact('sdResult', 'sdError');
     }
 
     // ── Settings ──────────────────────────────────────────────────────────────
