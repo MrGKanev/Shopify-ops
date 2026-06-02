@@ -30,6 +30,45 @@ document.querySelectorAll('.js-localtime').forEach(function(el) {
   });
 });
 
+// Desktop sidebar collapse
+(function() {
+  var sidebar    = document.getElementById('js-sidebar');
+  var toggleBtn  = document.getElementById('js-sidebar-collapse');
+  if (!sidebar || !toggleBtn) return;
+
+  var MOBILE_BREAKPOINT = 701;
+  var KEY = 'sidebarCollapsed';
+
+  function isMobile() { return window.innerWidth < MOBILE_BREAKPOINT; }
+
+  function applyCollapsed(collapsed) {
+    if (isMobile()) return;
+    if (collapsed) {
+      sidebar.classList.add('collapsed');
+    } else {
+      sidebar.classList.remove('collapsed');
+    }
+  }
+
+  if (localStorage.getItem(KEY) === '1') {
+    applyCollapsed(true);
+  }
+
+  toggleBtn.addEventListener('click', function() {
+    var nowCollapsed = sidebar.classList.contains('collapsed');
+    applyCollapsed(!nowCollapsed);
+    localStorage.setItem(KEY, nowCollapsed ? '0' : '1');
+  });
+
+  window.addEventListener('resize', function() {
+    if (isMobile()) {
+      sidebar.classList.remove('collapsed');
+    } else if (localStorage.getItem(KEY) === '1') {
+      sidebar.classList.add('collapsed');
+    }
+  });
+})();
+
 // Mobile sidebar toggle
 (function() {
   var sidebar  = document.getElementById('js-sidebar');

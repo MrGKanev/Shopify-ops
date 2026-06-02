@@ -1,28 +1,33 @@
 {
   "_readme": "Copy this file to order_types.json and define your own order type rules. Each rule is checked against every line item in the order. If any line item matches, that type label is included in the order's classification. Orders with no matching rules get the fallback label. Multiple matched types are joined with ' + ' (e.g. 'Main + Accessory').",
 
+  "bundle_check_description": "Optional. When set, this text is shown in the Bundle Check feature info block instead of the generic description. Useful for explaining what bundles mean in the context of your own product catalogue.",
+
   "fallback": "Accessory",
 
   "rules": [
     {
-      "_comment": "Main product line A - matched by SKU prefix",
+      "_comment": "Main product line — matched by SKU prefix",
       "name": "Pro",
       "match": "sku_starts_with",
       "value": "widget-pro-"
     },
     {
-      "_comment": "Main product line with required bundle items. The audit will flag any Pro order that is missing these items.",
+      "_comment": "Product line with required bundle items. The Bundle Check will flag any Pro Bundle order that is missing these companion items.",
       "name": "Pro Bundle",
       "match": "sku_starts_with",
       "value": "widget-pro-",
+      "exclude_if": [
+        { "match": "sku_contains", "value": "warranty" }
+      ],
       "required_items": [
         { "label": "Carry Case",  "match": "title_contains", "value": "carry case" },
-        { "label": "Power Cable", "match": "sku_starts_with", "value": "cable-pwr-" }
+        { "label": "Power Cable", "match": "sku_starts_with", "value": ["cable-pwr-", "pwr-"] }
       ]
     },
     {
       "_comment": "Match by product title keyword",
-      "name": "Bundle",
+      "name": "Starter Kit",
       "match": "title_contains",
       "value": "starter kit"
     },
@@ -35,12 +40,14 @@
   ],
 
   "_match_types": {
-    "sku_starts_with":     "SKU starts with the given string (case-insensitive)",
+    "sku_starts_with":     "SKU starts with the given string (case-insensitive). Pass an array to match any of multiple prefixes.",
     "sku_contains":        "SKU contains the given string (case-insensitive)",
-    "sku_not_starts_with": "SKU does not start with any of the given strings - pass an array for multiple prefixes",
+    "sku_not_starts_with": "SKU does not start with any of the given strings — pass an array for multiple prefixes",
     "title_contains":      "Product title contains the given string (case-insensitive)",
     "vendor_is":           "Product vendor exactly matches the given string (case-insensitive)"
   },
 
-  "_required_items": "Optional array on any rule. Each entry uses the same match types as main rules plus a 'label' for display. When an order matches the rule type, the audit checks that every required item is also present. Missing items appear as a warning chip in the missing orders table and as a 'missing_required_items' column in CSV reports."
+  "_required_items": "Optional array on any rule. Each entry uses the same match types as main rules plus a 'label' for display. When an order matches the rule type, the Bundle Check verifies that every required item is also present. Missing items appear as warning chips in the results table and as a 'missing_required_items' column in CSV exports.",
+
+  "_exclude_if": "Optional array on any rule. If any line item in the order matches an exclusion condition, the entire rule is skipped for that order. Useful for warranty or replacement orders that should not be subject to bundle requirements."
 }

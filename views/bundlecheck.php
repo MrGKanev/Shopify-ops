@@ -1,12 +1,24 @@
+<?php
+$_bcRules     = array_filter($bcConfig['rules'] ?? [], fn($r) => !empty($r['required_items']));
+$_bcTypeNames = implode(', ', array_column($_bcRules, 'name'));
+$_bcDesc      = $bcConfig['bundle_check_description'] ?? null;
+?>
 <?= topbar('Bundle Check', 'Find orders missing required companion items') ?>
 
 <?= featureInfoStart('bundlecheck', 'Bundle Check') ?>
-  <p><strong>Bundle Check</strong> scans Shopify orders in a date range and flags any order whose type (e.g. Z1, Z2) requires specific companion items that are not present in the order.</p>
-  <p>This covers the case where a customer places the main order and an admin manually adds the required accessories afterwards — catching orders where that step was missed.</p>
+  <?php if ($_bcDesc): ?>
+    <p><?= esc($_bcDesc) ?></p>
+  <?php else: ?>
+    <p><strong>Bundle Check</strong> scans Shopify orders in a date range and flags any order whose type requires specific companion items that are not present in the order.</p>
+    <p>This covers the case where a customer places the main order and required accessories are added afterwards — catching orders where that step was missed.</p>
+  <?php endif; ?>
   <ul>
     <li>Required items per order type are configured in <code>order_types.json</code> via the <code>required_items</code> field on each rule.</li>
     <li>Only paid, non-cancelled orders with shipping are scanned.</li>
-    <li>Fulfilled orders are included — a Z1/Z2 that shipped without all required items is the most urgent case.</li>
+    <?php if ($_bcTypeNames): ?>
+      <li>Active bundle rules: <strong><?= esc($_bcTypeNames) ?></strong>.</li>
+    <?php endif; ?>
+    <li>Fulfilled orders are included — an order that shipped without all required items is the most urgent case.</li>
   </ul>
 <?= featureInfoEnd() ?>
 
@@ -49,7 +61,7 @@
     <div class="empty">
       <div class="icon">✅</div>
       <h3>All bundles complete!</h3>
-      <p>Every Z1/Z2 order in this date range has all required companion items.</p>
+      <p>Every order in this date range has all required companion items.</p>
     </div>
   <?php else: ?>
     <div class="table-wrap">
