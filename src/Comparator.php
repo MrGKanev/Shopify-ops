@@ -265,6 +265,15 @@ class Comparator
             }
             if (!$typeMatched) continue;
 
+            // Skip if any exclusion condition matches any line item
+            foreach ($rule['exclude_if'] ?? [] as $excl) {
+                foreach ($order['line_items'] ?? [] as $li) {
+                    if (self::lineItemHit($li, $excl['match'] ?? '', $excl['value'] ?? '')) {
+                        continue 3; // next rule
+                    }
+                }
+            }
+
             // Collect required items absent from the order
             $missing = [];
             foreach ($required as $req) {
