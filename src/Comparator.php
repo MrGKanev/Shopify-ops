@@ -235,11 +235,10 @@ class Comparator
      *
      * Example order_types.json rule:
      *   {
-     *     "name": "Z1", "match": "sku_starts_with", "value": "zerno-z1-",
+     *     "name": "Pro", "match": "sku_starts_with", "value": "widget-pro-",
      *     "required_items": [
-     *       { "label": "Accent Piece", "match": "title_contains", "value": "accent piece" },
-     *       { "label": "Funnel Cap",   "match": "title_contains", "value": "funnel cap" },
-     *       { "label": "Burr Set",     "match": "title_contains", "value": "burr set" }
+     *       { "label": "Carry Case",  "match": "title_contains", "value": "carry case" },
+     *       { "label": "Power Cable", "match": "sku_starts_with", "value": "cable-pwr-" }
      *     ]
      *   }
      *
@@ -300,7 +299,7 @@ class Comparator
     // ── Private helpers ───────────────────────────────────────────────
 
     /** Loads order_types.json once per process. */
-    private static function getOrderTypesConfig(): array
+    public static function getOrderTypesConfig(): array
     {
         static $config = null;
         if ($config === null) {

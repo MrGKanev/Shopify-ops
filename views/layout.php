@@ -99,20 +99,20 @@
 
     <nav class="flat-nav">
 
-      <a href="?page=hub-audit" class="flat-nav-link <?= $activeGroup === 'audit'  ? 'active' : '' ?>">
-        <span class="flat-nav-icon">📋</span> Audit
+      <a href="?page=hub-audit" class="flat-nav-link <?= $activeGroup === 'audit'  ? 'active' : '' ?>" title="Audit">
+        <span class="flat-nav-icon">📋</span><span class="nav-label"> Audit</span>
       </a>
-      <a href="?page=hub-search" class="flat-nav-link <?= $activeGroup === 'search' ? 'active' : '' ?>">
-        <span class="flat-nav-icon">🔎</span> Search &amp; Lookup
+      <a href="?page=hub-search" class="flat-nav-link <?= $activeGroup === 'search' ? 'active' : '' ?>" title="Search &amp; Lookup">
+        <span class="flat-nav-icon">🔎</span><span class="nav-label"> Search &amp; Lookup</span>
       </a>
-      <a href="?page=ignored" class="flat-nav-link <?= $activeGroup === 'manage'  ? 'active' : '' ?>">
-        <span class="flat-nav-icon">📂</span> Manage
+      <a href="?page=ignored" class="flat-nav-link <?= $activeGroup === 'manage'  ? 'active' : '' ?>" title="Manage">
+        <span class="flat-nav-icon">📂</span><span class="nav-label"> Manage</span>
         <?php if (count($ignoredOrders) > 0): ?>
-          <span class="badge badge-warn badge-sm" style="margin-left:auto"><?= count($ignoredOrders) ?></span>
+          <span class="badge badge-warn badge-sm nav-badge" style="margin-left:auto"><?= count($ignoredOrders) ?></span>
         <?php endif; ?>
       </a>
-      <a href="?page=settings" class="flat-nav-link <?= $page === 'settings' ? 'active' : '' ?>">
-        <span class="flat-nav-icon">⚙</span> Settings
+      <a href="?page=settings" class="flat-nav-link <?= $page === 'settings' ? 'active' : '' ?>" title="Settings">
+        <span class="flat-nav-icon">⚙</span><span class="nav-label"> Settings</span>
       </a>
 
     </nav>
@@ -145,12 +145,19 @@
     <div class="sidebar-footer">
       <form method="post">
         <input type="hidden" name="action" value="logout">
-        <button class="btn btn-ghost btn-sm btn-full" type="submit">Sign out</button>
+        <button class="btn btn-ghost btn-sm btn-full sidebar-signout-btn" type="submit">Sign out</button>
       </form>
-      <a href="https://github.com/MrGKanev/Shopify-ops"
-         class="sidebar-github" target="_blank" rel="noopener" title="View on GitHub">
-        Shopify Ops v1.2.0
-      </a>
+      <div class="sidebar-footer-row">
+        <a href="https://github.com/MrGKanev/Shopify-ops"
+           class="sidebar-github" target="_blank" rel="noopener" title="View on GitHub">
+          Shopify Ops v1.3.0
+        </a>
+        <button class="sidebar-collapse-btn" id="js-sidebar-collapse" title="Collapse sidebar" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+      </div>
     </div>
   </aside>
 

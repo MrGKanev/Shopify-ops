@@ -1557,7 +1557,8 @@ class PageLoader
             }
         }
 
-        return compact('bcResult', 'bcError', 'bcStart', 'bcEnd');
+        $bcConfig = Comparator::getOrderTypesConfig();
+        return compact('bcResult', 'bcError', 'bcStart', 'bcEnd', 'bcConfig');
     }
 
     // ── Settings ──────────────────────────────────────────────────────────────
