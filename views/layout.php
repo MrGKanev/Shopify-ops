@@ -65,7 +65,7 @@
     </div>
 
     <?php
-      $auditPages  = ['hub-audit', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'orderedits', 'bundlecheck'];
+      $auditPages  = ['hub-audit', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'orderedits', 'bundlecheck', 'productcheck', 'skudupes'];
       $searchPages = ['hub-search', 'spotcheck', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'tracking', 'compare', 'timeline', 'globalsearch', 'packingslip'];
       $managePages = ['ignored', 'pushlog'];
       $groupOf = function(string $p) use ($auditPages, $searchPages, $managePages): string {
@@ -85,6 +85,7 @@
           'addrchanges' => 'Address Changes',
           'orderedits'  => 'Order Edit History',
           'bundlecheck' => 'Bundle Check',
+          'productcheck' => 'Product Completeness', 'skudupes' => 'SKU Duplicates',
           'spotcheck' => 'Spot-check', 'metafields' => 'Metafields',
           'tagsearch' => 'Tag Search', 'tagaudit' => 'Tag Audit',
           'customer' => 'Customer Lookup', 'tracking' => 'Tracking Feed',
@@ -163,7 +164,7 @@
 
   <main class="main">
     <?php
-      $allowedPages = ['hub-audit', 'hub-search', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'orderedits', 'bundlecheck', 'spotcheck', 'tracking', 'compare', 'timeline', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'ignored', 'pushlog', 'settings', 'globalsearch', 'packingslip'];
+      $allowedPages = ['hub-audit', 'hub-search', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'orderedits', 'bundlecheck', 'productcheck', 'skudupes', 'spotcheck', 'tracking', 'compare', 'timeline', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'ignored', 'pushlog', 'settings', 'globalsearch', 'packingslip'];
       $page         = in_array($page, $allowedPages, true) ? $page : 'hub-audit';
       $pageFile     = __DIR__ . '/' . $page . '.php';
 

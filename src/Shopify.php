@@ -783,6 +783,27 @@ class Shopify
         return $data['events'] ?? [];
     }
 
+    /**
+     * Fetches all products from the store. $status can be 'active', 'draft', 'archived', or 'any'.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function fetchAllProducts(string $status = 'active'): array
+    {
+        $all = [];
+        $params = http_build_query([
+            'status' => $status,
+            'limit'  => self::PAGE_SIZE,
+            'fields' => 'id,title,status,body_html,vendor,product_type,images,variants',
+        ]);
+        $nextUrl = "{$this->baseUrl}/products.json?{$params}";
+        while ($nextUrl) {
+            [$products, $nextUrl] = $this->getPage($nextUrl, 'products');
+            array_push($all, ...$products);
+        }
+        return $all;
+    }
+
     // ── Private ───────────────────────────────────────────────────────
 
     /**
