@@ -70,10 +70,10 @@ require __DIR__ . '/partials/_date-range.php';
               <button class="copy-btn" data-copy="<?= esc($row['order_number']) ?>" title="Copy">⧉</button>
             </td>
             <td><?= esc($row['void_date']) ?></td>
-            <td><?= esc($row['ship_date']) ?: '—' ?></td>
-            <td><?= esc(strtoupper($row['carrier'])) ?: '—' ?></td>
-            <td><?= esc($row['service']) ?: '—' ?></td>
-            <td class="td-email"><?= esc($row['tracking']) ?: '—' ?></td>
+            <td><?= esc($row['ship_date']) ?: '-' ?></td>
+            <td><?= esc(strtoupper($row['carrier'])) ?: '-' ?></td>
+            <td><?= esc($row['service']) ?: '-' ?></td>
+            <td class="td-email"><?= esc($row['tracking']) ?: '-' ?></td>
             <td class="td-email">
               <?php if ($row['ship_to_name']): ?>
                 <div class="font-medium"><?= esc($row['ship_to_name']) ?></div>

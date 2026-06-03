@@ -42,7 +42,7 @@
   $shopifyId = $order['id'] ?? '';
   $orderUrl  = $shopifyId ? $shopifyAdminBase . '/' . $shopifyId : null;
 
-  $finStatus = $order['financial_status']    ?? '—';
+  $finStatus = $order['financial_status']    ?? '-';
   $fulStatus = $order['fulfillment_status']  ?? 'unfulfilled';
   $total     = (float) ($order['total_price'] ?? 0);
   $email     = $order['email']    ?? '';
@@ -95,7 +95,7 @@
       <div class="tl-stat-lbl">Item<?= $itemCount !== 1 ? 's' : '' ?></div>
     </div>
     <div class="tl-stat">
-      <div class="tl-stat-val"><?= $fulCount ?: '—' ?></div>
+      <div class="tl-stat-val"><?= $fulCount ?: '-' ?></div>
       <div class="tl-stat-lbl">Shipment<?= $fulCount !== 1 ? 's' : '' ?></div>
     </div>
     <?php if ($tos !== null): ?>
@@ -195,7 +195,7 @@ function copyTimeline() {
     var title  = el.dataset.title  || '';
     var detail = el.dataset.detail || '';
     var source = el.dataset.source === 'shipstation' ? '[SS]' : '[Shopify]';
-    lines.push(ts + '  ' + source + '  ' + title + (detail ? '  —  ' + detail : ''));
+    lines.push(ts + '  ' + source + '  ' + title + (detail ? '  -  ' + detail : ''));
   });
 
   navigator.clipboard.writeText(lines.join('\n')).then(function() {

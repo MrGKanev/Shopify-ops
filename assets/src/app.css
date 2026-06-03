@@ -251,6 +251,39 @@ a:hover { text-decoration: underline; }
 .stat-card .value.warn   { color: var(--warn); }
 .stat-card .value.accent { color: var(--accent-lt); }
 
+/* ── Trends bar chart ── */
+.history {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 120px;
+  padding-bottom: 0;
+}
+.history > a {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+}
+.history-bar {
+  border-radius: 3px 3px 0 0;
+  transition: opacity .15s;
+  min-height: 4px;
+}
+.history > a:hover .history-bar { opacity: .75; }
+.history-label {
+  font-size: .62rem;
+  text-align: center;
+  color: var(--muted);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ── Badge ── */
 .badge      { @apply inline-block rounded-full text-xs font-bold; padding: .2rem .6rem; }
 .badge-ok   {
@@ -373,7 +406,7 @@ tbody td         { @apply text-sm align-middle; padding: .75rem 1.25rem; }
   stroke-linecap: round;
 }
 
-/* HTML dots — always circular */
+/* HTML dots - always circular */
 .spk-dot {
   position: absolute;
   width: 8px; height: 8px;
@@ -1312,11 +1345,22 @@ td:hover .copy-btn,
 }
 
 /* ── Hub card grid ── */
+.hub-section { margin-top: 1.5rem; }
+.hub-section + .hub-section { margin-top: 2rem; }
+.hub-section-title {
+  font-size: .7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+  margin-bottom: .75rem;
+  padding-bottom: .4rem;
+  border-bottom: 1px solid var(--border);
+}
 .hub-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 1rem;
-  margin-top: 1.5rem;
 }
 .hub-card {
   @apply rounded-xl border flex flex-col gap-1.5 no-underline transition-all;

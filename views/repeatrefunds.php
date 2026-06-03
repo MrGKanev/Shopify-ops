@@ -82,7 +82,7 @@
                   $oAdminUrl = $o['shopify_id'] ? $shopifyAdminBase . '/' . esc($o['shopify_id']) : null;
                 ?>
                   <?php if ($oAdminUrl): ?>
-                    <a href="<?= $oAdminUrl ?>" target="_blank" rel="noopener" class="chip chip-partial" title="<?= esc($o['created_at']) ?><?= $o['refunded_amt'] ? ' — $' . number_format($o['refunded_amt'], 2) . ' refunded' : '' ?>"><?= esc($o['order_number']) ?></a>
+                    <a href="<?= $oAdminUrl ?>" target="_blank" rel="noopener" class="chip chip-partial" title="<?= esc($o['created_at']) ?><?= $o['refunded_amt'] ? ' - $' . number_format($o['refunded_amt'], 2) . ' refunded' : '' ?>"><?= esc($o['order_number']) ?></a>
                   <?php else: ?>
                     <span class="chip chip-partial" title="<?= esc($o['created_at']) ?>"><?= esc($o['order_number']) ?></span>
                   <?php endif; ?>

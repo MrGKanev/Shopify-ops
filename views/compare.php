@@ -45,7 +45,7 @@
   $diff = function($a, $b): bool { return (string)$a !== (string)$b; };
 
   $addrStr = function(?array $addr): string {
-    if (!$addr) return '—';
+    if (!$addr) return '-';
     return implode(', ', array_filter([
       trim(($addr['first_name'] ?? '') . ' ' . ($addr['last_name'] ?? '')),
       $addr['address1'] ?? '',
@@ -63,25 +63,25 @@
       $items[] = ($li['quantity'] ?? 1) . '× ' . ($li['title'] ?? '') .
                  ($li['variant_title'] ? ' (' . $li['variant_title'] . ')' : '');
     }
-    return implode(', ', $items) ?: '—';
+    return implode(', ', $items) ?: '-';
   };
 
   $rows = [
     ['label' => 'Order #',            'a' => $oA ? ($oA['name'] ?? '#'.$numA) : '#'.$numA,                    'b' => $oB ? ($oB['name'] ?? '#'.$numB) : '#'.$numB],
-    ['label' => 'Date',               'a' => $oA ? substr($oA['created_at'] ?? '', 0, 10) : '—',              'b' => $oB ? substr($oB['created_at'] ?? '', 0, 10) : '—'],
-    ['label' => 'Email',              'a' => $oA['email'] ?? '—',                                             'b' => $oB['email'] ?? '—'],
-    ['label' => 'Financial status',   'a' => $oA['financial_status'] ?? '—',                                  'b' => $oB['financial_status'] ?? '—'],
+    ['label' => 'Date',               'a' => $oA ? substr($oA['created_at'] ?? '', 0, 10) : '-',              'b' => $oB ? substr($oB['created_at'] ?? '', 0, 10) : '-'],
+    ['label' => 'Email',              'a' => $oA['email'] ?? '-',                                             'b' => $oB['email'] ?? '-'],
+    ['label' => 'Financial status',   'a' => $oA['financial_status'] ?? '-',                                  'b' => $oB['financial_status'] ?? '-'],
     ['label' => 'Fulfilment status',  'a' => $oA['fulfillment_status'] ?? 'unfulfilled',                      'b' => $oB['fulfillment_status'] ?? 'unfulfilled'],
-    ['label' => 'Total',              'a' => $oA ? '$' . number_format((float)($oA['total_price'] ?? 0), 2) : '—', 'b' => $oB ? '$' . number_format((float)($oB['total_price'] ?? 0), 2) : '—'],
+    ['label' => 'Total',              'a' => $oA ? '$' . number_format((float)($oA['total_price'] ?? 0), 2) : '-', 'b' => $oB ? '$' . number_format((float)($oB['total_price'] ?? 0), 2) : '-'],
     ['label' => 'Items',              'a' => $itemStr($oA),                                                    'b' => $itemStr($oB)],
     ['label' => 'Ship to',            'a' => $addrStr($oA['shipping_address'] ?? null),                       'b' => $addrStr($oB['shipping_address'] ?? null)],
-    ['label' => 'Tags',               'a' => implode(', ', (array)($oA['tags'] ?? [])) ?: '—',                'b' => implode(', ', (array)($oB['tags'] ?? [])) ?: '—'],
-    ['label' => 'Note',               'a' => $oA['note'] ?? '—',                                              'b' => $oB['note'] ?? '—'],
+    ['label' => 'Tags',               'a' => implode(', ', (array)($oA['tags'] ?? [])) ?: '-',                'b' => implode(', ', (array)($oB['tags'] ?? [])) ?: '-'],
+    ['label' => 'Note',               'a' => $oA['note'] ?? '-',                                              'b' => $oB['note'] ?? '-'],
   ];
 
   if ($ssA || $ssB) {
-    $ssStatusA = !empty($ssA) ? ($ssA[0]['orderStatus'] ?? '—') : 'Not found';
-    $ssStatusB = !empty($ssB) ? ($ssB[0]['orderStatus'] ?? '—') : 'Not found';
+    $ssStatusA = !empty($ssA) ? ($ssA[0]['orderStatus'] ?? '-') : 'Not found';
+    $ssStatusB = !empty($ssB) ? ($ssB[0]['orderStatus'] ?? '-') : 'Not found';
     $rows[] = ['label' => 'ShipStation status', 'a' => $ssStatusA, 'b' => $ssStatusB];
   }
 ?>

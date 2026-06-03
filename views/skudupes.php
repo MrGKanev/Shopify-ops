@@ -5,7 +5,7 @@
   <p>Duplicate SKUs cause inventory tracking errors, incorrect fulfilment routing, and reporting anomalies. Each SKU should uniquely identify one variant.</p>
   <ul>
     <li>Scans all products regardless of status (active, draft, archived).</li>
-    <li>Variants with no SKU are ignored — use <a href="?page=productcheck">Product Completeness</a> to find those.</li>
+    <li>Variants with no SKU are ignored - use <a href="?page=productcheck">Product Completeness</a> to find those.</li>
   </ul>
 <?= featureInfoEnd() ?>
 
@@ -88,7 +88,7 @@
                       <?= esc($v['product_title']) ?>
                     <?php endif; ?>
                     <?php if ($v['variant_title'] && $v['variant_title'] !== 'Default Title'): ?>
-                      <span class="text-muted"> — <?= esc($v['variant_title']) ?></span>
+                      <span class="text-muted"> - <?= esc($v['variant_title']) ?></span>
                     <?php endif; ?>
                     <span class="chip <?= $statusChip ?>" style="font-size:.65rem;padding:.1rem .4rem"><?= esc($v['product_status']) ?></span>
                   </span>

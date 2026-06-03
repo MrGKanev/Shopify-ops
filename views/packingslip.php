@@ -12,7 +12,7 @@
 
 <div class="spot-form">
   <h2>Preview packing slip</h2>
-  <div class="hint">Fetches live from ShipStation — results are not cached.</div>
+  <div class="hint">Fetches live from ShipStation - results are not cached.</div>
   <form method="post">
     <input type="hidden" name="action" value="packingslip">
     <div class="flex gap-2 items-center mt-2">
@@ -88,7 +88,7 @@
   <span class="text-xs" style="color:var(--muted)">Sidebar hidden in print mode (Ctrl/⌘+P)</span>
   <?php if ($bugCount > 0): ?>
     <span class="ps-bug-banner">
-      ⚠ <?= $bugCount ?> option<?= $bugCount !== 1 ? 's' : '' ?> with JSON-array value —
+      ⚠ <?= $bugCount ?> option<?= $bugCount !== 1 ? 's' : '' ?> with JSON-array value -
       highlighted below in yellow
     </span>
   <?php endif; ?>
@@ -172,7 +172,7 @@
               <?= esc($line) ?>
               <?php if ($hasBug): ?>
                 <span class="ps-bug-tag">
-                  ⚠ JSON array — SS renders as-is. Decoded: <strong><?= esc($cleanVal($oVal)) ?></strong>
+                  ⚠ JSON array - SS renders as-is. Decoded: <strong><?= esc($cleanVal($oVal)) ?></strong>
                 </span>
               <?php endif; ?>
             </td>

@@ -9,12 +9,12 @@ class ViewHelpersTest extends TestCase
 
     public function testFormatPriceNull(): void
     {
-        $this->assertSame('—', formatPrice(null));
+        $this->assertSame('-', formatPrice(null));
     }
 
     public function testFormatPriceEmptyString(): void
     {
-        $this->assertSame('—', formatPrice(''));
+        $this->assertSame('-', formatPrice(''));
     }
 
     public function testFormatPriceZero(): void

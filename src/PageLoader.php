@@ -40,8 +40,11 @@ class PageLoader
             'bundlecheck'   => self::loadBundleCheck($action, $ctx),
             'productcheck'  => self::loadProductCheck($action, $ctx),
             'skudupes'      => self::loadSkuDupes($action, $ctx),
-            'packingslip'   => self::loadPackingSlip($action, $ctx),
-            'settings'      => self::loadSettings($action, $ctx),
+            'packingslip'       => self::loadPackingSlip($action, $ctx),
+            'inventoryoversell' => self::loadInventoryOversell($action, $ctx),
+            'countrymismatch'   => self::loadCountryMismatch($action, $ctx),
+            'partialfulfill'    => self::loadPartialFulfill($action, $ctx),
+            'settings'          => self::loadSettings($action, $ctx),
             default     => [],
         };
 
@@ -539,15 +542,15 @@ class PageLoader
         if (!$phone) {
             $shippingTitles = implode(' ', array_column($order['shipping_lines'] ?? [], 'title'));
             if (preg_match('/overnight|express|priority|fedex|ups/i', $shippingTitles)) {
-                $issues[] = ['level' => 'warning', 'code' => 'no_phone_express', 'message' => 'No phone number — carrier may require it for express shipping'];
+                $issues[] = ['level' => 'warning', 'code' => 'no_phone_express', 'message' => 'No phone number - carrier may require it for express shipping'];
             }
         }
         if ($address1 && preg_match('/\bbox\b/i', $address1)) {
             $shippingTitles = implode(' ', array_column($order['shipping_lines'] ?? [], 'title'));
             if (preg_match('/fedex|ups|dhl/i', $shippingTitles)) {
-                $issues[] = ['level' => 'warning', 'code' => 'po_box_carrier', 'message' => 'PO Box — carrier cannot deliver (FedEx/UPS/DHL do not deliver to PO Boxes)'];
+                $issues[] = ['level' => 'warning', 'code' => 'po_box_carrier', 'message' => 'PO Box - carrier cannot deliver (FedEx/UPS/DHL do not deliver to PO Boxes)'];
             } else {
-                $issues[] = ['level' => 'warning', 'code' => 'po_box', 'message' => 'PO Box address — confirm your shipping carrier accepts PO Box deliveries'];
+                $issues[] = ['level' => 'warning', 'code' => 'po_box', 'message' => 'PO Box address - confirm your shipping carrier accepts PO Box deliveries'];
             }
         }
 
@@ -875,13 +878,13 @@ class PageLoader
                             }
                             $local = substr($email, 0, strrpos($email, '@'));
                             if (strlen($local) <= 2) {
-                                $issues[] = ['level' => 'warning', 'message' => 'Very short local part — may be a test address'];
+                                $issues[] = ['level' => 'warning', 'message' => 'Very short local part - may be a test address'];
                             }
                             if (preg_match('/^(test|noemail|no-?reply|none|null|fake|dummy|xxx|aaa|zzz)\b/i', $local)) {
                                 $issues[] = ['level' => 'warning', 'message' => 'Email looks like a placeholder'];
                             }
                             if (preg_match('/(.)\1{4,}/', $local)) {
-                                $issues[] = ['level' => 'warning', 'message' => 'Email has repeated characters — may be keyboard mashing'];
+                                $issues[] = ['level' => 'warning', 'message' => 'Email has repeated characters - may be keyboard mashing'];
                             }
                         }
 
@@ -1369,7 +1372,7 @@ class PageLoader
             ];
         }
 
-        // Shopify audit events — skip verbs already covered by the order object
+        // Shopify audit events - skip verbs already covered by the order object
         $skipVerbs = ['placed', 'confirmed', 'fulfillment_created', 'fulfillment_success',
                       'fulfillment_shipped', 'closed', 'cancelled'];
         foreach ($events as $ev) {
@@ -1451,7 +1454,7 @@ class PageLoader
 
         // Cancelled but has fulfillments
         if (!empty($order['cancelled_at']) && !empty($order['fulfillments'])) {
-            $risks[] = ['level' => 'danger', 'msg' => 'Order is cancelled but has fulfillments — items may have already shipped'];
+            $risks[] = ['level' => 'danger', 'msg' => 'Order is cancelled but has fulfillments - items may have already shipped'];
         }
 
         // Refunded but SS order still active
@@ -1693,6 +1696,235 @@ class PageLoader
         }
 
         return compact('sdResult', 'sdError');
+    }
+
+    // ── Inventory Oversell Risk ───────────────────────────────────────────────
+
+    private static function loadInventoryOversell(string $action, array $ctx): array
+    {
+        $ioResult = null;
+        $ioError  = '';
+
+        if ($action === 'scan_inventory') {
+            if ($err = self::requireShopify($ctx)) {
+                $ioError = $err;
+            } elseif ($err = self::requireSS($ctx)) {
+                $ioError = $err;
+            } else {
+                try {
+                    self::setLimits(300);
+                    $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken'], $ctx['cacheObj']);
+                    $ss      = new ShipStation($ctx['ssKey'], $ctx['ssSecret']);
+
+                    $products = self::suppressOutput(fn() => $shopify->fetchAllProducts('active'));
+                    $ssOrders = self::suppressOutput(fn() => $ss->fetchAwaitingOrders());
+
+                    // Build SKU → stock map (sum across all variants that deny oversell)
+                    $skuStock = [];
+                    $skuInfo  = [];
+                    foreach ($products as $p) {
+                        foreach ($p['variants'] ?? [] as $v) {
+                            $sku = trim($v['sku'] ?? '');
+                            if ($sku === '') continue;
+                            if (($v['inventory_management'] ?? '') === '') continue; // untracked
+                            if (($v['inventory_policy'] ?? 'deny') === 'continue') continue; // allows oversell
+                            $qty = (int)($v['inventory_quantity'] ?? 0);
+                            $skuStock[$sku] = ($skuStock[$sku] ?? 0) + $qty;
+                            $skuInfo[$sku]  = [
+                                'product_id'    => (string)($p['id'] ?? ''),
+                                'product_title' => $p['title'] ?? '',
+                                'variant_title' => $v['title'] ?? '',
+                            ];
+                        }
+                    }
+
+                    // Count awaiting qty per SKU from ShipStation
+                    $skuAwaiting = [];
+                    foreach ($ssOrders as $o) {
+                        foreach ($o['items'] ?? [] as $item) {
+                            $sku = trim($item['sku'] ?? '');
+                            if ($sku === '') continue;
+                            $skuAwaiting[$sku] = ($skuAwaiting[$sku] ?? 0) + (int)($item['quantity'] ?? 1);
+                        }
+                    }
+
+                    $rows = [];
+                    foreach ($skuAwaiting as $sku => $awaitingQty) {
+                        if (!isset($skuStock[$sku])) continue; // not tracked in Shopify
+                        $stock    = $skuStock[$sku];
+                        $shortfall = $awaitingQty - $stock;
+                        if ($shortfall <= 0) continue;
+                        $info   = $skuInfo[$sku] ?? [];
+                        $rows[] = [
+                            'sku'           => $sku,
+                            'product_id'    => $info['product_id']    ?? '',
+                            'product_title' => $info['product_title'] ?? '(unknown)',
+                            'variant_title' => $info['variant_title'] ?? '',
+                            'stock'         => $stock,
+                            'awaiting'      => $awaitingQty,
+                            'shortfall'     => $shortfall,
+                        ];
+                    }
+                    usort($rows, fn($a, $b) => $b['shortfall'] <=> $a['shortfall']);
+
+                    $ioResult = [
+                        'rows'           => $rows,
+                        'products_scanned' => count($products),
+                        'ss_orders'      => count($ssOrders),
+                    ];
+                } catch (Throwable $e) {
+                    $ioError = $e->getMessage();
+                }
+            }
+        }
+
+        return compact('ioResult', 'ioError');
+    }
+
+    // ── Billing ≠ Shipping Country ────────────────────────────────────────────
+
+    private static function loadCountryMismatch(string $action, array $ctx): array
+    {
+        $cmResult = null;
+        $cmError  = '';
+        [$cmStart, $cmEnd] = self::extractDateRange('cm');
+
+        if ($action === 'scan_country_mismatch') {
+            $cmStart = trim($_POST['cm_start'] ?? '');
+            $cmEnd   = trim($_POST['cm_end']   ?? '');
+
+            if ($err = self::requireShopify($ctx)) {
+                $cmError = $err;
+            } elseif ($err = self::validateDates($cmStart, $cmEnd)) {
+                $cmError = $err;
+            } else {
+                try {
+                    self::setLimits(180);
+                    $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+                    $orders  = self::suppressOutput(
+                        fn() => $shopify->fetchOrdersForCountryMismatch($cmStart, $cmEnd)
+                    );
+
+                    $rows = [];
+                    foreach ($orders as $o) {
+                        $bill = $o['billing_address']  ?? null;
+                        $ship = $o['shipping_address'] ?? null;
+                        $billCountry = strtoupper(trim($bill['country_code'] ?? $bill['country'] ?? ''));
+                        $shipCountry = strtoupper(trim($ship['country_code'] ?? $ship['country'] ?? ''));
+                        if (!$billCountry || !$shipCountry) continue;
+                        if ($billCountry === $shipCountry) continue;
+                        $rows[] = [
+                            'shopify_id'      => $o['id'] ?? '',
+                            'order_number'    => $o['name'] ?? '',
+                            'created_at'      => self::dateOnly($o['created_at'] ?? ''),
+                            'email'           => $o['email'] ?? '',
+                            'total_price'     => (float)($o['total_price'] ?? 0),
+                            'financial'       => $o['financial_status'] ?? '',
+                            'fulfillment'     => $o['fulfillment_status'] ?? '',
+                            'bill_country'    => $billCountry,
+                            'ship_country'    => $shipCountry,
+                            'bill_name'       => trim(($bill['first_name'] ?? '') . ' ' . ($bill['last_name'] ?? '')),
+                        ];
+                    }
+                    usort($rows, fn($a, $b) => strcmp($b['created_at'], $a['created_at']));
+
+                    $cmResult = [
+                        'rows'    => $rows,
+                        'scanned' => count($orders),
+                        'start'   => $cmStart,
+                        'end'     => $cmEnd,
+                    ];
+                } catch (Throwable $e) {
+                    $cmError = $e->getMessage();
+                }
+            }
+        }
+
+        return compact('cmResult', 'cmError', 'cmStart', 'cmEnd');
+    }
+
+    // ── Partially Fulfilled Orders Aged Out ───────────────────────────────────
+
+    private static function loadPartialFulfill(string $action, array $ctx): array
+    {
+        $pfResult   = null;
+        $pfError    = '';
+        [$pfStart, $pfEnd] = self::extractDateRange('pf', 90);
+        $pfThreshold = (int)($_POST['pf_threshold'] ?? $_GET['pf_threshold'] ?? 7);
+
+        if ($action === 'scan_partial_fulfill') {
+            $pfStart     = trim($_POST['pf_start']     ?? '');
+            $pfEnd       = trim($_POST['pf_end']       ?? '');
+            $pfThreshold = max(1, (int)($_POST['pf_threshold'] ?? 7));
+
+            if ($err = self::requireShopify($ctx)) {
+                $pfError = $err;
+            } elseif ($err = self::validateDates($pfStart, $pfEnd)) {
+                $pfError = $err;
+            } else {
+                try {
+                    self::setLimits(240);
+                    $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+                    $orders  = self::suppressOutput(
+                        fn() => $shopify->fetchPartiallyFulfilledOrders($pfStart, $pfEnd)
+                    );
+
+                    $now  = time();
+                    $rows = [];
+                    foreach ($orders as $o) {
+                        // Find date of last fulfillment
+                        $lastFulfilled = '';
+                        foreach ($o['fulfillments'] ?? [] as $f) {
+                            $fa = $f['created_at'] ?? '';
+                            if ($fa > $lastFulfilled) $lastFulfilled = $fa;
+                        }
+                        $stallSince = $lastFulfilled ?: ($o['created_at'] ?? '');
+                        $daysStalled = $stallSince ? (int) floor(($now - strtotime($stallSince)) / 86400) : 0;
+
+                        if ($daysStalled < $pfThreshold) continue;
+
+                        // Identify unfulfilled line items
+                        $unfulfilledItems = [];
+                        foreach ($o['line_items'] ?? [] as $li) {
+                            $fulfillableQty = (int)($li['fulfillable_quantity'] ?? 0);
+                            if ($fulfillableQty <= 0) continue;
+                            $unfulfilledItems[] = [
+                                'name'     => $li['name']     ?? $li['title'] ?? '',
+                                'sku'      => $li['sku']      ?? '',
+                                'qty'      => $fulfillableQty,
+                            ];
+                        }
+
+                        if (empty($unfulfilledItems)) continue;
+
+                        $rows[] = [
+                            'shopify_id'      => $o['id'] ?? '',
+                            'order_number'    => $o['name'] ?? '',
+                            'created_at'      => self::dateOnly($o['created_at'] ?? ''),
+                            'last_fulfilled'  => self::dateOnly($lastFulfilled),
+                            'days_stalled'    => $daysStalled,
+                            'email'           => $o['email'] ?? '',
+                            'total_price'     => (float)($o['total_price'] ?? 0),
+                            'financial'       => $o['financial_status'] ?? '',
+                            'unfulfilled_items' => $unfulfilledItems,
+                        ];
+                    }
+                    usort($rows, fn($a, $b) => $b['days_stalled'] <=> $a['days_stalled']);
+
+                    $pfResult = [
+                        'rows'      => $rows,
+                        'scanned'   => count($orders),
+                        'start'     => $pfStart,
+                        'end'       => $pfEnd,
+                        'threshold' => $pfThreshold,
+                    ];
+                } catch (Throwable $e) {
+                    $pfError = $e->getMessage();
+                }
+            }
+        }
+
+        return compact('pfResult', 'pfError', 'pfStart', 'pfEnd', 'pfThreshold');
     }
 
     // ── Settings ──────────────────────────────────────────────────────────────

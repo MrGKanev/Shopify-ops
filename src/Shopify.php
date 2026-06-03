@@ -799,6 +799,55 @@ class Shopify
     }
 
     /**
+     * Paid orders where billing country != shipping country.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function fetchOrdersForCountryMismatch(string $startDate, string $endDate): array
+    {
+        $all = [];
+        $params = http_build_query([
+            'status'           => 'any',
+            'financial_status' => 'paid,partially_paid',
+            'created_at_min'   => $startDate . 'T00:00:00-00:00',
+            'created_at_max'   => $endDate   . 'T23:59:59-00:00',
+            'limit'            => self::PAGE_SIZE,
+            'fields'           => 'id,order_number,name,created_at,email,financial_status,fulfillment_status,total_price,billing_address,shipping_address',
+        ]);
+        $nextUrl = "{$this->baseUrl}/orders.json?{$params}";
+        while ($nextUrl) {
+            [$orders, $nextUrl] = $this->getPage($nextUrl);
+            array_push($all, ...$orders);
+        }
+        return $all;
+    }
+
+    /**
+     * Open orders in 'partial' fulfillment status - includes line_items + fulfillments
+     * so callers can determine which items remain unfulfilled and for how long.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function fetchPartiallyFulfilledOrders(string $startDate, string $endDate): array
+    {
+        $all = [];
+        $params = http_build_query([
+            'status'             => 'open',
+            'fulfillment_status' => 'partial',
+            'created_at_min'     => $startDate . 'T00:00:00-00:00',
+            'created_at_max'     => $endDate   . 'T23:59:59-00:00',
+            'limit'              => self::PAGE_SIZE,
+            'fields'             => 'id,order_number,name,created_at,email,financial_status,fulfillment_status,total_price,line_items,fulfillments',
+        ]);
+        $nextUrl = "{$this->baseUrl}/orders.json?{$params}";
+        while ($nextUrl) {
+            [$orders, $nextUrl] = $this->getPage($nextUrl);
+            array_push($all, ...$orders);
+        }
+        return $all;
+    }
+
+    /**
      * Fetches all products from the store. $status can be 'active', 'draft', 'archived', or 'any'.
      *
      * @return array<int, array<string, mixed>>
@@ -862,7 +911,7 @@ class Shopify
     }
 
     /**
-     * Single GET request — returns decoded JSON body as array.
+     * Single GET request - returns decoded JSON body as array.
      *
      * @return array<string, mixed>
      */

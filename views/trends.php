@@ -70,7 +70,7 @@ $repeatOffenders = array_slice($repeatOffenders, 0, 20, true);
   $maxCount     = max(1, max(array_column($historySlice, 'count')));
 ?>
 <div class="text-xs font-bold uppercase mb-2 text-muted tracking-[.07em]">Missing orders over time</div>
-<div class="history mb-8 h-[120px]">
+<div class="history mb-8">
   <?php foreach ($historySlice as $r):
     $pct   = max(6, round(($r['count'] / $maxCount) * 100));
     $color = $r['count'] === 0 ? 'var(--ok)' : 'var(--warn)';

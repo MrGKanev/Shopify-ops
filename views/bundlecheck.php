@@ -10,7 +10,7 @@ $_bcDesc      = $bcConfig['bundle_check_description'] ?? null;
     <p><?= esc($_bcDesc) ?></p>
   <?php else: ?>
     <p><strong>Bundle Check</strong> scans Shopify orders in a date range and flags any order whose type requires specific companion items that are not present in the order.</p>
-    <p>This covers the case where a customer places the main order and required accessories are added afterwards — catching orders where that step was missed.</p>
+    <p>This covers the case where a customer places the main order and required accessories are added afterwards - catching orders where that step was missed.</p>
   <?php endif; ?>
   <ul>
     <li>Required items per order type are configured in <code>order_types.json</code> via the <code>required_items</code> field on each rule.</li>
@@ -18,7 +18,7 @@ $_bcDesc      = $bcConfig['bundle_check_description'] ?? null;
     <?php if ($_bcTypeNames): ?>
       <li>Active bundle rules: <strong><?= esc($_bcTypeNames) ?></strong>.</li>
     <?php endif; ?>
-    <li>Fulfilled orders are included — an order that shipped without all required items is the most urgent case.</li>
+    <li>Fulfilled orders are included - an order that shipped without all required items is the most urgent case.</li>
   </ul>
 <?= featureInfoEnd() ?>
 
@@ -51,7 +51,7 @@ $_bcDesc      = $bcConfig['bundle_check_description'] ?? null;
   <div class="flex items-center gap-2 flex-wrap mb-4">
     <span class="text-xs text-muted"><?= $scanned ?> orders scanned &mdash;</span>
     <?php if ($count === 0): ?>
-      <span class="source-badge live">All clear — no incomplete bundles found</span>
+      <span class="source-badge live">All clear - no incomplete bundles found</span>
     <?php else: ?>
       <span class="source-badge cached"><?= $count ?> order<?= $count !== 1 ? 's' : '' ?> with missing items</span>
     <?php endif; ?>

@@ -1,7 +1,7 @@
 <?= topbar('Tracking Feed', 'Look up shipment tracking info for orders via ShipStation') ?>
 
 <?= featureInfoStart('tracking', 'Tracking Feed') ?>
-    <p><strong>Tracking Feed</strong> looks up one or more order numbers in ShipStation and shows tracking details — carrier, tracking number, ship date — with a direct link to the carrier's tracking page.</p>
+    <p><strong>Tracking Feed</strong> looks up one or more order numbers in ShipStation and shows tracking details - carrier, tracking number, ship date - with a direct link to the carrier's tracking page.</p>
     <p>Useful for quickly answering "where is my order?" without leaving the app or navigating through ShipStation's interface.</p>
     <ul>
       <li>Enter up to <strong>30 order numbers</strong> at once.</li>
