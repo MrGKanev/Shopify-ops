@@ -495,7 +495,8 @@ tbody td         { @apply text-sm align-middle; padding: .75rem 1.25rem; }
 
 .audit-summary { @apply grid gap-3 mb-6; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); }
 .audit-summary .stat-card .value { font-size: 1.6rem; }
-.duration-note { @apply text-xs mb-4; color: var(--muted); }
+.duration-note { @apply text-xs mb-4; color: var(--muted); line-height: 1.4; }
+.duration-note code { font-size: inherit; line-height: inherit; vertical-align: baseline; }
 
 /* ── Cache table ── */
 .cache-section   { @apply mt-8; }
@@ -518,7 +519,7 @@ tbody td         { @apply text-sm align-middle; padding: .75rem 1.25rem; }
 }
 
 /* ── Source badge ── */
-.source-badge        { @apply inline-flex gap-1.5 items-center text-xs font-semibold rounded-full; padding: .2rem .6rem; }
+.source-badge        { @apply inline-flex gap-1.5 items-center text-xs font-semibold rounded-full; padding: .25rem .7rem; vertical-align: middle; }
 .source-badge.cached { background: #ede9fe; color: #6d28d9; @apply dark:bg-[#2e1065] dark:text-[#c4b5fd]; }
 .source-badge.live   { background: #dbeafe; color: #1d4ed8; @apply dark:bg-[#1e3a5f] dark:text-[#93c5fd]; }
 

@@ -55,6 +55,11 @@ class PageLoader
 
     private static function loadGlobal(array $ctx): array
     {
+        // Probabilistic background prune — keeps cache dir tidy without blocking every request
+        if (mt_rand(1, 10) === 1) {
+            $ctx['cacheObj']->pruneExpired();
+        }
+
         $reports      = [];
         $orderHistory = [];
         $reportDir    = $ctx['reportDir'];
@@ -156,8 +161,12 @@ class PageLoader
                     $ss      = new ShipStation($ctx['ssKey'], $ctx['ssSecret'], $ctx['cacheObj']);
                     $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken'], $ctx['cacheObj']);
 
-                    $shopifyOrders = $shopify->fetchAllOrders($auditStart, $auditEnd);
-                    $ssOrders      = $ss->fetchAllOrders($auditStart, $ssAuditEnd);
+                    [$shopifyOrders, $ssOrders] = self::suppressOutput(function () use ($ss, $shopify, $auditStart, $auditEnd, $ssAuditEnd) {
+                        return [
+                            $shopify->fetchAllOrders($auditStart, $auditEnd),
+                            $ss->fetchAllOrders($auditStart, $ssAuditEnd),
+                        ];
+                    });
 
                     $ssIndex      = Comparator::buildSSIndex($ssOrders);
                     $ssEmailIndex = Comparator::buildSSEmailIndex($ssOrders);

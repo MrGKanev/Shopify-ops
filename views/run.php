@@ -171,9 +171,12 @@
 <div class="cache-section">
   <h2>Cache</h2>
   <div class="cache-meta">
-    TTL: <?= $cacheTtl >= 3600 ? round($cacheTtl / 3600, 1) . ' h' : ($cacheTtl / 60) . ' min' ?>
-    &mdash; set <code>CACHE_TTL</code> in .env (seconds) to change.
-    Cached data is reused for repeated runs on the same date range.
+    TTL: <?php
+      if ($cacheTtl >= 86400)     echo round($cacheTtl / 86400, 1) . ' days';
+      elseif ($cacheTtl >= 3600)  echo round($cacheTtl / 3600, 1) . ' h';
+      else                         echo ($cacheTtl / 60) . ' min';
+    ?> &mdash; set <code>CACHE_TTL</code> in .env (seconds) to change.
+    Cached data is reused for repeated runs on the same date range. Expired files are deleted automatically.
   </div>
 
   <?php if ($cacheFlushed > 0): ?>

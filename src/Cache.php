@@ -4,6 +4,10 @@
  *
  * Each entry is stored as   cache/<prefix>_<hash>.json
  * with a wrapper: { "expires_at": <unix>, "data": [...] }
+ *
+ * Two separate time controls:
+ *   $ttl       — how long the data is considered fresh (reused on next request)
+ *   $retention — how long the file stays on disk AFTER expiry (for debugging)
  */
 class Cache
 {
@@ -12,7 +16,8 @@ class Cache
 
     public function __construct(
         private readonly string $dir,
-        private readonly int    $ttl = 14400
+        private readonly int    $ttl       = 82800,   // data validity (default 23 h)
+        private readonly int    $retention = 1209600  // keep file on disk after expiry (default 2 weeks)
     ) {
         if ($this->ttl > 0 && !is_dir($dir)) {
             mkdir($dir, 0755, true);
@@ -37,7 +42,6 @@ class Cache
         $file = $this->path($prefix, $key);
 
         if (file_exists($file)) {
-            // Check freshness cheaply before loading the full file
             $fh   = fopen($file, 'r');
             $head = $fh ? fread($fh, 64) : '';
             if ($fh) fclose($fh);
@@ -49,6 +53,7 @@ class Cache
                     return $wrapper['data'];
                 }
             }
+            // Expired — file stays on disk until pruneExpired() removes it after retention period
         }
 
         $data    = $fetch();
@@ -58,10 +63,8 @@ class Cache
         return $data;
     }
 
-    /**
-     * Was the last remember() call for this prefix a cache hit?
-     */
-    public function getTtl(): int { return $this->ttl; }
+    public function getTtl(): int       { return $this->ttl; }
+    public function getRetention(): int { return $this->retention; }
 
     public function wasHit(string $prefix): bool
     {
@@ -95,6 +98,46 @@ class Cache
     }
 
     /**
+     * Delete files that have been expired longer than $retention seconds.
+     * Fresh files and recently-expired files (kept for debugging) are left alone.
+     */
+    public function pruneExpired(): int
+    {
+        $deadline = time() - $this->retention;
+        $count    = 0;
+
+        foreach (glob($this->dir . '/*.json') ?: [] as $f) {
+            $fh   = fopen($f, 'r');
+            $head = $fh ? fread($fh, 64) : '';
+            if ($fh) fclose($fh);
+            preg_match('/"expires_at"\s*:\s*(\d+)/', $head, $m);
+            if (isset($m[1]) && (int) $m[1] < $deadline) {
+                @unlink($f);
+                $count++;
+            }
+        }
+
+        // Prune ShipStation checkpoint directories
+        $cpBase = $this->dir . '/checkpoints';
+        if (is_dir($cpBase)) {
+            foreach (glob($cpBase . '/*/') ?: [] as $cpDir) {
+                $metaFile = rtrim($cpDir, '/') . '/_meta.json';
+                if (!file_exists($metaFile)) continue;
+                $meta = json_decode(file_get_contents($metaFile), true);
+                if (is_array($meta) && ($meta['expires_at'] ?? 0) < $deadline) {
+                    foreach (glob(rtrim($cpDir, '/') . '/*') ?: [] as $f) {
+                        @unlink($f);
+                    }
+                    @rmdir(rtrim($cpDir, '/'));
+                    $count++;
+                }
+            }
+        }
+
+        return $count;
+    }
+
+    /**
      * Delete all cache files, or only those matching a prefix.
      */
     public function flush(string $prefix = '*'): int
@@ -106,17 +149,19 @@ class Cache
     }
 
     /**
-     * Return metadata about every cached entry.
+     * Return metadata about every cached entry (after pruning old files).
      *
      * @return list<array{file: string, prefix: string, expires_at: int, expired: bool, size_kb: float}>
      */
     public function entries(): array
     {
+        $this->pruneExpired();
         $files  = glob($this->dir . '/*.json') ?: [];
         $result = [];
         foreach ($files as $f) {
-            // Read only the first 64 bytes - enough to extract expires_at without loading data
-            $head = fread(fopen($f, 'r'), 64);
+            $fh   = fopen($f, 'r');
+            $head = $fh ? fread($fh, 64) : '';
+            if ($fh) fclose($fh);
             preg_match('/"expires_at"\s*:\s*(\d+)/', $head, $m);
             $exp = isset($m[1]) ? (int) $m[1] : 0;
             preg_match('/\/([a-z_]+)_[0-9a-f]+\.json$/', $f, $pm);

@@ -80,7 +80,8 @@ $webPassword = getenv('WEB_PASSWORD') ?: 'changeme';
 $appTitle    = getenv('APP_TITLE')    ?: 'Shopify Ops';
 $appBrand    = getenv('APP_BRAND')    ?: 'Shopify Ops';
 $appLogo     = getenv('APP_LOGO')     ?: '';
-$cacheTtl    = (int) (getenv('CACHE_TTL') ?: 82800);
+$cacheTtl       = (int) (getenv('CACHE_TTL')           ?: 82800);   // data validity, default 23 h
+$cacheRetention = (int) (getenv('CACHE_RETENTION')    ?: 1209600); // keep on disk after expiry, default 2 weeks
 
 $reportDir = __DIR__ . '/reports' . ($storeId ? "/{$storeId}" : '');
 $cacheDir  = __DIR__ . '/cache'   . ($storeId ? "/{$storeId}" : '');
@@ -92,7 +93,7 @@ $cacheObj      = null;
 $ignoredOrders = [];
 
 if ($authed) {
-    $cacheObj = new Cache($cacheDir, $cacheTtl);
+    $cacheObj = new Cache($cacheDir, $cacheTtl, $cacheRetention);
     if ($storeId) {
         IgnoreList::setDataDir($dataDir);
         PushLog::setDataDir($dataDir);
