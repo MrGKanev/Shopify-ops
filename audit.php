@@ -4,7 +4,6 @@
 // Usage: php audit.php [--spot-check 100042,100043]
 
 require_once __DIR__ . '/vendor/autoload.php';
-require_once __DIR__ . '/src/Env.php';
 require_once __DIR__ . '/src/Cache.php';
 require_once __DIR__ . '/src/ShipStation.php';
 require_once __DIR__ . '/src/Shopify.php';
@@ -15,7 +14,7 @@ require_once __DIR__ . '/src/Reporter.php';
 if (!file_exists(__DIR__ . '/.env')) {
     die("\n✗ .env file not found. Copy .env.example → .env and fill in your credentials.\n\n");
 }
-Env::load(__DIR__ . '/.env');
+Dotenv\Dotenv::createUnsafeImmutable(__DIR__)->load();
 
 // ── Validate required config ──────────────────────────────────────
 $required = ['SS_API_KEY', 'SS_API_SECRET', 'SHOPIFY_STORE', 'SHOPIFY_ACCESS_TOKEN'];

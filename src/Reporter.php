@@ -1,4 +1,7 @@
 <?php
+
+use League\Csv\Writer;
+
 /**
  * Reporter - formats and saves the audit results.
  */
@@ -75,20 +78,19 @@ class Reporter
 
     // ── File output ───────────────────────────────────────────────────
 
-    public static function saveReports(array $missing, string $startDate, string $endDate): void
+    public static function saveReports(array $missing, string $startDate, string $endDate, string $dir = ''): void
     {
-        $dir = self::REPORT_DIR;
+        $dir = $dir ?: self::REPORT_DIR;
         if (!is_dir($dir)) mkdir($dir, 0755, true);
 
         $stamp = date('Y-m-d');
 
         // CSV
         $csvPath = "{$dir}/missing_{$stamp}.csv";
-        $fh = fopen($csvPath, 'w');
-        flock($fh, LOCK_EX);
-        fputcsv($fh, ['order_number', 'shopify_name', 'shopify_id', 'created_at', 'total_price', 'financial_status', 'fulfillment_status', 'email', 'order_type'], ',', '"', '\\');
+        $writer  = Writer::from($csvPath, 'w+');
+        $writer->insertOne(['order_number', 'shopify_name', 'shopify_id', 'created_at', 'total_price', 'financial_status', 'fulfillment_status', 'email', 'order_type']);
         foreach ($missing as $o) {
-            fputcsv($fh, [
+            $writer->insertOne([
                 $o['order_number']       ?? '',
                 $o['name']               ?? '',
                 $o['id']                 ?? '',
@@ -98,10 +100,8 @@ class Reporter
                 $o['fulfillment_status'] ?? '',
                 $o['email']              ?? '',
                 $o['_order_type']        ?? '',
-            ], ',', '"', '\\');
+            ]);
         }
-        flock($fh, LOCK_UN);
-        fclose($fh);
 
         // Plain text
         $txtPath = "{$dir}/missing_{$stamp}.txt";

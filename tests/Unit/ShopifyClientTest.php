@@ -1,7 +1,6 @@
 <?php
 declare(strict_types=1);
 
-use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
@@ -10,17 +9,17 @@ use PHPUnit\Framework\TestCase;
 
 class ShopifyClientTest extends TestCase
 {
-    private function makeClient(array $responses, array &$history = []): Client
+    private function makeStack(array $responses, array &$history = []): HandlerStack
     {
-        $mock    = new MockHandler($responses);
-        $stack   = HandlerStack::create($mock);
+        $mock  = new MockHandler($responses);
+        $stack = HandlerStack::create($mock);
         $stack->push(Middleware::history($history));
-        return new Client(['handler' => $stack]);
+        return $stack;
     }
 
     private function shopify(array $responses, array &$history = []): Shopify
     {
-        return new Shopify('test.myshopify.com', 'tok_test', null, $this->makeClient($responses, $history));
+        return new Shopify('test.myshopify.com', 'tok_test', null, $this->makeStack($responses, $history));
     }
 
     private function json(mixed $data, int $status = 200, array $headers = []): Response
@@ -124,20 +123,29 @@ class ShopifyClientTest extends TestCase
 
     public function testRetryOn429WithRetryAfterHeader(): void
     {
-        $order   = ['id' => 1, 'name' => '#1001'];
-        $history = [];
-
-        $shopify = $this->shopify([
+        $order = ['id' => 1, 'name' => '#1001'];
+        $mock  = new MockHandler([
             new Response(429, ['Retry-After' => '0']),
             $this->json(['orders' => [$order]]),
-        ], $history);
+        ]);
+        $shopify = new Shopify('test.myshopify.com', 'tok_test', null, HandlerStack::create($mock));
 
         $result = $shopify->findByOrderNumber('1001');
 
-        $this->assertCount(2, $history);
-        $this->assertSame(429, $history[0]['response']->getStatusCode());
-        $this->assertSame(200, $history[1]['response']->getStatusCode());
+        $this->assertSame(0, $mock->count()); // both responses consumed: 429 then 200
         $this->assertSame([$order], $result);
+    }
+
+    public function testStopsRetryingAfterFiveAttempts(): void
+    {
+        // 6 responses: original + 5 retries, all 429 — 6th passes through and throws
+        $mock    = new MockHandler(array_fill(0, 6, new Response(429, ['Retry-After' => '0'], '')));
+        $shopify = new Shopify('test.myshopify.com', 'tok_test', null, HandlerStack::create($mock));
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessageMatches('/429/');
+
+        $shopify->findByOrderNumber('1001');
     }
 
     // ── GraphQL (searchOrdersByTag) ───────────────────────────────────────────

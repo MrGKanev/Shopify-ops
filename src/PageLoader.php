@@ -1,4 +1,7 @@
 <?php
+
+use League\Csv\Reader;
+
 /**
  * Loads all view data for each page.
  * Returns an array that gets extract()-ed into the view scope.
@@ -63,12 +66,10 @@ class PageLoader
                 $date    = $m[1] ?? 'unknown';
                 $rawRows = [];
 
-                if (($fh = fopen($csvPath, 'r')) !== false) {
-                    $headers = fgetcsv($fh, 0, ',', '"', '\\');
-                    while (($row = fgetcsv($fh, 0, ',', '"', '\\')) !== false) {
-                        $rawRows[] = array_combine($headers ?: [], $row);
-                    }
-                    fclose($fh);
+                $csv = Reader::from($csvPath, 'r');
+                $csv->setHeaderOffset(0);
+                foreach ($csv->getRecords() as $record) {
+                    $rawRows[] = $record;
                 }
 
                 foreach ($rawRows as $row) {

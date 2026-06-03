@@ -1,7 +1,8 @@
 <?php
 
-use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Client;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -19,19 +20,33 @@ class Shopify
     private readonly string $baseUrl;
     private readonly string $token;
     private readonly ?Cache $cache;
-    private readonly ClientInterface $http;
+    private readonly Client $http;
 
     public function __construct(
         string $store,
         string $accessToken,
         ?Cache $cache = null,
-        ?ClientInterface $http = null
+        ?HandlerStack $stack = null
     ) {
         $host = str_contains($store, '.') ? $store : "{$store}.myshopify.com";
         $this->baseUrl = "https://{$host}/admin/api/2025-04";
         $this->token   = $accessToken;
         $this->cache   = $cache;
-        $this->http    = $http ?? new Client();
+        $stack ??= HandlerStack::create();
+        $stack->push(Middleware::retry(
+            function (int $retries, $req, ?ResponseInterface $res = null) {
+                if ($res?->getStatusCode() !== 429 || $retries >= 5) return false;
+                $h    = $res->getHeaderLine('Retry-After');
+                $wait = $h !== '' ? (int)$h : 10;
+                echo "\n  [Shopify] Rate limited - waiting {$wait}s ...\n";
+                return true;
+            },
+            function ($retries, $res) {
+                $h = $res?->getHeaderLine('Retry-After') ?? '';
+                return ($h !== '' ? (int)$h : 10) * 1000;
+            }
+        ));
+        $this->http = new Client(['handler' => $stack]);
     }
 
     // ── Public ────────────────────────────────────────────────────────
@@ -817,16 +832,7 @@ class Shopify
         $options['headers']['X-Shopify-Access-Token']  = $this->token;
         $options['headers']['Content-Type']           ??= 'application/json';
 
-        $response = $this->http->request($method, $url, $options);
-
-        if ($response->getStatusCode() === 429) {
-            $retryAfter = (int) ($response->getHeaderLine('Retry-After') ?: 10);
-            echo "\n  [Shopify] Rate limited - waiting {$retryAfter}s ...\n";
-            sleep($retryAfter);
-            return $this->request($method, $url, $options);
-        }
-
-        return $response;
+        return $this->http->request($method, $url, $options);
     }
 
     /**
