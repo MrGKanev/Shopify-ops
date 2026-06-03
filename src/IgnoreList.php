@@ -1,4 +1,7 @@
 <?php
+
+use League\Csv\Reader;
+
 /**
  * Manages the data/ignored.json file.
  * All write operations use exclusive file locking.
@@ -102,23 +105,24 @@ class IgnoreList
         $count   = 0;
         $entries = [];
 
-        if (($fh = fopen($tmpPath, 'r')) !== false) {
-            $first = fgetcsv($fh, escape: '\\');
-            if ($first) {
-                $firstCell = ltrim(trim((string) ($first[0] ?? '')), '#');
-                if (preg_match('/^\d+$/', $firstCell)) {
-                    $entries[] = ['number' => $firstCell, 'reason' => $reason];
-                    $count++;
-                }
+        $csv  = Reader::from($tmpPath, 'r');
+        $all  = [...$csv];
+
+        if (!empty($all)) {
+            // First row: include only if purely numeric (skip text headers)
+            $firstCell = ltrim(trim((string)($all[0][0] ?? '')), '#');
+            if (preg_match('/^\d+$/', $firstCell)) {
+                $entries[] = ['number' => $firstCell, 'reason' => $reason];
+                $count++;
             }
-            while (($row = fgetcsv($fh, escape: '\\')) !== false) {
-                $cell = ltrim(trim((string) ($row[0] ?? '')), '#');
+            // Remaining rows: include all non-empty values
+            foreach (array_slice($all, 1) as $row) {
+                $cell = ltrim(trim((string)($row[0] ?? '')), '#');
                 if ($cell) {
                     $entries[] = ['number' => $cell, 'reason' => $reason];
                     $count++;
                 }
             }
-            fclose($fh);
         }
 
         if ($entries) {

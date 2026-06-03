@@ -4,7 +4,6 @@ declare(strict_types=1);
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
 require_once __DIR__ . '/vendor/autoload.php';
-require_once __DIR__ . '/src/Env.php';
 require_once __DIR__ . '/src/Auth.php';
 require_once __DIR__ . '/src/Stores.php';
 require_once __DIR__ . '/src/IgnoreList.php';
@@ -18,7 +17,7 @@ require_once __DIR__ . '/src/ViewHelpers.php';
 require_once __DIR__ . '/src/Actions.php';
 require_once __DIR__ . '/src/PageLoader.php';
 
-Env::load(__DIR__ . '/.env');
+Dotenv\Dotenv::createUnsafeImmutable(__DIR__)->safeLoad();
 Stores::init(__DIR__);
 
 // ── Session / auth ────────────────────────────────────────────────────────────

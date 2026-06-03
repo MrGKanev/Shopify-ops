@@ -1,7 +1,8 @@
 <?php
 
-use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Client;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -17,17 +18,31 @@ class ShipStation
 
     private readonly string $auth;
     private readonly ?Cache $cache;
-    private readonly ClientInterface $http;
+    private readonly Client $http;
 
     public function __construct(
         string $apiKey,
         string $apiSecret,
         ?Cache $cache = null,
-        ?ClientInterface $http = null
+        ?HandlerStack $stack = null
     ) {
         $this->auth  = base64_encode("{$apiKey}:{$apiSecret}");
         $this->cache = $cache;
-        $this->http  = $http ?? new Client();
+        $stack ??= HandlerStack::create();
+        $stack->push(Middleware::retry(
+            function (int $retries, $req, ?ResponseInterface $res = null) {
+                if ($res?->getStatusCode() !== 429 || $retries >= 5) return false;
+                $h    = $res->getHeaderLine('Retry-After');
+                $wait = $h !== '' ? (int)$h : 60;
+                echo "\n  [ShipStation] Rate limited - waiting {$wait}s ...\n";
+                return true;
+            },
+            function ($retries, $res) {
+                $h = $res?->getHeaderLine('Retry-After') ?? '';
+                return ($h !== '' ? (int)$h : 60) * 1000;
+            }
+        ));
+        $this->http = new Client(['handler' => $stack]);
     }
 
     // ── Public ────────────────────────────────────────────────────────
@@ -251,17 +266,7 @@ class ShipStation
         $options['headers']['Authorization']     = 'Basic ' . $this->auth;
         $options['headers']['Content-Type']    ??= 'application/json';
 
-        $response = $this->http->request($method, self::BASE_URL . $path, $options);
-
-        if ($response->getStatusCode() === 429) {
-            $h          = $response->getHeaderLine('Retry-After');
-            $retryAfter = $h !== '' ? (int) $h : 60;
-            echo "\n  [ShipStation] Rate limited - waiting {$retryAfter}s ...\n";
-            sleep($retryAfter);
-            return $this->request($method, $path, $options);
-        }
-
-        return $response;
+        return $this->http->request($method, self::BASE_URL . $path, $options);
     }
 
     /** @return array<string, mixed> */
