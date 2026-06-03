@@ -138,7 +138,7 @@ class ShopifyClientTest extends TestCase
 
     public function testStopsRetryingAfterFiveAttempts(): void
     {
-        // 6 responses: original + 5 retries, all 429 — 6th passes through and throws
+        // 6 responses: original + 5 retries, all 429 - 6th passes through and throws
         $mock    = new MockHandler(array_fill(0, 6, new Response(429, ['Retry-After' => '0'], '')));
         $shopify = new Shopify('test.myshopify.com', 'tok_test', null, HandlerStack::create($mock));
 

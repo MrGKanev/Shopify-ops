@@ -92,7 +92,7 @@
               <?php if ($row['email']): ?>
                 <a href="?page=customer&email=<?= urlencode($row['email']) ?>"><?= esc($row['email']) ?></a>
               <?php else: ?>
-                —
+                -
               <?php endif; ?>
             </td>
             <td class="td-email">

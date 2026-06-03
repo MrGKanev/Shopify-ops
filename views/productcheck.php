@@ -3,8 +3,8 @@
 <?= featureInfoStart('productcheck', 'Product Completeness') ?>
   <p><strong>Product Completeness</strong> scans all active products in your Shopify store and flags those with missing or incomplete content.</p>
   <ul>
-    <li><strong>Critical</strong> — one or more variants have no SKU set. This breaks fulfilment and inventory tracking.</li>
-    <li><strong>Warning</strong> — product has no images, or no description. Both affect customer experience and SEO.</li>
+    <li><strong>Critical</strong> - one or more variants have no SKU set. This breaks fulfilment and inventory tracking.</li>
+    <li><strong>Warning</strong> - product has no images, or no description. Both affect customer experience and SEO.</li>
   </ul>
 <?= featureInfoEnd() ?>
 
@@ -81,8 +81,8 @@
                 <?= esc($row['title']) ?>
               <?php endif; ?>
             </td>
-            <td><?= esc($row['vendor'] ?: '—') ?></td>
-            <td><?= esc($row['type'] ?: '—') ?></td>
+            <td><?= esc($row['vendor'] ?: '-') ?></td>
+            <td><?= esc($row['type'] ?: '-') ?></td>
             <td><?= $row['images'] ?></td>
             <td><?= $row['variants'] ?></td>
             <td>

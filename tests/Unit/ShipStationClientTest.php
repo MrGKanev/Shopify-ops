@@ -83,7 +83,7 @@ class ShipStationClientTest extends TestCase
 
     public function testStopsRetryingAfterFiveAttempts(): void
     {
-        // 6 responses: original + 5 retries, all 429 — 6th passes through and throws
+        // 6 responses: original + 5 retries, all 429 - 6th passes through and throws
         $mock = new MockHandler(array_fill(0, 6, new Response(429, ['Retry-After' => '0'], '')));
         $ss   = new ShipStation('key', 'secret', null, HandlerStack::create($mock));
 

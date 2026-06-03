@@ -63,7 +63,7 @@ function gqlOrderRow(array $o, string $shopifyAdminBase): array
 
 function formatPrice(float|string|null $amount): string
 {
-    if ($amount === null || $amount === '') return '—';
+    if ($amount === null || $amount === '') return '-';
     return '$' . number_format((float) $amount, 2);
 }
 

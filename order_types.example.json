@@ -7,7 +7,7 @@
 
   "rules": [
     {
-      "_comment": "Main product line — matched by SKU prefix",
+      "_comment": "Main product line - matched by SKU prefix",
       "name": "Pro",
       "match": "sku_starts_with",
       "value": "widget-pro-"
@@ -42,7 +42,7 @@
   "_match_types": {
     "sku_starts_with":     "SKU starts with the given string (case-insensitive). Pass an array to match any of multiple prefixes.",
     "sku_contains":        "SKU contains the given string (case-insensitive)",
-    "sku_not_starts_with": "SKU does not start with any of the given strings — pass an array for multiple prefixes",
+    "sku_not_starts_with": "SKU does not start with any of the given strings - pass an array for multiple prefixes",
     "title_contains":      "Product title contains the given string (case-insensitive)",
     "vendor_is":           "Product vendor exactly matches the given string (case-insensitive)"
   },

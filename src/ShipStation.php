@@ -242,6 +242,31 @@ class ShipStation
     }
 
     /**
+     * Fetches all orders currently in awaiting_shipment status (no date filter).
+     * Used for oversell risk checks.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function fetchAwaitingOrders(): array
+    {
+        $all  = [];
+        $page = 1;
+        do {
+            $params = http_build_query([
+                'orderStatus' => 'awaiting_shipment',
+                'pageSize'    => self::PAGE_SIZE,
+                'page'        => $page,
+            ]);
+            $data  = $this->get("/orders?{$params}");
+            $batch = $data['orders'] ?? [];
+            array_push($all, ...$batch);
+            $totalPages = $data['pages'] ?? 1;
+            $page++;
+        } while ($page <= $totalPages);
+        return $all;
+    }
+
+    /**
      * Fetches all shipments for a given order number (not cached - live lookup).
      *
      * @return array<int, array<string, mixed>>
@@ -257,7 +282,7 @@ class ShipStation
 
     /**
      * Sends a request with auth headers.
-     * ShipStation rate-limits at 40 req/min — backs off 60s on 429.
+     * ShipStation rate-limits at 40 req/min - backs off 60s on 429.
      */
     private function request(string $method, string $path, array $options = []): ResponseInterface
     {

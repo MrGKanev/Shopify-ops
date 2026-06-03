@@ -1,11 +1,11 @@
 <?= topbar('Address Scanner', 'Find paid orders with incomplete or potentially invalid shipping addresses') ?>
 
 <?= featureInfoStart('addrcheck', 'Address Scanner') ?>
-    <p><strong>Address Scanner</strong> fetches all paid Shopify orders in the selected date range and runs a set of validation checks on each shipping address — flagging orders that may fail delivery before they are ever shipped.</p>
+    <p><strong>Address Scanner</strong> fetches all paid Shopify orders in the selected date range and runs a set of validation checks on each shipping address - flagging orders that may fail delivery before they are ever shipped.</p>
     <p>Issues are split into two severity levels:</p>
     <ul>
-      <li><strong>Critical</strong> — the address is almost certainly undeliverable: missing street, city, ZIP, country, or recipient name.</li>
-      <li><strong>Warning</strong> — the address may cause problems: invalid ZIP format for US/CA, missing state/province, PO Box address (always flagged — use the <em>PO Box only</em> filter to isolate these), or no phone number on an express shipment.</li>
+      <li><strong>Critical</strong> - the address is almost certainly undeliverable: missing street, city, ZIP, country, or recipient name.</li>
+      <li><strong>Warning</strong> - the address may cause problems: invalid ZIP format for US/CA, missing state/province, PO Box address (always flagged - use the <em>PO Box only</em> filter to isolate these), or no phone number on an express shipment.</li>
     </ul>
     <p>Critical issues are sorted to the top. Each row links directly to the Shopify order and to Spot-check for a live ShipStation cross-reference.</p>
 <?= featureInfoEnd() ?>

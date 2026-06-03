@@ -8,7 +8,7 @@
       <li><strong>Test or dummy orders</strong> that were never placed through the storefront.</li>
       <li>Orders <strong>imported from another channel</strong> (Amazon, eBay, CSV import).</li>
       <li>Orders from a <strong>Shopify store that was deleted or disconnected</strong>.</li>
-      <li>Potential <strong>data entry errors</strong> — wrong order number entered in SS.</li>
+      <li>Potential <strong>data entry errors</strong> - wrong order number entered in SS.</li>
     </ul>
     <p>Matching is done by normalised order number. Both datasets are cached, so re-scanning the same range is instant.</p>
 <?= featureInfoEnd() ?>
@@ -92,8 +92,8 @@ require __DIR__ . '/partials/_date-range.php';
               <button class="copy-btn" data-copy="<?= esc($row['order_number']) ?>" title="Copy">⧉</button>
             </td>
             <td><?= esc($row['order_date']) ?></td>
-            <td><?= esc($row['customer'] ?: '—') ?></td>
-            <td class="td-email"><?= esc($row['email'] ?: '—') ?></td>
+            <td><?= esc($row['customer'] ?: '-') ?></td>
+            <td class="td-email"><?= esc($row['email'] ?: '-') ?></td>
             <td><span class="chip <?= $statusChip ?>"><?= esc(str_replace('_', ' ', $row['order_status'])) ?></span></td>
             <td class="td-price"><?= formatPrice($row['total'] ?: null) ?></td>
             <td class="td-actions">

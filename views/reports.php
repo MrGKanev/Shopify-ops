@@ -41,7 +41,7 @@
     <?php
       $sparkPoints = $historySlice; // oldest first
       $n     = count($sparkPoints);
-      /* SVG coordinate space — only used for line/fill, not dots */
+      /* SVG coordinate space - only used for line/fill, not dots */
       $svgW  = 1000; $svgH = 200;
       $padL  = 0;    $padR = 0; $padT = 10; $padB = 0;
       $plotW = $svgW; $plotH = $svgH - $padT - $padB;
@@ -90,7 +90,7 @@
             <polyline points="<?= $polyPts ?>" class="spk-line" fill="none"/>
           </svg>
 
-          <!-- HTML dots — perfectly circular regardless of SVG stretch -->
+          <!-- HTML dots - perfectly circular regardless of SVG stretch -->
           <?php foreach ($ptPct as $i => [$xPct, $yPct, $r]): ?>
             <?php $sel = $r['date'] === $selectedDate; ?>
             <a href="?date=<?= esc($r['date']) ?>"

@@ -137,8 +137,8 @@
           <?php foreach ($ignRows as $entry): ?>
           <tr>
             <td class="order-num"><?= esc($entry['number']) ?></td>
-            <td class="text-sm"><?= esc($entry['reason'] ?? '—') ?></td>
-            <td class="text-sm"><?= esc($entry['ignored_at'] ?? '—') ?></td>
+            <td class="text-sm"><?= esc($entry['reason'] ?? '-') ?></td>
+            <td class="text-sm"><?= esc($entry['ignored_at'] ?? '-') ?></td>
             <td>
               <form method="post" style="display:inline">
                 <input type="hidden" name="action" value="unignore_order">

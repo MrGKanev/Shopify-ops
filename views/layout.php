@@ -65,7 +65,7 @@
     </div>
 
     <?php
-      $auditPages  = ['hub-audit', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'orderedits', 'bundlecheck', 'productcheck', 'skudupes'];
+      $auditPages  = ['hub-audit', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'orderedits', 'bundlecheck', 'productcheck', 'skudupes', 'inventoryoversell', 'countrymismatch', 'partialfulfill'];
       $searchPages = ['hub-search', 'spotcheck', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'tracking', 'compare', 'timeline', 'globalsearch', 'packingslip'];
       $managePages = ['ignored', 'pushlog'];
       $groupOf = function(string $p) use ($auditPages, $searchPages, $managePages): string {
@@ -86,6 +86,9 @@
           'orderedits'  => 'Order Edit History',
           'bundlecheck' => 'Bundle Check',
           'productcheck' => 'Product Completeness', 'skudupes' => 'SKU Duplicates',
+          'inventoryoversell' => 'Inventory Oversell Risk',
+          'countrymismatch'   => 'Billing ≠ Shipping Country',
+          'partialfulfill'    => 'Partial Fulfillment Stalls',
           'spotcheck' => 'Spot-check', 'metafields' => 'Metafields',
           'tagsearch' => 'Tag Search', 'tagaudit' => 'Tag Audit',
           'customer' => 'Customer Lookup', 'tracking' => 'Tracking Feed',
@@ -164,11 +167,11 @@
 
   <main class="main">
     <?php
-      $allowedPages = ['hub-audit', 'hub-search', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'orderedits', 'bundlecheck', 'productcheck', 'skudupes', 'spotcheck', 'tracking', 'compare', 'timeline', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'ignored', 'pushlog', 'settings', 'globalsearch', 'packingslip'];
+      $allowedPages = ['hub-audit', 'hub-search', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'orderedits', 'bundlecheck', 'productcheck', 'skudupes', 'inventoryoversell', 'countrymismatch', 'partialfulfill', 'spotcheck', 'tracking', 'compare', 'timeline', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'ignored', 'pushlog', 'settings', 'globalsearch', 'packingslip'];
       $page         = in_array($page, $allowedPages, true) ? $page : 'hub-audit';
       $pageFile     = __DIR__ . '/' . $page . '.php';
 
-      // Breadcrumb — shown on tool pages (not hub or settings)
+      // Breadcrumb - shown on tool pages (not hub or settings)
       if (!in_array($page, $hubPages, true) && $page !== 'settings' && isset($pageTitles[$page])) {
           $hubLink  = $activeGroup === 'search' ? '?page=hub-search' : '?page=hub-audit';
           $hubLabel = $activeGroup === 'search' ? 'Search &amp; Lookup' : 'Audit';

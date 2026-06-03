@@ -1,10 +1,10 @@
 <?= topbar('Email Checker', 'Find orders with invalid, disposable, or suspicious email addresses') ?>
 
 <?= featureInfoStart('emailcheck', 'Email Checker') ?>
-    <p><strong>Email Checker</strong> scans paid Shopify orders in the selected date range and flags those with email addresses that are likely to cause delivery failures — shipping confirmations, tracking updates, and receipts will never reach the customer.</p>
+    <p><strong>Email Checker</strong> scans paid Shopify orders in the selected date range and flags those with email addresses that are likely to cause delivery failures - shipping confirmations, tracking updates, and receipts will never reach the customer.</p>
     <ul>
-      <li><strong>Critical</strong> — missing email, invalid format, or a known disposable/temporary domain (Mailinator, YOPmail, 10MinuteMail, etc.).</li>
-      <li><strong>Warning</strong> — placeholder-looking addresses (test@, noemail@), very short local parts, or suspicious repeated characters.</li>
+      <li><strong>Critical</strong> - missing email, invalid format, or a known disposable/temporary domain (Mailinator, YOPmail, 10MinuteMail, etc.).</li>
+      <li><strong>Warning</strong> - placeholder-looking addresses (test@, noemail@), very short local parts, or suspicious repeated characters.</li>
     </ul>
     <p>Catching these early lets you reach out to the customer via phone or correct the email before the order ships.</p>
 <?= featureInfoEnd() ?>
