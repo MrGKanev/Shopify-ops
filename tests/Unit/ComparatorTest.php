@@ -262,4 +262,133 @@ class ComparatorTest extends TestCase
 
         $this->assertCount(0, $result);
     }
+
+    // ── classifyOrder ─────────────────────────────────────────────────────────
+
+    private function makeLineItem(array $overrides = []): array
+    {
+        return array_merge(['sku' => '', 'title' => '', 'vendor' => ''], $overrides);
+    }
+
+    private function orderWith(array ...$items): array
+    {
+        return ['line_items' => array_map(fn($i) => $this->makeLineItem($i), $items)];
+    }
+
+    public function testClassifyZ1BySkuPrefix(): void
+    {
+        $this->assertSame('Z1', Comparator::classifyOrder($this->orderWith(['sku' => 'zerno-z1-black'])));
+    }
+
+    public function testClassifyZ2BySkuPrefix(): void
+    {
+        $this->assertSame('Z2', Comparator::classifyOrder($this->orderWith(['sku' => 'zerno-z2-silver'])));
+    }
+
+    public function testClassifyBothZ1AndZ2(): void
+    {
+        $order = $this->orderWith(['sku' => 'zerno-z1-black'], ['sku' => 'zerno-z2-silver']);
+        $this->assertSame('Z1 + Z2', Comparator::classifyOrder($order));
+    }
+
+    public function testClassifyFallbackWhenNoMatch(): void
+    {
+        $this->assertSame('Addons', Comparator::classifyOrder($this->orderWith(['sku' => 'grinder-brush'])));
+    }
+
+    public function testClassifyEmptyLineItemsFallback(): void
+    {
+        $this->assertSame('Addons', Comparator::classifyOrder(['line_items' => []]));
+    }
+
+    public function testClassifyIsCaseInsensitive(): void
+    {
+        $this->assertSame('Z1', Comparator::classifyOrder($this->orderWith(['sku' => 'ZERNO-Z1-BLACK'])));
+    }
+
+    // ── findMissingRequired ───────────────────────────────────────────────────
+
+    public function testFindMissingRequiredAllPresent(): void
+    {
+        $order = $this->orderWith(
+            ['sku' => 'zerno-z1-black'],
+            ['title' => 'Accent Piece - Walnut'],
+            ['title' => 'Funnel Cap'],
+            ['sku' => 'ssp-64-steel'],
+        );
+        $this->assertSame([], Comparator::findMissingRequired($order));
+    }
+
+    public function testFindMissingRequiredMissingAccentPiece(): void
+    {
+        $order  = $this->orderWith(['sku' => 'zerno-z1-black'], ['title' => 'Funnel Cap'], ['sku' => 'ssp-64-steel']);
+        $result = Comparator::findMissingRequired($order);
+        $this->assertContains('Accent Piece', $result['Z1']);
+        $this->assertNotContains('Funnel Cap',  $result['Z1']);
+        $this->assertNotContains('Burr Set',    $result['Z1']);
+    }
+
+    public function testFindMissingRequiredMissingFunnelCap(): void
+    {
+        $order  = $this->orderWith(['sku' => 'zerno-z1-black'], ['title' => 'Accent Piece'], ['sku' => 'ssp-64-steel']);
+        $result = Comparator::findMissingRequired($order);
+        $this->assertContains('Funnel Cap', $result['Z1']);
+        $this->assertNotContains('Accent Piece', $result['Z1']);
+    }
+
+    public function testFindMissingRequiredAllMissing(): void
+    {
+        $result = Comparator::findMissingRequired($this->orderWith(['sku' => 'zerno-z1-black']));
+        $this->assertArrayHasKey('Z1', $result);
+        $this->assertCount(3, $result['Z1']);
+        $this->assertSame(['Accent Piece', 'Funnel Cap', 'Burr Set'], $result['Z1']);
+    }
+
+    public function testFindMissingRequiredBurrSetMatchesAnyArrayPrefix(): void
+    {
+        foreach (['ssp-64-steel', 'burrs-80-ti', 'core-light', 'ulf-fine'] as $sku) {
+            $order = $this->orderWith(
+                ['sku' => 'zerno-z1-black'],
+                ['title' => 'Accent Piece'],
+                ['title' => 'Funnel Cap'],
+                ['sku' => $sku],
+            );
+            $this->assertSame([], Comparator::findMissingRequired($order), "Expected no missing with burr SKU: {$sku}");
+        }
+    }
+
+    public function testFindMissingRequiredExcludeIfSkuContainsWarranty(): void
+    {
+        $order = $this->orderWith(['sku' => 'zerno-z1-warranty']);
+        $this->assertSame([], Comparator::findMissingRequired($order));
+    }
+
+    public function testFindMissingRequiredExcludeIfTitleContainsWarranty(): void
+    {
+        $order = $this->orderWith(['sku' => 'zerno-z1-black', 'title' => 'Warranty Extension']);
+        $this->assertSame([], Comparator::findMissingRequired($order));
+    }
+
+    public function testFindMissingRequiredNonZ1Z2ReturnsEmpty(): void
+    {
+        $this->assertSame([], Comparator::findMissingRequired($this->orderWith(['sku' => 'grinder-brush'])));
+    }
+
+    public function testFindMissingRequiredZ2MissingAll(): void
+    {
+        $result = Comparator::findMissingRequired($this->orderWith(['sku' => 'zerno-z2-white']));
+        $this->assertArrayHasKey('Z2', $result);
+        $this->assertCount(3, $result['Z2']);
+    }
+
+    public function testFindMissingRequiredZ2AllPresent(): void
+    {
+        $order = $this->orderWith(
+            ['sku' => 'zerno-z2-white'],
+            ['title' => 'Accent Piece'],
+            ['title' => 'Funnel Cap'],
+            ['sku' => 'ssp-64-steel'],
+        );
+        $this->assertSame([], Comparator::findMissingRequired($order));
+    }
 }

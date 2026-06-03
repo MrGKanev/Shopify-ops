@@ -103,7 +103,7 @@ class IgnoreList
         $entries = [];
 
         if (($fh = fopen($tmpPath, 'r')) !== false) {
-            $first = fgetcsv($fh);
+            $first = fgetcsv($fh, escape: '\\');
             if ($first) {
                 $firstCell = ltrim(trim((string) ($first[0] ?? '')), '#');
                 if (preg_match('/^\d+$/', $firstCell)) {
@@ -111,7 +111,7 @@ class IgnoreList
                     $count++;
                 }
             }
-            while (($row = fgetcsv($fh)) !== false) {
+            while (($row = fgetcsv($fh, escape: '\\')) !== false) {
                 $cell = ltrim(trim((string) ($row[0] ?? '')), '#');
                 if ($cell) {
                     $entries[] = ['number' => $cell, 'reason' => $reason];
