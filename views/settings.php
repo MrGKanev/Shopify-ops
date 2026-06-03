@@ -95,7 +95,18 @@
           'SHOPIFY_ACCESS_TOKEN' => getenv('SHOPIFY_ACCESS_TOKEN') ? '••••••••' : 'Not set',
           'SS_API_KEY'           => getenv('SS_API_KEY')    ? '••••••••' : 'Not set',
           'SS_API_SECRET'        => getenv('SS_API_SECRET') ? '••••••••' : 'Not set',
-          'CACHE_TTL'            => (getenv('CACHE_TTL') ?: '14400') . ' s',
+          'CACHE_TTL'            => (function() {
+              $s = (int)(getenv('CACHE_TTL') ?: 82800);
+              if ($s >= 86400) return round($s / 86400, 1) . ' days (' . $s . ' s)';
+              if ($s >= 3600)  return round($s / 3600, 1)  . ' h ('    . $s . ' s)';
+              return $s . ' s';
+          })(),
+          'CACHE_RETENTION'      => (function() {
+              $s = (int)(getenv('CACHE_RETENTION') ?: 1209600);
+              if ($s >= 86400) return round($s / 86400, 1) . ' days (' . $s . ' s)';
+              if ($s >= 3600)  return round($s / 3600, 1)  . ' h ('    . $s . ' s)';
+              return $s . ' s';
+          })(),
           'WEB_PASSWORD'         => getenv('WEB_PASSWORD')  ? '••••••••' : 'Not set',
         ];
         foreach ($configKeys as $k => $v):

@@ -50,7 +50,7 @@ if ($spotCheckNumbers) {
 echo "\n";
 
 try {
-    $cacheTtl = (int) (getenv('CACHE_TTL') ?: 14400); // default 4 h
+    $cacheTtl = (int) (getenv('CACHE_TTL') ?: 82800); // default 23 h
     $cache    = new Cache(__DIR__ . '/cache', $cacheTtl);
 
     $ss      = new ShipStation($ssKey, $ssSecret, $cache);
