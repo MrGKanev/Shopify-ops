@@ -300,17 +300,33 @@ class Comparator
 
     // ── Private helpers ───────────────────────────────────────────────
 
-    /** Loads order_types.json once per process. */
+    private static ?array $loadedConfig   = null;
+    private static ?array $overrideConfig = null;
+
+    /** Loads order_types.json once per process (or returns test override). */
     public static function getOrderTypesConfig(): array
     {
-        static $config = null;
-        if ($config === null) {
-            $file   = __DIR__ . '/../order_types.json';
-            $config = file_exists($file)
+        if (self::$overrideConfig !== null) {
+            return self::$overrideConfig;
+        }
+        if (self::$loadedConfig === null) {
+            $file = __DIR__ . '/../order_types.json';
+            self::$loadedConfig = file_exists($file)
                 ? (json_decode(file_get_contents($file), true) ?: [])
                 : [];
         }
-        return $config;
+        return self::$loadedConfig;
+    }
+
+    /** Inject config for tests — call resetOrderTypesConfig() in tearDown. */
+    public static function setOrderTypesConfig(array $config): void
+    {
+        self::$overrideConfig = $config;
+    }
+
+    public static function resetOrderTypesConfig(): void
+    {
+        self::$overrideConfig = null;
     }
 
     /** Tests whether a single line item matches a rule's match type and value. */
