@@ -19,21 +19,12 @@
 
   <form method="post">
     <input type="hidden" name="action" value="scan_partial_fulfill">
-    <div class="date-row">
-      <div class="field">
-        <label>From</label>
-        <input type="date" name="pf_start" value="<?= esc($pfStart) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <div class="field">
-        <label>To</label>
-        <input type="date" name="pf_end" value="<?= esc($pfEnd) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <div class="field">
-        <label>Stalled &ge; (days)</label>
-        <input type="number" name="pf_threshold" value="<?= (int)$pfThreshold ?>" min="1" style="width:80px">
-      </div>
-      <button class="btn btn-submit-end" type="submit">Scan</button>
-    </div>
+    <?php
+$partialStartName = 'pf_start'; $partialStartVal = $pfStart;
+$partialEndName   = 'pf_end';   $partialEndVal   = $pfEnd;
+$partialExtraHtml = '<div class="field"><label>Stalled &ge; (days)</label><input type="number" name="pf_threshold" value="' . (int)$pfThreshold . '" min="1" style="width:80px"></div>';
+require __DIR__ . '/partials/_date-range.php';
+?>
   </form>
 
   <?php if ($pfResult !== null): ?>

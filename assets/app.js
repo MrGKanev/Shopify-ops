@@ -98,7 +98,7 @@ document.querySelectorAll('.js-localtime').forEach(function(el) {
   });
 })();
 
-// ── Audit preset buttons ──────────────────────────────────────────────────────
+// ── Date range preset buttons ─────────────────────────────────────────────────
 (function() {
   document.querySelectorAll('.preset-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
@@ -111,11 +111,14 @@ document.querySelectorAll('.js-localtime').forEach(function(el) {
           String(d.getMonth() + 1).padStart(2, '0') + '-' +
           String(d.getDate()).padStart(2, '0');
       };
-      var s = document.getElementById('js-audit-start');
-      var e = document.getElementById('js-audit-end');
+      var form   = this.closest('form');
+      var inputs = form ? Array.from(form.querySelectorAll('input[type=date]')) : [];
+      var s = inputs[0] || null;
+      var e = inputs[1] || null;
       if (s) s.value = fmt(start);
       if (e) e.value = fmt(end);
-      document.querySelectorAll('.preset-btn').forEach(function(b) { b.classList.remove('preset-btn-active'); });
+      var row = this.closest('.preset-row');
+      if (row) row.querySelectorAll('.preset-btn').forEach(function(b) { b.classList.remove('preset-btn-active'); });
       this.classList.add('preset-btn-active');
     });
   });

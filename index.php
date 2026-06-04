@@ -75,11 +75,12 @@ if (Stores::isMultiStore()) {
     $allStores      = [];
 }
 
-$webUsername = getenv('WEB_USERNAME') ?: 'admin';
-$webPassword = getenv('WEB_PASSWORD') ?: 'changeme';
-$appTitle    = getenv('APP_TITLE')    ?: 'Shopify Ops';
-$appBrand    = getenv('APP_BRAND')    ?: 'Shopify Ops';
-$appLogo     = getenv('APP_LOGO')     ?: '';
+$webUsername   = getenv('WEB_USERNAME') ?: 'admin';
+$webPassword   = getenv('WEB_PASSWORD') ?: 'changeme';
+$_appTitleEnv  = getenv('APP_TITLE') ?: '';
+$appTitle      = $_appTitleEnv ? "{$_appTitleEnv} - Shopify OPS" : 'Shopify OPS';
+$appBrand      = $_appTitleEnv ?: 'Shopify OPS';
+$appLogo       = getenv('APP_LOGO') ?: '';
 $cacheTtl       = (int) (getenv('CACHE_TTL')           ?: 82800);   // data validity, default 23 h
 $cacheRetention = (int) (getenv('CACHE_RETENTION')    ?: 1209600); // keep on disk after expiry, default 2 weeks
 

@@ -15,21 +15,12 @@
 
   <form method="post">
     <input type="hidden" name="action" value="scan_repeat_refunds">
-    <div class="date-row">
-      <div class="field">
-        <label>From</label>
-        <input type="date" name="rr_start" value="<?= esc($rrStart) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <div class="field">
-        <label>To</label>
-        <input type="date" name="rr_end" value="<?= esc($rrEnd) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <div class="field">
-        <label>Min refund count</label>
-        <input type="number" name="rr_min_count" value="<?= (int)$rrMinCount ?>" min="2" style="width:80px">
-      </div>
-      <button class="btn btn-submit-end" type="submit">Scan</button>
-    </div>
+    <?php
+$partialStartName = 'rr_start'; $partialStartVal = $rrStart;
+$partialEndName   = 'rr_end';   $partialEndVal   = $rrEnd;
+$partialExtraHtml = '<div class="field"><label>Min refund count</label><input type="number" name="rr_min_count" value="' . (int)$rrMinCount . '" min="2" style="width:80px"></div>';
+require __DIR__ . '/partials/_date-range.php';
+?>
   </form>
 
   <?php if ($rrResult !== null): ?>

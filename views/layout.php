@@ -154,7 +154,7 @@
       <div class="sidebar-footer-row">
         <a href="https://github.com/MrGKanev/Shopify-ops"
            class="sidebar-github" target="_blank" rel="noopener" title="View on GitHub">
-          Shopify Ops v1.3.0
+          Shopify Ops v1.4.0
         </a>
         <button class="sidebar-collapse-btn" id="js-sidebar-collapse" title="Collapse sidebar" type="button">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -171,14 +171,37 @@
       $page         = in_array($page, $allowedPages, true) ? $page : 'hub-audit';
       $pageFile     = __DIR__ . '/' . $page . '.php';
 
-      // Breadcrumb - shown on tool pages (not hub or settings)
-      if (!in_array($page, $hubPages, true) && $page !== 'settings' && isset($pageTitles[$page])) {
-          $hubLink  = $activeGroup === 'search' ? '?page=hub-search' : '?page=hub-audit';
-          $hubLabel = $activeGroup === 'search' ? 'Search &amp; Lookup' : 'Audit';
-          if ($activeGroup === 'manage') { $hubLink = '?page=ignored'; $hubLabel = 'Manage'; }
-          echo '<div class="breadcrumb"><a href="' . $hubLink . '">' . $hubLabel . '</a>'
-             . '<span class="breadcrumb-sep">›</span>'
-             . '<span>' . esc($pageTitles[$page]) . '</span></div>';
+      // Breadcrumb
+      /** @var string $appBrand */
+      $groupMeta = [
+          'audit'    => ['label' => 'Audit',            'href' => '?page=hub-audit'],
+          'search'   => ['label' => 'Search &amp; Lookup', 'href' => '?page=hub-search'],
+          'manage'   => ['label' => 'Manage',           'href' => '?page=ignored'],
+          'settings' => ['label' => 'Settings',         'href' => '?page=settings'],
+      ];
+      $crumbs   = [];
+      $crumbs[] = ['href' => '?page=hub-audit', 'label' => esc($appBrand)];
+      if ($page === 'hub-audit') {
+          // home — no extra crumb needed
+      } elseif ($page === 'hub-search') {
+          $crumbs[] = ['label' => 'Search &amp; Lookup'];
+      } elseif ($page === 'settings') {
+          $crumbs[] = ['label' => 'Settings'];
+      } else {
+          $gm = $groupMeta[$activeGroup] ?? $groupMeta['audit'];
+          $crumbs[] = ['href' => $gm['href'], 'label' => $gm['label']];
+          $crumbs[] = ['label' => esc($pageTitles[$page] ?? $page)];
+      }
+      if (count($crumbs) > 1) {
+          $bc = '<nav class="breadcrumb" aria-label="Breadcrumb">';
+          foreach ($crumbs as $i => $c) {
+              if ($i > 0) $bc .= '<span class="breadcrumb-sep">›</span>';
+              $bc .= isset($c['href'])
+                  ? '<a href="' . $c['href'] . '">' . $c['label'] . '</a>'
+                  : '<span class="breadcrumb-current">' . $c['label'] . '</span>';
+          }
+          $bc .= '</nav>';
+          echo $bc;
       }
 
       if (file_exists($pageFile)) {

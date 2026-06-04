@@ -15,21 +15,12 @@
 
   <form method="post">
     <input type="hidden" name="action" value="scan_hvorders">
-    <div class="date-row">
-      <div class="field">
-        <label>From</label>
-        <input type="date" name="hv_start" value="<?= esc($hvStart) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <div class="field">
-        <label>To</label>
-        <input type="date" name="hv_end" value="<?= esc($hvEnd) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <div class="field">
-        <label>Min order value $</label>
-        <input type="number" name="hv_min" value="<?= (int)$hvMin ?>" min="0" step="10" style="width:100px">
-      </div>
-      <button class="btn btn-submit-end" type="submit">Scan</button>
-    </div>
+    <?php
+$partialStartName = 'hv_start'; $partialStartVal = $hvStart;
+$partialEndName   = 'hv_end';   $partialEndVal   = $hvEnd;
+$partialExtraHtml = '<div class="field"><label>Min order value $</label><input type="number" name="hv_min" value="' . (int)$hvMin . '" min="0" step="10" style="width:100px"></div>';
+require __DIR__ . '/partials/_date-range.php';
+?>
   </form>
 
   <?php if ($hvResult !== null): ?>
