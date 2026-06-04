@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * Optional multi-store support.
  * When stores.json exists in the project root, multi-store mode is active.

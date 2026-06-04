@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * Handles all POST actions that terminate with a redirect or direct output.
  * Call Actions::dispatch() early in index.php; it exits if the action was handled.

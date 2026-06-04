@@ -4,6 +4,7 @@ declare(strict_types=1);
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
 require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/src/Logger.php';
 require_once __DIR__ . '/src/Auth.php';
 require_once __DIR__ . '/src/Stores.php';
 require_once __DIR__ . '/src/IgnoreList.php';
@@ -19,6 +20,29 @@ require_once __DIR__ . '/src/PageLoader.php';
 
 Dotenv\Dotenv::createUnsafeImmutable(__DIR__)->safeLoad();
 Stores::init(__DIR__);
+
+$log = Logger::getInstance(__DIR__ . '/logs');
+
+set_exception_handler(function (\Throwable $e) use ($log): void {
+    $log->error('Uncaught {class}: {message}', [
+        'class'     => get_class($e),
+        'message'   => $e->getMessage(),
+        'exception' => $e->getFile() . ':' . $e->getLine(),
+    ]);
+    http_response_code(500);
+    echo '<h1>Something went wrong.</h1>';
+    exit(1);
+});
+
+set_error_handler(function (int $severity, string $message, string $file, int $line) use ($log): bool {
+    if (!($severity & error_reporting())) return false;
+    $log->warning('PHP error [{severity}]: {message}', [
+        'severity' => $severity,
+        'message'  => $message,
+        'exception' => $file . ':' . $line,
+    ]);
+    return false;
+});
 
 // ── Session / auth ────────────────────────────────────────────────────────────
 
@@ -81,6 +105,7 @@ $_appTitleEnv  = getenv('APP_TITLE') ?: '';
 $appTitle      = $_appTitleEnv ? "{$_appTitleEnv} - Shopify OPS" : 'Shopify OPS';
 $appBrand      = $_appTitleEnv ?: 'Shopify OPS';
 $appLogo       = getenv('APP_LOGO') ?: '';
+$appVersion    = json_decode((string) file_get_contents(__DIR__ . '/composer.json'), true)['version'] ?? 'dev';
 $cacheTtl       = (int) (getenv('CACHE_TTL')           ?: 82800);   // data validity, default 23 h
 $cacheRetention = (int) (getenv('CACHE_RETENTION')    ?: 1209600); // keep on disk after expiry, default 2 weeks
 
@@ -105,7 +130,7 @@ if ($authed) {
 // ── Dispatch early-exit actions ───────────────────────────────────────────────
 
 $ctx = compact('authed', 'action', 'ssKey', 'ssSecret', 'shopifyToken', 'shopifyStore',
-               'cacheObj', 'cacheTtl', 'reportDir', 'ignoredOrders');
+               'cacheObj', 'cacheTtl', 'reportDir', 'ignoredOrders', 'appVersion');
 
 Actions::dispatch($action, $ctx);
 
@@ -113,7 +138,7 @@ Actions::dispatch($action, $ctx);
 
 $page = $_GET['page'] ?? 'reports';
 
-extract(PageLoader::load($page, $action, $ctx));
+extract(PageLoader::load($page, $action, $ctx), EXTR_SKIP);
 
 // ── Render ────────────────────────────────────────────────────────────────────
 
