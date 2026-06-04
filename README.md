@@ -9,7 +9,7 @@ A self-hosted Shopify operations toolkit. Audits and surfaces Shopify order issu
 ## Tools
 
 | Page | What it does |
-|---|---|
+| --- | --- |
 | **Reports** | Browse historical ShipStation sync reports. Click any date in the sidebar to load that report. Download as CSV. |
 | **Run Audit** | Compare every paid Shopify order against ShipStation for any date range. Flags genuinely missing orders and surfaces potential duplicate purchases. |
 | **Trends** | Aggregated stats across all reports: average missing count, worst day, repeat offenders. Includes a full history chart and bulk-ignore table. |
@@ -98,5 +98,7 @@ Exit codes: `0` = all clear, `1` = missing orders found, `2` = script error.
 ## Further reading
 
 - [Audit engine — how it works, skip rules, duplicate detection](docs/audit.md)
+- [Audit checks — address, email, fraud, product, inventory checks](docs/audit-checks.md)
+- [Search & Lookup — spot-check, timeline, metafields, tags, customer](docs/search-lookup.md)
 - [Order type classification — rules, JSON config, required items](docs/order-types.md)
 - [Configuration — all ENV vars, caching, security](docs/configuration.md)

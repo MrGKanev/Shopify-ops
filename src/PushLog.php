@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * Append-only log for orders pushed from Shopify to ShipStation.
  */

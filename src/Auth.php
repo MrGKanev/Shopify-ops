@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * Authentication helpers: login brute-force protection, logout, ban management.
  */

@@ -154,7 +154,7 @@
       <div class="sidebar-footer-row">
         <a href="https://github.com/MrGKanev/Shopify-ops"
            class="sidebar-github" target="_blank" rel="noopener" title="View on GitHub">
-          Shopify Ops v1.4.0
+          Shopify Ops v<?= esc($appVersion) ?>
         </a>
         <button class="sidebar-collapse-btn" id="js-sidebar-collapse" title="Collapse sidebar" type="button">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -182,7 +182,7 @@
       $crumbs   = [];
       $crumbs[] = ['href' => '?page=hub-audit', 'label' => esc($appBrand)];
       if ($page === 'hub-audit') {
-          // home — no extra crumb needed
+          $crumbs[] = ['label' => 'Audit'];
       } elseif ($page === 'hub-search') {
           $crumbs[] = ['label' => 'Search &amp; Lookup'];
       } elseif ($page === 'settings') {
