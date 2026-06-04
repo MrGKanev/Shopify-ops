@@ -8,40 +8,9 @@ A self-hosted Shopify operations toolkit. Audits and surfaces Shopify order issu
 
 ## Tools
 
-| Page | What it does |
-| --- | --- |
-| **Reports** | Browse historical ShipStation sync reports. Click any date in the sidebar to load that report. Download as CSV. |
-| **Run Audit** | Compare every paid Shopify order against ShipStation for any date range. Flags genuinely missing orders and surfaces potential duplicate purchases. |
-| **Trends** | Aggregated stats across all reports: average missing count, worst day, repeat offenders. Includes a full history chart and bulk-ignore table. |
-| **Duplicate Detector** | Scan for potential duplicate purchases (same email + amount within 24 h). |
-| **Refunds Tracker** | Track refunded orders across a date range. |
-| **Address Scanner** | Flag orders with potentially undeliverable or mismatched shipping addresses. |
-| **Email Checker** | Scan for orders with missing or invalid customer emails. |
-| **Orphan Detector** | Find Shopify orders that have no matching ShipStation record and are not skipped by any rule. |
-| **High-Value No Phone** | Surface high-value orders missing a phone number. |
-| **Repeat Refunds** | Identify customers with multiple refunds. |
-| **Voided Shipments** | Orders where a shipment was voided/cancelled after creation. |
-| **Address Changes** | Orders where the shipping address was edited after placement. |
-| **Order Edit History** | Full edit history for a given order. |
-| **Bundle Check** | Validate that bundle orders contain all expected line items. |
-| **Product Completeness** | Flag products missing images, descriptions, or other required fields. |
-| **SKU Duplicates** | Detect products sharing the same SKU across the catalogue. |
-| **Inventory Oversell Risk** | Surface variants at risk of overselling based on current stock. |
-| **Billing ≠ Shipping Country** | Flag orders where billing and shipping countries differ. |
-| **Partial Fulfillment Stalls** | Orders partially fulfilled but with no further activity. |
-| **Spot-check** | Look up one or more specific order numbers live in ShipStation and/or Shopify. |
-| **Metafields** | Browse order metafield definitions. Search orders by metafield value. Look up all metafields on a specific order. |
-| **Tag Search** | Find all Shopify orders with a specific tag - fast, native index, no full scan needed. |
-| **Tag Audit** | Audit tag usage across orders. |
-| **Customer Lookup** | Look up a customer and their full order history. |
-| **Tracking Feed** | Live tracking status for recent shipments. |
-| **Order Compare** | Side-by-side comparison of two orders. |
-| **Order Timeline** | Visual timeline of all events on a given order. |
-| **Global Search** | Search across orders by number, email, or name. |
-| **Packing Slip Preview** | Generate a packing slip preview for any order. |
-| **Ignored** | View and manage all ignored orders. Bulk-unignore with checkboxes. Import via CSV. |
-| **Push Log** | Full history of every order pushed to ShipStation from the dashboard. |
-| **Settings** | Test API connectivity, view current `.env` config, manage banned IPs. |
+- **Audit** — Run Audit, Reports, Trends, duplicate/refund/address/email/fraud/product/inventory checks → [full list](docs/tools.md#audit)
+- **Search & Lookup** — Spot-check, Order Timeline, Metafields, Tag Search, Customer Lookup, Tracking, Packing Slip → [full list](docs/tools.md#search--lookup)
+- **Manage** — Ignored Orders, Push Log, Settings → [full list](docs/tools.md#manage)
 
 ---
 

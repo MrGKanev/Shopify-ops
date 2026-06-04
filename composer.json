@@ -1,5 +1,5 @@
 {
-    "name": "gabrielkanev/shipstation-shopify-checker",
+    "name": "mrgkanev/shipstation-shopify-checker",
     "description": "Shopify ↔ ShipStation order audit dashboard",
     "version": "1.4.1",
     "type": "project",
