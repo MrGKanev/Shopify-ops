@@ -5,6 +5,48 @@ use PHPUnit\Framework\TestCase;
 
 class ComparatorTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        Comparator::setOrderTypesConfig([
+            'fallback' => 'Addons',
+            'rules'    => [
+                [
+                    'name'       => 'TypeA',
+                    'match'      => 'sku_starts_with',
+                    'value'      => 'widget-a-',
+                    'exclude_if' => [
+                        ['match' => 'sku_contains',   'value' => 'warranty'],
+                        ['match' => 'title_contains', 'value' => 'warranty'],
+                    ],
+                    'required_items' => [
+                        ['label' => 'Part X', 'match' => 'title_contains',  'value' => 'part x'],
+                        ['label' => 'Part Y', 'match' => 'title_contains',  'value' => 'part y'],
+                        ['label' => 'Part Z', 'match' => 'sku_starts_with', 'value' => ['cmp-', 'cmp2-', 'cmp3-', 'cmp4-']],
+                    ],
+                ],
+                [
+                    'name'       => 'TypeB',
+                    'match'      => 'sku_starts_with',
+                    'value'      => 'widget-b-',
+                    'exclude_if' => [
+                        ['match' => 'sku_contains',   'value' => 'warranty'],
+                        ['match' => 'title_contains', 'value' => 'warranty'],
+                    ],
+                    'required_items' => [
+                        ['label' => 'Part X', 'match' => 'title_contains',  'value' => 'part x'],
+                        ['label' => 'Part Y', 'match' => 'title_contains',  'value' => 'part y'],
+                        ['label' => 'Part Z', 'match' => 'sku_starts_with', 'value' => ['cmp-', 'cmp2-', 'cmp3-', 'cmp4-']],
+                    ],
+                ],
+            ],
+        ]);
+    }
+
+    protected function tearDown(): void
+    {
+        Comparator::resetOrderTypesConfig();
+    }
+
     // ── normalise ─────────────────────────────────────────────────────────────
 
     public function testNormaliseStripsHash(): void
@@ -275,25 +317,25 @@ class ComparatorTest extends TestCase
         return ['line_items' => array_map(fn($i) => $this->makeLineItem($i), $items)];
     }
 
-    public function testClassifyZ1BySkuPrefix(): void
+    public function testClassifyTypeABySkuPrefix(): void
     {
-        $this->assertSame('Z1', Comparator::classifyOrder($this->orderWith(['sku' => 'zerno-z1-black'])));
+        $this->assertSame('TypeA', Comparator::classifyOrder($this->orderWith(['sku' => 'widget-a-red'])));
     }
 
-    public function testClassifyZ2BySkuPrefix(): void
+    public function testClassifyTypeBBySkuPrefix(): void
     {
-        $this->assertSame('Z2', Comparator::classifyOrder($this->orderWith(['sku' => 'zerno-z2-silver'])));
+        $this->assertSame('TypeB', Comparator::classifyOrder($this->orderWith(['sku' => 'widget-b-blue'])));
     }
 
-    public function testClassifyBothZ1AndZ2(): void
+    public function testClassifyBothTypesInOneOrder(): void
     {
-        $order = $this->orderWith(['sku' => 'zerno-z1-black'], ['sku' => 'zerno-z2-silver']);
-        $this->assertSame('Z1 + Z2', Comparator::classifyOrder($order));
+        $order = $this->orderWith(['sku' => 'widget-a-red'], ['sku' => 'widget-b-blue']);
+        $this->assertSame('TypeA + TypeB', Comparator::classifyOrder($order));
     }
 
     public function testClassifyFallbackWhenNoMatch(): void
     {
-        $this->assertSame('Addons', Comparator::classifyOrder($this->orderWith(['sku' => 'grinder-brush'])));
+        $this->assertSame('Addons', Comparator::classifyOrder($this->orderWith(['sku' => 'other-sku'])));
     }
 
     public function testClassifyEmptyLineItemsFallback(): void
@@ -303,7 +345,7 @@ class ComparatorTest extends TestCase
 
     public function testClassifyIsCaseInsensitive(): void
     {
-        $this->assertSame('Z1', Comparator::classifyOrder($this->orderWith(['sku' => 'ZERNO-Z1-BLACK'])));
+        $this->assertSame('TypeA', Comparator::classifyOrder($this->orderWith(['sku' => 'WIDGET-A-RED'])));
     }
 
     // ── findMissingRequired ───────────────────────────────────────────────────
@@ -311,83 +353,83 @@ class ComparatorTest extends TestCase
     public function testFindMissingRequiredAllPresent(): void
     {
         $order = $this->orderWith(
-            ['sku' => 'zerno-z1-black'],
-            ['title' => 'Accent Piece - Walnut'],
-            ['title' => 'Funnel Cap'],
-            ['sku' => 'ssp-64-steel'],
+            ['sku' => 'widget-a-red'],
+            ['title' => 'Part X - Premium'],
+            ['title' => 'Part Y'],
+            ['sku' => 'cmp-64-steel'],
         );
         $this->assertSame([], Comparator::findMissingRequired($order));
     }
 
-    public function testFindMissingRequiredMissingAccentPiece(): void
+    public function testFindMissingRequiredMissingPartX(): void
     {
-        $order  = $this->orderWith(['sku' => 'zerno-z1-black'], ['title' => 'Funnel Cap'], ['sku' => 'ssp-64-steel']);
+        $order  = $this->orderWith(['sku' => 'widget-a-red'], ['title' => 'Part Y'], ['sku' => 'cmp-64-steel']);
         $result = Comparator::findMissingRequired($order);
-        $this->assertContains('Accent Piece', $result['Z1']);
-        $this->assertNotContains('Funnel Cap',  $result['Z1']);
-        $this->assertNotContains('Burr Set',    $result['Z1']);
+        $this->assertContains('Part X', $result['TypeA']);
+        $this->assertNotContains('Part Y', $result['TypeA']);
+        $this->assertNotContains('Part Z', $result['TypeA']);
     }
 
-    public function testFindMissingRequiredMissingFunnelCap(): void
+    public function testFindMissingRequiredMissingPartY(): void
     {
-        $order  = $this->orderWith(['sku' => 'zerno-z1-black'], ['title' => 'Accent Piece'], ['sku' => 'ssp-64-steel']);
+        $order  = $this->orderWith(['sku' => 'widget-a-red'], ['title' => 'Part X'], ['sku' => 'cmp-64-steel']);
         $result = Comparator::findMissingRequired($order);
-        $this->assertContains('Funnel Cap', $result['Z1']);
-        $this->assertNotContains('Accent Piece', $result['Z1']);
+        $this->assertContains('Part Y', $result['TypeA']);
+        $this->assertNotContains('Part X', $result['TypeA']);
     }
 
     public function testFindMissingRequiredAllMissing(): void
     {
-        $result = Comparator::findMissingRequired($this->orderWith(['sku' => 'zerno-z1-black']));
-        $this->assertArrayHasKey('Z1', $result);
-        $this->assertCount(3, $result['Z1']);
-        $this->assertSame(['Accent Piece', 'Funnel Cap', 'Burr Set'], $result['Z1']);
+        $result = Comparator::findMissingRequired($this->orderWith(['sku' => 'widget-a-red']));
+        $this->assertArrayHasKey('TypeA', $result);
+        $this->assertCount(3, $result['TypeA']);
+        $this->assertSame(['Part X', 'Part Y', 'Part Z'], $result['TypeA']);
     }
 
-    public function testFindMissingRequiredBurrSetMatchesAnyArrayPrefix(): void
+    public function testFindMissingRequiredPartZMatchesAnyArrayPrefix(): void
     {
-        foreach (['ssp-64-steel', 'burrs-80-ti', 'core-light', 'ulf-fine'] as $sku) {
+        foreach (['cmp-64-steel', 'cmp2-80-ti', 'cmp3-light', 'cmp4-fine'] as $sku) {
             $order = $this->orderWith(
-                ['sku' => 'zerno-z1-black'],
-                ['title' => 'Accent Piece'],
-                ['title' => 'Funnel Cap'],
+                ['sku' => 'widget-a-red'],
+                ['title' => 'Part X'],
+                ['title' => 'Part Y'],
                 ['sku' => $sku],
             );
-            $this->assertSame([], Comparator::findMissingRequired($order), "Expected no missing with burr SKU: {$sku}");
+            $this->assertSame([], Comparator::findMissingRequired($order), "Expected no missing with component SKU: {$sku}");
         }
     }
 
     public function testFindMissingRequiredExcludeIfSkuContainsWarranty(): void
     {
-        $order = $this->orderWith(['sku' => 'zerno-z1-warranty']);
+        $order = $this->orderWith(['sku' => 'widget-a-warranty']);
         $this->assertSame([], Comparator::findMissingRequired($order));
     }
 
     public function testFindMissingRequiredExcludeIfTitleContainsWarranty(): void
     {
-        $order = $this->orderWith(['sku' => 'zerno-z1-black', 'title' => 'Warranty Extension']);
+        $order = $this->orderWith(['sku' => 'widget-a-red', 'title' => 'Warranty Extension']);
         $this->assertSame([], Comparator::findMissingRequired($order));
     }
 
-    public function testFindMissingRequiredNonZ1Z2ReturnsEmpty(): void
+    public function testFindMissingRequiredUnmatchedTypeReturnsEmpty(): void
     {
-        $this->assertSame([], Comparator::findMissingRequired($this->orderWith(['sku' => 'grinder-brush'])));
+        $this->assertSame([], Comparator::findMissingRequired($this->orderWith(['sku' => 'other-sku'])));
     }
 
-    public function testFindMissingRequiredZ2MissingAll(): void
+    public function testFindMissingRequiredTypeBAllMissing(): void
     {
-        $result = Comparator::findMissingRequired($this->orderWith(['sku' => 'zerno-z2-white']));
-        $this->assertArrayHasKey('Z2', $result);
-        $this->assertCount(3, $result['Z2']);
+        $result = Comparator::findMissingRequired($this->orderWith(['sku' => 'widget-b-blue']));
+        $this->assertArrayHasKey('TypeB', $result);
+        $this->assertCount(3, $result['TypeB']);
     }
 
-    public function testFindMissingRequiredZ2AllPresent(): void
+    public function testFindMissingRequiredTypeBAllPresent(): void
     {
         $order = $this->orderWith(
-            ['sku' => 'zerno-z2-white'],
-            ['title' => 'Accent Piece'],
-            ['title' => 'Funnel Cap'],
-            ['sku' => 'ssp-64-steel'],
+            ['sku' => 'widget-b-blue'],
+            ['title' => 'Part X'],
+            ['title' => 'Part Y'],
+            ['sku' => 'cmp-64-steel'],
         );
         $this->assertSame([], Comparator::findMissingRequired($order));
     }
