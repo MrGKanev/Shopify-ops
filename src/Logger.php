@@ -22,12 +22,17 @@ class Logger extends AbstractLogger
         $this->maxBytes = $maxBytes;
     }
 
-    public static function getInstance(string $logDir = ''): self
+    public static function getInstance(string $logDir = '', int $maxBytes = 10_485_760): self
     {
         if (self::$instance === null) {
-            self::$instance = new self($logDir ?: __DIR__ . '/../logs');
+            self::$instance = new self($logDir ?: __DIR__ . '/../logs', $maxBytes);
         }
         return self::$instance;
+    }
+
+    public static function resetInstance(): void
+    {
+        self::$instance = null;
     }
 
     public function log(mixed $level, \Stringable|string $message, array $context = []): void
