@@ -21,17 +21,11 @@
 
   <form method="post">
     <input type="hidden" name="action" value="tag_audit">
-    <div class="date-row">
-      <div class="field">
-        <label>From</label>
-        <input type="date" name="ta_start" value="<?= esc($taStart) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <div class="field">
-        <label>To</label>
-        <input type="date" name="ta_end" value="<?= esc($taEnd) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <button class="btn btn-submit-end" type="submit">Scan</button>
-    </div>
+    <?php
+$partialStartName = 'ta_start'; $partialStartVal = $taStart;
+$partialEndName   = 'ta_end';   $partialEndVal   = $taEnd;
+require __DIR__ . '/partials/_date-range.php';
+?>
   </form>
 
   <?php if ($tagAuditResult !== null): ?>

@@ -123,3 +123,20 @@ function renderMetafieldValue(string $value): string
     }
     return esc($value);
 }
+
+function datePresets(): string
+{
+    $presets = [
+        7   => '1 week',
+        21  => '3 weeks',
+        30  => '1 month',
+        90  => '3 months',
+        180 => '6 months',
+        365 => '1 year',
+    ];
+    $html = '<div class="preset-row"><span class="preset-label">Quick select:</span>';
+    foreach ($presets as $days => $label) {
+        $html .= '<button class="preset-btn" type="button" data-days="' . $days . '">' . $label . '</button>';
+    }
+    return $html . '</div>';
+}

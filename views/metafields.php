@@ -92,24 +92,15 @@
                placeholder="exact or partial value">
       </div>
     </div>
-    <div class="date-row">
-      <div class="field">
-        <label>From <span class="label-opt">(optional)</span></label>
-        <input type="date" name="mf_start"
-               value="<?= esc($metafieldSearch['start'] ?? '') ?>"
-               max="<?= date('Y-m-d') ?>">
-      </div>
-      <div class="field">
-        <label>To <span class="label-opt">(optional)</span></label>
-        <input type="date" name="mf_end"
-               value="<?= esc($metafieldSearch['end'] ?? '') ?>"
-               max="<?= date('Y-m-d') ?>">
-      </div>
-      <div class="mf-hint">
-        No date range - scans the most recent 2,500 orders.
-      </div>
-      <button class="btn btn-submit-end" type="submit">Search</button>
-    </div>
+    <?php
+$partialStartName  = 'mf_start'; $partialStartVal = $metafieldSearch['start'] ?? '';
+$partialEndName    = 'mf_end';   $partialEndVal   = $metafieldSearch['end']   ?? '';
+$partialFromLabel  = 'From <span class="label-opt">(optional)</span>';
+$partialToLabel    = 'To <span class="label-opt">(optional)</span>';
+$partialExtraHtml  = '<div class="mf-hint">No date range - scans the most recent 2,500 orders.</div>';
+$partialSubmitLabel = 'Search';
+require __DIR__ . '/partials/_date-range.php';
+?>
   </form>
 
   <?php if ($metafieldSearch !== null): ?>

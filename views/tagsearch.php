@@ -28,18 +28,15 @@
         <input type="text" name="tag_input" value="<?= esc($tagInput) ?>" placeholder="wholesale, vip, reorder…" autofocus>
       </div>
     </div>
-    <div class="date-row">
-      <div class="field">
-        <label>From <span class="label-opt">(optional)</span></label>
-        <input type="date" name="tag_start" value="<?= esc($tagStart) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <div class="field">
-        <label>To <span class="label-opt">(optional)</span></label>
-        <input type="date" name="tag_end" value="<?= esc($tagEnd) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <div class="mf-hint">No date range - searches all orders.</div>
-      <button class="btn btn-submit-end" type="submit">Search</button>
-    </div>
+    <?php
+$partialStartName  = 'tag_start'; $partialStartVal = $tagStart;
+$partialEndName    = 'tag_end';   $partialEndVal   = $tagEnd;
+$partialFromLabel  = 'From <span class="label-opt">(optional)</span>';
+$partialToLabel    = 'To <span class="label-opt">(optional)</span>';
+$partialExtraHtml  = '<div class="mf-hint">No date range - searches all orders.</div>';
+$partialSubmitLabel = 'Search';
+require __DIR__ . '/partials/_date-range.php';
+?>
   </form>
 
   <?php if ($tagSearch !== null): ?>

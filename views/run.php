@@ -19,28 +19,14 @@
     <div class="error-msg mb-3"><?= esc($auditError) ?></div>
   <?php endif; ?>
 
-  <div class="preset-row">
-    <span class="preset-label">Quick select:</span>
-    <button class="preset-btn" data-days="7">7 days</button>
-    <button class="preset-btn" data-days="30">1 month</button>
-    <button class="preset-btn" data-days="90">3 months</button>
-    <button class="preset-btn" data-days="180">6 months</button>
-    <button class="preset-btn" data-days="365">12 months</button>
-  </div>
-
   <form method="post" id="js-audit-form">
     <input type="hidden" name="action" value="run_audit">
-    <div class="date-row">
-      <div class="field">
-        <label>From</label>
-        <input type="date" id="js-audit-start" name="audit_start" value="<?= esc($auditStart) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <div class="field">
-        <label>To</label>
-        <input type="date" id="js-audit-end" name="audit_end" value="<?= esc($auditEnd) ?>" max="<?= date('Y-m-d') ?>">
-      </div>
-      <button class="btn btn-submit-end" type="submit">Run Audit</button>
-    </div>
+    <?php
+$partialStartName = 'audit_start'; $partialStartVal = $auditStart;
+$partialEndName   = 'audit_end';   $partialEndVal   = $auditEnd;
+$partialSubmitLabel = 'Run Audit';
+require __DIR__ . '/partials/_date-range.php';
+?>
   </form>
 
 
