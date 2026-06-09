@@ -53,6 +53,14 @@ if ($latestDate) {
         <?php if ($prevCount !== null && $dbTrend !== 0): ?>
           <span style="color:<?= $trendColor ?>"> (was <?= $prevCount ?>)</span>
         <?php endif; ?>
+        <?php if ($dbDaysSinceAudit !== null): ?>
+          <?php
+            $dsa = $dbDaysSinceAudit;
+            $dsaColor = $dsa <= 2 ? 'var(--ok)' : ($dsa <= 7 ? 'var(--warn)' : 'var(--danger)');
+            $dsaLabel = $dsa === 0 ? 'today' : ($dsa === 1 ? '1 day ago' : "{$dsa} days ago");
+          ?>
+          <br><span style="color:<?= $dsaColor ?>">last run: <?= $dsaLabel ?></span>
+        <?php endif; ?>
       <?php else: ?>
         No audits run yet
       <?php endif; ?>
@@ -86,10 +94,13 @@ if ($latestDate) {
   </div>
 
   <!-- Ignored -->
-  <div class="db-card">
+  <div class="db-card <?= $dbStaleIgnored > 0 ? 'db-card--warn' : '' ?>">
     <div class="db-card-label">Ignored Orders</div>
     <div class="db-card-num"><?= count($ignoredOrders) ?></div>
     <div class="db-card-sub">
+      <?php if ($dbStaleIgnored > 0): ?>
+        <span style="color:var(--warn)"><?= $dbStaleIgnored ?> stale (60+ days)</span> &middot;
+      <?php endif; ?>
       <a href="?page=ignored">Manage &rarr;</a>
     </div>
   </div>
@@ -102,6 +113,10 @@ if ($latestDate) {
     ⚠ Action Queue — Missing Orders
     <?php if ($latestDate): ?>
       <a href="?date=<?= esc($latestDate) ?>">View full report &rarr;</a>
+    <?php endif; ?>
+    <?php if ($dbOldestMissingDays !== null && $latestCount > 0): ?>
+      <?php $omColor = $dbOldestMissingDays >= 14 ? 'var(--danger)' : ($dbOldestMissingDays >= 7 ? 'var(--warn)' : 'var(--muted)'); ?>
+      <span style="font-size:.78rem;font-weight:400;color:<?= $omColor ?>">oldest order: <?= $dbOldestMissingDays ?> days old</span>
     <?php endif; ?>
   </div>
 
