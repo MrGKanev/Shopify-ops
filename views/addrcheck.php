@@ -62,23 +62,10 @@
 
 <?php if ($addrResult !== null): ?>
   <?php if (empty($addrResult['rows'])): ?>
-    <div class="table-wrap">
-      <div class="empty">
-        <div class="icon">✅</div>
-        <h3>All addresses look good</h3>
-        <p>No address problems found in <?= $addrResult['scanned'] ?> orders for this date range.</p>
-      </div>
-    </div>
+    <?= tableWrapEmpty('All addresses look good', 'No address problems found in ' . $addrResult['scanned'] . ' orders for this date range.') ?>
   <?php else: ?>
     <div class="table-wrap">
-      <div class="table-header">
-        <h2>Address Issues</h2>
-        <div class="flex items-center gap-2">
-          <span><?= count($addrResult['rows']) ?> order<?= count($addrResult['rows']) !== 1 ? 's' : '' ?></span>
-          <button class="btn btn-sm btn-ghost" data-csv-btn="#tbl-addrcheck"
-                  data-csv-filename="address-issues-<?= esc($addrResult['start']) ?>.csv">Export CSV</button>
-        </div>
-      </div>
+      <?= tableWrapHeader($addrResult['rows'], 'tbl-addrcheck', 'Address Issues', 'address-issues', $addrResult['start']) ?>
       <table id="tbl-addrcheck">
         <thead>
           <tr>
@@ -99,14 +86,7 @@
             $recipientName = trim(($addr['first_name'] ?? '') . ' ' . ($addr['last_name'] ?? ''));
           ?>
           <tr>
-            <td class="order-num">
-              <?php if ($adminUrl): ?>
-                <a href="<?= $adminUrl ?>" target="_blank" rel="noopener"><?= esc($row['order_number']) ?></a>
-              <?php else: ?>
-                <?= esc($row['order_number']) ?>
-              <?php endif; ?>
-              <button class="copy-btn" data-copy="<?= esc(ltrim($row['order_number'], '#')) ?>" title="Copy">⧉</button>
-            </td>
+            <?= orderNumCell($row['order_number'], $adminUrl) ?>
             <td><?= esc($row['created_at']) ?></td>
             <td class="td-email"><?= esc($row['email']) ?></td>
             <td class="td-email">
@@ -131,15 +111,7 @@
                 <?= $row['severity'] ?>
               </span>
             </td>
-            <td class="td-actions">
-              <?php if ($adminUrl): ?>
-                <a class="ignore-btn" href="<?= $adminUrl ?>" target="_blank" rel="noopener">Edit in Shopify</a>
-              <?php endif; ?>
-              <a class="ignore-btn" href="?page=spotcheck&prefill=<?= urlencode(ltrim($row['order_number'], '#')) ?>">Spot-check</a>
-              <?php if ($row['email']): ?>
-                <a class="ignore-btn" href="?page=customer&email=<?= urlencode($row['email']) ?>">Customer</a>
-              <?php endif; ?>
-            </td>
+            <?= actionLinks(['shopifyUrl' => $adminUrl, 'shopifyLabel' => 'Edit in Shopify', 'orderNum' => $row['order_number'], 'email' => $row['email'], 'spotcheck' => true]) ?>
           </tr>
           <?php endforeach; ?>
         </tbody>
