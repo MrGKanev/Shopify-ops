@@ -65,7 +65,7 @@
     </div>
 
     <?php
-      $auditPages  = ['hub-audit', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'orderedits', 'bundlecheck', 'productcheck', 'skudupes', 'inventoryoversell', 'countrymismatch', 'partialfulfill'];
+      $auditPages  = ['hub-audit', 'dashboard', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'orderedits', 'bundlecheck', 'productcheck', 'skudupes', 'inventoryoversell', 'countrymismatch', 'partialfulfill', 'onholdstall', 'notracking', 'postshipaddr', 'noteflags', 'ssshipped', 'zombieproducts', 'addrdupes'];
       $searchPages = ['hub-search', 'spotcheck', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'tracking', 'compare', 'timeline', 'globalsearch', 'packingslip'];
       $managePages = ['ignored', 'pushlog'];
       $groupOf = function(string $p) use ($auditPages, $searchPages, $managePages): string {
@@ -77,6 +77,7 @@
       $activeGroup = $groupOf($page);
 
       $pageTitles = [
+          'dashboard' => 'Dashboard',
           'reports' => 'Reports', 'run' => 'Run Audit', 'trends' => 'Trends',
           'dupes' => 'Duplicate Detector', 'refunds' => 'Refunds Tracker',
           'addrcheck' => 'Address Scanner', 'emailcheck' => 'Email Checker',
@@ -89,6 +90,13 @@
           'inventoryoversell' => 'Inventory Oversell Risk',
           'countrymismatch'   => 'Billing ≠ Shipping Country',
           'partialfulfill'    => 'Partial Fulfillment Stalls',
+          'onholdstall'       => 'On-Hold Stall',
+          'notracking'        => 'Fulfilled Without Tracking',
+          'postshipaddr'      => 'Post-Ship Address Change',
+          'noteflags'         => 'Note Flags',
+          'ssshipped'         => 'SS Shipped / Shopify Unfulfilled',
+          'zombieproducts'    => 'Zombie Products',
+          'addrdupes'         => 'Duplicate Shipping Addresses',
           'spotcheck' => 'Spot-check', 'metafields' => 'Metafields',
           'tagsearch' => 'Tag Search', 'tagaudit' => 'Tag Audit',
           'customer' => 'Customer Lookup', 'tracking' => 'Tracking Feed',
@@ -103,7 +111,13 @@
 
     <nav class="flat-nav">
 
-      <a href="?page=hub-audit" class="flat-nav-link <?= $activeGroup === 'audit'  ? 'active' : '' ?>" title="Audit">
+      <a href="?page=dashboard" class="flat-nav-link <?= $page === 'dashboard' ? 'active' : '' ?>" title="Dashboard">
+        <span class="flat-nav-icon">🏠</span><span class="nav-label"> Dashboard</span>
+        <?php if (($latestReport['count'] ?? 0) > 0): ?>
+          <span class="badge badge-warn badge-sm nav-badge" style="margin-left:auto"><?= $latestReport['count'] ?></span>
+        <?php endif; ?>
+      </a>
+      <a href="?page=hub-audit" class="flat-nav-link <?= ($activeGroup === 'audit' && $page !== 'dashboard') ? 'active' : '' ?>" title="Audit">
         <span class="flat-nav-icon">📋</span><span class="nav-label"> Audit</span>
       </a>
       <a href="?page=hub-search" class="flat-nav-link <?= $activeGroup === 'search' ? 'active' : '' ?>" title="Search &amp; Lookup">
@@ -167,7 +181,7 @@
 
   <main class="main">
     <?php
-      $allowedPages = ['hub-audit', 'hub-search', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'orderedits', 'bundlecheck', 'productcheck', 'skudupes', 'inventoryoversell', 'countrymismatch', 'partialfulfill', 'spotcheck', 'tracking', 'compare', 'timeline', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'ignored', 'pushlog', 'settings', 'globalsearch', 'packingslip'];
+      $allowedPages = ['hub-audit', 'hub-search', 'dashboard', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'orderedits', 'bundlecheck', 'productcheck', 'skudupes', 'inventoryoversell', 'countrymismatch', 'partialfulfill', 'onholdstall', 'notracking', 'postshipaddr', 'noteflags', 'ssshipped', 'zombieproducts', 'addrdupes', 'spotcheck', 'tracking', 'compare', 'timeline', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'ignored', 'pushlog', 'settings', 'globalsearch', 'packingslip'];
       $page         = in_array($page, $allowedPages, true) ? $page : 'hub-audit';
       $pageFile     = __DIR__ . '/' . $page . '.php';
 
@@ -181,7 +195,9 @@
       ];
       $crumbs   = [];
       $crumbs[] = ['href' => '?page=hub-audit', 'label' => esc($appBrand)];
-      if ($page === 'hub-audit') {
+      if ($page === 'dashboard') {
+          $crumbs[] = ['label' => 'Dashboard'];
+      } elseif ($page === 'hub-audit') {
           $crumbs[] = ['label' => 'Audit'];
       } elseif ($page === 'hub-search') {
           $crumbs[] = ['label' => 'Search &amp; Lookup'];

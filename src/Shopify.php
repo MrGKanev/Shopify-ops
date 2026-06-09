@@ -869,6 +869,200 @@ class Shopify
         return $all;
     }
 
+    /**
+     * Fetches on-hold fulfillment orders via GraphQL, filtered to the given order creation date range.
+     * Requires the read_merchant_managed_fulfillment_orders or read_assigned_fulfillment_orders scope.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function fetchOnHoldFulfillmentOrders(string $startDate, string $endDate): array
+    {
+        $all      = [];
+        $template = <<<'GQL'
+        {
+          fulfillmentOrders(first: 250, query: "status:on_hold"{{AFTER}}) {
+            pageInfo { hasNextPage endCursor }
+            edges {
+              node {
+                id
+                status
+                order {
+                  id
+                  legacyResourceId
+                  name
+                  email
+                  createdAt
+                  displayFinancialStatus
+                  displayFulfillmentStatus
+                  totalPriceSet { shopMoney { amount } }
+                }
+                fulfillmentHolds {
+                  reason
+                  reasonNotes
+                }
+              }
+            }
+          }
+        }
+        GQL;
+
+        $this->paginateGraphQL($template, 'fulfillmentOrders', function (array $edges) use (&$all, $startDate, $endDate) {
+            foreach ($edges as $e) {
+                $node      = $e['node'];
+                $orderDate = substr($node['order']['createdAt'] ?? '', 0, 10);
+                if ($orderDate >= $startDate && $orderDate <= $endDate) {
+                    $all[] = $node;
+                }
+            }
+        }, 40);
+
+        return $all;
+    }
+
+    /**
+     * Fetches fulfilled or partially-fulfilled orders with their fulfillment records (tracking data).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function fetchFulfilledOrdersWithTracking(string $startDate, string $endDate): array
+    {
+        $all = [];
+        $params = http_build_query([
+            'status'             => 'any',
+            'fulfillment_status' => 'fulfilled,partial',
+            'created_at_min'     => $startDate . 'T00:00:00-00:00',
+            'created_at_max'     => $endDate   . 'T23:59:59-00:00',
+            'limit'              => self::PAGE_SIZE,
+            'fields'             => 'id,order_number,name,created_at,email,financial_status,fulfillment_status,total_price,fulfillments',
+        ]);
+        $nextUrl = "{$this->baseUrl}/orders.json?{$params}";
+        while ($nextUrl) {
+            [$orders, $nextUrl] = $this->getPage($nextUrl);
+            array_push($all, ...$orders);
+        }
+        return $all;
+    }
+
+    /**
+     * Returns orders where the shipping address was changed AFTER the first fulfillment was created.
+     * Builds on the same events-API strategy as fetchOrdersWithAddressChanges but includes
+     * fulfillments in the batch order fetch to compare timestamps.
+     *
+     * @return array<int, array{order: array, changed_at: string, fulfillment_at: string}>
+     */
+    public function fetchPostShipAddressChanges(string $startDate, string $endDate): array
+    {
+        $params  = http_build_query([
+            'subject_type'   => 'Order',
+            'created_at_min' => $startDate . 'T00:00:00-00:00',
+            'created_at_max' => $endDate   . 'T23:59:59-00:00',
+            'limit'          => self::PAGE_SIZE,
+        ]);
+        $nextUrl = "{$this->baseUrl}/events.json?{$params}";
+
+        $changed = [];
+        while ($nextUrl) {
+            [$page, $nextUrl] = $this->getPage($nextUrl, 'events');
+            foreach ($page as $ev) {
+                $msg = strtolower($ev['message'] ?? '');
+                if (str_contains($msg, 'shipping address') || str_contains($msg, 'address was')) {
+                    $id = (string)($ev['subject_id'] ?? '');
+                    if (!$id) continue;
+                    $ts = $ev['created_at'] ?? '';
+                    if (!isset($changed[$id]) || $ts > $changed[$id]) {
+                        $changed[$id] = $ts;
+                    }
+                }
+            }
+        }
+
+        if (empty($changed)) return [];
+
+        $orders = [];
+        foreach (array_chunk(array_keys($changed), 250) as $chunk) {
+            $p = http_build_query([
+                'ids'    => implode(',', $chunk),
+                'status' => 'any',
+                'limit'  => 250,
+                'fields' => 'id,order_number,name,created_at,email,total_price,financial_status,fulfillment_status,shipping_address,fulfillments',
+            ]);
+            $data = $this->get("{$this->baseUrl}/orders.json?{$p}");
+            foreach ($data['orders'] ?? [] as $o) {
+                $oid       = (string)$o['id'];
+                $changedAt = $changed[$oid] ?? '';
+
+                $firstFulfillAt = '';
+                foreach ($o['fulfillments'] ?? [] as $f) {
+                    $fa = $f['created_at'] ?? '';
+                    if ($fa && (!$firstFulfillAt || $fa < $firstFulfillAt)) {
+                        $firstFulfillAt = $fa;
+                    }
+                }
+
+                // Only flag if address changed AFTER first fulfillment
+                if (!$firstFulfillAt || $changedAt <= $firstFulfillAt) continue;
+
+                $orders[] = [
+                    'order'          => $o,
+                    'changed_at'     => $changedAt,
+                    'fulfillment_at' => $firstFulfillAt,
+                ];
+            }
+        }
+
+        usort($orders, fn($a, $b) => strcmp($b['changed_at'], $a['changed_at']));
+        return $orders;
+    }
+
+    /**
+     * Fetches paid, unfulfilled orders including the note field for keyword scanning.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function fetchOrdersWithNotes(string $startDate, string $endDate): array
+    {
+        $all = [];
+        $params = http_build_query([
+            'status'             => 'any',
+            'financial_status'   => 'paid,partially_paid',
+            'fulfillment_status' => 'unfulfilled,partial',
+            'created_at_min'     => $startDate . 'T00:00:00-00:00',
+            'created_at_max'     => $endDate   . 'T23:59:59-00:00',
+            'limit'              => self::PAGE_SIZE,
+            'fields'             => 'id,order_number,name,created_at,email,financial_status,fulfillment_status,total_price,note',
+        ]);
+        $nextUrl = "{$this->baseUrl}/orders.json?{$params}";
+        while ($nextUrl) {
+            [$orders, $nextUrl] = $this->getPage($nextUrl);
+            array_push($all, ...$orders);
+        }
+        return $all;
+    }
+
+    /**
+     * Fetches paid orders with shipping address data for duplicate-address analysis.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function fetchOrdersForAddrDupes(string $startDate, string $endDate): array
+    {
+        $all = [];
+        $params = http_build_query([
+            'status'           => 'any',
+            'financial_status' => 'paid,partially_paid',
+            'created_at_min'   => $startDate . 'T00:00:00-00:00',
+            'created_at_max'   => $endDate   . 'T23:59:59-00:00',
+            'limit'            => self::PAGE_SIZE,
+            'fields'           => 'id,order_number,name,created_at,email,total_price,shipping_address,fulfillment_status',
+        ]);
+        $nextUrl = "{$this->baseUrl}/orders.json?{$params}";
+        while ($nextUrl) {
+            [$orders, $nextUrl] = $this->getPage($nextUrl);
+            array_push($all, ...$orders);
+        }
+        return $all;
+    }
+
     // ── Private ───────────────────────────────────────────────────────
 
     /**

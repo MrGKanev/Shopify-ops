@@ -136,7 +136,7 @@ Actions::dispatch($action, $ctx);
 
 // ── Load page data ────────────────────────────────────────────────────────────
 
-$page = $_GET['page'] ?? 'reports';
+$page = $_GET['page'] ?? 'dashboard';
 
 extract(PageLoader::load($page, $action, $ctx), EXTR_SKIP);
 
