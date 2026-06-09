@@ -74,6 +74,9 @@ if ($latestDate) {
     <div class="db-card-sub">
       <?php if ($dbTotalReports > 0): ?>
         <?= $dbTotalMissing ?> total missing orders
+        <?php if ($dbAvgCadence !== null): ?>
+          <br><span style="color:var(--muted)">avg every <?= $dbAvgCadence ?> day<?= $dbAvgCadence == 1 ? '' : 's' ?></span>
+        <?php endif; ?>
       <?php else: ?>
         No history yet
       <?php endif; ?>
@@ -87,6 +90,9 @@ if ($latestDate) {
     <div class="db-card-sub">
       <?php if ($dbLastPush): ?>
         last: <?= esc(substr($dbLastPush, 0, 10)) ?>
+        <?php if ($dbAvgResolutionDays !== null): ?>
+          <br><span style="color:var(--muted)">avg <?= $dbAvgResolutionDays ?> day<?= $dbAvgResolutionDays == 1 ? '' : 's' ?> to resolve</span>
+        <?php endif; ?>
       <?php else: ?>
         No pushes yet
       <?php endif; ?>
@@ -119,6 +125,13 @@ if ($latestDate) {
       <span style="font-size:.78rem;font-weight:400;color:<?= $omColor ?>">oldest order: <?= $dbOldestMissingDays ?> days old</span>
     <?php endif; ?>
   </div>
+  <?php if (!empty($dbMissingByType) && $latestCount > 0): ?>
+    <div style="padding:.35rem 0 .6rem;font-size:.8rem;color:var(--muted)">
+      <?php foreach ($dbMissingByType as $type => $cnt): ?>
+        <span style="margin-right:.75rem"><strong style="color:var(--fg)"><?= $cnt ?>×</strong> <?= esc($type) ?></span>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
 
   <?php if (!$latestDate): ?>
     <div class="empty" style="padding:2.5rem 1rem">
