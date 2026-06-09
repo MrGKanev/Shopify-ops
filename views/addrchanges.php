@@ -36,23 +36,10 @@ require __DIR__ . '/partials/_date-range.php';
 
 <?php if ($acResult !== null): ?>
   <?php if (empty($acResult['rows'])): ?>
-    <div class="table-wrap">
-      <div class="empty">
-        <div class="icon">✅</div>
-        <h3>No address changes found</h3>
-        <p>No shipping address edits detected in this date range.</p>
-      </div>
-    </div>
+    <?= tableWrapEmpty('No address changes found', 'No shipping address edits detected in this date range.') ?>
   <?php else: ?>
     <div class="table-wrap">
-      <div class="table-header">
-        <h2>Address Changes</h2>
-        <div class="flex items-center gap-2">
-          <span><?= count($acResult['rows']) ?> order<?= count($acResult['rows']) !== 1 ? 's' : '' ?></span>
-          <button class="btn btn-sm btn-ghost" data-csv-btn="#tbl-addrchanges"
-                  data-csv-filename="address-changes-<?= esc($acResult['start']) ?>.csv">Export CSV</button>
-        </div>
-      </div>
+      <?= tableWrapHeader($acResult['rows'], 'tbl-addrchanges', 'Address Changes', 'address-changes', $acResult['start']) ?>
       <table id="tbl-addrchanges">
         <thead>
           <tr>
@@ -71,14 +58,7 @@ require __DIR__ . '/partials/_date-range.php';
             $adminUrl = $row['shopify_id'] ? $shopifyAdminBase . '/' . esc($row['shopify_id']) : null;
           ?>
           <tr>
-            <td class="order-num">
-              <?php if ($adminUrl): ?>
-                <a href="<?= $adminUrl ?>" target="_blank" rel="noopener"><?= esc($row['order_number']) ?></a>
-              <?php else: ?>
-                <?= esc($row['order_number']) ?>
-              <?php endif; ?>
-              <button class="copy-btn" data-copy="<?= esc(ltrim($row['order_number'], '#')) ?>" title="Copy">⧉</button>
-            </td>
+            <?= orderNumCell($row['order_number'], $adminUrl) ?>
             <td><?= esc($row['created_at']) ?></td>
             <td class="font-medium" style="color:var(--warn)"><?= esc($row['changed_at']) ?></td>
             <td class="td-email"><?= esc($row['email']) ?></td>
@@ -99,15 +79,7 @@ require __DIR__ . '/partials/_date-range.php';
                 <?php endif; ?>
               </div>
             </td>
-            <td class="td-actions">
-              <?php if ($adminUrl): ?>
-                <a class="ignore-btn" href="<?= $adminUrl ?>" target="_blank" rel="noopener">Edit in Shopify</a>
-              <?php endif; ?>
-              <a class="ignore-btn" href="?page=spotcheck&prefill=<?= urlencode(ltrim($row['order_number'], '#')) ?>">Spot-check</a>
-              <?php if ($row['email']): ?>
-                <a class="ignore-btn" href="?page=customer&email=<?= urlencode($row['email']) ?>">Customer</a>
-              <?php endif; ?>
-            </td>
+            <?= actionLinks(['shopifyUrl' => $adminUrl, 'shopifyLabel' => 'Edit in Shopify', 'orderNum' => $row['order_number'], 'email' => $row['email'], 'spotcheck' => true]) ?>
           </tr>
           <?php endforeach; ?>
         </tbody>

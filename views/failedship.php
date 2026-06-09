@@ -32,23 +32,10 @@ require __DIR__ . '/partials/_date-range.php';
 
 <?php if ($fsResult !== null): ?>
   <?php if (empty($fsResult['rows'])): ?>
-    <div class="table-wrap">
-      <div class="empty">
-        <div class="icon">✅</div>
-        <h3>No voided shipments found</h3>
-        <p>No shipments were voided in ShipStation during this date range.</p>
-      </div>
-    </div>
+    <?= tableWrapEmpty('No voided shipments found', 'No shipments were voided in ShipStation during this date range.') ?>
   <?php else: ?>
     <div class="table-wrap">
-      <div class="table-header">
-        <h2>Voided Shipments</h2>
-        <div class="flex items-center gap-2">
-          <span><?= count($fsResult['rows']) ?> shipment<?= count($fsResult['rows']) !== 1 ? 's' : '' ?></span>
-          <button class="btn btn-sm btn-ghost" data-csv-btn="#tbl-failedship"
-                  data-csv-filename="voided-shipments-<?= esc($fsResult['start']) ?>.csv">Export CSV</button>
-        </div>
-      </div>
+      <?= tableWrapHeader($fsResult['rows'], 'tbl-failedship', 'Voided Shipments', 'voided-shipments', $fsResult['start'], 'shipment') ?>
       <table id="tbl-failedship">
         <thead>
           <tr>
@@ -65,10 +52,7 @@ require __DIR__ . '/partials/_date-range.php';
         <tbody>
           <?php foreach ($fsResult['rows'] as $row): ?>
           <tr>
-            <td class="order-num">
-              <?= esc($row['order_number']) ?>
-              <button class="copy-btn" data-copy="<?= esc($row['order_number']) ?>" title="Copy">⧉</button>
-            </td>
+            <?= orderNumCell($row['order_number'], null, $row['order_number']) ?>
             <td><?= esc($row['void_date']) ?></td>
             <td><?= esc($row['ship_date']) ?: '-' ?></td>
             <td><?= esc(strtoupper($row['carrier'])) ?: '-' ?></td>
@@ -90,9 +74,7 @@ require __DIR__ . '/partials/_date-range.php';
                 <div class="text-xs text-muted"><?= esc($shipTo) ?></div>
               <?php endif; ?>
             </td>
-            <td class="td-actions">
-              <a class="ignore-btn" href="?page=spotcheck&prefill=<?= urlencode($row['order_number']) ?>">Spot-check</a>
-            </td>
+            <?= actionLinks(['orderNum' => $row['order_number'], 'spotcheck' => true]) ?>
           </tr>
           <?php endforeach; ?>
         </tbody>

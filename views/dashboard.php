@@ -192,16 +192,7 @@ if ($latestDate) {
                 <span class="chip <?= financialChip($row['financial_status']) ?>"><?= esc($row['financial_status']) ?></span>
               <?php endif; ?>
             </td>
-            <td class="td-actions">
-              <?php if ($adminUrl): ?>
-                <a class="ignore-btn" href="<?= $adminUrl ?>" target="_blank" rel="noopener">Shopify</a>
-              <?php endif; ?>
-              <a class="ignore-btn" href="?page=spotcheck&prefill=<?= urlencode($numClean) ?>">Spot-check</a>
-              <a class="ignore-btn" href="?page=timeline&order=<?= urlencode($numClean) ?>">Timeline</a>
-              <?php if ($row['email'] ?? ''): ?>
-                <a class="ignore-btn" href="?page=customer&email=<?= urlencode($row['email']) ?>">Customer</a>
-              <?php endif; ?>
-            </td>
+            <?= actionLinks(['shopifyUrl' => $adminUrl, 'shopifyLabel' => 'Shopify', 'orderNum' => $numClean, 'email' => $row['email'] ?? '', 'spotcheck' => true, 'timeline' => true]) ?>
           </tr>
           <?php endforeach; ?>
         </tbody>

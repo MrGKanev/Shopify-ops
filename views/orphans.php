@@ -44,23 +44,10 @@ require __DIR__ . '/partials/_date-range.php';
 
 <?php if ($orphanResult !== null): ?>
   <?php if (empty($orphanResult['rows'])): ?>
-    <div class="table-wrap">
-      <div class="empty">
-        <div class="icon">✅</div>
-        <h3>No orphans found</h3>
-        <p>Every ShipStation order in this date range has a matching Shopify order.</p>
-      </div>
-    </div>
+    <?= tableWrapEmpty('No orphans found', 'Every ShipStation order in this date range has a matching Shopify order.') ?>
   <?php else: ?>
     <div class="table-wrap">
-      <div class="table-header">
-        <h2>Orphan Orders</h2>
-        <div class="flex items-center gap-2">
-          <span><?= count($orphanResult['rows']) ?> order<?= count($orphanResult['rows']) !== 1 ? 's' : '' ?></span>
-          <button class="btn btn-sm btn-ghost" data-csv-btn="#tbl-orphans"
-                  data-csv-filename="orphans-<?= esc($orphanResult['start']) ?>.csv">Export CSV</button>
-        </div>
-      </div>
+      <?= tableWrapHeader($orphanResult['rows'], 'tbl-orphans', 'Orphan Orders', 'orphans', $orphanResult['start']) ?>
       <table id="tbl-orphans">
         <thead>
           <tr>
@@ -83,25 +70,13 @@ require __DIR__ . '/partials/_date-range.php';
             };
           ?>
           <tr>
-            <td class="order-num">
-              <?php if ($row['ss_url']): ?>
-                <a href="<?= esc($row['ss_url']) ?>" target="_blank" rel="noopener"><?= esc($row['order_number']) ?></a>
-              <?php else: ?>
-                <?= esc($row['order_number']) ?>
-              <?php endif; ?>
-              <button class="copy-btn" data-copy="<?= esc($row['order_number']) ?>" title="Copy">⧉</button>
-            </td>
+            <?= orderNumCell($row['order_number'], $row['ss_url'], $row['order_number']) ?>
             <td><?= esc($row['order_date']) ?></td>
             <td><?= esc($row['customer'] ?: '-') ?></td>
             <td class="td-email"><?= esc($row['email'] ?: '-') ?></td>
             <td><span class="chip <?= $statusChip ?>"><?= esc(str_replace('_', ' ', $row['order_status'])) ?></span></td>
             <td class="td-price"><?= formatPrice($row['total'] ?: null) ?></td>
-            <td class="td-actions">
-              <?php if ($row['ss_url']): ?>
-                <a class="ignore-btn" href="<?= esc($row['ss_url']) ?>" target="_blank" rel="noopener">Open in SS</a>
-              <?php endif; ?>
-              <a class="ignore-btn" href="?page=spotcheck&prefill=<?= urlencode($row['order_number']) ?>">Spot-check</a>
-            </td>
+            <?= actionLinks(['ssUrl' => $row['ss_url'], 'orderNum' => $row['order_number'], 'spotcheck' => true]) ?>
           </tr>
           <?php endforeach; ?>
         </tbody>

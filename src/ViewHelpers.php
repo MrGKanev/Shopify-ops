@@ -162,6 +162,51 @@ function actionLinks(array $opts): string
     return $html . '</td>';
 }
 
+function searchInput(string $tableId, string $placeholder): string
+{
+    return '<div class="search-wrap mb-3">'
+        . '<input class="js-search" data-target="' . esc($tableId) . '"'
+        . ' placeholder="' . esc($placeholder) . '" type="search">'
+        . '</div>';
+}
+
+function tableWrapEmpty(string $heading, string $msg): string
+{
+    return '<div class="table-wrap">'
+        . '<div class="empty">'
+        . '<div class="icon">✅</div>'
+        . '<h3>' . esc($heading) . '</h3>'
+        . '<p>' . esc($msg) . '</p>'
+        . '</div>'
+        . '</div>';
+}
+
+function tableWrapHeader(
+    array $rows,
+    string $tableId,
+    string $title,
+    string $csvSlug,
+    string $dateStart,
+    string $unit = 'order',
+    string $searchPlaceholder = ''
+): string {
+    $n    = count($rows);
+    $html = '<div class="table-header">'
+        . '<h2>' . esc($title) . '</h2>'
+        . '<div class="flex items-center gap-2">'
+        . '<span>' . $n . ' ' . esc($unit) . ($n !== 1 ? 's' : '') . '</span>'
+        . '<button class="btn btn-sm btn-ghost"'
+        . ' data-csv-btn="#' . esc($tableId) . '"'
+        . ' data-csv-filename="' . esc($csvSlug) . '-' . esc($dateStart) . '.csv">'
+        . 'Export CSV</button>'
+        . '</div>'
+        . '</div>';
+    if ($searchPlaceholder !== '') {
+        $html .= searchInput($tableId, $searchPlaceholder);
+    }
+    return $html;
+}
+
 function datePresets(): string
 {
     $presets = [

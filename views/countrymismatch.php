@@ -37,26 +37,10 @@
 
 <?php if ($cmResult !== null): ?>
   <?php if (empty($cmResult['rows'])): ?>
-    <div class="table-wrap">
-      <div class="empty">
-        <div class="icon">✅</div>
-        <h3>No country mismatches found</h3>
-        <p>All <?= $cmResult['scanned'] ?> paid orders in this range have matching billing and shipping countries.</p>
-      </div>
-    </div>
+    <?= tableWrapEmpty('No country mismatches found', 'All ' . $cmResult['scanned'] . ' paid orders in this range have matching billing and shipping countries.') ?>
   <?php else: ?>
     <div class="table-wrap">
-      <div class="table-header">
-        <h2>Country Mismatches</h2>
-        <div class="flex items-center gap-2">
-          <span><?= count($cmResult['rows']) ?> order<?= count($cmResult['rows']) !== 1 ? 's' : '' ?></span>
-          <button class="btn btn-sm btn-ghost" data-csv-btn="#tbl-countrymismatch"
-                  data-csv-filename="country-mismatch-<?= esc($cmResult['start']) ?>.csv">Export CSV</button>
-        </div>
-      </div>
-      <div class="search-wrap mb-3">
-        <input class="js-search" data-target="tbl-countrymismatch" placeholder="Filter by order #, email, country…" type="search">
-      </div>
+      <?= tableWrapHeader($cmResult['rows'], 'tbl-countrymismatch', 'Country Mismatches', 'country-mismatch', $cmResult['start'], 'order', 'Filter by order #, email, country…') ?>
       <table id="tbl-countrymismatch">
         <thead>
           <tr>
@@ -75,14 +59,7 @@
             $adminUrl = $row['shopify_id'] ? $shopifyAdminBase . '/' . esc($row['shopify_id']) : null;
           ?>
           <tr>
-            <td class="order-num">
-              <?php if ($adminUrl): ?>
-                <a href="<?= $adminUrl ?>" target="_blank" rel="noopener"><?= esc($row['order_number']) ?></a>
-              <?php else: ?>
-                <?= esc($row['order_number']) ?>
-              <?php endif; ?>
-              <button class="copy-btn" data-copy="<?= esc(ltrim($row['order_number'], '#')) ?>" title="Copy">⧉</button>
-            </td>
+            <?= orderNumCell($row['order_number'], $adminUrl) ?>
             <td class="text-sm"><?= esc($row['created_at']) ?></td>
             <td class="td-email"><?= esc($row['email']) ?></td>
             <td>
@@ -101,16 +78,7 @@
                 <?php endif; ?>
               </div>
             </td>
-            <td class="td-actions">
-              <?php if ($adminUrl): ?>
-                <a class="ignore-btn" href="<?= $adminUrl ?>" target="_blank" rel="noopener">View in Shopify</a>
-              <?php endif; ?>
-              <a class="ignore-btn" href="?page=spotcheck&prefill=<?= urlencode(ltrim($row['order_number'], '#')) ?>">Spot-check</a>
-              <a class="ignore-btn" href="?page=timeline&order=<?= urlencode(ltrim($row['order_number'], '#')) ?>">Timeline</a>
-              <?php if ($row['email']): ?>
-                <a class="ignore-btn" href="?page=customer&email=<?= urlencode($row['email']) ?>">Customer</a>
-              <?php endif; ?>
-            </td>
+            <?= actionLinks(['shopifyUrl' => $adminUrl, 'orderNum' => $row['order_number'], 'email' => $row['email'], 'spotcheck' => true, 'timeline' => true]) ?>
           </tr>
           <?php endforeach; ?>
         </tbody>

@@ -38,26 +38,10 @@ require __DIR__ . '/partials/_date-range.php';
 
 <?php if ($pfResult !== null): ?>
   <?php if (empty($pfResult['rows'])): ?>
-    <div class="table-wrap">
-      <div class="empty">
-        <div class="icon">✅</div>
-        <h3>No stalled partial fulfillments</h3>
-        <p>All <?= $pfResult['scanned'] ?> partially fulfilled orders in this range have moved within <?= (int)$pfResult['threshold'] ?> days.</p>
-      </div>
-    </div>
+    <?= tableWrapEmpty('No stalled partial fulfillments', 'All ' . $pfResult['scanned'] . ' partially fulfilled orders in this range have moved within ' . (int)$pfResult['threshold'] . ' days.') ?>
   <?php else: ?>
     <div class="table-wrap">
-      <div class="table-header">
-        <h2>Stalled Partial Fulfillments</h2>
-        <div class="flex items-center gap-2">
-          <span><?= count($pfResult['rows']) ?> order<?= count($pfResult['rows']) !== 1 ? 's' : '' ?></span>
-          <button class="btn btn-sm btn-ghost" data-csv-btn="#tbl-partialfulfill"
-                  data-csv-filename="partial-stalls-<?= esc($pfResult['start']) ?>.csv">Export CSV</button>
-        </div>
-      </div>
-      <div class="search-wrap mb-3">
-        <input class="js-search" data-target="tbl-partialfulfill" placeholder="Filter by order #, email, SKU…" type="search">
-      </div>
+      <?= tableWrapHeader($pfResult['rows'], 'tbl-partialfulfill', 'Stalled Partial Fulfillments', 'partial-stalls', $pfResult['start'], 'order', 'Filter by order #, email, SKU…') ?>
       <table id="tbl-partialfulfill">
         <thead>
           <tr>
@@ -78,14 +62,7 @@ require __DIR__ . '/partials/_date-range.php';
             $daysColor   = $days >= 30 ? 'var(--danger)' : ($days >= 14 ? 'var(--warn)' : 'inherit');
           ?>
           <tr>
-            <td class="order-num">
-              <?php if ($adminUrl): ?>
-                <a href="<?= $adminUrl ?>" target="_blank" rel="noopener"><?= esc($row['order_number']) ?></a>
-              <?php else: ?>
-                <?= esc($row['order_number']) ?>
-              <?php endif; ?>
-              <button class="copy-btn" data-copy="<?= esc(ltrim($row['order_number'], '#')) ?>" title="Copy">⧉</button>
-            </td>
+            <?= orderNumCell($row['order_number'], $adminUrl) ?>
             <td class="text-sm"><?= esc($row['created_at']) ?></td>
             <td class="text-sm text-muted"><?= $row['last_fulfilled'] ? esc($row['last_fulfilled']) : '-' ?></td>
             <td class="font-semibold" style="color:<?= $daysColor ?>"><?= $days ?>d</td>
@@ -104,16 +81,7 @@ require __DIR__ . '/partials/_date-range.php';
             </td>
             <td class="td-email"><?= esc($row['email']) ?></td>
             <td class="td-price"><?= formatPrice($row['total_price']) ?></td>
-            <td class="td-actions">
-              <?php if ($adminUrl): ?>
-                <a class="ignore-btn" href="<?= $adminUrl ?>" target="_blank" rel="noopener">View in Shopify</a>
-              <?php endif; ?>
-              <a class="ignore-btn" href="?page=spotcheck&prefill=<?= urlencode(ltrim($row['order_number'], '#')) ?>">Spot-check</a>
-              <a class="ignore-btn" href="?page=timeline&order=<?= urlencode(ltrim($row['order_number'], '#')) ?>">Timeline</a>
-              <?php if ($row['email']): ?>
-                <a class="ignore-btn" href="?page=customer&email=<?= urlencode($row['email']) ?>">Customer</a>
-              <?php endif; ?>
-            </td>
+            <?= actionLinks(['shopifyUrl' => $adminUrl, 'orderNum' => $row['order_number'], 'email' => $row['email'], 'spotcheck' => true, 'timeline' => true]) ?>
           </tr>
           <?php endforeach; ?>
         </tbody>

@@ -157,4 +157,185 @@ class ViewHelpersTest extends TestCase
         $this->assertStringContainsString('class="feature-info-body"', $html);
         $this->assertStringContainsString('<p>body</p>', $html);
     }
+
+    // ── orderNumCell ──────────────────────────────────────────────────────────
+
+    public function testOrderNumCellNoUrl(): void
+    {
+        $html = orderNumCell('#1001', null);
+        $this->assertStringContainsString('class="order-num"', $html);
+        $this->assertStringContainsString('#1001', $html);
+        $this->assertStringNotContainsString('<a ', $html);
+        $this->assertStringContainsString('data-copy="1001"', $html);
+    }
+
+    public function testOrderNumCellWithUrl(): void
+    {
+        $html = orderNumCell('#1002', 'https://example.com/orders/1002');
+        $this->assertStringContainsString('<a href="https://example.com/orders/1002"', $html);
+        $this->assertStringContainsString('target="_blank"', $html);
+        $this->assertStringContainsString('data-copy="1002"', $html);
+    }
+
+    public function testOrderNumCellCustomCopyVal(): void
+    {
+        $html = orderNumCell('#1003', null, 'CUSTOM');
+        $this->assertStringContainsString('data-copy="CUSTOM"', $html);
+    }
+
+    public function testOrderNumCellRowspan(): void
+    {
+        $html = orderNumCell('#1004', null, null, 3);
+        $this->assertStringContainsString('rowspan="3"', $html);
+    }
+
+    public function testOrderNumCellNoRowspanByDefault(): void
+    {
+        $html = orderNumCell('#1005', null);
+        $this->assertStringNotContainsString('rowspan', $html);
+    }
+
+    public function testOrderNumCellEscapesUrl(): void
+    {
+        $html = orderNumCell('#1006', 'https://example.com/?a=1&b=2');
+        $this->assertStringContainsString('&amp;', $html);
+        $this->assertStringNotContainsString('"https://example.com/?a=1&b=2"', $html);
+    }
+
+    // ── actionLinks ───────────────────────────────────────────────────────────
+
+    public function testActionLinksEmpty(): void
+    {
+        $html = actionLinks([]);
+        $this->assertStringContainsString('class="td-actions"', $html);
+        $this->assertStringNotContainsString('<a ', $html);
+    }
+
+    public function testActionLinksSsUrl(): void
+    {
+        $html = actionLinks(['ssUrl' => 'https://ship.example.com/order/1']);
+        $this->assertStringContainsString('href="https://ship.example.com/order/1"', $html);
+        $this->assertStringContainsString('Open in SS', $html);
+    }
+
+    public function testActionLinksSsUrlCustomLabel(): void
+    {
+        $html = actionLinks(['ssUrl' => 'https://ship.example.com/order/1', 'ssLabel' => 'View SS']);
+        $this->assertStringContainsString('View SS', $html);
+    }
+
+    public function testActionLinksShopifyUrl(): void
+    {
+        $html = actionLinks(['shopifyUrl' => 'https://store.myshopify.com/orders/99']);
+        $this->assertStringContainsString('View in Shopify', $html);
+        $this->assertStringContainsString('href="https://store.myshopify.com/orders/99"', $html);
+    }
+
+    public function testActionLinksSpotcheck(): void
+    {
+        $html = actionLinks(['orderNum' => '#2001', 'spotcheck' => true]);
+        $this->assertStringContainsString('page=spotcheck', $html);
+        $this->assertStringContainsString('prefill=2001', $html);
+    }
+
+    public function testActionLinksTimeline(): void
+    {
+        $html = actionLinks(['orderNum' => '#2002', 'timeline' => true]);
+        $this->assertStringContainsString('page=timeline', $html);
+        $this->assertStringContainsString('order=2002', $html);
+    }
+
+    public function testActionLinksEmail(): void
+    {
+        $html = actionLinks(['email' => 'test@example.com']);
+        $this->assertStringContainsString('page=customer', $html);
+        $this->assertStringContainsString('email=test%40example.com', $html);
+    }
+
+    public function testActionLinksRowspan(): void
+    {
+        $html = actionLinks(['rowspan' => 2]);
+        $this->assertStringContainsString('rowspan="2"', $html);
+    }
+
+    public function testActionLinksNoSpotcheckWithoutOrderNum(): void
+    {
+        $html = actionLinks(['spotcheck' => true]);
+        $this->assertStringNotContainsString('spotcheck', $html);
+    }
+
+    // ── searchInput ───────────────────────────────────────────────────────────
+
+    public function testSearchInputStructure(): void
+    {
+        $html = searchInput('tbl-foo', 'Filter by order…');
+        $this->assertStringContainsString('class="search-wrap mb-3"', $html);
+        $this->assertStringContainsString('data-target="tbl-foo"', $html);
+        $this->assertStringContainsString('placeholder="Filter by order…"', $html);
+        $this->assertStringContainsString('type="search"', $html);
+    }
+
+    public function testSearchInputEscapesValues(): void
+    {
+        $html = searchInput('tbl-<bad>', '"quoted"');
+        $this->assertStringNotContainsString('<bad>', $html);
+        $this->assertStringNotContainsString('"quoted"', $html);
+    }
+
+    // ── tableWrapEmpty ────────────────────────────────────────────────────────
+
+    public function testTableWrapEmptyStructure(): void
+    {
+        $html = tableWrapEmpty('Nothing found', 'No results in this range.');
+        $this->assertStringContainsString('class="table-wrap"', $html);
+        $this->assertStringContainsString('class="empty"', $html);
+        $this->assertStringContainsString('<h3>Nothing found</h3>', $html);
+        $this->assertStringContainsString('<p>No results in this range.</p>', $html);
+        $this->assertStringContainsString('✅', $html);
+    }
+
+    public function testTableWrapEmptyEscapesStrings(): void
+    {
+        $html = tableWrapEmpty('<b>Bad</b>', '<script>x</script>');
+        $this->assertStringNotContainsString('<b>', $html);
+        $this->assertStringNotContainsString('<script>', $html);
+    }
+
+    // ── tableWrapHeader ───────────────────────────────────────────────────────
+
+    public function testTableWrapHeaderSingular(): void
+    {
+        $html = tableWrapHeader([['x' => 1]], 'tbl-foo', 'My Title', 'my-slug', '2025-01-01');
+        $this->assertStringContainsString('<h2>My Title</h2>', $html);
+        $this->assertStringContainsString('1 order</span>', $html);
+        $this->assertStringContainsString('data-csv-btn="#tbl-foo"', $html);
+        $this->assertStringContainsString('data-csv-filename="my-slug-2025-01-01.csv"', $html);
+        $this->assertStringNotContainsString('search-wrap', $html);
+    }
+
+    public function testTableWrapHeaderPlural(): void
+    {
+        $html = tableWrapHeader([[], []], 'tbl-bar', 'Title', 'slug', '2025-06-01');
+        $this->assertStringContainsString('2 orders</span>', $html);
+    }
+
+    public function testTableWrapHeaderCustomUnit(): void
+    {
+        $html = tableWrapHeader([[], []], 'tbl-x', 'T', 's', '2025-01-01', 'shipment');
+        $this->assertStringContainsString('2 shipments</span>', $html);
+    }
+
+    public function testTableWrapHeaderWithSearch(): void
+    {
+        $html = tableWrapHeader([['x' => 1]], 'tbl-s', 'T', 's', '2025-01-01', 'order', 'Filter…');
+        $this->assertStringContainsString('search-wrap', $html);
+        $this->assertStringContainsString('data-target="tbl-s"', $html);
+        $this->assertStringContainsString('Filter…', $html);
+    }
+
+    public function testTableWrapHeaderEscapesTitle(): void
+    {
+        $html = tableWrapHeader([['x' => 1]], 'tbl-x', '<script>', 'slug', '2025-01-01');
+        $this->assertStringNotContainsString('<script>', $html);
+    }
 }
