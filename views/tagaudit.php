@@ -21,11 +21,7 @@
 
   <form method="post">
     <input type="hidden" name="action" value="tag_audit">
-    <?php
-$partialStartName = 'ta_start'; $partialStartVal = $taStart;
-$partialEndName   = 'ta_end';   $partialEndVal   = $taEnd;
-require __DIR__ . '/partials/_date-range.php';
-?>
+    <?php dateRangePartial('ta', $taStart, $taEnd) ?>
   </form>
 
   <?php if ($tagAuditResult !== null): ?>

@@ -21,12 +21,7 @@
 
   <form method="post" id="js-audit-form">
     <input type="hidden" name="action" value="run_audit">
-    <?php
-$partialStartName = 'audit_start'; $partialStartVal = $auditStart;
-$partialEndName   = 'audit_end';   $partialEndVal   = $auditEnd;
-$partialSubmitLabel = 'Run Audit';
-require __DIR__ . '/partials/_date-range.php';
-?>
+    <?php dateRangePartial('audit', $auditStart, $auditEnd, '', 'Run Audit') ?>
   </form>
 
 

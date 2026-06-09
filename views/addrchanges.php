@@ -19,11 +19,7 @@
 
   <form method="post">
     <input type="hidden" name="action" value="scan_addr_changes">
-    <?php
-$partialStartName = 'ac_start'; $partialStartVal = $acStart;
-$partialEndName   = 'ac_end';   $partialEndVal   = $acEnd;
-require __DIR__ . '/partials/_date-range.php';
-?>
+    <?php dateRangePartial('ac', $acStart, $acEnd) ?>
   </form>
 
   <?php if ($acResult !== null): ?>

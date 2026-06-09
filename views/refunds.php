@@ -22,11 +22,7 @@
 
   <form method="post">
     <input type="hidden" name="action" value="find_refunds">
-    <?php
-$partialStartName = 'refunds_start'; $partialStartVal = $refundsStart;
-$partialEndName   = 'refunds_end';   $partialEndVal   = $refundsEnd;
-require __DIR__ . '/partials/_date-range.php';
-?>
+    <?php dateRangePartial('refunds', $refundsStart, $refundsEnd) ?>
   </form>
 
   <?php if ($refundsResult !== null): ?>

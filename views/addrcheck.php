@@ -20,11 +20,7 @@
 
   <form method="post">
     <input type="hidden" name="action" value="scan_addresses">
-    <?php
-    $partialStartName = 'addr_start'; $partialStartVal = $addrStart;
-    $partialEndName   = 'addr_end';   $partialEndVal   = $addrEnd;
-    require __DIR__ . '/partials/_date-range.php';
-    ?>
+    <?php dateRangePartial('addr', $addrStart, $addrEnd) ?>
     <div class="filter-row">
       <label class="toggle-pill">
         <input type="checkbox" name="po_box_only" value="1"<?= !empty($poBoxOnly) ? ' checked' : '' ?>>

@@ -19,11 +19,7 @@
 
   <form method="post">
     <input type="hidden" name="action" value="scan_onhold">
-    <?php
-$partialStartName = 'oh_start'; $partialStartVal = $ohStart;
-$partialEndName   = 'oh_end';   $partialEndVal   = $ohEnd;
-require __DIR__ . '/partials/_date-range.php';
-?>
+    <?php dateRangePartial('oh', $ohStart, $ohEnd) ?>
   </form>
 
   <?php if ($ohResult !== null): ?>
@@ -53,9 +49,7 @@ require __DIR__ . '/partials/_date-range.php';
                   data-csv-filename="on-hold-<?= esc($ohResult['start']) ?>.csv">Export CSV</button>
         </div>
       </div>
-      <div class="search-wrap mb-3">
-        <input class="js-search" data-target="tbl-onholdstall" placeholder="Filter by order #, email…" type="search">
-      </div>
+      <?= searchInput('tbl-onholdstall', 'Filter by order #, email…') ?>
       <table id="tbl-onholdstall">
         <thead>
           <tr>

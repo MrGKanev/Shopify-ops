@@ -19,11 +19,7 @@
 
   <form method="post">
     <input type="hidden" name="action" value="scan_ssshipped">
-    <?php
-$partialStartName = 'ssu_start'; $partialStartVal = $ssuStart;
-$partialEndName   = 'ssu_end';   $partialEndVal   = $ssuEnd;
-require __DIR__ . '/partials/_date-range.php';
-?>
+    <?php dateRangePartial('ssu', $ssuStart, $ssuEnd) ?>
   </form>
 
   <?php if ($ssuResult !== null): ?>
@@ -56,9 +52,7 @@ require __DIR__ . '/partials/_date-range.php';
                   data-csv-filename="ss-shipped-mismatch-<?= esc($ssuResult['start']) ?>.csv">Export CSV</button>
         </div>
       </div>
-      <div class="search-wrap mb-3">
-        <input class="js-search" data-target="tbl-ssshipped" placeholder="Filter by order #, email…" type="search">
-      </div>
+      <?= searchInput('tbl-ssshipped', 'Filter by order #, email…') ?>
       <table id="tbl-ssshipped">
         <thead>
           <tr>

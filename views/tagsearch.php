@@ -28,15 +28,15 @@
         <input type="text" name="tag_input" value="<?= esc($tagInput) ?>" placeholder="wholesale, vip, reorder…" autofocus>
       </div>
     </div>
-    <?php
-$partialStartName  = 'tag_start'; $partialStartVal = $tagStart;
-$partialEndName    = 'tag_end';   $partialEndVal   = $tagEnd;
-$partialFromLabel  = 'From <span class="label-opt">(optional)</span>';
-$partialToLabel    = 'To <span class="label-opt">(optional)</span>';
-$partialExtraHtml  = '<div class="mf-hint">No date range - searches all orders.</div>';
-$partialSubmitLabel = 'Search';
-require __DIR__ . '/partials/_date-range.php';
-?>
+    <?php dateRangePartial(
+    'tag',
+    $tagStart,
+    $tagEnd,
+    '<div class="mf-hint">No date range - searches all orders.</div>',
+    'Search',
+    'From <span class="label-opt">(optional)</span>',
+    'To <span class="label-opt">(optional)</span>'
+) ?>
   </form>
 
   <?php if ($tagSearch !== null): ?>

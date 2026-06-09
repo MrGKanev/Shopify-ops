@@ -32,12 +32,7 @@ $_bcDesc      = $bcConfig['bundle_check_description'] ?? null;
 
   <form method="post">
     <input type="hidden" name="action" value="scan_bundle">
-    <?php
-      $partialStartName  = 'bc_start'; $partialStartVal = $bcStart;
-      $partialEndName    = 'bc_end';   $partialEndVal   = $bcEnd;
-      $partialSubmitLabel = 'Scan orders';
-      require __DIR__ . '/partials/_date-range.php';
-    ?>
+    <?php dateRangePartial('bc', $bcStart, $bcEnd, '', 'Scan orders') ?>
   </form>
 </div>
 

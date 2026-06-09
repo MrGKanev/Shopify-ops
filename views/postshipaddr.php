@@ -19,11 +19,7 @@
 
   <form method="post">
     <input type="hidden" name="action" value="scan_postshipaddr">
-    <?php
-$partialStartName = 'ps_start'; $partialStartVal = $psStart;
-$partialEndName   = 'ps_end';   $partialEndVal   = $psEnd;
-require __DIR__ . '/partials/_date-range.php';
-?>
+    <?php dateRangePartial('ps', $psStart, $psEnd) ?>
   </form>
 
   <?php if ($psResult !== null): ?>
@@ -53,9 +49,7 @@ require __DIR__ . '/partials/_date-range.php';
                   data-csv-filename="postship-addr-<?= esc($psResult['start']) ?>.csv">Export CSV</button>
         </div>
       </div>
-      <div class="search-wrap mb-3">
-        <input class="js-search" data-target="tbl-postshipaddr" placeholder="Filter by order #, email, address…" type="search">
-      </div>
+      <?= searchInput('tbl-postshipaddr', 'Filter by order #, email, address…') ?>
       <table id="tbl-postshipaddr">
         <thead>
           <tr>

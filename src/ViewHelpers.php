@@ -162,6 +162,26 @@ function actionLinks(array $opts): string
     return $html . '</td>';
 }
 
+function dateRangePartial(
+    string $prefix,
+    mixed $startVal,
+    mixed $endVal,
+    string $extraHtml = '',
+    string $submitLabel = 'Scan',
+    string $fromLabel = 'From',
+    string $toLabel = 'To'
+): void {
+    $partialStartName   = $prefix . '_start';
+    $partialStartVal    = $startVal;
+    $partialEndName     = $prefix . '_end';
+    $partialEndVal      = $endVal;
+    $partialExtraHtml   = $extraHtml;
+    $partialSubmitLabel = $submitLabel;
+    $partialFromLabel   = $fromLabel;
+    $partialToLabel     = $toLabel;
+    require __DIR__ . '/../views/partials/_date-range.php';
+}
+
 function searchInput(string $tableId, string $placeholder): string
 {
     return '<div class="search-wrap mb-3">'
