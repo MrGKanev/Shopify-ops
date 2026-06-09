@@ -80,14 +80,7 @@ require __DIR__ . '/partials/_date-range.php';
           ?>
           <tr>
             <?php if ($idx === 0): ?>
-            <td class="order-num" rowspan="<?= count($row['missing']) ?>">
-              <?php if ($adminUrl): ?>
-                <a href="<?= $adminUrl ?>" target="_blank" rel="noopener"><?= esc($row['order_number']) ?></a>
-              <?php else: ?>
-                <?= esc($row['order_number']) ?>
-              <?php endif; ?>
-              <button class="copy-btn" data-copy="<?= esc(ltrim($row['order_number'], '#')) ?>" title="Copy">⧉</button>
-            </td>
+            <?= orderNumCell($row['order_number'], $adminUrl, null, count($row['missing'])) ?>
             <td class="text-sm" rowspan="<?= count($row['missing']) ?>"><?= esc($row['created_at']) ?></td>
             <?php endif; ?>
             <td class="text-sm"><?= esc($f['created_at']) ?></td>
@@ -96,15 +89,7 @@ require __DIR__ . '/partials/_date-range.php';
             <?php if ($idx === 0): ?>
             <td class="td-email" rowspan="<?= count($row['missing']) ?>"><?= esc($row['email']) ?></td>
             <td class="td-price" rowspan="<?= count($row['missing']) ?>"><?= formatPrice($row['total']) ?></td>
-            <td class="td-actions" rowspan="<?= count($row['missing']) ?>">
-              <?php if ($adminUrl): ?>
-                <a class="ignore-btn" href="<?= $adminUrl ?>" target="_blank" rel="noopener">View in Shopify</a>
-              <?php endif; ?>
-              <a class="ignore-btn" href="?page=spotcheck&prefill=<?= urlencode(ltrim($row['order_number'], '#')) ?>">Spot-check</a>
-              <?php if ($row['email']): ?>
-                <a class="ignore-btn" href="?page=customer&email=<?= urlencode($row['email']) ?>">Customer</a>
-              <?php endif; ?>
-            </td>
+            <?= actionLinks(['shopifyUrl' => $adminUrl, 'orderNum' => $row['order_number'], 'email' => $row['email'], 'spotcheck' => true, 'rowspan' => count($row['missing'])]) ?>
             <?php endif; ?>
           </tr>
           <?php endforeach; ?>
