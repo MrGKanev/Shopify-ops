@@ -82,30 +82,14 @@ require __DIR__ . '/partials/_date-range.php';
             };
           ?>
           <tr>
-            <td class="order-num">
-              <?php if ($row['ss_url']): ?>
-                <a href="<?= esc($row['ss_url']) ?>" target="_blank" rel="noopener"><?= esc($row['order_number']) ?></a>
-              <?php else: ?>
-                <?= esc($row['order_number']) ?>
-              <?php endif; ?>
-              <button class="copy-btn" data-copy="<?= esc($row['order_number']) ?>" title="Copy">⧉</button>
-            </td>
+            <?= orderNumCell($row['order_number'], $row['ss_url'], $row['order_number']) ?>
             <td class="text-sm"><?= esc($row['order_date']) ?></td>
             <td><?= esc($row['customer'] ?: '-') ?></td>
             <td class="td-email"><?= esc($row['email'] ?: '-') ?></td>
             <td><span class="chip chip-paid">shipped</span></td>
             <td><span class="chip <?= $shChip ?>"><?= esc(str_replace('_', ' ', $row['sh_fulfillment'])) ?></span></td>
             <td class="td-price"><?= formatPrice($row['total'] ?: null) ?></td>
-            <td class="td-actions">
-              <?php if ($row['ss_url']): ?>
-                <a class="ignore-btn" href="<?= esc($row['ss_url']) ?>" target="_blank" rel="noopener">Open in SS</a>
-              <?php endif; ?>
-              <?php if ($shopifyUrl): ?>
-                <a class="ignore-btn" href="<?= $shopifyUrl ?>" target="_blank" rel="noopener">View in Shopify</a>
-              <?php endif; ?>
-              <a class="ignore-btn" href="?page=spotcheck&prefill=<?= urlencode($row['order_number']) ?>">Spot-check</a>
-              <a class="ignore-btn" href="?page=timeline&order=<?= urlencode($row['order_number']) ?>">Timeline</a>
-            </td>
+            <?= actionLinks(['ssUrl' => $row['ss_url'], 'shopifyUrl' => $shopifyUrl, 'orderNum' => $row['order_number'], 'spotcheck' => true, 'timeline' => true]) ?>
           </tr>
           <?php endforeach; ?>
         </tbody>

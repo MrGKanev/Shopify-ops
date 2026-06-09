@@ -76,14 +76,7 @@ require __DIR__ . '/partials/_date-range.php';
             $adminUrl = $row['shopify_id'] ? $shopifyAdminBase . '/' . esc($row['shopify_id']) : null;
           ?>
           <tr>
-            <td class="order-num">
-              <?php if ($adminUrl): ?>
-                <a href="<?= $adminUrl ?>" target="_blank" rel="noopener"><?= esc($row['order_number']) ?></a>
-              <?php else: ?>
-                <?= esc($row['order_number']) ?>
-              <?php endif; ?>
-              <button class="copy-btn" data-copy="<?= esc(ltrim($row['order_number'], '#')) ?>" title="Copy">⧉</button>
-            </td>
+            <?= orderNumCell($row['order_number'], $adminUrl) ?>
             <td class="text-sm"><?= esc($row['created_at']) ?></td>
             <td>
               <div class="flex flex-col gap-1">
@@ -101,15 +94,7 @@ require __DIR__ . '/partials/_date-range.php';
                 <span class="chip chip-partial"><?= esc(str_replace('_', ' ', $row['fulfillment'])) ?></span>
               <?php endif; ?>
             </td>
-            <td class="td-actions">
-              <?php if ($adminUrl): ?>
-                <a class="ignore-btn" href="<?= $adminUrl ?>" target="_blank" rel="noopener">View in Shopify</a>
-              <?php endif; ?>
-              <a class="ignore-btn" href="?page=spotcheck&prefill=<?= urlencode(ltrim($row['order_number'], '#')) ?>">Spot-check</a>
-              <?php if ($row['email']): ?>
-                <a class="ignore-btn" href="?page=customer&email=<?= urlencode($row['email']) ?>">Customer</a>
-              <?php endif; ?>
-            </td>
+            <?= actionLinks(['shopifyUrl' => $adminUrl, 'orderNum' => $row['order_number'], 'email' => $row['email'], 'spotcheck' => true]) ?>
           </tr>
           <?php endforeach; ?>
         </tbody>

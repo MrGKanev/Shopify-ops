@@ -124,6 +124,44 @@ function renderMetafieldValue(string $value): string
     return esc($value);
 }
 
+function orderNumCell(string $num, ?string $url, ?string $copyVal = null, ?int $rowspan = null): string
+{
+    $copyVal ??= ltrim($num, '#');
+    $inner   = $url
+        ? '<a href="' . esc($url) . '" target="_blank" rel="noopener">' . esc($num) . '</a>'
+        : esc($num);
+    $attr = $rowspan !== null ? ' rowspan="' . $rowspan . '"' : '';
+    return '<td class="order-num"' . $attr . '>'
+        . $inner
+        . '<button class="copy-btn" data-copy="' . esc($copyVal) . '" title="Copy">⧉</button>'
+        . '</td>';
+}
+
+function actionLinks(array $opts): string
+{
+    $rowspanAttr = isset($opts['rowspan']) ? ' rowspan="' . (int)$opts['rowspan'] . '"' : '';
+    $html = '<td class="td-actions"' . $rowspanAttr . '>';
+    if (!empty($opts['ssUrl'])) {
+        $label = $opts['ssLabel'] ?? 'Open in SS';
+        $html .= '<a class="ignore-btn" href="' . esc($opts['ssUrl']) . '" target="_blank" rel="noopener">' . esc($label) . '</a>';
+    }
+    if (!empty($opts['shopifyUrl'])) {
+        $label = $opts['shopifyLabel'] ?? 'View in Shopify';
+        $html .= '<a class="ignore-btn" href="' . esc($opts['shopifyUrl']) . '" target="_blank" rel="noopener">' . esc($label) . '</a>';
+    }
+    $num = ltrim($opts['orderNum'] ?? '', '#');
+    if ($num && !empty($opts['spotcheck'])) {
+        $html .= '<a class="ignore-btn" href="?page=spotcheck&prefill=' . urlencode($num) . '">Spot-check</a>';
+    }
+    if ($num && !empty($opts['timeline'])) {
+        $html .= '<a class="ignore-btn" href="?page=timeline&order=' . urlencode($num) . '">Timeline</a>';
+    }
+    if (!empty($opts['email'])) {
+        $html .= '<a class="ignore-btn" href="?page=customer&email=' . urlencode($opts['email']) . '">Customer</a>';
+    }
+    return $html . '</td>';
+}
+
 function datePresets(): string
 {
     $presets = [

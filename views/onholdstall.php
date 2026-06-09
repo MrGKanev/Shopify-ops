@@ -87,14 +87,7 @@ require __DIR__ . '/partials/_date-range.php';
             };
           ?>
           <tr>
-            <td class="order-num">
-              <?php if ($adminUrl): ?>
-                <a href="<?= $adminUrl ?>" target="_blank" rel="noopener"><?= esc($row['order_number']) ?></a>
-              <?php else: ?>
-                <?= esc($row['order_number']) ?>
-              <?php endif; ?>
-              <button class="copy-btn" data-copy="<?= esc(ltrim($row['order_number'], '#')) ?>" title="Copy">⧉</button>
-            </td>
+            <?= orderNumCell($row['order_number'], $adminUrl) ?>
             <td class="text-sm"><?= esc($row['created_at']) ?></td>
             <td class="font-semibold" style="color:<?= $daysColor ?>"><?= $days ?>d</td>
             <td><span class="chip chip-unpaid"><?= esc($reasonLabel) ?></span></td>
@@ -102,15 +95,7 @@ require __DIR__ . '/partials/_date-range.php';
             <td class="td-email"><?= esc($row['email']) ?></td>
             <td class="td-price"><?= formatPrice($row['total']) ?></td>
             <td><span class="chip <?= financialChip($row['financial']) ?>"><?= esc($row['financial']) ?></span></td>
-            <td class="td-actions">
-              <?php if ($adminUrl): ?>
-                <a class="ignore-btn" href="<?= $adminUrl ?>" target="_blank" rel="noopener">View in Shopify</a>
-              <?php endif; ?>
-              <a class="ignore-btn" href="?page=timeline&order=<?= urlencode(ltrim($row['order_number'], '#')) ?>">Timeline</a>
-              <?php if ($row['email']): ?>
-                <a class="ignore-btn" href="?page=customer&email=<?= urlencode($row['email']) ?>">Customer</a>
-              <?php endif; ?>
-            </td>
+            <?= actionLinks(['shopifyUrl' => $adminUrl, 'orderNum' => $row['order_number'], 'email' => $row['email'], 'timeline' => true]) ?>
           </tr>
           <?php endforeach; ?>
         </tbody>

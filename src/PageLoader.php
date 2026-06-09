@@ -2156,6 +2156,44 @@ class PageLoader
         }
     }
 
+    /**
+     * Shared scaffold for all on-demand scan pages.
+     * Handles date extraction, credential checks, validation, and try/catch.
+     * The callable receives ($ctx, $start, $end) and should return the result array.
+     * Extra validation or POST params can be read and mutated via closure bindings.
+     */
+    private static function runScan(
+        string   $action,
+        string   $trigger,
+        array    $ctx,
+        string   $prefix,
+        callable $fn,
+        int      $defaultDays = 30,
+        bool     $needsSS     = false
+    ): array {
+        [$start, $end] = self::extractDateRange($prefix, $defaultDays);
+        $result = null;
+        $error  = '';
+
+        if ($action === $trigger) {
+            $start = trim($_POST["{$prefix}_start"] ?? '');
+            $end   = trim($_POST["{$prefix}_end"]   ?? '');
+
+            if     ($needsSS && ($err = self::requireSS($ctx)))    { $error = $err; }
+            elseif ($err = self::requireShopify($ctx))             { $error = $err; }
+            elseif ($err = self::validateDates($start, $end))      { $error = $err; }
+            else {
+                try {
+                    $result = $fn($ctx, $start, $end);
+                } catch (Throwable $e) {
+                    $error = $e->getMessage();
+                }
+            }
+        }
+
+        return compact('result', 'error', 'start', 'end');
+    }
+
     // ── Dashboard ─────────────────────────────────────────────────────────────
 
     private static function loadDashboard(array $ctx, array $already): array
@@ -2267,52 +2305,35 @@ class PageLoader
 
     private static function loadOnHoldStall(string $action, array $ctx): array
     {
-        $ohResult = null;
-        $ohError  = '';
-        [$ohStart, $ohEnd] = self::extractDateRange('oh', 90);
+        ['result' => $ohResult, 'error' => $ohError, 'start' => $ohStart, 'end' => $ohEnd] =
+            self::runScan($action, 'scan_onhold', $ctx, 'oh', function ($ctx, $start, $end) {
+                self::setLimits(240);
+                $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+                $nodes   = self::suppressOutput(fn() => $shopify->fetchOnHoldFulfillmentOrders($start, $end));
 
-        if ($action === 'scan_onhold') {
-            $ohStart = trim($_POST['oh_start'] ?? '');
-            $ohEnd   = trim($_POST['oh_end']   ?? '');
-
-            if ($err = self::requireShopify($ctx)) {
-                $ohError = $err;
-            } elseif ($err = self::validateDates($ohStart, $ohEnd)) {
-                $ohError = $err;
-            } else {
-                try {
-                    self::setLimits(240);
-                    $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
-                    $nodes   = self::suppressOutput(fn() => $shopify->fetchOnHoldFulfillmentOrders($ohStart, $ohEnd));
-
-                    $now  = time();
-                    $rows = [];
-                    foreach ($nodes as $node) {
-                        $order   = $node['order'];
-                        $created = $order['createdAt'] ?? '';
-                        $days    = $created ? (int)floor(($now - strtotime($created)) / 86400) : 0;
-                        $holds   = $node['fulfillmentHolds'] ?? [];
-                        $rows[] = [
-                            'shopify_id'   => $order['legacyResourceId']            ?? '',
-                            'order_number' => $order['name']                        ?? '',
-                            'created_at'   => self::dateOnly($created),
-                            'days_waiting' => $days,
-                            'email'        => $order['email']                       ?? '',
-                            'total'        => $order['totalPriceSet']['shopMoney']['amount'] ?? '',
-                            'financial'    => $order['displayFinancialStatus']      ?? '',
-                            'fulfillment'  => $order['displayFulfillmentStatus']    ?? '',
-                            'hold_reason'  => $holds[0]['reason']                  ?? '',
-                            'hold_notes'   => $holds[0]['reasonNotes']             ?? '',
-                        ];
-                    }
-                    usort($rows, fn($a, $b) => $b['days_waiting'] <=> $a['days_waiting']);
-
-                    $ohResult = ['rows' => $rows, 'start' => $ohStart, 'end' => $ohEnd];
-                } catch (Throwable $e) {
-                    $ohError = $e->getMessage();
+                $now  = time();
+                $rows = [];
+                foreach ($nodes as $node) {
+                    $order   = $node['order'];
+                    $created = $order['createdAt'] ?? '';
+                    $days    = $created ? (int)floor(($now - strtotime($created)) / 86400) : 0;
+                    $holds   = $node['fulfillmentHolds'] ?? [];
+                    $rows[] = [
+                        'shopify_id'   => $order['legacyResourceId']            ?? '',
+                        'order_number' => $order['name']                        ?? '',
+                        'created_at'   => self::dateOnly($created),
+                        'days_waiting' => $days,
+                        'email'        => $order['email']                       ?? '',
+                        'total'        => $order['totalPriceSet']['shopMoney']['amount'] ?? '',
+                        'financial'    => $order['displayFinancialStatus']      ?? '',
+                        'fulfillment'  => $order['displayFulfillmentStatus']    ?? '',
+                        'hold_reason'  => $holds[0]['reason']                  ?? '',
+                        'hold_notes'   => $holds[0]['reasonNotes']             ?? '',
+                    ];
                 }
-            }
-        }
+                usort($rows, fn($a, $b) => $b['days_waiting'] <=> $a['days_waiting']);
+                return ['rows' => $rows, 'start' => $start, 'end' => $end];
+            }, 90);
 
         return compact('ohResult', 'ohError', 'ohStart', 'ohEnd');
     }
@@ -2321,69 +2342,53 @@ class PageLoader
 
     private static function loadNoTracking(string $action, array $ctx): array
     {
-        $ntResult    = null;
-        $ntError     = '';
-        [$ntStart, $ntEnd] = self::extractDateRange('nt', 30);
-        $ntThreshold = (int)($_POST['nt_threshold'] ?? $_GET['nt_threshold'] ?? 24);
+        $ntThreshold = max(1, (int)($_POST['nt_threshold'] ?? $_GET['nt_threshold'] ?? 24));
 
-        if ($action === 'scan_notracking') {
-            $ntStart     = trim($_POST['nt_start']     ?? '');
-            $ntEnd       = trim($_POST['nt_end']       ?? '');
-            $ntThreshold = max(1, (int)($_POST['nt_threshold'] ?? 24));
+        ['result' => $ntResult, 'error' => $ntError, 'start' => $ntStart, 'end' => $ntEnd] =
+            self::runScan($action, 'scan_notracking', $ctx, 'nt', function ($ctx, $start, $end) use (&$ntThreshold) {
+                $ntThreshold = max(1, (int)($_POST['nt_threshold'] ?? 24));
+                self::setLimits(180);
+                $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+                $orders  = self::suppressOutput(fn() => $shopify->fetchFulfilledOrdersWithTracking($start, $end));
 
-            if ($err = self::requireShopify($ctx)) {
-                $ntError = $err;
-            } elseif ($err = self::validateDates($ntStart, $ntEnd)) {
-                $ntError = $err;
-            } else {
-                try {
-                    self::setLimits(180);
-                    $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
-                    $orders  = self::suppressOutput(fn() => $shopify->fetchFulfilledOrdersWithTracking($ntStart, $ntEnd));
-
-                    $now  = time();
-                    $rows = [];
-                    foreach ($orders as $o) {
-                        $missing = [];
-                        foreach ($o['fulfillments'] ?? [] as $f) {
-                            if (trim($f['tracking_number'] ?? '') !== '') continue;
-                            $createdAt = $f['created_at'] ?? '';
-                            $hoursAgo  = $createdAt ? (int)(($now - strtotime($createdAt)) / 3600) : 0;
-                            if ($hoursAgo < $ntThreshold) continue;
-                            $missing[] = [
-                                'id'         => $f['id']       ?? '',
-                                'created_at' => self::dateOnly($createdAt),
-                                'hours_ago'  => $hoursAgo,
-                                'status'     => $f['shipment_status'] ?? $f['status'] ?? '',
-                                'company'    => $f['tracking_company'] ?? '',
-                            ];
-                        }
-                        if (empty($missing)) continue;
-                        $rows[] = [
-                            'shopify_id'   => $o['id']          ?? '',
-                            'order_number' => $o['name']        ?? '',
-                            'created_at'   => self::dateOnly($o['created_at'] ?? ''),
-                            'email'        => $o['email']       ?? '',
-                            'total'        => $o['total_price'] ?? '',
-                            'financial'    => $o['financial_status']   ?? '',
-                            'fulfillment'  => $o['fulfillment_status'] ?? '',
-                            'missing'      => $missing,
+                $now  = time();
+                $rows = [];
+                foreach ($orders as $o) {
+                    $missing = [];
+                    foreach ($o['fulfillments'] ?? [] as $f) {
+                        if (trim($f['tracking_number'] ?? '') !== '') continue;
+                        $createdAt = $f['created_at'] ?? '';
+                        $hoursAgo  = $createdAt ? (int)(($now - strtotime($createdAt)) / 3600) : 0;
+                        if ($hoursAgo < $ntThreshold) continue;
+                        $missing[] = [
+                            'id'         => $f['id']       ?? '',
+                            'created_at' => self::dateOnly($createdAt),
+                            'hours_ago'  => $hoursAgo,
+                            'status'     => $f['shipment_status'] ?? $f['status'] ?? '',
+                            'company'    => $f['tracking_company'] ?? '',
                         ];
                     }
-                    usort($rows, fn($a, $b) => ($b['missing'][0]['hours_ago'] ?? 0) <=> ($a['missing'][0]['hours_ago'] ?? 0));
-
-                    $ntResult = [
-                        'rows'      => $rows,
-                        'scanned'   => count($orders),
-                        'start'     => $ntStart,
-                        'end'       => $ntEnd,
-                        'threshold' => $ntThreshold,
+                    if (empty($missing)) continue;
+                    $rows[] = [
+                        'shopify_id'   => $o['id']          ?? '',
+                        'order_number' => $o['name']        ?? '',
+                        'created_at'   => self::dateOnly($o['created_at'] ?? ''),
+                        'email'        => $o['email']       ?? '',
+                        'total'        => $o['total_price'] ?? '',
+                        'financial'    => $o['financial_status']   ?? '',
+                        'fulfillment'  => $o['fulfillment_status'] ?? '',
+                        'missing'      => $missing,
                     ];
-                } catch (Throwable $e) {
-                    $ntError = $e->getMessage();
                 }
-            }
-        }
+                usort($rows, fn($a, $b) => ($b['missing'][0]['hours_ago'] ?? 0) <=> ($a['missing'][0]['hours_ago'] ?? 0));
+                return [
+                    'rows'      => $rows,
+                    'scanned'   => count($orders),
+                    'start'     => $start,
+                    'end'       => $end,
+                    'threshold' => $ntThreshold,
+                ];
+            });
 
         return compact('ntResult', 'ntError', 'ntStart', 'ntEnd', 'ntThreshold');
     }
@@ -2392,61 +2397,44 @@ class PageLoader
 
     private static function loadPostShipAddrChange(string $action, array $ctx): array
     {
-        $psResult = null;
-        $psError  = '';
-        [$psStart, $psEnd] = self::extractDateRange('ps');
+        ['result' => $psResult, 'error' => $psError, 'start' => $psStart, 'end' => $psEnd] =
+            self::runScan($action, 'scan_postshipaddr', $ctx, 'ps', function ($ctx, $start, $end) {
+                self::setLimits(240);
+                $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+                $entries = self::suppressOutput(fn() => $shopify->fetchPostShipAddressChanges($start, $end));
 
-        if ($action === 'scan_postshipaddr') {
-            $psStart = trim($_POST['ps_start'] ?? '');
-            $psEnd   = trim($_POST['ps_end']   ?? '');
-
-            if ($err = self::requireShopify($ctx)) {
-                $psError = $err;
-            } elseif ($err = self::validateDates($psStart, $psEnd)) {
-                $psError = $err;
-            } else {
-                try {
-                    self::setLimits(240);
-                    $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
-                    $entries = self::suppressOutput(fn() => $shopify->fetchPostShipAddressChanges($psStart, $psEnd));
-
-                    $rows = [];
-                    foreach ($entries as $e) {
-                        $o    = $e['order'];
-                        $addr = $o['shipping_address'] ?? null;
-                        $addrLine = $addr ? implode(', ', array_filter([
-                            $addr['address1']      ?? '',
-                            $addr['city']          ?? '',
-                            $addr['province_code'] ?? '',
-                            $addr['zip']           ?? '',
-                            $addr['country_code']  ?? '',
-                        ])) : '';
-                        $changedTs     = strtotime($e['changed_at']     ?? '');
-                        $fulfillTs     = strtotime($e['fulfillment_at'] ?? '');
-                        $minsAfterShip = ($changedTs && $fulfillTs) ? max(0, (int)(($changedTs - $fulfillTs) / 60)) : 0;
-                        $rows[] = [
-                            'shopify_id'      => $o['id']          ?? '',
-                            'order_number'    => $o['name']        ?? '',
-                            'created_at'      => self::dateOnly($o['created_at']     ?? ''),
-                            'fulfillment_at'  => self::dateOnly($e['fulfillment_at'] ?? ''),
-                            'changed_at'      => substr($e['changed_at'] ?? '', 0, 16),
-                            'mins_after_ship' => $minsAfterShip,
-                            'email'           => $o['email']       ?? '',
-                            'total'           => $o['total_price'] ?? '',
-                            'financial'       => $o['financial_status']   ?? '',
-                            'fulfillment'     => $o['fulfillment_status'] ?? '',
-                            'addr_name'       => trim(($addr['first_name'] ?? '') . ' ' . ($addr['last_name'] ?? '')),
-                            'addr_line'       => $addrLine,
-                        ];
-                    }
-                    usort($rows, fn($a, $b) => strcmp($b['changed_at'], $a['changed_at']));
-
-                    $psResult = ['rows' => $rows, 'start' => $psStart, 'end' => $psEnd];
-                } catch (Throwable $e) {
-                    $psError = $e->getMessage();
+                $rows = [];
+                foreach ($entries as $e) {
+                    $o    = $e['order'];
+                    $addr = $o['shipping_address'] ?? null;
+                    $addrLine = $addr ? implode(', ', array_filter([
+                        $addr['address1']      ?? '',
+                        $addr['city']          ?? '',
+                        $addr['province_code'] ?? '',
+                        $addr['zip']           ?? '',
+                        $addr['country_code']  ?? '',
+                    ])) : '';
+                    $changedTs     = strtotime($e['changed_at']     ?? '');
+                    $fulfillTs     = strtotime($e['fulfillment_at'] ?? '');
+                    $minsAfterShip = ($changedTs && $fulfillTs) ? max(0, (int)(($changedTs - $fulfillTs) / 60)) : 0;
+                    $rows[] = [
+                        'shopify_id'      => $o['id']          ?? '',
+                        'order_number'    => $o['name']        ?? '',
+                        'created_at'      => self::dateOnly($o['created_at']     ?? ''),
+                        'fulfillment_at'  => self::dateOnly($e['fulfillment_at'] ?? ''),
+                        'changed_at'      => substr($e['changed_at'] ?? '', 0, 16),
+                        'mins_after_ship' => $minsAfterShip,
+                        'email'           => $o['email']       ?? '',
+                        'total'           => $o['total_price'] ?? '',
+                        'financial'       => $o['financial_status']   ?? '',
+                        'fulfillment'     => $o['fulfillment_status'] ?? '',
+                        'addr_name'       => trim(($addr['first_name'] ?? '') . ' ' . ($addr['last_name'] ?? '')),
+                        'addr_line'       => $addrLine,
+                    ];
                 }
-            }
-        }
+                usort($rows, fn($a, $b) => strcmp($b['changed_at'], $a['changed_at']));
+                return ['rows' => $rows, 'start' => $start, 'end' => $end];
+            });
 
         return compact('psResult', 'psError', 'psStart', 'psEnd');
     }
@@ -2455,67 +2443,50 @@ class PageLoader
 
     private static function loadNoteFlags(string $action, array $ctx): array
     {
-        $nfResult = null;
-        $nfError  = '';
-        [$nfStart, $nfEnd] = self::extractDateRange('nf', 30);
-
         $defaultKeywords = 'urgent, hold, cancel, wrong, error, stop, do not ship, dont ship, wait, attention';
         $nfKeywordsRaw   = trim($_POST['nf_keywords'] ?? $_GET['nf_keywords'] ?? $defaultKeywords);
 
-        if ($action === 'scan_noteflags') {
-            $nfStart       = trim($_POST['nf_start']    ?? '');
-            $nfEnd         = trim($_POST['nf_end']      ?? '');
-            $nfKeywordsRaw = trim($_POST['nf_keywords'] ?? $defaultKeywords);
-
-            $keywords = array_values(array_filter(array_map('trim', explode(',', strtolower($nfKeywordsRaw)))));
-
-            if ($err = self::requireShopify($ctx)) {
-                $nfError = $err;
-            } elseif ($err = self::validateDates($nfStart, $nfEnd)) {
-                $nfError = $err;
-            } elseif (empty($keywords)) {
-                $nfError = 'Enter at least one keyword.';
-            } else {
-                try {
-                    self::setLimits(180);
-                    $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
-                    $orders  = self::suppressOutput(fn() => $shopify->fetchOrdersWithNotes($nfStart, $nfEnd));
-
-                    $rows = [];
-                    foreach ($orders as $o) {
-                        $note = strtolower($o['note'] ?? '');
-                        if (!$note) continue;
-                        $matched = [];
-                        foreach ($keywords as $kw) {
-                            if ($kw !== '' && str_contains($note, $kw)) $matched[] = $kw;
-                        }
-                        if (empty($matched)) continue;
-                        $rows[] = [
-                            'shopify_id'   => $o['id']          ?? '',
-                            'order_number' => $o['name']        ?? '',
-                            'created_at'   => self::dateOnly($o['created_at'] ?? ''),
-                            'email'        => $o['email']       ?? '',
-                            'total'        => $o['total_price'] ?? '',
-                            'financial'    => $o['financial_status']   ?? '',
-                            'fulfillment'  => $o['fulfillment_status'] ?? '',
-                            'note'         => $o['note']        ?? '',
-                            'matched'      => $matched,
-                        ];
-                    }
-                    usort($rows, fn($a, $b) => strcmp($b['created_at'], $a['created_at']));
-
-                    $nfResult = [
-                        'rows'     => $rows,
-                        'scanned'  => count($orders),
-                        'start'    => $nfStart,
-                        'end'      => $nfEnd,
-                        'keywords' => $keywords,
-                    ];
-                } catch (Throwable $e) {
-                    $nfError = $e->getMessage();
+        ['result' => $nfResult, 'error' => $nfError, 'start' => $nfStart, 'end' => $nfEnd] =
+            self::runScan($action, 'scan_noteflags', $ctx, 'nf', function ($ctx, $start, $end) use (&$nfKeywordsRaw, $defaultKeywords) {
+                $nfKeywordsRaw = trim($_POST['nf_keywords'] ?? $defaultKeywords);
+                $keywords = array_values(array_filter(array_map('trim', explode(',', strtolower($nfKeywordsRaw)))));
+                if (empty($keywords)) {
+                    throw new \InvalidArgumentException('Enter at least one keyword.');
                 }
-            }
-        }
+                self::setLimits(180);
+                $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+                $orders  = self::suppressOutput(fn() => $shopify->fetchOrdersWithNotes($start, $end));
+
+                $rows = [];
+                foreach ($orders as $o) {
+                    $note = strtolower($o['note'] ?? '');
+                    if (!$note) continue;
+                    $matched = [];
+                    foreach ($keywords as $kw) {
+                        if ($kw !== '' && str_contains($note, $kw)) $matched[] = $kw;
+                    }
+                    if (empty($matched)) continue;
+                    $rows[] = [
+                        'shopify_id'   => $o['id']          ?? '',
+                        'order_number' => $o['name']        ?? '',
+                        'created_at'   => self::dateOnly($o['created_at'] ?? ''),
+                        'email'        => $o['email']       ?? '',
+                        'total'        => $o['total_price'] ?? '',
+                        'financial'    => $o['financial_status']   ?? '',
+                        'fulfillment'  => $o['fulfillment_status'] ?? '',
+                        'note'         => $o['note']        ?? '',
+                        'matched'      => $matched,
+                    ];
+                }
+                usort($rows, fn($a, $b) => strcmp($b['created_at'], $a['created_at']));
+                return [
+                    'rows'     => $rows,
+                    'scanned'  => count($orders),
+                    'start'    => $start,
+                    'end'      => $end,
+                    'keywords' => $keywords,
+                ];
+            });
 
         return compact('nfResult', 'nfError', 'nfStart', 'nfEnd', 'nfKeywordsRaw');
     }
@@ -2528,78 +2499,64 @@ class PageLoader
         $ssuError  = '';
         [$ssuStart, $ssuEnd] = self::extractDateRange('ssu');
 
-        if ($action === 'scan_ssshipped') {
-            $ssuStart = trim($_POST['ssu_start'] ?? '');
-            $ssuEnd   = trim($_POST['ssu_end']   ?? '');
+        ['result' => $ssuResult, 'error' => $ssuError, 'start' => $ssuStart, 'end' => $ssuEnd] =
+            self::runScan($action, 'scan_ssshipped', $ctx, 'ssu', function ($ctx, $start, $end) {
+                self::setLimits(300);
 
-            if ($err = self::requireSS($ctx)) {
-                $ssuError = $err;
-            } elseif ($err = self::requireShopify($ctx)) {
-                $ssuError = $err;
-            } elseif ($err = self::validateDates($ssuStart, $ssuEnd)) {
-                $ssuError = $err;
-            } else {
-                try {
-                    self::setLimits(300);
-
-                    [$ssOrders, $shOrders] = self::suppressOutput(function () use ($ctx, $ssuStart, $ssuEnd) {
-                        $ss      = new ShipStation($ctx['ssKey'], $ctx['ssSecret'], $ctx['cacheObj']);
-                        $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken'], $ctx['cacheObj']);
-                        return [
-                            $ss->fetchAllOrders($ssuStart, $ssuEnd),
-                            $shopify->fetchAllOrders($ssuStart, $ssuEnd),
-                        ];
-                    });
-
-                    $shIndex = [];
-                    foreach ($shOrders as $o) {
-                        $num = Comparator::normalise((string)($o['order_number'] ?? ltrim($o['name'] ?? '', '#')));
-                        if ($num) {
-                            $shIndex[$num] = [
-                                'fulfillment_status' => $o['fulfillment_status'] ?? '',
-                                'financial_status'   => $o['financial_status']   ?? '',
-                                'shopify_id'         => $o['id']                 ?? '',
-                            ];
-                        }
-                    }
-
-                    $rows = [];
-                    foreach ($ssOrders as $o) {
-                        if (($o['orderStatus'] ?? '') !== 'shipped') continue;
-                        $num = Comparator::normalise((string)($o['orderNumber'] ?? ''));
-                        if (!$num || !isset($shIndex[$num])) continue; // orphan = different check
-
-                        $sh           = $shIndex[$num];
-                        $shFulfillment = $sh['fulfillment_status'] ?? '';
-                        if ($shFulfillment === 'fulfilled') continue; // correctly synced
-
-                        $rows[] = [
-                            'ss_order_id'    => $o['orderId']      ?? '',
-                            'order_number'   => $o['orderNumber']  ?? '',
-                            'order_date'     => self::dateOnly($o['orderDate'] ?? ''),
-                            'customer'       => trim($o['shipTo']['name'] ?? ''),
-                            'email'          => $o['customerEmail'] ?? '',
-                            'total'          => $o['orderTotal']   ?? 0,
-                            'sh_fulfillment' => $shFulfillment ?: 'unfulfilled',
-                            'sh_financial'   => $sh['financial_status'] ?? '',
-                            'shopify_id'     => $sh['shopify_id'] ?? '',
-                            'ss_url'         => $o['orderId'] ? 'https://app.shipstation.com/#!/orders/order-details/' . urlencode((string)$o['orderId']) : null,
-                        ];
-                    }
-                    usort($rows, fn($a, $b) => strcmp($b['order_date'], $a['order_date']));
-
-                    $shippedCount = count(array_filter($ssOrders, fn($o) => ($o['orderStatus'] ?? '') === 'shipped'));
-                    $ssuResult = [
-                        'rows'          => $rows,
-                        'shipped_total' => $shippedCount,
-                        'start'         => $ssuStart,
-                        'end'           => $ssuEnd,
+                [$ssOrders, $shOrders] = self::suppressOutput(function () use ($ctx, $start, $end) {
+                    $ss      = new ShipStation($ctx['ssKey'], $ctx['ssSecret'], $ctx['cacheObj']);
+                    $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken'], $ctx['cacheObj']);
+                    return [
+                        $ss->fetchAllOrders($start, $end),
+                        $shopify->fetchAllOrders($start, $end),
                     ];
-                } catch (Throwable $e) {
-                    $ssuError = $e->getMessage();
+                });
+
+                $shIndex = [];
+                foreach ($shOrders as $o) {
+                    $num = Comparator::normalise((string)($o['order_number'] ?? ltrim($o['name'] ?? '', '#')));
+                    if ($num) {
+                        $shIndex[$num] = [
+                            'fulfillment_status' => $o['fulfillment_status'] ?? '',
+                            'financial_status'   => $o['financial_status']   ?? '',
+                            'shopify_id'         => $o['id']                 ?? '',
+                        ];
+                    }
                 }
-            }
-        }
+
+                $rows = [];
+                foreach ($ssOrders as $o) {
+                    if (($o['orderStatus'] ?? '') !== 'shipped') continue;
+                    $num = Comparator::normalise((string)($o['orderNumber'] ?? ''));
+                    if (!$num || !isset($shIndex[$num])) continue;
+
+                    $sh            = $shIndex[$num];
+                    $shFulfillment = $sh['fulfillment_status'] ?? '';
+                    if ($shFulfillment === 'fulfilled') continue;
+
+                    $rows[] = [
+                        'ss_order_id'    => $o['orderId']      ?? '',
+                        'order_number'   => $o['orderNumber']  ?? '',
+                        'order_date'     => self::dateOnly($o['orderDate'] ?? ''),
+                        'customer'       => trim($o['shipTo']['name'] ?? ''),
+                        'email'          => $o['customerEmail'] ?? '',
+                        'total'          => $o['orderTotal']   ?? 0,
+                        'sh_fulfillment' => $shFulfillment ?: 'unfulfilled',
+                        'sh_financial'   => $sh['financial_status'] ?? '',
+                        'shopify_id'     => $sh['shopify_id'] ?? '',
+                        'ss_url'         => $o['orderId'] ? 'https://app.shipstation.com/#!/orders/order-details/' . urlencode((string)$o['orderId']) : null,
+                    ];
+                }
+                usort($rows, fn($a, $b) => strcmp($b['order_date'], $a['order_date']));
+
+                $shippedCount = count(array_filter($ssOrders, fn($o) => ($o['orderStatus'] ?? '') === 'shipped'));
+                return [
+                    'rows'          => $rows,
+                    'shipped_total' => $shippedCount,
+                    'start'         => $start,
+                    'end'           => $end,
+                ];
+            }, 30, true);
 
         return compact('ssuResult', 'ssuError', 'ssuStart', 'ssuEnd');
     }
