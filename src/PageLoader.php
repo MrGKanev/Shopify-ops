@@ -2219,11 +2219,47 @@ class PageLoader
             fn($e) => ($e['ignored_at'] ?? '9999-99-99') <= $cutoff60
         ));
 
+        // Missing order type breakdown for the latest report
+        $dbMissingByType = [];
+        foreach ($reports[0]['missing'] ?? [] as $o) {
+            $t = $o['order_type'] ?? 'Unknown';
+            $dbMissingByType[$t] = ($dbMissingByType[$t] ?? 0) + 1;
+        }
+        arsort($dbMissingByType);
+
+        // Average days between consecutive audits
+        $dbAvgCadence = null;
+        if (count($reports) >= 2) {
+            $gaps = [];
+            for ($i = 0; $i < count($reports) - 1; $i++) {
+                $gaps[] = (strtotime($reports[$i]['date']) - strtotime($reports[$i + 1]['date'])) / 86400;
+            }
+            $dbAvgCadence = (float) round(array_sum($gaps) / count($gaps), 1);
+        }
+
+        // Average days from first-seen-as-missing to pushed
+        $dbAvgResolutionDays = null;
+        $orderHistory        = $already['orderHistory'] ?? [];
+        $lags = [];
+        foreach ($pushLog as $p) {
+            $norm   = Comparator::normalise($p['order_number'] ?? '');
+            $pushed = substr($p['pushed_at'] ?? '', 0, 10);
+            if ($norm && $pushed && isset($orderHistory[$norm]['first'])) {
+                $first = $orderHistory[$norm]['first'];
+                $lag   = (strtotime($pushed) - strtotime($first)) / 86400;
+                if ($lag >= 0) $lags[] = $lag;
+            }
+        }
+        if ($lags) {
+            $dbAvgResolutionDays = (float) round(array_sum($lags) / count($lags), 1);
+        }
+
         return compact(
             'dbPushRecent', 'dbTrendReports', 'dbMaxCount',
             'dbTotalReports', 'dbTotalMissing', 'dbTrend',
             'dbLastPush', 'dbCacheCount',
-            'dbDaysSinceAudit', 'dbOldestMissingDays', 'dbStaleIgnored'
+            'dbDaysSinceAudit', 'dbOldestMissingDays', 'dbStaleIgnored',
+            'dbMissingByType', 'dbAvgCadence', 'dbAvgResolutionDays'
         );
     }
 
