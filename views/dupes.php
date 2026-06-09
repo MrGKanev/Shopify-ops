@@ -21,11 +21,7 @@
 
   <form method="post">
     <input type="hidden" name="action" value="find_dupes">
-    <?php
-$partialStartName = 'dupes_start'; $partialStartVal = $dupesStart;
-$partialEndName   = 'dupes_end';   $partialEndVal   = $dupesEnd;
-require __DIR__ . '/partials/_date-range.php';
-?>
+    <?php dateRangePartial('dupes', $dupesStart, $dupesEnd) ?>
   </form>
 
   <?php if ($dupesResult !== null): ?>

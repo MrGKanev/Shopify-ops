@@ -15,12 +15,7 @@
 
   <form method="post">
     <input type="hidden" name="action" value="scan_hvorders">
-    <?php
-$partialStartName = 'hv_start'; $partialStartVal = $hvStart;
-$partialEndName   = 'hv_end';   $partialEndVal   = $hvEnd;
-$partialExtraHtml = '<div class="field"><label>Min order value $</label><input type="number" name="hv_min" value="' . (int)$hvMin . '" min="0" step="10" style="width:100px"></div>';
-require __DIR__ . '/partials/_date-range.php';
-?>
+    <?php dateRangePartial('hv', $hvStart, $hvEnd, '<div class="field"><label>Min order value $</label><input type="number" name="hv_min" value="' . (int)$hvMin . '" min="0" step="10" style="width:100px"></div>') ?>
   </form>
 
   <?php if ($hvResult !== null): ?>

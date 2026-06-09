@@ -54,9 +54,7 @@
                   data-csv-filename="zombie-products.csv">Export CSV</button>
         </div>
       </div>
-      <div class="search-wrap mb-3">
-        <input class="js-search" data-target="tbl-zombieproducts" placeholder="Filter by title, vendor, type…" type="search">
-      </div>
+      <?= searchInput('tbl-zombieproducts', 'Filter by title, vendor, type…') ?>
       <table id="tbl-zombieproducts">
         <thead>
           <tr>

@@ -19,12 +19,7 @@
 
   <form method="post">
     <input type="hidden" name="action" value="scan_partial_fulfill">
-    <?php
-$partialStartName = 'pf_start'; $partialStartVal = $pfStart;
-$partialEndName   = 'pf_end';   $partialEndVal   = $pfEnd;
-$partialExtraHtml = '<div class="field"><label>Stalled &ge; (days)</label><input type="number" name="pf_threshold" value="' . (int)$pfThreshold . '" min="1" style="width:80px"></div>';
-require __DIR__ . '/partials/_date-range.php';
-?>
+    <?php dateRangePartial('pf', $pfStart, $pfEnd, '<div class="field"><label>Stalled &ge; (days)</label><input type="number" name="pf_threshold" value="' . (int)$pfThreshold . '" min="1" style="width:80px"></div>') ?>
   </form>
 
   <?php if ($pfResult !== null): ?>

@@ -19,11 +19,7 @@
 
   <form method="post">
     <input type="hidden" name="action" value="scan_emails">
-    <?php
-$partialStartName = 'email_start'; $partialStartVal = $emailStart;
-$partialEndName   = 'email_end';   $partialEndVal   = $emailEnd;
-require __DIR__ . '/partials/_date-range.php';
-?>
+    <?php dateRangePartial('email', $emailStart, $emailEnd) ?>
   </form>
 
   <?php if ($emailResult !== null): ?>

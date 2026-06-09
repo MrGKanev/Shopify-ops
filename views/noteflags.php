@@ -19,12 +19,7 @@
 
   <form method="post">
     <input type="hidden" name="action" value="scan_noteflags">
-    <?php
-$partialStartName = 'nf_start'; $partialStartVal = $nfStart;
-$partialEndName   = 'nf_end';   $partialEndVal   = $nfEnd;
-$partialExtraHtml = '<div class="field" style="min-width:260px"><label>Keywords (comma-separated)</label><input type="text" name="nf_keywords" value="' . esc($nfKeywordsRaw) . '" style="width:100%"></div>';
-require __DIR__ . '/partials/_date-range.php';
-?>
+    <?php dateRangePartial('nf', $nfStart, $nfEnd, '<div class="field" style="min-width:260px"><label>Keywords (comma-separated)</label><input type="text" name="nf_keywords" value="' . esc($nfKeywordsRaw) . '" style="width:100%"></div>') ?>
   </form>
 
   <?php if ($nfResult !== null): ?>
@@ -55,9 +50,7 @@ require __DIR__ . '/partials/_date-range.php';
                   data-csv-filename="note-flags-<?= esc($nfResult['start']) ?>.csv">Export CSV</button>
         </div>
       </div>
-      <div class="search-wrap mb-3">
-        <input class="js-search" data-target="tbl-noteflags" placeholder="Filter by order #, email, note…" type="search">
-      </div>
+      <?= searchInput('tbl-noteflags', 'Filter by order #, email, note…') ?>
       <table id="tbl-noteflags">
         <thead>
           <tr>

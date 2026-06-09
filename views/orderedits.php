@@ -20,12 +20,7 @@
 
   <form method="post">
     <input type="hidden" name="action" value="scan_order_edits">
-    <?php
-      $partialStartName = 'oe_start'; $partialStartVal = $oeStart;
-      $partialEndName   = 'oe_end';   $partialEndVal   = $oeEnd;
-      $partialSubmitLabel = 'Scan';
-      require __DIR__ . '/partials/_date-range.php';
-    ?>
+    <?php dateRangePartial('oe', $oeStart, $oeEnd) ?>
   </form>
 
   <?php if ($oeResult !== null): ?>
@@ -55,9 +50,7 @@
                   data-csv-filename="order-edits-<?= esc($oeResult['start']) ?>.csv">Export CSV</button>
         </div>
       </div>
-      <div class="search-wrap mb-3">
-        <input class="js-search" data-target="tbl-orderedits" placeholder="Filter by order #, email…" type="search">
-      </div>
+      <?= searchInput('tbl-orderedits', 'Filter by order #, email…') ?>
       <table id="tbl-orderedits">
         <thead>
           <tr>

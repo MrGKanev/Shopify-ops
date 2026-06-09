@@ -23,11 +23,7 @@
 
   <form method="post">
     <input type="hidden" name="action" value="find_orphans">
-    <?php
-$partialStartName = 'orphan_start'; $partialStartVal = $orphanStart;
-$partialEndName   = 'orphan_end';   $partialEndVal   = $orphanEnd;
-require __DIR__ . '/partials/_date-range.php';
-?>
+    <?php dateRangePartial('orphan', $orphanStart, $orphanEnd) ?>
   </form>
 
   <?php if ($orphanResult !== null): ?>

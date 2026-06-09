@@ -19,12 +19,7 @@
 
   <form method="post">
     <input type="hidden" name="action" value="scan_notracking">
-    <?php
-$partialStartName = 'nt_start'; $partialStartVal = $ntStart;
-$partialEndName   = 'nt_end';   $partialEndVal   = $ntEnd;
-$partialExtraHtml = '<div class="field"><label>Grace period (hours)</label><input type="number" name="nt_threshold" value="' . (int)$ntThreshold . '" min="1" style="width:80px"></div>';
-require __DIR__ . '/partials/_date-range.php';
-?>
+    <?php dateRangePartial('nt', $ntStart, $ntEnd, '<div class="field"><label>Grace period (hours)</label><input type="number" name="nt_threshold" value="' . (int)$ntThreshold . '" min="1" style="width:80px"></div>') ?>
   </form>
 
   <?php if ($ntResult !== null): ?>
@@ -55,9 +50,7 @@ require __DIR__ . '/partials/_date-range.php';
                   data-csv-filename="no-tracking-<?= esc($ntResult['start']) ?>.csv">Export CSV</button>
         </div>
       </div>
-      <div class="search-wrap mb-3">
-        <input class="js-search" data-target="tbl-notracking" placeholder="Filter by order #, email…" type="search">
-      </div>
+      <?= searchInput('tbl-notracking', 'Filter by order #, email…') ?>
       <table id="tbl-notracking">
         <thead>
           <tr>

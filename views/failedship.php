@@ -14,11 +14,7 @@
 
   <form method="post">
     <input type="hidden" name="action" value="scan_failed_shipments">
-    <?php
-$partialStartName = 'fs_start'; $partialStartVal = $fsStart;
-$partialEndName   = 'fs_end';   $partialEndVal   = $fsEnd;
-require __DIR__ . '/partials/_date-range.php';
-?>
+    <?php dateRangePartial('fs', $fsStart, $fsEnd) ?>
   </form>
 
   <?php if ($fsResult !== null): ?>

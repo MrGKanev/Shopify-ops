@@ -19,11 +19,7 @@
 
   <form method="post">
     <input type="hidden" name="action" value="scan_country_mismatch">
-    <?php
-      $partialStartName = 'cm_start'; $partialStartVal = $cmStart;
-      $partialEndName   = 'cm_end';   $partialEndVal   = $cmEnd;
-      require __DIR__ . '/partials/_date-range.php';
-    ?>
+    <?php dateRangePartial('cm', $cmStart, $cmEnd) ?>
   </form>
 
   <?php if ($cmResult !== null): ?>

@@ -92,15 +92,15 @@
                placeholder="exact or partial value">
       </div>
     </div>
-    <?php
-$partialStartName  = 'mf_start'; $partialStartVal = $metafieldSearch['start'] ?? '';
-$partialEndName    = 'mf_end';   $partialEndVal   = $metafieldSearch['end']   ?? '';
-$partialFromLabel  = 'From <span class="label-opt">(optional)</span>';
-$partialToLabel    = 'To <span class="label-opt">(optional)</span>';
-$partialExtraHtml  = '<div class="mf-hint">No date range - scans the most recent 2,500 orders.</div>';
-$partialSubmitLabel = 'Search';
-require __DIR__ . '/partials/_date-range.php';
-?>
+    <?php dateRangePartial(
+    'mf',
+    $metafieldSearch['start'] ?? '',
+    $metafieldSearch['end']   ?? '',
+    '<div class="mf-hint">No date range - scans the most recent 2,500 orders.</div>',
+    'Search',
+    'From <span class="label-opt">(optional)</span>',
+    'To <span class="label-opt">(optional)</span>'
+) ?>
   </form>
 
   <?php if ($metafieldSearch !== null): ?>

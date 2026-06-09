@@ -19,11 +19,7 @@
 
   <form method="post">
     <input type="hidden" name="action" value="scan_addrdupes">
-    <?php
-$partialStartName = 'ad_start'; $partialStartVal = $adStart;
-$partialEndName   = 'ad_end';   $partialEndVal   = $adEnd;
-require __DIR__ . '/partials/_date-range.php';
-?>
+    <?php dateRangePartial('ad', $adStart, $adEnd) ?>
   </form>
 
   <?php if ($adResult !== null): ?>
@@ -54,9 +50,7 @@ require __DIR__ . '/partials/_date-range.php';
                   data-csv-filename="addr-dupes-<?= esc($adResult['start']) ?>.csv">Export CSV</button>
         </div>
       </div>
-      <div class="search-wrap mb-3">
-        <input class="js-search" data-target="tbl-addrdupes" placeholder="Filter by address, email…" type="search">
-      </div>
+      <?= searchInput('tbl-addrdupes', 'Filter by address, email…') ?>
       <table id="tbl-addrdupes">
         <thead>
           <tr>
