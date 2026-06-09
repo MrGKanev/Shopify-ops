@@ -2193,10 +2193,37 @@ class PageLoader
         // Cache stats
         $dbCacheCount = $cacheObj ? count($cacheObj->entries()) : 0;
 
+        // Days since last audit
+        $dbDaysSinceAudit = null;
+        if (!empty($reports[0]['date'])) {
+            $dbDaysSinceAudit = (int) round(
+                (strtotime('today') - strtotime($reports[0]['date'])) / 86400
+            );
+        }
+
+        // Oldest unresolved missing order (by created_at) in latest report
+        $dbOldestMissingDays = null;
+        if (!empty($reports[0]['missing'])) {
+            $dates = array_filter(array_column($reports[0]['missing'], 'created_at'));
+            if ($dates) {
+                $dbOldestMissingDays = (int) round(
+                    (strtotime('today') - strtotime(substr(min($dates), 0, 10))) / 86400
+                );
+            }
+        }
+
+        // Stale ignored orders (ignored 60+ days ago)
+        $cutoff60       = date('Y-m-d', strtotime('-60 days'));
+        $dbStaleIgnored = count(array_filter(
+            $ignoredOrders,
+            fn($e) => ($e['ignored_at'] ?? '9999-99-99') <= $cutoff60
+        ));
+
         return compact(
             'dbPushRecent', 'dbTrendReports', 'dbMaxCount',
             'dbTotalReports', 'dbTotalMissing', 'dbTrend',
-            'dbLastPush', 'dbCacheCount'
+            'dbLastPush', 'dbCacheCount',
+            'dbDaysSinceAudit', 'dbOldestMissingDays', 'dbStaleIgnored'
         );
     }
 
