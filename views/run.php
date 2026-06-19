@@ -20,10 +20,10 @@
   <?php endif; ?>
 
   <form method="post" id="js-audit-form">
-    <input type="hidden" name="action" value="run_audit">
-    <?php dateRangePartial('audit', $auditStart, $auditEnd, '', 'Run Audit') ?>
+    <input type="hidden" name="action" value="run_audit" id="audit-action">
+    <?php dateRangePartial('audit', $auditStart, $auditEnd, '<button class="btn btn-ghost btn-submit-end" type="submit" onclick="document.getElementById(\'audit-action\').value=\'queue_audit\'">Queue</button>', 'Run Audit') ?>
   </form>
-
+  <div class="hint mt-2">Queued audits run outside the web request with <code>php worker.php --once</code>.</div>
 
 </div>
 

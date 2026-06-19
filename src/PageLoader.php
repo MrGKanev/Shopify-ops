@@ -59,6 +59,11 @@ class PageLoader
             'tagpolicy'         => self::loadTagPolicy($action, $ctx),
             'inventoryaging'    => self::loadInventoryAging($action, $ctx),
             'shipmentaging'     => self::loadShipmentAging($action, $ctx),
+            'jobs'              => self::loadJobs(),
+            'slackrules'        => self::loadSlackRules(),
+            'apihealth'         => self::loadApiHealth($action, $ctx),
+            'configcheck'       => self::loadConfigCheck(),
+            'actionlog'         => self::loadActionLog(),
             'settings'          => self::loadSettings($action, $ctx),
             default     => [],
         };
@@ -129,10 +134,12 @@ class PageLoader
 
         $pushLog   = PushLog::all();
         $runLog    = RunLog::all();
+        $jobLog    = JobQueue::all();
+        $actionLog = UserActionLog::all();
         $bannedIps = Auth::bannedIps();
 
         return compact('reports', 'orderHistory', 'latestReport', 'selectedDate', 'selectedReport',
-                       'shopifyAdminBase', 'pushLog', 'runLog', 'bannedIps');
+                       'shopifyAdminBase', 'pushLog', 'runLog', 'jobLog', 'actionLog', 'bannedIps');
     }
 
     // ── Audit ─────────────────────────────────────────────────────────────────
@@ -220,7 +227,7 @@ class PageLoader
                         'duplicates' => Comparator::findDuplicates($shopifyOrders),
                     ];
 
-                    if ($notifier = SlackNotifier::fromEnvironment()) {
+                    if (SlackRules::shouldNotifyAudit(count($comparison['missing'])) && ($notifier = SlackNotifier::fromEnvironment())) {
                         try {
                             $notifier->notifyAudit([
                                 'store'          => $ctx['shopifyStore'],
@@ -1821,6 +1828,50 @@ class PageLoader
 
     // ── Settings ──────────────────────────────────────────────────────────────
 
+    private static function loadJobs(): array
+    {
+        $jobs = JobQueue::all();
+        return compact('jobs');
+    }
+
+    private static function loadSlackRules(): array
+    {
+        $slackRules = SlackRules::load();
+        $slackConfigured = SlackNotifier::isConfigured();
+        return compact('slackRules', 'slackConfigured');
+    }
+
+    private static function loadApiHealth(string $action, array $ctx): array
+    {
+        $apiHealth = null;
+        if ($action === 'refresh_api_health') {
+            $apiHealth = [
+                'shopify'     => ApiHealth::checkShopify($ctx['shopifyStore'], $ctx['shopifyToken']),
+                'shipstation' => ApiHealth::checkShipStation($ctx['ssKey'], $ctx['ssSecret']),
+                'checked_at'   => date('Y-m-d H:i:s'),
+            ];
+            RunLog::append([
+                'tool'       => 'api_health',
+                'status'     => (($apiHealth['shopify']['ok'] ?? false) && ($apiHealth['shipstation']['ok'] ?? false)) ? 'ok' : 'issues_found',
+                'rows_found' => count($apiHealth['shopify']['missing_scopes'] ?? []),
+                'meta'       => ['api_version' => Shopify::API_VERSION],
+            ]);
+        }
+        return compact('apiHealth');
+    }
+
+    private static function loadConfigCheck(): array
+    {
+        $configResults = ConfigValidator::validateAll(dirname(__DIR__));
+        return compact('configResults');
+    }
+
+    private static function loadActionLog(): array
+    {
+        $actionLog = UserActionLog::all();
+        return compact('actionLog');
+    }
+
     private static function loadSettings(string $action, array $ctx): array
     {
         $connResults  = null;
@@ -2062,17 +2113,34 @@ class PageLoader
             else {
                 try {
                     $result = $fn($ctx, $start, $end);
+                    $rowsFound = self::resultRowCount($result);
                     RunLog::append([
                         'tool'       => $trigger,
-                        'status'     => self::resultRowCount($result) > 0 ? 'issues_found' : 'ok',
+                        'status'     => $rowsFound > 0 ? 'issues_found' : 'ok',
                         'created_at' => $runStartedAt,
                         'duration'   => round(microtime(true) - $t0, 2),
                         'start_date' => $start,
                         'end_date'   => $end,
                         'scanned'    => is_array($result) ? ($result['scanned'] ?? $result['total_orders'] ?? null) : null,
-                        'rows_found' => self::resultRowCount($result),
+                        'rows_found' => $rowsFound,
                         'meta'       => ['api_version' => Shopify::API_VERSION],
                     ]);
+                    if ($rowsFound !== null && SlackRules::shouldNotifyScan($rowsFound) && ($notifier = SlackNotifier::fromEnvironment())) {
+                        try {
+                            $notifier->notifyScan([
+                                'tool'       => $trigger,
+                                'rows_found' => $rowsFound,
+                                'scanned'    => is_array($result) ? ($result['scanned'] ?? $result['total_orders'] ?? null) : null,
+                                'start'      => $start,
+                                'end'        => $end,
+                            ]);
+                        } catch (Throwable $e) {
+                            Logger::getInstance()->warning('Slack scan notification failed: {message}', [
+                                'message'   => $e->getMessage(),
+                                'exception' => $e->getFile() . ':' . $e->getLine(),
+                            ]);
+                        }
+                    }
                     $logged = true;
                 } catch (Throwable $e) {
                     $error = $e->getMessage();

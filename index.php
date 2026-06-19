@@ -10,9 +10,14 @@ require_once __DIR__ . '/src/Stores.php';
 require_once __DIR__ . '/src/IgnoreList.php';
 require_once __DIR__ . '/src/PushLog.php';
 require_once __DIR__ . '/src/RunLog.php';
+require_once __DIR__ . '/src/UserActionLog.php';
+require_once __DIR__ . '/src/SlackRules.php';
+require_once __DIR__ . '/src/JobQueue.php';
 require_once __DIR__ . '/src/Cache.php';
 require_once __DIR__ . '/src/ShipStation.php';
 require_once __DIR__ . '/src/Shopify.php';
+require_once __DIR__ . '/src/ApiHealth.php';
+require_once __DIR__ . '/src/ConfigValidator.php';
 require_once __DIR__ . '/src/Comparator.php';
 require_once __DIR__ . '/src/Reporter.php';
 require_once __DIR__ . '/src/SlackNotifier.php';
@@ -148,6 +153,9 @@ if ($authed) {
         IgnoreList::setDataDir($dataDir);
         PushLog::setDataDir($dataDir);
         RunLog::setDataDir($dataDir);
+        UserActionLog::setDataDir($dataDir);
+        SlackRules::setDataDir($dataDir);
+        JobQueue::setDataDir($dataDir);
     }
     $ignoredOrders = IgnoreList::load();
 }
@@ -155,7 +163,8 @@ if ($authed) {
 // ── Dispatch early-exit actions ───────────────────────────────────────────────
 
 $ctx = compact('authed', 'action', 'ssKey', 'ssSecret', 'shopifyToken', 'shopifyStore',
-               'cacheObj', 'cacheTtl', 'reportDir', 'ignoredOrders', 'appVersion');
+               'cacheObj', 'cacheTtl', 'reportDir', 'ignoredOrders', 'appVersion',
+               'storeId', 'storeLabel');
 
 Actions::dispatch($action, $ctx);
 

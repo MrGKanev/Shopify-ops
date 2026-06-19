@@ -91,7 +91,7 @@
           <span class="badge badge-warn badge-sm nav-badge" style="margin-left:auto"><?= count($ignoredOrders) ?></span>
         <?php endif; ?>
       </a>
-      <a href="?page=settings" class="flat-nav-link <?= $page === 'settings' ? 'active' : '' ?>" title="Settings">
+      <a href="?page=settings" class="flat-nav-link <?= $activeGroup === 'settings' ? 'active' : '' ?>" title="Settings">
         <span class="flat-nav-icon">⚙</span><span class="nav-label"> Settings</span>
       </a>
 
@@ -103,6 +103,18 @@
         <li><a href="?page=ignored" class="<?= $page === 'ignored' ? 'active' : '' ?>">Ignored Orders</a></li>
         <li><a href="?page=pushlog" class="<?= $page === 'pushlog' ? 'active' : '' ?>">Push Log</a></li>
         <li><a href="?page=runlog" class="<?= $page === 'runlog' ? 'active' : '' ?>">Run History</a></li>
+        <li><a href="?page=jobs" class="<?= $page === 'jobs' ? 'active' : '' ?>">Job Queue</a></li>
+        <li><a href="?page=actionlog" class="<?= $page === 'actionlog' ? 'active' : '' ?>">Action Log</a></li>
+      </ul>
+    <?php endif; ?>
+
+    <?php if ($activeGroup === 'settings'): ?>
+      <div class="sidebar-section">Settings</div>
+      <ul class="sidebar-nav">
+        <li><a href="?page=settings" class="<?= $page === 'settings' ? 'active' : '' ?>">Configuration</a></li>
+        <li><a href="?page=apihealth" class="<?= $page === 'apihealth' ? 'active' : '' ?>">API Health</a></li>
+        <li><a href="?page=configcheck" class="<?= $page === 'configcheck' ? 'active' : '' ?>">Config Check</a></li>
+        <li><a href="?page=slackrules" class="<?= $page === 'slackrules' ? 'active' : '' ?>">Slack Rules</a></li>
       </ul>
     <?php endif; ?>
 

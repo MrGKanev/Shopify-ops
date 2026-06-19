@@ -48,6 +48,20 @@ class SlackNotifierTest extends TestCase
         $this->assertSame(['text' => 'hello'], json_decode((string) $history[0]['request']->getBody(), true));
     }
 
+    public function testScanPayloadIncludesRowsFound(): void
+    {
+        $payload = SlackNotifier::scanPayload([
+            'tool' => 'scan_sla',
+            'rows_found' => 3,
+            'scanned' => 50,
+            'start' => '2026-06-01',
+            'end' => '2026-06-19',
+        ]);
+
+        $this->assertSame('Shopify Ops scan scan_sla: 3 rows found', $payload['text']);
+        $this->assertStringContainsString('scan_sla', $payload['blocks'][0]['text']['text']);
+    }
+
     public function testSendThrowsOnSlackError(): void
     {
         $mock     = new MockHandler([new Response(500, [], 'bad')]);

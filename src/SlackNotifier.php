@@ -49,6 +49,14 @@ class SlackNotifier
     /**
      * @param array<string, mixed> $summary
      */
+    public function notifyScan(array $summary): void
+    {
+        $this->send(self::scanPayload($summary));
+    }
+
+    /**
+     * @param array<string, mixed> $summary
+     */
     public function notifyAuditSafely(array $summary, ?LoggerInterface $logger = null): bool
     {
         try {
@@ -127,6 +135,44 @@ class SlackNotifier
         return [
             'text'   => "Shopify Ops audit for {$store}: {$statusText}",
             'blocks' => $blocks,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $summary
+     * @return array<string, mixed>
+     */
+    public static function scanPayload(array $summary): array
+    {
+        $tool = (string)($summary['tool'] ?? 'scan');
+        $rows = (int)($summary['rows_found'] ?? 0);
+        $scanned = $summary['scanned'] ?? null;
+        $start = (string)($summary['start'] ?? '');
+        $end = (string)($summary['end'] ?? '');
+
+        $fields = [
+            ['type' => 'mrkdwn', 'text' => "*Tool*\n{$tool}"],
+            ['type' => 'mrkdwn', 'text' => "*Rows found*\n{$rows}"],
+        ];
+        if ($scanned !== null) {
+            $fields[] = ['type' => 'mrkdwn', 'text' => "*Scanned*\n{$scanned}"];
+        }
+        if ($start || $end) {
+            $fields[] = ['type' => 'mrkdwn', 'text' => "*Period*\n{$start} -> {$end}"];
+        }
+
+        return [
+            'text' => "Shopify Ops scan {$tool}: {$rows} row" . ($rows === 1 ? '' : 's') . ' found',
+            'blocks' => [
+                [
+                    'type' => 'header',
+                    'text' => ['type' => 'plain_text', 'text' => "Shopify Ops scan: {$tool}"],
+                ],
+                [
+                    'type' => 'section',
+                    'fields' => $fields,
+                ],
+            ],
         ];
     }
 

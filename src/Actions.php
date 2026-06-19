@@ -20,6 +20,8 @@ class Actions
             'bulk_unignore_orders'=> self::bulkUnignore($ctx),
             'import_ignore_csv'   => self::importIgnoreCsv($ctx),
             'push_to_shipstation' => self::pushToShipStation($ctx),
+            'queue_audit'         => self::queueAudit($ctx),
+            'save_slack_rules'    => self::saveSlackRules($ctx),
             'preview_push'        => self::previewPush($ctx),
             'order_detail'        => self::orderDetail($ctx),
             'flush_cache'         => self::flushCache($ctx),
@@ -36,30 +38,36 @@ class Actions
     private static function switchStore(array $ctx): void
     {
         if (!class_exists('Stores') || !Stores::isMultiStore()) return;
-        Stores::setActive($_POST['store_id'] ?? '');
+        $storeId = $_POST['store_id'] ?? '';
+        Stores::setActive($storeId);
+        UserActionLog::append('switch_store', ['store_id' => $storeId]);
         header('Location: ?');
         exit;
     }
 
     private static function unbanIp(array $ctx): void
     {
-        Auth::unban($_POST['ip'] ?? '');
+        $ip = $_POST['ip'] ?? '';
+        Auth::unban($ip);
+        UserActionLog::append('unban_ip', ['ip' => $ip]);
         header('Location: ?page=settings&unbanned=1');
         exit;
     }
 
     private static function ignoreOrder(array $ctx): void
     {
-        IgnoreList::add(
-            Comparator::normalise($_POST['order_number'] ?? ''),
-            trim($_POST['reason'] ?? '')
-        );
+        $norm = Comparator::normalise($_POST['order_number'] ?? '');
+        $reason = trim($_POST['reason'] ?? '');
+        IgnoreList::add($norm, $reason);
+        UserActionLog::append('ignore_order', ['order_number' => $norm, 'reason' => $reason]);
         header('Location: ' . self::redirectBack()); exit;
     }
 
     private static function unignoreOrder(array $ctx): void
     {
-        IgnoreList::remove(Comparator::normalise($_POST['order_number'] ?? ''));
+        $norm = Comparator::normalise($_POST['order_number'] ?? '');
+        IgnoreList::remove($norm);
+        UserActionLog::append('unignore_order', ['order_number' => $norm]);
         header('Location: ' . self::redirectBack()); exit;
     }
 
@@ -73,6 +81,7 @@ class Actions
             if ($norm) $entries[] = ['number' => $norm, 'reason' => $reason];
         }
         IgnoreList::bulkAdd($entries);
+        UserActionLog::append('bulk_ignore_orders', ['count' => count($entries), 'reason' => $reason]);
         header('Location: ' . self::redirectBack()); exit;
     }
 
@@ -81,6 +90,7 @@ class Actions
         $numbers = array_filter((array) ($_POST['order_numbers'] ?? []));
         $norms   = array_values(array_filter(array_map(Comparator::normalise(...), $numbers)));
         IgnoreList::bulkRemove($norms);
+        UserActionLog::append('bulk_unignore_orders', ['count' => count($norms)]);
         header('Location: ?page=ignored'); exit;
     }
 
@@ -91,6 +101,7 @@ class Actions
         $count  = ($file && $file['error'] === UPLOAD_ERR_OK)
             ? IgnoreList::importCsv($file['tmp_name'], $reason)
             : 0;
+        UserActionLog::append('import_ignore_csv', ['count' => $count, 'reason' => $reason]);
         header('Location: ?page=ignored&imported=' . $count); exit;
     }
 
@@ -120,6 +131,11 @@ class Actions
                     'ss_order_id'  => $created['orderId'] ?? null,
                     'pushed_at'    => date('Y-m-d H:i:s'),
                 ]);
+                UserActionLog::append('push_to_shipstation', [
+                    'order_number' => $orderNum,
+                    'shopify_id'   => $shopifyId,
+                    'ss_order_id'  => $created['orderId'] ?? null,
+                ]);
 
                 $loc .= '&push_ok=' . urlencode($orderNum);
             } catch (Throwable $e) {
@@ -128,6 +144,39 @@ class Actions
         }
 
         header('Location: ' . $loc); exit;
+    }
+
+    private static function queueAudit(array $ctx): void
+    {
+        $start = trim($_POST['audit_start'] ?? '');
+        $end   = trim($_POST['audit_end'] ?? '');
+        $loc   = '?page=jobs';
+
+        if ($err = self::validateDates($start, $end)) {
+            header('Location: ' . $loc . '&queue_error=' . urlencode($err)); exit;
+        }
+
+        $id = JobQueue::enqueue('audit', [
+            'start'    => $start,
+            'end'      => $end,
+            'store_id' => $ctx['storeId'] ?? '',
+        ], "Audit {$start} -> {$end}");
+        UserActionLog::append('queue_audit', ['job_id' => $id, 'start' => $start, 'end' => $end]);
+        header('Location: ' . $loc . '&queued=' . urlencode($id)); exit;
+    }
+
+    private static function saveSlackRules(array $ctx): void
+    {
+        $rules = [
+            'audit_enabled'      => isset($_POST['audit_enabled']),
+            'audit_min_missing'  => $_POST['audit_min_missing'] ?? 0,
+            'scan_enabled'       => isset($_POST['scan_enabled']),
+            'scan_min_rows'      => $_POST['scan_min_rows'] ?? 1,
+            'include_zero_audit' => isset($_POST['include_zero_audit']),
+        ];
+        SlackRules::save($rules);
+        UserActionLog::append('save_slack_rules', SlackRules::load());
+        header('Location: ?page=slackrules&saved=1'); exit;
     }
 
     private static function previewPush(array $ctx): void
@@ -209,5 +258,16 @@ class Actions
         $loc  = '?page=' . urlencode($page);
         if ($date) $loc .= '&date=' . urlencode($date);
         return $loc;
+    }
+
+    private static function validateDates(string $start, string $end): ?string
+    {
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $start) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $end)) {
+            return 'Invalid date format. Use YYYY-MM-DD.';
+        }
+        if ($start > $end) {
+            return 'Start date must be before end date.';
+        }
+        return null;
     }
 }

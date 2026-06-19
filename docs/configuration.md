@@ -24,6 +24,30 @@ API responses are cached under `cache/` as JSON files keyed by platform and date
 
 To force a fresh fetch: **Clear all cache** in the Run Audit page, or set `CACHE_TTL=0` in `.env`.
 
+## Background jobs
+
+The Job Queue stores pending audit jobs under `data/jobs.json` (or `data/<store>/jobs.json` in multi-store mode). Queue an audit from **Run Audit** or **Job Queue**, then process one pending job:
+
+```bash
+php worker.php --once
+```
+
+For multi-store mode, process a specific store queue:
+
+```bash
+php worker.php --store store_id --once
+```
+
+Schedule that command from cron when you want queued audits to run automatically.
+
+## Slack rules
+
+Set `SLACK_WEBHOOK_URL` in `.env`, then configure thresholds in **Settings → Slack Rules**.
+
+- Audit notifications can require a minimum missing-order count.
+- All-clear audit notifications can be disabled.
+- Scan notifications are optional and default to off to avoid noisy channels.
+
 ## Tag policy rules
 
 `Tag Policy Audit` is enabled by creating `tag_policy.json` from `tag_policy.example.json`.

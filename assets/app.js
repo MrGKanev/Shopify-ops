@@ -134,7 +134,7 @@ document.querySelectorAll('.js-localtime').forEach(function(el) {
     scan_hvorders: true, scan_repeat_refunds: true, scan_failed_shipments: true,
     scan_addr_changes: true, scan_bundle: true, scan_sla: true,
     scan_activess: true, scan_discountabuse: true, scan_tagpolicy: true,
-    scan_inventoryaging: true, scan_shipmentaging: true
+    scan_inventoryaging: true, scan_shipmentaging: true, refresh_api_health: true
   };
 
   var bar = document.getElementById('js-loading-bar');

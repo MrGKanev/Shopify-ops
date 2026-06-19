@@ -94,7 +94,12 @@ class ToolRegistry
         'ignored'    => ['group' => 'manage',   'title' => 'Ignored Orders'],
         'pushlog'    => ['group' => 'manage',   'title' => 'Push Log'],
         'runlog'     => ['group' => 'manage',   'title' => 'Run History'],
+        'jobs'       => ['group' => 'manage',   'title' => 'Job Queue'],
+        'actionlog'  => ['group' => 'manage',   'title' => 'Action Log'],
         'settings'   => ['group' => 'settings', 'title' => 'Settings'],
+        'slackrules' => ['group' => 'settings', 'title' => 'Slack Rules'],
+        'apihealth'  => ['group' => 'settings', 'title' => 'API Health'],
+        'configcheck'=> ['group' => 'settings', 'title' => 'Config Check'],
     ];
 
     /**
