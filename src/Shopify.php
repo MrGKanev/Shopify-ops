@@ -7,12 +7,10 @@ use GuzzleHttp\Middleware;
 use Psr\Http\Message\ResponseInterface;
 
 /**
- * Shopify Admin REST API client.
+ * Shopify Admin API client.
  *
- * Fetches all orders in a date range using cursor-based pagination
- * (Link header) - required for stores with > 250 orders per page.
- *
- * API docs: https://shopify.dev/docs/api/admin-rest/latest/resources/order
+ * Uses Admin GraphQL for migrated resources and keeps legacy REST-shaped
+ * arrays at the public method boundary for the rest of the app.
  */
 class Shopify
 {
@@ -62,25 +60,62 @@ class Shopify
     public function fetchAllOrders(string $startDate, string $endDate): array
     {
         $fetch = function () use ($startDate, $endDate): array {
-            $all = [];
-
-            $params = http_build_query([
-                'status'         => 'any',
-                'created_at_min' => $startDate . 'T00:00:00-00:00',
-                'created_at_max' => $endDate   . 'T23:59:59-00:00',
-                'limit'          => self::PAGE_SIZE,
-                'fields'         => 'id,order_number,name,financial_status,fulfillment_status,cancelled_at,created_at,email,total_price,shipping_lines,line_items',
-            ]);
+            $all      = [];
+            $queryStr = 'status:any created_at:>=' . $startDate . 'T00:00:00Z created_at:<=' . $endDate . 'T23:59:59Z';
+            $query    = <<<'GQL'
+            query FetchOrdersForAudit($query: String!, $after: String) {
+              orders(first: 250, sortKey: CREATED_AT, query: $query, after: $after) {
+                pageInfo { hasNextPage endCursor }
+                edges {
+                  node {
+                    id
+                    legacyResourceId
+                    name
+                    createdAt
+                    cancelledAt
+                    email
+                    displayFinancialStatus
+                    displayFulfillmentStatus
+                    totalPriceSet { shopMoney { amount currencyCode } }
+                    lineItems(first: 250) {
+                      nodes {
+                        id
+                        title
+                        name
+                        sku
+                        quantity
+                        variantTitle
+                        originalUnitPriceSet { shopMoney { amount currencyCode } }
+                      }
+                    }
+                    shippingLines(first: 250) {
+                      nodes {
+                        id
+                        title
+                        code
+                        originalPriceSet { shopMoney { amount currencyCode } }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            GQL;
 
             echo "  Fetching Shopify orders";
 
-            $nextUrl = "{$this->baseUrl}/orders.json?{$params}";
-
-            while ($nextUrl) {
-                [$orders, $nextUrl] = $this->getPage($nextUrl);
-                array_push($all, ...$orders);
-                echo '.';
-            }
+            $this->paginateGraphQLVariables(
+                $query,
+                'orders',
+                ['query' => $queryStr],
+                function (array $edges) use (&$all) {
+                    foreach ($edges as $edge) {
+                        $all[] = $this->normalizeGraphQLOrder($edge['node'] ?? []);
+                    }
+                    echo '.';
+                },
+                1000
+            );
 
             echo " done (" . count($all) . " orders)\n";
             return $all;
@@ -106,26 +141,110 @@ class Shopify
     public function findByOrderNumber(string $orderNumber): array
     {
         $clean = ltrim(trim($orderNumber), '#');
-        $params = http_build_query([
-            'status' => 'any',
-            'name'   => $clean,
-            'limit'  => 10,
-            'fields' => 'id,order_number,name,financial_status,fulfillment_status,cancelled_at,created_at,email,total_price',
-        ]);
-        $data = $this->get("{$this->baseUrl}/orders.json?{$params}");
-        return $data['orders'] ?? [];
+        $query = <<<'GQL'
+        query FindOrderByName($query: String!) {
+          orders(first: 10, query: $query) {
+            pageInfo { hasNextPage endCursor }
+            edges {
+              node {
+                id
+                legacyResourceId
+                name
+                createdAt
+                cancelledAt
+                email
+                displayFinancialStatus
+                displayFulfillmentStatus
+                totalPriceSet { shopMoney { amount currencyCode } }
+              }
+            }
+          }
+        }
+        GQL;
+
+        $data  = $this->graphql($query, ['query' => "name:{$clean}"]);
+        $edges = $data['data']['orders']['edges'] ?? [];
+        return array_map(fn($edge) => $this->normalizeGraphQLOrder($edge['node'] ?? []), $edges);
     }
 
     /**
-     * Fetches a single order by its Shopify numeric ID (full detail).
+     * Fetches a single order by its Shopify numeric ID for detail views and ShipStation push.
      *
      * @return array<string, mixed>
      */
     public function getOrder(string $orderId): array
     {
-        $url  = "{$this->baseUrl}/orders/{$orderId}.json";
-        $data = $this->get($url);
-        return $data['order'] ?? [];
+        $query = <<<'GQL'
+        query GetOrderForRestShape($id: ID!) {
+          order(id: $id) {
+            id
+            legacyResourceId
+            name
+            createdAt
+            cancelledAt
+            email
+            note
+            tags
+            displayFinancialStatus
+            displayFulfillmentStatus
+            totalPriceSet { shopMoney { amount currencyCode } }
+            totalTaxSet { shopMoney { amount currencyCode } }
+            shippingAddress {
+              firstName
+              lastName
+              name
+              company
+              address1
+              address2
+              city
+              province
+              provinceCode
+              country
+              countryCodeV2
+              zip
+              phone
+            }
+            billingAddress {
+              firstName
+              lastName
+              name
+              company
+              address1
+              address2
+              city
+              province
+              provinceCode
+              country
+              countryCodeV2
+              zip
+              phone
+            }
+            lineItems(first: 250) {
+              nodes {
+                id
+                title
+                name
+                sku
+                quantity
+                variantTitle
+                originalUnitPriceSet { shopMoney { amount currencyCode } }
+              }
+            }
+            shippingLines(first: 250) {
+              nodes {
+                id
+                title
+                code
+                originalPriceSet { shopMoney { amount currencyCode } }
+              }
+            }
+          }
+        }
+        GQL;
+
+        $data = $this->graphql($query, ['id' => self::orderGid($orderId)]);
+        $node = $data['data']['order'] ?? null;
+        return is_array($node) ? $this->normalizeGraphQLOrder($node) : [];
     }
 
     /**
@@ -856,17 +975,53 @@ class Shopify
      */
     public function fetchAllProducts(string $status = 'active'): array
     {
-        $all = [];
-        $params = http_build_query([
-            'status' => $status,
-            'limit'  => self::PAGE_SIZE,
-            'fields' => 'id,title,status,body_html,vendor,product_type,images,variants',
-        ]);
-        $nextUrl = "{$this->baseUrl}/products.json?{$params}";
-        while ($nextUrl) {
-            [$products, $nextUrl] = $this->getPage($nextUrl, 'products');
-            array_push($all, ...$products);
+        $all      = [];
+        $queryArg = $this->productStatusGraphQLArg($status);
+        $template = <<<GQL
+        {
+          products(first: 250{$queryArg}{{AFTER}}) {
+            pageInfo { hasNextPage endCursor }
+            edges {
+              node {
+                id
+                legacyResourceId
+                title
+                status
+                descriptionHtml
+                vendor
+                productType
+                mediaCount { count }
+                variants(first: 250) {
+                  edges {
+                    node {
+                      id
+                      legacyResourceId
+                      title
+                      sku
+                      barcode
+                      inventoryQuantity
+                      inventoryPolicy
+                      inventoryItem { tracked }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
+        GQL;
+
+        $this->paginateGraphQL(
+            $template,
+            'products',
+            function (array $edges) use (&$all) {
+                foreach ($edges as $edge) {
+                    $all[] = $this->normalizeGraphQLProduct($edge['node'] ?? []);
+                }
+            },
+            1000
+        );
+
         return $all;
     }
 
@@ -1180,10 +1335,15 @@ class Shopify
      *
      * @return array<string, mixed>
      */
-    private function graphql(string $query): array
+    private function graphql(string $query, array $variables = []): array
     {
+        $payload = ['query' => $query];
+        if ($variables !== []) {
+            $payload['variables'] = $variables;
+        }
+
         $response = $this->request('POST', $this->baseUrl . '/graphql.json', [
-            'json' => ['query' => $query],
+            'json' => $payload,
         ]);
 
         $code = $response->getStatusCode();
@@ -1199,6 +1359,215 @@ class Shopify
         }
 
         return is_array($decoded) ? $decoded : [];
+    }
+
+    private static function orderGid(string $orderId): string
+    {
+        $trimmed = trim($orderId);
+        if (str_starts_with($trimmed, 'gid://shopify/Order/')) {
+            return $trimmed;
+        }
+
+        if (!ctype_digit($trimmed)) {
+            throw new InvalidArgumentException("Unsupported Shopify order ID: {$orderId}");
+        }
+
+        return "gid://shopify/Order/{$trimmed}";
+    }
+
+    /**
+     * Maps Admin GraphQL Order nodes into the legacy REST order shape used by the UI and ShipStation push.
+     *
+     * @return array<string, mixed>
+     */
+    private function normalizeGraphQLOrder(array $node): array
+    {
+        $id   = self::legacyId($node['legacyResourceId'] ?? null, $node['id'] ?? null);
+        $name = (string)($node['name'] ?? '');
+
+        $order = [
+            'id'                   => $id,
+            'order_number'         => self::orderNumberFromName($name),
+            'name'                 => $name,
+            'created_at'           => $node['createdAt'] ?? '',
+            'cancelled_at'         => $node['cancelledAt'] ?? null,
+            'email'                => $node['email'] ?? '',
+            'financial_status'     => self::normalizeFinancialStatus($node['displayFinancialStatus'] ?? null),
+            'fulfillment_status'   => self::normalizeFulfillmentStatus($node['displayFulfillmentStatus'] ?? null),
+            'total_price'          => $node['totalPriceSet']['shopMoney']['amount'] ?? '0.00',
+            'admin_graphql_api_id' => $node['id'] ?? '',
+        ];
+
+        if (array_key_exists('totalTaxSet', $node)) {
+            $order['total_tax'] = $node['totalTaxSet']['shopMoney']['amount'] ?? '0.00';
+        }
+        if (array_key_exists('note', $node)) {
+            $order['note'] = $node['note'] ?? '';
+        }
+        if (array_key_exists('tags', $node)) {
+            $order['tags'] = implode(', ', (array)($node['tags'] ?? []));
+        }
+        if (array_key_exists('shippingAddress', $node)) {
+            $order['shipping_address'] = self::normalizeGraphQLAddress($node['shippingAddress'] ?? null);
+        }
+        if (array_key_exists('billingAddress', $node)) {
+            $order['billing_address'] = self::normalizeGraphQLAddress($node['billingAddress'] ?? null);
+        }
+        if (isset($node['lineItems']['nodes'])) {
+            $order['line_items'] = array_map(
+                fn($lineItem) => self::normalizeGraphQLLineItem($lineItem),
+                $node['lineItems']['nodes']
+            );
+        }
+        if (isset($node['shippingLines']['nodes'])) {
+            $order['shipping_lines'] = array_map(
+                fn($shippingLine) => self::normalizeGraphQLShippingLine($shippingLine),
+                $node['shippingLines']['nodes']
+            );
+        }
+
+        return $order;
+    }
+
+    private static function orderNumberFromName(string $name): int|string
+    {
+        $number = ltrim(trim($name), '#');
+        return ctype_digit($number) ? (int)$number : $number;
+    }
+
+    private static function normalizeFinancialStatus(mixed $status): string
+    {
+        return strtolower((string)($status ?? ''));
+    }
+
+    private static function normalizeFulfillmentStatus(mixed $status): ?string
+    {
+        $normalized = strtolower((string)($status ?? ''));
+        return match ($normalized) {
+            '', 'unfulfilled' => null,
+            'partially_fulfilled' => 'partial',
+            default => $normalized,
+        };
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private static function normalizeGraphQLAddress(?array $address): ?array
+    {
+        if ($address === null) {
+            return null;
+        }
+
+        return [
+            'first_name'    => $address['firstName'] ?? '',
+            'last_name'     => $address['lastName'] ?? '',
+            'name'          => $address['name'] ?? '',
+            'company'       => $address['company'] ?? null,
+            'address1'      => $address['address1'] ?? '',
+            'address2'      => $address['address2'] ?? '',
+            'city'          => $address['city'] ?? '',
+            'province'      => $address['province'] ?? '',
+            'province_code' => $address['provinceCode'] ?? '',
+            'country'       => $address['country'] ?? '',
+            'country_code'  => $address['countryCodeV2'] ?? '',
+            'zip'           => $address['zip'] ?? '',
+            'phone'         => $address['phone'] ?? '',
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function normalizeGraphQLLineItem(array $lineItem): array
+    {
+        return [
+            'id'                   => self::legacyId(null, $lineItem['id'] ?? null),
+            'title'                => $lineItem['title'] ?? $lineItem['name'] ?? '',
+            'name'                 => $lineItem['name'] ?? $lineItem['title'] ?? '',
+            'sku'                  => $lineItem['sku'] ?? '',
+            'quantity'             => (int)($lineItem['quantity'] ?? 0),
+            'variant_title'        => $lineItem['variantTitle'] ?? null,
+            'price'                => $lineItem['originalUnitPriceSet']['shopMoney']['amount'] ?? '0.00',
+            'admin_graphql_api_id' => $lineItem['id'] ?? '',
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function normalizeGraphQLShippingLine(array $shippingLine): array
+    {
+        return [
+            'id'                   => self::legacyId(null, $shippingLine['id'] ?? null),
+            'title'                => $shippingLine['title'] ?? '',
+            'code'                 => $shippingLine['code'] ?? '',
+            'price'                => $shippingLine['originalPriceSet']['shopMoney']['amount'] ?? '0.00',
+            'admin_graphql_api_id' => $shippingLine['id'] ?? '',
+        ];
+    }
+
+    private function productStatusGraphQLArg(string $status): string
+    {
+        $normalized = strtolower(trim($status));
+        if ($normalized === '' || $normalized === 'any') {
+            return '';
+        }
+
+        if (!in_array($normalized, ['active', 'draft', 'archived'], true)) {
+            throw new InvalidArgumentException("Unsupported Shopify product status: {$status}");
+        }
+
+        return ', query: "status:' . $normalized . '"';
+    }
+
+    /**
+     * Maps Admin GraphQL Product nodes into the legacy REST product shape used by the UI.
+     *
+     * @return array<string, mixed>
+     */
+    private function normalizeGraphQLProduct(array $node): array
+    {
+        $productId = self::legacyId($node['legacyResourceId'] ?? null, $node['id'] ?? null);
+        $images    = array_fill(0, max(0, (int)($node['mediaCount']['count'] ?? 0)), []);
+
+        $variants = [];
+        foreach (($node['variants']['edges'] ?? []) as $edge) {
+            $variant = $edge['node'] ?? [];
+            $variants[] = [
+                'id'                   => self::legacyId($variant['legacyResourceId'] ?? null, $variant['id'] ?? null),
+                'product_id'           => $productId,
+                'title'                => $variant['title'] ?? '',
+                'sku'                  => $variant['sku'] ?? '',
+                'barcode'              => $variant['barcode'] ?? null,
+                'inventory_quantity'   => (int)($variant['inventoryQuantity'] ?? 0),
+                'inventory_policy'     => strtolower((string)($variant['inventoryPolicy'] ?? '')),
+                'inventory_management' => ($variant['inventoryItem']['tracked'] ?? false) ? 'shopify' : null,
+                'admin_graphql_api_id' => $variant['id'] ?? '',
+            ];
+        }
+
+        return [
+            'id'                   => $productId,
+            'title'                => $node['title'] ?? '',
+            'status'               => strtolower((string)($node['status'] ?? '')),
+            'body_html'            => $node['descriptionHtml'] ?? '',
+            'vendor'               => $node['vendor'] ?? '',
+            'product_type'         => $node['productType'] ?? '',
+            'images'               => $images,
+            'variants'             => $variants,
+            'admin_graphql_api_id' => $node['id'] ?? '',
+        ];
+    }
+
+    private static function legacyId(mixed $legacyResourceId, mixed $gid): int|string
+    {
+        $id = (string)($legacyResourceId ?? '');
+        if ($id === '' && is_string($gid) && preg_match('~/(\d+)(?:\?.*)?$~', $gid, $matches)) {
+            $id = $matches[1];
+        }
+
+        return ctype_digit($id) ? (int)$id : $id;
     }
 
     /**
@@ -1269,6 +1638,38 @@ class Shopify
             $data    = $this->graphql($gql);
             $conn    = $data['data'][$rootKey] ?? [];
             $edges   = $conn['edges'] ?? [];
+
+            $processor($edges);
+
+            $hasNext = $conn['pageInfo']['hasNextPage'] ?? false;
+            $cursor  = $conn['pageInfo']['endCursor']   ?? null;
+            $page++;
+        } while ($hasNext && $cursor && $page < $maxPages);
+
+        return ['truncated' => $hasNext, 'pages' => $page];
+    }
+
+    /**
+     * Runs a paginated GraphQL query that uses an `$after` variable.
+     *
+     * @param  callable(array $edges): void $processor
+     * @return array{truncated: bool, pages: int}
+     */
+    private function paginateGraphQLVariables(
+        string   $query,
+        string   $rootKey,
+        array    $variables,
+        callable $processor,
+        int      $maxPages = 20
+    ): array {
+        $cursor  = null;
+        $page    = 0;
+        $hasNext = false;
+
+        do {
+            $data  = $this->graphql($query, $variables + ['after' => $cursor]);
+            $conn  = $data['data'][$rootKey] ?? [];
+            $edges = $conn['edges'] ?? [];
 
             $processor($edges);
 
