@@ -1,6 +1,7 @@
 .env
 stores.json
 order_types.json
+tag_policy.json
 cache/
 logs/
 

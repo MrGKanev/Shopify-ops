@@ -9,13 +9,16 @@ require_once __DIR__ . '/src/Auth.php';
 require_once __DIR__ . '/src/Stores.php';
 require_once __DIR__ . '/src/IgnoreList.php';
 require_once __DIR__ . '/src/PushLog.php';
+require_once __DIR__ . '/src/RunLog.php';
 require_once __DIR__ . '/src/Cache.php';
 require_once __DIR__ . '/src/ShipStation.php';
 require_once __DIR__ . '/src/Shopify.php';
 require_once __DIR__ . '/src/Comparator.php';
 require_once __DIR__ . '/src/Reporter.php';
+require_once __DIR__ . '/src/SlackNotifier.php';
 require_once __DIR__ . '/src/ViewHelpers.php';
 require_once __DIR__ . '/src/Actions.php';
+require_once __DIR__ . '/src/ToolRegistry.php';
 require_once __DIR__ . '/src/PageLoader.php';
 
 Dotenv\Dotenv::createUnsafeImmutable(__DIR__)->safeLoad();
@@ -46,24 +49,45 @@ set_error_handler(function (int $severity, string $message, string $file, int $l
 
 // ── Session / auth ────────────────────────────────────────────────────────────
 
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    $secureCookie = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path'     => '/',
+        'secure'   => $secureCookie,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+}
 session_start();
 
 $action      = $_POST['action'] ?? '';
 $error       = '';
 $isLocalhost = in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1']);
+$csrfToken   = Auth::csrfToken();
+
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !Auth::validateCsrf($_POST['_csrf'] ?? '')) {
+    http_response_code(419);
+    echo '<h1>Session expired.</h1>';
+    exit(1);
+}
 
 if ($action === 'login') {
     $ip    = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
     $error = Auth::attempt($_POST['username'] ?? '', $_POST['password'] ?? '', getenv('WEB_USERNAME') ?: 'admin', getenv('WEB_PASSWORD') ?: 'changeme', $ip);
     if ($error === '') {
+        session_regenerate_id(true);
         $_SESSION['authed'] = true;
+        $csrfToken = Auth::rotateCsrfToken();
         header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
         exit;
     }
 }
 
 if ($action === 'dev_login' && $isLocalhost) {
+    session_regenerate_id(true);
     $_SESSION['authed'] = true;
+    $csrfToken = Auth::rotateCsrfToken();
     header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
     exit;
 }
@@ -123,6 +147,7 @@ if ($authed) {
     if ($storeId) {
         IgnoreList::setDataDir($dataDir);
         PushLog::setDataDir($dataDir);
+        RunLog::setDataDir($dataDir);
     }
     $ignoredOrders = IgnoreList::load();
 }
@@ -142,8 +167,21 @@ extract(PageLoader::load($page, $action, $ctx), EXTR_SKIP);
 
 // ── Render ────────────────────────────────────────────────────────────────────
 
+ob_start();
 if (!$authed) {
     require __DIR__ . '/views/login.php';
 } else {
     require __DIR__ . '/views/layout.php';
 }
+$html = ob_get_clean();
+
+echo preg_replace_callback('/<form\b([^>]*)>/i', function (array $m) use ($csrfToken): string {
+    $attrs = $m[1] ?? '';
+    if (!preg_match('/\bmethod\s*=\s*([\'"]?)post\1/i', $attrs)) {
+        return $m[0];
+    }
+    if (str_contains($attrs, '_csrf')) {
+        return $m[0];
+    }
+    return '<form' . $attrs . '><input type="hidden" name="_csrf" value="' . esc($csrfToken) . '">';
+}, $html) ?? $html;

@@ -95,6 +95,7 @@
           'SHOPIFY_ACCESS_TOKEN' => getenv('SHOPIFY_ACCESS_TOKEN') ? '••••••••' : 'Not set',
           'SS_API_KEY'           => getenv('SS_API_KEY')    ? '••••••••' : 'Not set',
           'SS_API_SECRET'        => getenv('SS_API_SECRET') ? '••••••••' : 'Not set',
+          'SLACK_WEBHOOK_URL'    => getenv('SLACK_WEBHOOK_URL') ? 'Configured' : 'Not set',
           'CACHE_TTL'            => (function() {
               $s = (int)(getenv('CACHE_TTL') ?: 82800);
               if ($s >= 86400) return round($s / 86400, 1) . ' days (' . $s . ' s)';

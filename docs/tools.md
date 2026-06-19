@@ -8,7 +8,9 @@
 | **Run Audit** | Compare every paid Shopify order against ShipStation for any date range. Flags genuinely missing orders and surfaces potential duplicate purchases. |
 | **Trends** | Aggregated stats across all reports: average missing count, worst day, repeat offenders. Includes a full history chart and bulk-ignore table. |
 | **Duplicate Detector** | Scan for potential duplicate purchases (same email + amount within 24 h). |
+| **Fulfillment SLA Breaches** | Flag orders whose time-to-first-fulfillment exceeds a configurable SLA by shipping method and region. |
 | **Refunds Tracker** | Track refunded orders across a date range. |
+| **Active SS Conflicts** | Find refunded/cancelled Shopify orders still active in ShipStation queues. |
 | **Address Scanner** | Flag orders with potentially undeliverable or mismatched shipping addresses. |
 | **Email Checker** | Scan for orders with missing or invalid customer emails. |
 | **Orphan Detector** | Find ShipStation orders with no matching Shopify order. |
@@ -21,8 +23,12 @@
 | **Product Completeness** | Flag active products missing images, descriptions, or variant SKUs. |
 | **SKU Duplicates** | Detect variants sharing the same SKU across the catalogue. |
 | **Inventory Oversell Risk** | Surface variants where ShipStation awaiting qty exceeds available Shopify stock. |
+| **Inventory Aging** | Find active tracked zero-stock variants that still sold recently. |
 | **Billing ≠ Shipping Country** | Flag orders where billing and shipping countries differ — a documented fraud signal. |
+| **Discount Abuse** | Group discount-code use by shipping address and flag clusters across multiple customer emails. |
+| **Tag Policy Audit** | Validate required and forbidden tag combinations from `tag_policy.json`. |
 | **Partial Fulfillment Stalls** | Open orders partially shipped with unfulfilled items stalled for N+ days. |
+| **Shipment Aging** | Flag ShipStation awaiting-shipment orders older than a configurable threshold, grouped by SKU/order type. |
 
 ## Search & Lookup
 
@@ -45,4 +51,5 @@
 | --- | --- |
 | **Ignored** | View and manage all ignored orders. Bulk-unignore with checkboxes. Import via CSV. |
 | **Push Log** | Full history of every order pushed to ShipStation from the dashboard. |
+| **Run History** | Recent audit and scan executions with status, duration, scanned count, issue count, and errors. |
 | **Settings** | Test API connectivity, view current `.env` config, manage banned IPs. |

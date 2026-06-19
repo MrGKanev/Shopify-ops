@@ -1,0 +1,179 @@
+<?php
+declare(strict_types=1);
+
+/**
+ * Single source of truth for tool pages, labels, groups, and hub cards.
+ */
+class ToolRegistry
+{
+    /** @var array<string, array<string, mixed>> */
+    private const HUBS = [
+        'audit' => [
+            'label' => 'Audit',
+            'href'  => '?page=hub-audit',
+            'hub'   => 'hub-audit',
+            'sections' => [
+                'Core Audit' => [
+                    ['page' => 'reports',  'icon' => '📋', 'name' => 'Reports',    'desc' => 'View and download saved audit reports'],
+                    ['page' => 'run',      'icon' => '▶',  'name' => 'Run Audit',  'desc' => 'Compare Shopify vs ShipStation for any date range'],
+                    ['page' => 'trends',   'icon' => '📈', 'name' => 'Trends',     'desc' => 'Aggregated stats across all audit reports'],
+                ],
+                'Order Issues' => [
+                    ['page' => 'dupes',         'icon' => '🔁', 'name' => 'Duplicate Detector',          'desc' => 'Same customer, same total - placed within 10 minutes'],
+                    ['page' => 'refunds',       'icon' => '💸', 'name' => 'Refunds Tracker',             'desc' => 'Refunded Shopify orders cross-checked against ShipStation'],
+                    ['page' => 'repeatrefunds', 'icon' => '♻',  'name' => 'Repeat Refunds',              'desc' => 'Customers with multiple refunded orders in a date range'],
+                    ['page' => 'orphans',       'icon' => '👻', 'name' => 'Orphan Detector',             'desc' => 'ShipStation orders with no matching Shopify order'],
+                    ['page' => 'activess',      'icon' => '🛑', 'name' => 'Active SS Conflicts',         'desc' => 'Refunded or cancelled Shopify orders still active in ShipStation'],
+                    ['page' => 'ssshipped',     'icon' => '🔄', 'name' => 'SS Shipped / Shopify Unful.', 'title' => 'SS Shipped / Shopify Unfulfilled', 'desc' => 'ShipStation shipped orders that Shopify still shows as unfulfilled (sync failure)'],
+                    ['page' => 'orderedits',    'icon' => '✏️',  'name' => 'Order Edit History',          'desc' => 'Orders with post-placement edits: line items, discounts, notes or custom attributes'],
+                    ['page' => 'noteflags',     'icon' => '🚩', 'name' => 'Note Flags',                  'desc' => 'Paid unfulfilled orders with flagged keywords in the order note'],
+                ],
+                'Address & Contact' => [
+                    ['page' => 'addrcheck',    'icon' => '📍', 'name' => 'Address Scanner',           'desc' => 'Paid orders with incomplete or invalid shipping addresses'],
+                    ['page' => 'emailcheck',   'icon' => '✉',  'name' => 'Email Checker',             'desc' => 'Orders with invalid, disposable or suspicious emails'],
+                    ['page' => 'hvorders',     'icon' => '📦', 'name' => 'High-Value No Phone',       'desc' => 'High-value unfulfilled orders missing a shipping phone'],
+                    ['page' => 'addrchanges',  'icon' => '🔀', 'name' => 'Address Changes',           'desc' => 'Orders whose shipping address was edited after placement'],
+                    ['page' => 'postshipaddr', 'icon' => '📮', 'name' => 'Post-Ship Address Change',  'desc' => 'Address edited AFTER the order was already fulfilled - package already in transit'],
+                    ['page' => 'addrdupes',    'icon' => '👥', 'name' => 'Duplicate Shipping Addrs.', 'title' => 'Duplicate Shipping Addresses', 'desc' => 'Different customer emails shipping to the exact same address'],
+                ],
+                'Fulfillment' => [
+                    ['page' => 'failedship',     'icon' => '🚫', 'name' => 'Voided Shipments',           'desc' => 'ShipStation shipments voided in the selected date range'],
+                    ['page' => 'slabreaches',    'icon' => '⏱',  'name' => 'Fulfillment SLA Breaches',  'desc' => 'Orders exceeding your time-to-first-fulfillment SLA by shipping method and region'],
+                    ['page' => 'bundlecheck',    'icon' => '🧩', 'name' => 'Bundle Check',               'desc' => 'Bundled orders missing required companion items (Addon items)'],
+                    ['page' => 'partialfulfill', 'icon' => '⏳', 'name' => 'Partial Fulfillment Stalls', 'desc' => 'Open orders partially shipped with unfulfilled items stalled for N+ days'],
+                    ['page' => 'onholdstall',    'icon' => '⏸',  'name' => 'On-Hold Stall',              'desc' => 'Fulfillment orders sitting on hold - sorted by how long the order has been waiting'],
+                    ['page' => 'notracking',     'icon' => '📪', 'name' => 'Fulfilled Without Tracking', 'desc' => 'Fulfilled orders with no tracking number after a configurable grace period'],
+                    ['page' => 'shipmentaging',  'icon' => '🕒', 'name' => 'Shipment Aging',             'desc' => 'ShipStation awaiting-shipment orders older than a configurable threshold'],
+                ],
+                'Products & Inventory' => [
+                    ['page' => 'productcheck',      'icon' => '🖼', 'name' => 'Product Completeness',   'desc' => 'Active products missing images, descriptions, or variant SKUs'],
+                    ['page' => 'skudupes',          'icon' => '🔑', 'name' => 'SKU Duplicates',          'desc' => 'Variants sharing the same SKU across your product catalog'],
+                    ['page' => 'inventoryoversell', 'icon' => '📉', 'name' => 'Inventory Oversell Risk', 'desc' => 'SKUs where ShipStation awaiting qty exceeds available Shopify stock'],
+                    ['page' => 'inventoryaging',    'icon' => '📦', 'name' => 'Inventory Aging',         'desc' => 'Zero-stock active variants that still sold recently'],
+                    ['page' => 'zombieproducts',    'icon' => '🧟', 'name' => 'Zombie Products',         'desc' => 'Active products with no variants or all tracked variants permanently out of stock'],
+                ],
+                'Fraud & Compliance' => [
+                    ['page' => 'countrymismatch', 'icon' => '🌍', 'name' => 'Billing ≠ Shipping Country', 'desc' => 'Paid orders where billing and shipping countries differ - a documented fraud signal'],
+                    ['page' => 'discountabuse',   'icon' => '🎟', 'name' => 'Discount Abuse',             'desc' => 'Discount code clusters at the same shipping address across different emails'],
+                    ['page' => 'tagpolicy',       'icon' => '🏷', 'name' => 'Tag Policy Audit',           'desc' => 'Required and forbidden Shopify tag combinations from local policy rules'],
+                ],
+            ],
+        ],
+        'search' => [
+            'label' => 'Search &amp; Lookup',
+            'href'  => '?page=hub-search',
+            'hub'   => 'hub-search',
+            'sections' => [
+                'Orders' => [
+                    ['page' => 'spotcheck', 'icon' => '🔎', 'name' => 'Spot-check',    'desc' => 'Live lookup of specific order numbers in ShipStation and Shopify'],
+                    ['page' => 'compare',   'icon' => '⚖',  'name' => 'Order Compare', 'desc' => 'Two orders side by side with differences highlighted'],
+                    ['page' => 'timeline',  'icon' => '📅', 'name' => 'Order Timeline', 'desc' => 'Full chronological history of a single order: Shopify events + ShipStation shipments'],
+                ],
+                'Customers & Tags' => [
+                    ['page' => 'customer',  'icon' => '👤', 'name' => 'Customer Lookup', 'desc' => 'Full order history for a customer by email address'],
+                    ['page' => 'tagsearch', 'icon' => '🔖', 'name' => 'Tag Search',      'desc' => 'Find all orders that carry a specific Shopify tag'],
+                    ['page' => 'tagaudit',  'icon' => '🏷',  'name' => 'Tag Audit',       'desc' => 'All unique tags on orders - with frequency and last-seen date'],
+                ],
+                'Metadata' => [
+                    ['page' => 'metafields', 'icon' => '🗂', 'name' => 'Metafields', 'desc' => 'Browse metafield definitions and search orders by value'],
+                ],
+                'Shipping' => [
+                    ['page' => 'tracking',    'icon' => '🚚', 'name' => 'Tracking Feed',        'desc' => 'Shipment tracking info for orders via ShipStation'],
+                    ['page' => 'packingslip', 'icon' => '🖨',  'name' => 'Packing Slip Preview', 'desc' => 'Visualise a ShipStation packing slip for any order - without logging in'],
+                ],
+            ],
+        ],
+    ];
+
+    /** @var array<string, array{group: string, title: string}> */
+    private const STANDALONE = [
+        'dashboard'  => ['group' => 'audit',    'title' => 'Dashboard'],
+        'hub-audit'  => ['group' => 'audit',    'title' => 'Audit'],
+        'hub-search' => ['group' => 'search',   'title' => 'Search & Lookup'],
+        'globalsearch' => ['group' => 'search', 'title' => 'Global Search'],
+        'ignored'    => ['group' => 'manage',   'title' => 'Ignored Orders'],
+        'pushlog'    => ['group' => 'manage',   'title' => 'Push Log'],
+        'runlog'     => ['group' => 'manage',   'title' => 'Run History'],
+        'settings'   => ['group' => 'settings', 'title' => 'Settings'],
+    ];
+
+    /**
+     * @return array<string, array<int, array<string, string>>>
+     */
+    public static function hubSections(string $group): array
+    {
+        return self::HUBS[$group]['sections'] ?? [];
+    }
+
+    /**
+     * @return array<string, array{label: string, href: string}>
+     */
+    public static function groupMeta(): array
+    {
+        return [
+            'audit'    => ['label' => self::HUBS['audit']['label'],  'href' => self::HUBS['audit']['href']],
+            'search'   => ['label' => self::HUBS['search']['label'], 'href' => self::HUBS['search']['href']],
+            'manage'   => ['label' => 'Manage',   'href' => '?page=ignored'],
+            'settings' => ['label' => 'Settings', 'href' => '?page=settings'],
+        ];
+    }
+
+    /**
+     * @return string[]
+     */
+    public static function allowedPages(): array
+    {
+        return array_values(array_unique(array_merge(array_keys(self::STANDALONE), array_keys(self::toolMap()))));
+    }
+
+    public static function normalizePage(string $page, string $fallback = 'hub-audit'): string
+    {
+        return in_array($page, self::allowedPages(), true) ? $page : $fallback;
+    }
+
+    public static function groupOf(string $page): string
+    {
+        if (isset(self::STANDALONE[$page])) {
+            return self::STANDALONE[$page]['group'];
+        }
+        return self::toolMap()[$page]['group'] ?? 'settings';
+    }
+
+    public static function title(string $page): string
+    {
+        if (isset(self::STANDALONE[$page])) {
+            return self::STANDALONE[$page]['title'];
+        }
+        $tool = self::toolMap()[$page] ?? null;
+        return $tool ? (string) ($tool['title'] ?? $tool['name']) : $page;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function titles(): array
+    {
+        $titles = [];
+        foreach (self::allowedPages() as $page) {
+            $titles[$page] = self::title($page);
+        }
+        return $titles;
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private static function toolMap(): array
+    {
+        $tools = [];
+        foreach (self::HUBS as $group => $hub) {
+            foreach (($hub['sections'] ?? []) as $sectionTools) {
+                foreach ($sectionTools as $tool) {
+                    $tool['group'] = $group;
+                    $tools[(string) $tool['page']] = $tool;
+                }
+            }
+        }
+        return $tools;
+    }
+}

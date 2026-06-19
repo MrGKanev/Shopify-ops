@@ -1,0 +1,15 @@
+{
+  "required": [
+    {
+      "name": "Express orders need priority review",
+      "when": ["express"],
+      "must_have": ["priority-review"]
+    }
+  ],
+  "forbidden": [
+    {
+      "name": "Wholesale cannot be fraud review",
+      "tags": ["wholesale", "fraud-review"]
+    }
+  ]
+}

@@ -8,12 +8,13 @@
 | `SHOPIFY_ACCESS_TOKEN` | ✅ | Shopify Admin API access token |
 | `SS_API_KEY` | - | ShipStation → Settings → API (required for audit/push features) |
 | `SS_API_SECRET` | - | Same page |
-| `WEB_PASSWORD` | ✅ | Dashboard login password |
+| `WEB_PASSWORD` | ✅ | Dashboard login password. Plain text is supported for compatibility; a PHP `password_hash()` value is also accepted. |
 | `WEB_USERNAME` | - | Login username (default: `admin`) |
 | `CACHE_TTL` | - | Cache duration in seconds (default: `82800` = 23 h). Set to `0` to disable. |
 | `APP_TITLE` | - | Label shown in browser tab and sidebar as `{APP_TITLE} - Shopify OPS` (default: `Shopify OPS`) |
 | `APP_LOGO` | - | URL to an image that replaces the brand text |
 | `APP_STORE_NUMBER` | - | Store number - shown as subtitle on login and in the browser tab |
+| `SLACK_WEBHOOK_URL` | - | Slack Incoming Webhook URL. When set, completed audits send a concise summary to Slack. |
 
 ---
 
@@ -22,6 +23,21 @@
 API responses are cached under `cache/` as JSON files keyed by platform and date range. Default TTL: 23 hours (`CACHE_TTL=82800`). Repeated runs within the same day reuse the cache automatically.
 
 To force a fresh fetch: **Clear all cache** in the Run Audit page, or set `CACHE_TTL=0` in `.env`.
+
+## Tag policy rules
+
+`Tag Policy Audit` is enabled by creating `tag_policy.json` from `tag_policy.example.json`.
+
+```json
+{
+  "required": [
+    { "name": "Express orders need priority review", "when": ["express"], "must_have": ["priority-review"] }
+  ],
+  "forbidden": [
+    { "name": "Wholesale cannot be fraud review", "tags": ["wholesale", "fraud-review"] }
+  ]
+}
+```
 
 ---
 

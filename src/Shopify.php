@@ -17,6 +17,7 @@ use Psr\Http\Message\ResponseInterface;
 class Shopify
 {
     private const int PAGE_SIZE = 250; // max allowed by Shopify
+    public const string API_VERSION = '2026-04';
 
     private readonly string $baseUrl;
     private readonly string $token;
@@ -30,7 +31,7 @@ class Shopify
         ?HandlerStack $stack = null
     ) {
         $host = str_contains($store, '.') ? $store : "{$store}.myshopify.com";
-        $this->baseUrl = "https://{$host}/admin/api/2025-04";
+        $this->baseUrl = "https://{$host}/admin/api/" . self::API_VERSION;
         $this->token   = $accessToken;
         $this->cache   = $cache;
         $stack ??= HandlerStack::create();
@@ -1054,6 +1055,101 @@ class Shopify
             'created_at_max'   => $endDate   . 'T23:59:59-00:00',
             'limit'            => self::PAGE_SIZE,
             'fields'           => 'id,order_number,name,created_at,email,total_price,shipping_address,fulfillment_status',
+        ]);
+        $nextUrl = "{$this->baseUrl}/orders.json?{$params}";
+        while ($nextUrl) {
+            [$orders, $nextUrl] = $this->getPage($nextUrl);
+            array_push($all, ...$orders);
+        }
+        return $all;
+    }
+
+    /**
+     * Fetches paid orders with shipping method, destination, and fulfillment data for SLA checks.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function fetchOrdersForSla(string $startDate, string $endDate): array
+    {
+        $all = [];
+        $params = http_build_query([
+            'status'           => 'any',
+            'financial_status' => 'paid,partially_paid',
+            'created_at_min'   => $startDate . 'T00:00:00-00:00',
+            'created_at_max'   => $endDate   . 'T23:59:59-00:00',
+            'limit'            => self::PAGE_SIZE,
+            'fields'           => 'id,order_number,name,created_at,email,total_price,financial_status,fulfillment_status,shipping_lines,shipping_address,fulfillments,line_items',
+        ]);
+        $nextUrl = "{$this->baseUrl}/orders.json?{$params}";
+        while ($nextUrl) {
+            [$orders, $nextUrl] = $this->getPage($nextUrl);
+            array_push($all, ...$orders);
+        }
+        return $all;
+    }
+
+    /**
+     * Fetches cancelled Shopify orders in a date range.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function fetchCancelledOrders(string $startDate, string $endDate): array
+    {
+        $all = [];
+        $params = http_build_query([
+            'status'           => 'cancelled',
+            'created_at_min'   => $startDate . 'T00:00:00-00:00',
+            'created_at_max'   => $endDate   . 'T23:59:59-00:00',
+            'limit'            => self::PAGE_SIZE,
+            'fields'           => 'id,order_number,name,created_at,cancelled_at,cancel_reason,email,total_price,financial_status,fulfillment_status',
+        ]);
+        $nextUrl = "{$this->baseUrl}/orders.json?{$params}";
+        while ($nextUrl) {
+            [$orders, $nextUrl] = $this->getPage($nextUrl);
+            array_push($all, ...$orders);
+        }
+        return $all;
+    }
+
+    /**
+     * Fetches paid orders with discount and shipping address fields for abuse clustering.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function fetchOrdersForDiscountAudit(string $startDate, string $endDate): array
+    {
+        $all = [];
+        $params = http_build_query([
+            'status'           => 'any',
+            'financial_status' => 'paid,partially_paid',
+            'created_at_min'   => $startDate . 'T00:00:00-00:00',
+            'created_at_max'   => $endDate   . 'T23:59:59-00:00',
+            'limit'            => self::PAGE_SIZE,
+            'fields'           => 'id,order_number,name,created_at,email,total_price,financial_status,fulfillment_status,discount_codes,shipping_address',
+        ]);
+        $nextUrl = "{$this->baseUrl}/orders.json?{$params}";
+        while ($nextUrl) {
+            [$orders, $nextUrl] = $this->getPage($nextUrl);
+            array_push($all, ...$orders);
+        }
+        return $all;
+    }
+
+    /**
+     * Fetches paid orders with tags for policy validation.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function fetchOrdersForTagPolicy(string $startDate, string $endDate): array
+    {
+        $all = [];
+        $params = http_build_query([
+            'status'           => 'any',
+            'financial_status' => 'paid,partially_paid',
+            'created_at_min'   => $startDate . 'T00:00:00-00:00',
+            'created_at_max'   => $endDate   . 'T23:59:59-00:00',
+            'limit'            => self::PAGE_SIZE,
+            'fields'           => 'id,order_number,name,created_at,email,total_price,financial_status,fulfillment_status,tags',
         ]);
         $nextUrl = "{$this->baseUrl}/orders.json?{$params}";
         while ($nextUrl) {
