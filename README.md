@@ -56,10 +56,25 @@ AUDIT_START_DATE=2025-01-01 AUDIT_END_DATE=2025-03-31 php audit.php
 
 Exit codes: `0` = all clear, `1` = missing orders found, `2` = script error.
 
-### 4. Schedule via cron
+### 4. Process queued background jobs
+
+Audits can be queued from the dashboard and processed outside the web request:
+
+```bash
+php worker.php --once
+```
+
+For multi-store installs:
+
+```bash
+php worker.php --store store_id --once
+```
+
+### 5. Schedule via cron
 
 ```cron
 0 6 * * * cd /var/www/shopify-ops && php audit.php >> logs/audit.log 2>&1
+*/5 * * * * cd /var/www/shopify-ops && php worker.php --once >> logs/worker.log 2>&1
 ```
 
 ---

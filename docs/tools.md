@@ -52,4 +52,9 @@
 | **Ignored** | View and manage all ignored orders. Bulk-unignore with checkboxes. Import via CSV. |
 | **Push Log** | Full history of every order pushed to ShipStation from the dashboard. |
 | **Run History** | Recent audit and scan executions with status, duration, scanned count, issue count, and errors. |
+| **Job Queue** | File-backed pending/running/done background audit jobs processed by `worker.php`. |
+| **Action Log** | Operator audit trail for ignore/unignore, ShipStation pushes, queued jobs, store switches, and settings changes. |
 | **Settings** | Test API connectivity, view current `.env` config, manage banned IPs. |
+| **API Health** | Live Shopify/ShipStation health checks, Shopify API version, and required Shopify scopes. |
+| **Config Check** | Validate `order_types.json`, `tag_policy.json`, and `stores.json`. |
+| **Slack Rules** | Configure thresholds for Slack audit and scan notifications. |

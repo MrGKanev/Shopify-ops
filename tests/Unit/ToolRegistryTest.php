@@ -13,8 +13,11 @@ class ToolRegistryTest extends TestCase
         $this->assertSame('Duplicate Shipping Addresses', ToolRegistry::title('addrdupes'));
         $this->assertSame('search', ToolRegistry::groupOf('globalsearch'));
         $this->assertSame('manage', ToolRegistry::groupOf('runlog'));
+        $this->assertSame('manage', ToolRegistry::groupOf('jobs'));
+        $this->assertSame('settings', ToolRegistry::groupOf('apihealth'));
         $this->assertContains('inventoryoversell', ToolRegistry::allowedPages());
         $this->assertContains('shipmentaging', ToolRegistry::allowedPages());
+        $this->assertContains('configcheck', ToolRegistry::allowedPages());
         $this->assertSame('Fraud & Compliance', array_key_last(ToolRegistry::hubSections('audit')));
     }
 

@@ -10,6 +10,7 @@ require_once __DIR__ . '/src/Shopify.php';
 require_once __DIR__ . '/src/Comparator.php';
 require_once __DIR__ . '/src/Reporter.php';
 require_once __DIR__ . '/src/SlackNotifier.php';
+require_once __DIR__ . '/src/SlackRules.php';
 require_once __DIR__ . '/src/RunLog.php';
 
 // ── Load .env ─────────────────────────────────────────────────────
@@ -136,7 +137,7 @@ try {
 
     Reporter::saveReports($result['missing'], $startDate, $endDate);
 
-    if ($notifier = SlackNotifier::fromEnvironment()) {
+    if (SlackRules::shouldNotifyAudit(count($result['missing'])) && ($notifier = SlackNotifier::fromEnvironment())) {
         $sent = $notifier->notifyAuditSafely([
             'store'          => $shopifyStore,
             'start'          => $startDate,
