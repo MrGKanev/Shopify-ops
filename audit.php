@@ -9,6 +9,8 @@ require_once __DIR__ . '/src/ShipStation.php';
 require_once __DIR__ . '/src/Shopify.php';
 require_once __DIR__ . '/src/Comparator.php';
 require_once __DIR__ . '/src/Reporter.php';
+require_once __DIR__ . '/src/SlackNotifier.php';
+require_once __DIR__ . '/src/RunLog.php';
 
 // ── Load .env ─────────────────────────────────────────────────────
 if (!file_exists(__DIR__ . '/.env')) {
@@ -48,6 +50,9 @@ if ($spotCheckNumbers) {
     echo "   Spot-check : #" . implode(', #', $spotCheckNumbers) . "\n";
 }
 echo "\n";
+
+$auditStartedAt = date('Y-m-d H:i:s');
+$auditT0 = microtime(true);
 
 try {
     $cacheTtl = (int) (getenv('CACHE_TTL') ?: 82800); // default 23 h
@@ -131,10 +136,55 @@ try {
 
     Reporter::saveReports($result['missing'], $startDate, $endDate);
 
+    if ($notifier = SlackNotifier::fromEnvironment()) {
+        $sent = $notifier->notifyAuditSafely([
+            'store'          => $shopifyStore,
+            'start'          => $startDate,
+            'end'            => $endDate,
+            'missing_count'  => count($result['missing']),
+            'missing_orders' => $result['missing'],
+            'found'          => count($result['found']),
+            'skipped'        => count($result['skipped']),
+            'ignored'        => count($result['ignored']),
+            'total_ss'       => count($ssOrders),
+        ]);
+        echo $sent
+            ? "  Slack notification sent.\n"
+            : "  Slack notification failed; audit result was still saved.\n";
+    }
+
+    RunLog::append([
+        'tool'       => 'cli_audit',
+        'status'     => count($result['missing']) > 0 ? 'issues_found' : 'ok',
+        'created_at' => $auditStartedAt,
+        'duration'   => round(microtime(true) - $auditT0, 2),
+        'start_date' => $startDate,
+        'end_date'   => $endDate,
+        'scanned'    => count($shopifyOrders),
+        'rows_found' => count($result['missing']),
+        'meta'       => [
+            'api_version' => Shopify::API_VERSION,
+            'shipstation_total' => count($ssOrders),
+            'found' => count($result['found']),
+            'skipped' => count($result['skipped']),
+            'ignored' => count($result['ignored']),
+        ],
+    ]);
+
     // Exit code 1 = missing orders found (useful for cron alerting)
     exit(empty($result['missing']) ? 0 : 1);
 
 } catch (Throwable $e) {
+    RunLog::append([
+        'tool'       => 'cli_audit',
+        'status'     => 'error',
+        'created_at' => $auditStartedAt,
+        'duration'   => round(microtime(true) - $auditT0, 2),
+        'start_date' => $startDate,
+        'end_date'   => $endDate,
+        'error'      => $e->getMessage(),
+        'meta'       => ['api_version' => Shopify::API_VERSION],
+    ]);
     echo "\n✗ Error: " . $e->getMessage() . "\n";
     if (getenv('DEBUG')) echo $e->getTraceAsString() . "\n";
     exit(2);

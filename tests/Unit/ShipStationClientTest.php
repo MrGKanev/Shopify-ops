@@ -157,4 +157,22 @@ class ShipStationClientTest extends TestCase
 
         $ss->findByOrderNumber('1001');
     }
+
+    public function testFetchActiveOrdersRequestsAllActiveStatuses(): void
+    {
+        $history = [];
+        $ss = $this->ss([
+            $this->json(['orders' => [['orderId' => 1]], 'pages' => 1]),
+            $this->json(['orders' => [['orderId' => 2]], 'pages' => 1]),
+            $this->json(['orders' => [['orderId' => 3]], 'pages' => 1]),
+        ], $history);
+
+        $orders = $ss->fetchActiveOrders();
+
+        $this->assertCount(3, $orders);
+        $uris = array_map(fn($h) => urldecode((string) $h['request']->getUri()), $history);
+        $this->assertStringContainsString('orderStatus=awaiting_payment', $uris[0]);
+        $this->assertStringContainsString('orderStatus=awaiting_shipment', $uris[1]);
+        $this->assertStringContainsString('orderStatus=on_hold', $uris[2]);
+    }
 }

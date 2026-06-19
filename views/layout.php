@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
+<meta name="csrf-token" content="<?= esc($csrfToken ?? '') ?>">
 <title><?= esc($appTitle) ?><?= $appStoreNumber ? ' - #' . esc($appStoreNumber) : '' ?></title>
 <link rel="stylesheet" href="assets/app.css">
 <script>
@@ -65,48 +66,9 @@
     </div>
 
     <?php
-      $auditPages  = ['hub-audit', 'dashboard', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'orderedits', 'bundlecheck', 'productcheck', 'skudupes', 'inventoryoversell', 'countrymismatch', 'partialfulfill', 'onholdstall', 'notracking', 'postshipaddr', 'noteflags', 'ssshipped', 'zombieproducts', 'addrdupes'];
-      $searchPages = ['hub-search', 'spotcheck', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'tracking', 'compare', 'timeline', 'globalsearch', 'packingslip'];
-      $managePages = ['ignored', 'pushlog'];
-      $groupOf = function(string $p) use ($auditPages, $searchPages, $managePages): string {
-          if (in_array($p, $auditPages,  true)) return 'audit';
-          if (in_array($p, $searchPages, true)) return 'search';
-          if (in_array($p, $managePages, true)) return 'manage';
-          return 'settings';
-      };
-      $activeGroup = $groupOf($page);
-
-      $pageTitles = [
-          'dashboard' => 'Dashboard',
-          'reports' => 'Reports', 'run' => 'Run Audit', 'trends' => 'Trends',
-          'dupes' => 'Duplicate Detector', 'refunds' => 'Refunds Tracker',
-          'addrcheck' => 'Address Scanner', 'emailcheck' => 'Email Checker',
-          'orphans' => 'Orphan Detector', 'hvorders' => 'High-Value No Phone',
-          'repeatrefunds' => 'Repeat Refunds', 'failedship' => 'Voided Shipments',
-          'addrchanges' => 'Address Changes',
-          'orderedits'  => 'Order Edit History',
-          'bundlecheck' => 'Bundle Check',
-          'productcheck' => 'Product Completeness', 'skudupes' => 'SKU Duplicates',
-          'inventoryoversell' => 'Inventory Oversell Risk',
-          'countrymismatch'   => 'Billing ≠ Shipping Country',
-          'partialfulfill'    => 'Partial Fulfillment Stalls',
-          'onholdstall'       => 'On-Hold Stall',
-          'notracking'        => 'Fulfilled Without Tracking',
-          'postshipaddr'      => 'Post-Ship Address Change',
-          'noteflags'         => 'Note Flags',
-          'ssshipped'         => 'SS Shipped / Shopify Unfulfilled',
-          'zombieproducts'    => 'Zombie Products',
-          'addrdupes'         => 'Duplicate Shipping Addresses',
-          'spotcheck' => 'Spot-check', 'metafields' => 'Metafields',
-          'tagsearch' => 'Tag Search', 'tagaudit' => 'Tag Audit',
-          'customer' => 'Customer Lookup', 'tracking' => 'Tracking Feed',
-          'compare'   => 'Order Compare',
-          'timeline'     => 'Order Timeline',
-          'globalsearch' => 'Global Search',
-          'packingslip'  => 'Packing Slip Preview',
-          'ignored' => 'Ignored Orders', 'pushlog' => 'Push Log',
-      ];
-      $hubPages = ['hub-audit', 'hub-search'];
+      $page = ToolRegistry::normalizePage($page, 'hub-audit');
+      $activeGroup = ToolRegistry::groupOf($page);
+      $pageTitles = ToolRegistry::titles();
     ?>
 
     <nav class="flat-nav">
@@ -134,6 +96,15 @@
       </a>
 
     </nav>
+
+    <?php if ($activeGroup === 'manage'): ?>
+      <div class="sidebar-section">Manage</div>
+      <ul class="sidebar-nav">
+        <li><a href="?page=ignored" class="<?= $page === 'ignored' ? 'active' : '' ?>">Ignored Orders</a></li>
+        <li><a href="?page=pushlog" class="<?= $page === 'pushlog' ? 'active' : '' ?>">Push Log</a></li>
+        <li><a href="?page=runlog" class="<?= $page === 'runlog' ? 'active' : '' ?>">Run History</a></li>
+      </ul>
+    <?php endif; ?>
 
     <div class="sidebar-search">
       <form method="get" action="">
@@ -181,18 +152,13 @@
 
   <main class="main">
     <?php
-      $allowedPages = ['hub-audit', 'hub-search', 'dashboard', 'reports', 'run', 'trends', 'dupes', 'refunds', 'addrcheck', 'emailcheck', 'orphans', 'hvorders', 'repeatrefunds', 'failedship', 'addrchanges', 'orderedits', 'bundlecheck', 'productcheck', 'skudupes', 'inventoryoversell', 'countrymismatch', 'partialfulfill', 'onholdstall', 'notracking', 'postshipaddr', 'noteflags', 'ssshipped', 'zombieproducts', 'addrdupes', 'spotcheck', 'tracking', 'compare', 'timeline', 'metafields', 'tagsearch', 'tagaudit', 'customer', 'ignored', 'pushlog', 'settings', 'globalsearch', 'packingslip'];
+      $allowedPages = ToolRegistry::allowedPages();
       $page         = in_array($page, $allowedPages, true) ? $page : 'hub-audit';
       $pageFile     = __DIR__ . '/' . $page . '.php';
 
       // Breadcrumb
       /** @var string $appBrand */
-      $groupMeta = [
-          'audit'    => ['label' => 'Audit',            'href' => '?page=hub-audit'],
-          'search'   => ['label' => 'Search &amp; Lookup', 'href' => '?page=hub-search'],
-          'manage'   => ['label' => 'Manage',           'href' => '?page=ignored'],
-          'settings' => ['label' => 'Settings',         'href' => '?page=settings'],
-      ];
+      $groupMeta = ToolRegistry::groupMeta();
       $crumbs   = [];
       $crumbs[] = ['href' => '?page=hub-audit', 'label' => esc($appBrand)];
       if ($page === 'dashboard') {
@@ -263,6 +229,7 @@ function previewPush(shopifyId, orderLabel) {
   var fd = new FormData();
   fd.append('action',     'preview_push');
   fd.append('shopify_id', shopifyId);
+  fd.append('_csrf', document.querySelector('meta[name="csrf-token"]').content || '');
 
   fetch('', { method: 'POST', body: fd })
     .then(function(r) { return r.json(); })

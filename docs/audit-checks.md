@@ -13,6 +13,18 @@ Finds paid Shopify orders in `partial` fulfillment status where unfulfilled item
 - Color-coded: red ≥ 30 days, yellow ≥ 14 days
 - Shows unfulfilled line items with SKUs and quantities
 
+### Fulfillment SLA Breaches
+Finds paid Shopify orders whose time-to-first-fulfillment exceeds a configurable threshold. Fulfilled orders are measured from placement to first fulfillment; open orders are measured from placement to today.
+
+- Groups context by shipping method, destination region, and configured order type
+- Useful for finding slow lanes, regions, or product types
+
+### Shipment Aging
+Scans the live ShipStation awaiting-shipment queue and flags orders older than N days.
+
+- Includes SKU and order-type summaries
+- Links directly to ShipStation and Spot-check
+
 ### Voided Shipments
 Shows shipments voided in ShipStation within the selected date range. Intended for proactive follow-up before the customer notices a tracking link has gone dead.
 
@@ -74,6 +86,12 @@ Reverse audit: finds ShipStation orders with no matching Shopify order. Common c
 
 - Matching uses normalized order numbers (same logic as the main audit engine)
 
+### Active SS Conflicts
+Finds Shopify orders that are refunded or cancelled but still active in ShipStation (`awaiting_payment`, `awaiting_shipment`, or `on_hold`).
+
+- Prevents accidental fulfillment after refund/cancellation
+- Uses the same normalized order matching as the audit engine
+
 ### Bundle Check
 Scans for orders missing required companion items as defined in `order_types.json` under `required_items`. Covers fulfilled orders too — catching shipped bundles missing a component is the most urgent case. See [order-types.md](order-types.md) for configuration.
 
@@ -98,3 +116,17 @@ Scans all products (active, draft, archived) for SKUs appearing more than once. 
 Compares current Shopify inventory levels against ShipStation orders awaiting shipment. Only considers variants where Shopify inventory management is enabled with a `deny` policy. Shows the shortfall when awaiting quantity exceeds available stock.
 
 - Real-time check (no date range needed)
+
+### Inventory Aging
+Finds active tracked variants at zero or negative inventory that still sold in the selected recent window.
+
+- Helps identify stale stock settings, inventory sync issues, or demand that needs replenishment
+
+### Discount Abuse
+Groups paid orders by discount code and shipping address, then flags clusters where multiple distinct customer emails used the same code at the same destination.
+
+### Tag Policy Audit
+Validates paid orders against `tag_policy.json`.
+
+- `required`: when all trigger tags are present, required tags must also be present
+- `forbidden`: listed tags must not appear together on one order

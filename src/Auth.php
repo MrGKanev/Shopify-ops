@@ -54,7 +54,7 @@ class Auth
         }
 
         $okUser = hash_equals($correctUser, $inputUser);
-        $okPass = hash_equals($correctPass, $inputPass);
+        $okPass = self::verifyPassword($inputPass, $correctPass);
 
         if ($okUser && $okPass) {
             unset($attempts[$ip]);
@@ -85,7 +85,36 @@ class Auth
      */
     public static function logout(): void
     {
+        $_SESSION = [];
         session_destroy();
+    }
+
+    public static function verifyPassword(string $inputPass, string $correctPass): bool
+    {
+        $info = password_get_info($correctPass);
+        if (($info['algo'] ?? 0) !== 0) {
+            return password_verify($inputPass, $correctPass);
+        }
+        return hash_equals($correctPass, $inputPass);
+    }
+
+    public static function csrfToken(): string
+    {
+        if (empty($_SESSION['_csrf'])) {
+            $_SESSION['_csrf'] = bin2hex(random_bytes(32));
+        }
+        return $_SESSION['_csrf'];
+    }
+
+    public static function rotateCsrfToken(): string
+    {
+        $_SESSION['_csrf'] = bin2hex(random_bytes(32));
+        return $_SESSION['_csrf'];
+    }
+
+    public static function validateCsrf(string $token): bool
+    {
+        return isset($_SESSION['_csrf']) && hash_equals((string)$_SESSION['_csrf'], $token);
     }
 
     /**

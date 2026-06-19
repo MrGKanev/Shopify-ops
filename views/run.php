@@ -38,6 +38,11 @@
     <span class="source-badge <?= $auditFromCache['ss'] ? 'cached' : 'live' ?>">
       ShipStation: <?= $auditFromCache['ss'] ? 'from cache' : 'live' ?>
     </span>
+    <?php if (($auditSlack['configured'] ?? false) && ($auditSlack['sent'] ?? false)): ?>
+      <span class="source-badge live">Slack: sent</span>
+    <?php elseif (($auditSlack['configured'] ?? false) && !empty($auditSlack['error'])): ?>
+      <span class="source-badge cached" title="<?= esc($auditSlack['error']) ?>">Slack: failed</span>
+    <?php endif; ?>
   </div>
 
   <div class="audit-summary">

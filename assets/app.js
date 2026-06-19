@@ -132,7 +132,9 @@ document.querySelectorAll('.js-localtime').forEach(function(el) {
     tag_search: true, compare_orders: true, customer_lookup: true,
     metafield_search: true, metafield_lookup: true, lookup_tracking: true,
     scan_hvorders: true, scan_repeat_refunds: true, scan_failed_shipments: true,
-    scan_addr_changes: true, scan_bundle: true
+    scan_addr_changes: true, scan_bundle: true, scan_sla: true,
+    scan_activess: true, scan_discountabuse: true, scan_tagpolicy: true,
+    scan_inventoryaging: true, scan_shipmentaging: true
   };
 
   var bar = document.getElementById('js-loading-bar');
@@ -318,6 +320,8 @@ function toggleOrderDetail(orderId, summaryRow) {
   var fd = new FormData();
   fd.append('action',     'order_detail');
   fd.append('shopify_id', orderId);
+  var csrf = document.querySelector('meta[name="csrf-token"]');
+  fd.append('_csrf', csrf ? csrf.content : '');
 
   fetch('', { method: 'POST', body: fd })
     .then(function(r) { return r.json(); })

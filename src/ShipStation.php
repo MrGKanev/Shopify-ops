@@ -268,6 +268,20 @@ class ShipStation
     }
 
     /**
+     * Fetches orders in ShipStation statuses that still require operational action.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function fetchActiveOrders(): array
+    {
+        $all = [];
+        foreach (['awaiting_payment', 'awaiting_shipment', 'on_hold'] as $status) {
+            array_push($all, ...$this->fetchOrdersByStatus($status));
+        }
+        return $all;
+    }
+
+    /**
      * Fetches all shipments for a given order number (not cached - live lookup).
      *
      * @return array<int, array<string, mixed>>
@@ -277,6 +291,28 @@ class ShipStation
         $params = http_build_query(['orderNumber' => $orderNumber, 'pageSize' => 100]);
         $data   = $this->get("/shipments?{$params}");
         return $data['shipments'] ?? [];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchOrdersByStatus(string $status): array
+    {
+        $all  = [];
+        $page = 1;
+        do {
+            $params = http_build_query([
+                'orderStatus' => $status,
+                'pageSize'    => self::PAGE_SIZE,
+                'page'        => $page,
+            ]);
+            $data  = $this->get("/orders?{$params}");
+            $batch = $data['orders'] ?? [];
+            array_push($all, ...$batch);
+            $totalPages = $data['pages'] ?? 1;
+            $page++;
+        } while ($page <= $totalPages);
+        return $all;
     }
 
     // ── Private ───────────────────────────────────────────────────────

@@ -53,6 +53,12 @@ class PageLoader
             'ssshipped'         => self::loadSsShippedUnfulfilled($action, $ctx),
             'zombieproducts'    => self::loadZombieProducts($action, $ctx),
             'addrdupes'         => self::loadAddrDupes($action, $ctx),
+            'slabreaches'       => self::loadSlaBreaches($action, $ctx),
+            'activess'          => self::loadActiveSsConflicts($action, $ctx),
+            'discountabuse'     => self::loadDiscountAbuse($action, $ctx),
+            'tagpolicy'         => self::loadTagPolicy($action, $ctx),
+            'inventoryaging'    => self::loadInventoryAging($action, $ctx),
+            'shipmentaging'     => self::loadShipmentAging($action, $ctx),
             'settings'          => self::loadSettings($action, $ctx),
             default     => [],
         };
@@ -65,7 +71,7 @@ class PageLoader
     private static function loadGlobal(array $ctx): array
     {
         // Probabilistic background prune — keeps cache dir tidy without blocking every request
-        if (mt_rand(1, 10) === 1) {
+        if ($ctx['cacheObj'] && mt_rand(1, 10) === 1) {
             $ctx['cacheObj']->pruneExpired();
         }
 
@@ -122,10 +128,11 @@ class PageLoader
             . '/admin/orders';
 
         $pushLog   = PushLog::all();
+        $runLog    = RunLog::all();
         $bannedIps = Auth::bannedIps();
 
         return compact('reports', 'orderHistory', 'latestReport', 'selectedDate', 'selectedReport',
-                       'shopifyAdminBase', 'pushLog', 'bannedIps');
+                       'shopifyAdminBase', 'pushLog', 'runLog', 'bannedIps');
     }
 
     // ── Audit ─────────────────────────────────────────────────────────────────
@@ -136,6 +143,7 @@ class PageLoader
         $auditError     = '';
         $auditDuration  = 0;
         $auditFromCache = ['shopify' => false, 'ss' => false];
+        $auditSlack     = ['configured' => SlackNotifier::isConfigured(), 'sent' => false, 'error' => ''];
         $cacheEntries   = $ctx['cacheObj']->entries();
         $cacheFlushed   = 0;
         $auditStart     = $_POST['audit_start'] ?? $_GET['start'] ?? date('Y-m-d', strtotime('-12 months'));
@@ -149,11 +157,30 @@ class PageLoader
         if ($action === 'run_audit') {
             $auditStart = $_POST['audit_start'] ?? '';
             $auditEnd   = $_POST['audit_end']   ?? '';
+            $runStartedAt = date('Y-m-d H:i:s');
 
             if ($err = self::validateDates($auditStart, $auditEnd)) {
                 $auditError = $err;
+                RunLog::append([
+                    'tool'       => 'run_audit',
+                    'status'     => 'validation_error',
+                    'created_at' => $runStartedAt,
+                    'start_date' => $auditStart,
+                    'end_date'   => $auditEnd,
+                    'error'      => $err,
+                    'meta'       => ['api_version' => Shopify::API_VERSION],
+                ]);
             } elseif (!$ctx['ssKey'] || !$ctx['ssSecret'] || !$ctx['shopifyToken']) {
                 $auditError = 'API credentials missing in .env.';
+                RunLog::append([
+                    'tool'       => 'run_audit',
+                    'status'     => 'config_error',
+                    'created_at' => $runStartedAt,
+                    'start_date' => $auditStart,
+                    'end_date'   => $auditEnd,
+                    'error'      => $auditError,
+                    'meta'       => ['api_version' => Shopify::API_VERSION],
+                ]);
             } else {
                 try {
                     self::setLimits(600);
@@ -193,15 +220,68 @@ class PageLoader
                         'duplicates' => Comparator::findDuplicates($shopifyOrders),
                     ];
 
+                    if ($notifier = SlackNotifier::fromEnvironment()) {
+                        try {
+                            $notifier->notifyAudit([
+                                'store'          => $ctx['shopifyStore'],
+                                'start'          => $auditStart,
+                                'end'            => $auditEnd,
+                                'duration'       => $auditDuration,
+                                'missing_count'  => count($comparison['missing']),
+                                'missing_orders' => $comparison['missing'],
+                                'found'          => count($comparison['found']),
+                                'skipped'        => count($comparison['skipped']),
+                                'ignored'        => count($comparison['ignored']),
+                                'total_ss'       => count($ssOrders),
+                            ]);
+                            $auditSlack['sent'] = true;
+                        } catch (Throwable $e) {
+                            $auditSlack['error'] = $e->getMessage();
+                            Logger::getInstance()->warning('Slack audit notification failed: {message}', [
+                                'message'   => $e->getMessage(),
+                                'exception' => $e->getFile() . ':' . $e->getLine(),
+                            ]);
+                        }
+                    }
+
+                    RunLog::append([
+                        'tool'       => 'run_audit',
+                        'status'     => count($comparison['missing']) > 0 ? 'issues_found' : 'ok',
+                        'created_at' => $runStartedAt,
+                        'duration'   => $auditDuration,
+                        'start_date' => $auditStart,
+                        'end_date'   => $auditEnd,
+                        'scanned'    => count($shopifyOrders),
+                        'rows_found' => count($comparison['missing']),
+                        'meta'       => [
+                            'api_version' => Shopify::API_VERSION,
+                            'shopify_cache' => $auditFromCache['shopify'],
+                            'shipstation_cache' => $auditFromCache['ss'],
+                            'shipstation_total' => count($ssOrders),
+                            'found' => count($comparison['found']),
+                            'skipped' => count($comparison['skipped']),
+                            'ignored' => count($comparison['ignored']),
+                        ],
+                    ]);
+
                     $cacheEntries = $ctx['cacheObj']->entries();
                 } catch (Throwable $e) {
                     $auditError = $e->getMessage();
+                    RunLog::append([
+                        'tool'       => 'run_audit',
+                        'status'     => 'error',
+                        'created_at' => $runStartedAt,
+                        'start_date' => $auditStart,
+                        'end_date'   => $auditEnd,
+                        'error'      => $auditError,
+                        'meta'       => ['api_version' => Shopify::API_VERSION],
+                    ]);
                 }
             }
         }
 
         $cacheTtl = $ctx['cacheTtl'];
-        return compact('auditResult', 'auditError', 'auditDuration', 'auditFromCache',
+        return compact('auditResult', 'auditError', 'auditDuration', 'auditFromCache', 'auditSlack',
                        'auditStart', 'auditEnd', 'cacheEntries', 'cacheFlushed', 'cacheTtl');
     }
 
@@ -1783,7 +1863,7 @@ class PageLoader
             if ($ctx['shopifyToken'] && $ctx['shopifyStore'] !== 'N/A') {
                 $host = str_contains($ctx['shopifyStore'], '.') ? $ctx['shopifyStore'] : "{$ctx['shopifyStore']}.myshopify.com";
                 $connResults['shopify'] = $ping(
-                    "https://{$host}/admin/api/2024-01/shop.json",
+                    "https://{$host}/admin/api/" . Shopify::API_VERSION . "/shop.json",
                     ["X-Shopify-Access-Token: {$ctx['shopifyToken']}", 'Accept: application/json']
                 );
             } else {
@@ -1970,6 +2050,9 @@ class PageLoader
         $error  = '';
 
         if ($action === $trigger) {
+            $runStartedAt = date('Y-m-d H:i:s');
+            $t0 = microtime(true);
+            $logged = false;
             $start = trim($_POST["{$prefix}_start"] ?? '');
             $end   = trim($_POST["{$prefix}_end"]   ?? '');
 
@@ -1979,13 +2062,57 @@ class PageLoader
             else {
                 try {
                     $result = $fn($ctx, $start, $end);
+                    RunLog::append([
+                        'tool'       => $trigger,
+                        'status'     => self::resultRowCount($result) > 0 ? 'issues_found' : 'ok',
+                        'created_at' => $runStartedAt,
+                        'duration'   => round(microtime(true) - $t0, 2),
+                        'start_date' => $start,
+                        'end_date'   => $end,
+                        'scanned'    => is_array($result) ? ($result['scanned'] ?? $result['total_orders'] ?? null) : null,
+                        'rows_found' => self::resultRowCount($result),
+                        'meta'       => ['api_version' => Shopify::API_VERSION],
+                    ]);
+                    $logged = true;
                 } catch (Throwable $e) {
                     $error = $e->getMessage();
+                    RunLog::append([
+                        'tool'       => $trigger,
+                        'status'     => 'error',
+                        'created_at' => $runStartedAt,
+                        'duration'   => round(microtime(true) - $t0, 2),
+                        'start_date' => $start,
+                        'end_date'   => $end,
+                        'error'      => $error,
+                        'meta'       => ['api_version' => Shopify::API_VERSION],
+                    ]);
+                    $logged = true;
                 }
+            }
+            if (!$logged && $error !== '' && $result === null) {
+                RunLog::append([
+                    'tool'       => $trigger,
+                    'status'     => 'validation_error',
+                    'created_at' => $runStartedAt,
+                    'duration'   => round(microtime(true) - $t0, 2),
+                    'start_date' => $start,
+                    'end_date'   => $end,
+                    'error'      => $error,
+                    'meta'       => ['api_version' => Shopify::API_VERSION],
+                ]);
             }
         }
 
         return compact('result', 'error', 'start', 'end');
+    }
+
+    private static function resultRowCount(mixed $result): ?int
+    {
+        if (!is_array($result)) return null;
+        if (isset($result['rows']) && is_array($result['rows'])) return count($result['rows']);
+        if (isset($result['matches']) && is_array($result['matches'])) return count($result['matches']);
+        if (isset($result['pairs']) && is_array($result['pairs'])) return count($result['pairs']);
+        return null;
     }
 
     // ── Dashboard ─────────────────────────────────────────────────────────────
@@ -2482,5 +2609,499 @@ class PageLoader
             });
 
         return compact('adResult', 'adError', 'adStart', 'adEnd');
+    }
+
+    // ── Fulfillment SLA Breaches ─────────────────────────────────────────────
+
+    private static function loadSlaBreaches(string $action, array $ctx): array
+    {
+        $slaThreshold = max(1, (int)($_POST['sla_threshold'] ?? $_GET['sla_threshold'] ?? 3));
+
+        ['result' => $slaResult, 'error' => $slaError, 'start' => $slaStart, 'end' => $slaEnd] =
+            self::runScan($action, 'scan_sla', $ctx, 'sla', function ($ctx, $start, $end) use (&$slaThreshold) {
+                $slaThreshold = max(1, (int)($_POST['sla_threshold'] ?? 3));
+                self::setLimits(240);
+                $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+                $orders  = self::suppressOutput(fn() => $shopify->fetchOrdersForSla($start, $end));
+
+                $now  = time();
+                $rows = [];
+                foreach ($orders as $o) {
+                    if (!empty($o['cancelled_at'])) continue;
+                    if (in_array($o['financial_status'] ?? '', ['refunded', 'voided'], true)) continue;
+
+                    $createdTs = strtotime($o['created_at'] ?? '');
+                    if (!$createdTs) continue;
+
+                    $firstFulfillment = self::firstFulfillmentAt($o);
+                    $fulfilledTs      = $firstFulfillment ? strtotime($firstFulfillment) : null;
+                    $days             = $fulfilledTs
+                        ? (int) floor(($fulfilledTs - $createdTs) / 86400)
+                        : (int) floor(($now - $createdTs) / 86400);
+
+                    if ($days < $slaThreshold) continue;
+
+                    $addr = $o['shipping_address'] ?? [];
+                    $rows[] = [
+                        'shopify_id'   => $o['id'] ?? '',
+                        'order_number' => $o['name'] ?? '',
+                        'created_at'   => self::dateOnly($o['created_at'] ?? ''),
+                        'fulfilled_at' => $firstFulfillment ? self::dateOnly($firstFulfillment) : '',
+                        'days'         => $days,
+                        'email'        => $o['email'] ?? '',
+                        'total'        => $o['total_price'] ?? '',
+                        'financial'    => $o['financial_status'] ?? '',
+                        'fulfillment'  => $o['fulfillment_status'] ?: 'unfulfilled',
+                        'method'       => self::shippingMethod($o),
+                        'region'       => self::addressRegion($addr),
+                        'order_type'   => Comparator::classifyOrder($o),
+                    ];
+                }
+                usort($rows, fn($a, $b) => $b['days'] <=> $a['days']);
+                return ['rows' => $rows, 'scanned' => count($orders), 'start' => $start, 'end' => $end, 'threshold' => $slaThreshold];
+            }, 30);
+
+        return compact('slaResult', 'slaError', 'slaStart', 'slaEnd', 'slaThreshold');
+    }
+
+    // ── Refunded/Cancelled Shopify Orders Still Active in ShipStation ────────
+
+    private static function loadActiveSsConflicts(string $action, array $ctx): array
+    {
+        ['result' => $asResult, 'error' => $asError, 'start' => $asStart, 'end' => $asEnd] =
+            self::runScan($action, 'scan_activess', $ctx, 'as', function ($ctx, $start, $end) {
+                self::setLimits(300);
+                [$refunded, $cancelled, $activeSs] = self::suppressOutput(function () use ($ctx, $start, $end) {
+                    $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+                    $ss      = new ShipStation($ctx['ssKey'], $ctx['ssSecret']);
+                    return [
+                        $shopify->fetchRefundedOrders($start, $end),
+                        $shopify->fetchCancelledOrders($start, $end),
+                        $ss->fetchActiveOrders(),
+                    ];
+                });
+
+                $activeIndex = Comparator::buildSSIndex($activeSs);
+                $shopifyRows = [];
+                foreach (array_merge($refunded, $cancelled) as $o) {
+                    $id = (string)($o['id'] ?? '');
+                    if ($id && isset($shopifyRows[$id])) continue;
+                    $shopifyRows[$id ?: spl_object_id((object)$o)] = $o;
+                }
+
+                $rows = [];
+                foreach ($shopifyRows as $o) {
+                    $num      = Comparator::normalise((string)($o['order_number'] ?? ''));
+                    $nameNorm = Comparator::normalise((string)($o['name'] ?? ''));
+                    $matches  = $activeIndex[$num] ?? $activeIndex[$nameNorm] ?? [];
+                    if (empty($matches)) continue;
+
+                    $issue = !empty($o['cancelled_at']) ? 'cancelled' : ($o['financial_status'] ?? 'refunded');
+                    foreach ($matches as $ssOrder) {
+                        $rows[] = [
+                            'shopify_id'   => $o['id'] ?? '',
+                            'order_number' => $o['name'] ?? $o['order_number'] ?? '',
+                            'created_at'   => self::dateOnly($o['created_at'] ?? ''),
+                            'issue'        => $issue,
+                            'email'        => $o['email'] ?? '',
+                            'total'        => $o['total_price'] ?? '',
+                            'financial'    => $o['financial_status'] ?? '',
+                            'cancelled_at' => self::dateOnly($o['cancelled_at'] ?? ''),
+                            'ss_order_id'  => $ssOrder['orderId'] ?? '',
+                            'ss_status'    => $ssOrder['orderStatus'] ?? '',
+                            'ss_date'      => self::dateOnly($ssOrder['orderDate'] ?? $ssOrder['createDate'] ?? ''),
+                            'ss_total'     => $ssOrder['orderTotal'] ?? '',
+                        ];
+                    }
+                }
+                usort($rows, fn($a, $b) => strcmp($b['created_at'], $a['created_at']));
+                return [
+                    'rows'       => $rows,
+                    'scanned'    => count($shopifyRows),
+                    'active_ss'  => count($activeSs),
+                    'start'      => $start,
+                    'end'        => $end,
+                ];
+            }, 30, true);
+
+        return compact('asResult', 'asError', 'asStart', 'asEnd');
+    }
+
+    // ── Discount Abuse Clusters ──────────────────────────────────────────────
+
+    private static function loadDiscountAbuse(string $action, array $ctx): array
+    {
+        $daMinEmails = max(2, (int)($_POST['da_min_emails'] ?? $_GET['da_min_emails'] ?? 3));
+
+        ['result' => $daResult, 'error' => $daError, 'start' => $daStart, 'end' => $daEnd] =
+            self::runScan($action, 'scan_discountabuse', $ctx, 'da', function ($ctx, $start, $end) use (&$daMinEmails) {
+                $daMinEmails = max(2, (int)($_POST['da_min_emails'] ?? 3));
+                self::setLimits(180);
+                $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+                $orders  = self::suppressOutput(fn() => $shopify->fetchOrdersForDiscountAudit($start, $end));
+
+                $groups = [];
+                foreach ($orders as $o) {
+                    $codes = $o['discount_codes'] ?? [];
+                    if (empty($codes)) continue;
+                    $addr = $o['shipping_address'] ?? null;
+                    if (!$addr) continue;
+                    $addrKey = self::addressKey($addr);
+                    if ($addrKey === '') continue;
+                    foreach ($codes as $discount) {
+                        $code = strtoupper(trim((string)($discount['code'] ?? '')));
+                        if ($code === '') continue;
+                        $key = $code . '|' . $addrKey;
+                        if (!isset($groups[$key])) {
+                            $groups[$key] = ['code' => $code, 'addr' => $addr, 'emails' => [], 'orders' => [], 'total' => 0.0];
+                        }
+                        $email = strtolower(trim($o['email'] ?? ''));
+                        if ($email) $groups[$key]['emails'][$email] = true;
+                        $groups[$key]['total'] += (float)($o['total_price'] ?? 0);
+                        $groups[$key]['orders'][] = [
+                            'shopify_id'   => $o['id'] ?? '',
+                            'order_number' => $o['name'] ?? '',
+                            'created_at'   => self::dateOnly($o['created_at'] ?? ''),
+                            'email'        => $o['email'] ?? '',
+                            'total'        => $o['total_price'] ?? '',
+                            'financial'    => $o['financial_status'] ?? '',
+                            'fulfillment'  => $o['fulfillment_status'] ?? '',
+                        ];
+                    }
+                }
+
+                $rows = [];
+                foreach ($groups as $g) {
+                    if (count($g['emails']) < $daMinEmails) continue;
+                    $addr = $g['addr'];
+                    $rows[] = [
+                        'code'        => $g['code'],
+                        'addr_line'   => self::addressLine($addr),
+                        'addr_name'   => trim(($addr['first_name'] ?? '') . ' ' . ($addr['last_name'] ?? '')),
+                        'email_count' => count($g['emails']),
+                        'order_count' => count($g['orders']),
+                        'emails'      => array_keys($g['emails']),
+                        'orders'      => $g['orders'],
+                        'total'       => $g['total'],
+                    ];
+                }
+                usort($rows, fn($a, $b) => $b['email_count'] <=> $a['email_count'] ?: $b['order_count'] <=> $a['order_count']);
+                return ['rows' => $rows, 'scanned' => count($orders), 'start' => $start, 'end' => $end, 'min_emails' => $daMinEmails];
+            }, 30);
+
+        return compact('daResult', 'daError', 'daStart', 'daEnd', 'daMinEmails');
+    }
+
+    // ── Tag Policy Audit ─────────────────────────────────────────────────────
+
+    private static function loadTagPolicy(string $action, array $ctx): array
+    {
+        $tpConfig = self::tagPolicyConfig();
+
+        ['result' => $tpResult, 'error' => $tpError, 'start' => $tpStart, 'end' => $tpEnd] =
+            self::runScan($action, 'scan_tagpolicy', $ctx, 'tp', function ($ctx, $start, $end) use ($tpConfig) {
+                $rules = array_merge($tpConfig['required'] ?? [], $tpConfig['forbidden'] ?? []);
+                if (empty($rules)) {
+                    return ['rows' => [], 'scanned' => 0, 'start' => $start, 'end' => $end, 'configured' => false];
+                }
+
+                self::setLimits(180);
+                $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+                $orders  = self::suppressOutput(fn() => $shopify->fetchOrdersForTagPolicy($start, $end));
+
+                $rows = [];
+                foreach ($orders as $o) {
+                    $tags       = self::orderTags($o);
+                    $tagLookup  = array_fill_keys(array_map('strtolower', $tags), true);
+                    $violations = [];
+
+                    foreach ($tpConfig['required'] ?? [] as $rule) {
+                        $when = array_map('strtolower', (array)($rule['when'] ?? []));
+                        $must = array_map('strtolower', (array)($rule['must_have'] ?? []));
+                        if ($when === [] || $must === []) continue;
+                        if (array_diff($when, array_keys($tagLookup)) !== []) continue;
+                        $missing = array_values(array_diff($must, array_keys($tagLookup)));
+                        if ($missing !== []) {
+                            $violations[] = [
+                                'type' => 'required',
+                                'name' => $rule['name'] ?? 'Required tag policy',
+                                'detail' => 'Missing: ' . implode(', ', $missing),
+                            ];
+                        }
+                    }
+
+                    foreach ($tpConfig['forbidden'] ?? [] as $rule) {
+                        $forbidden = array_map('strtolower', (array)($rule['tags'] ?? []));
+                        if (count($forbidden) < 2) continue;
+                        if (array_diff($forbidden, array_keys($tagLookup)) === []) {
+                            $violations[] = [
+                                'type' => 'forbidden',
+                                'name' => $rule['name'] ?? 'Forbidden tag combination',
+                                'detail' => 'Combination: ' . implode(', ', $forbidden),
+                            ];
+                        }
+                    }
+
+                    if ($violations === []) continue;
+                    $rows[] = [
+                        'shopify_id'   => $o['id'] ?? '',
+                        'order_number' => $o['name'] ?? '',
+                        'created_at'   => self::dateOnly($o['created_at'] ?? ''),
+                        'email'        => $o['email'] ?? '',
+                        'total'        => $o['total_price'] ?? '',
+                        'financial'    => $o['financial_status'] ?? '',
+                        'fulfillment'  => $o['fulfillment_status'] ?? '',
+                        'tags'         => $tags,
+                        'violations'   => $violations,
+                    ];
+                }
+                usort($rows, fn($a, $b) => strcmp($b['created_at'], $a['created_at']));
+                return ['rows' => $rows, 'scanned' => count($orders), 'start' => $start, 'end' => $end, 'configured' => true];
+            }, 30);
+
+        return compact('tpResult', 'tpError', 'tpStart', 'tpEnd', 'tpConfig');
+    }
+
+    // ── Inventory Aging ──────────────────────────────────────────────────────
+
+    private static function loadInventoryAging(string $action, array $ctx): array
+    {
+        ['result' => $iaResult, 'error' => $iaError, 'start' => $iaStart, 'end' => $iaEnd] =
+            self::runScan($action, 'scan_inventoryaging', $ctx, 'ia', function ($ctx, $start, $end) {
+                self::setLimits(240);
+                [$products, $orders] = self::suppressOutput(function () use ($ctx, $start, $end) {
+                    $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken'], $ctx['cacheObj']);
+                    return [
+                        $shopify->fetchAllProducts('active'),
+                        $shopify->fetchAllOrders($start, $end),
+                    ];
+                });
+
+                $sales = [];
+                foreach ($orders as $o) {
+                    foreach ($o['line_items'] ?? [] as $li) {
+                        $sku = trim((string)($li['sku'] ?? ''));
+                        if ($sku === '') continue;
+                        if (!isset($sales[$sku])) {
+                            $sales[$sku] = ['qty' => 0, 'last_order' => '', 'last_date' => ''];
+                        }
+                        $sales[$sku]['qty'] += (int)($li['quantity'] ?? 1);
+                        $date = self::dateOnly($o['created_at'] ?? '');
+                        if ($date > $sales[$sku]['last_date']) {
+                            $sales[$sku]['last_date']  = $date;
+                            $sales[$sku]['last_order'] = $o['name'] ?? '';
+                        }
+                    }
+                }
+
+                $rows = [];
+                $variantCount = 0;
+                foreach ($products as $p) {
+                    foreach ($p['variants'] ?? [] as $v) {
+                        $variantCount++;
+                        $sku = trim((string)($v['sku'] ?? ''));
+                        if ($sku === '' || !isset($sales[$sku])) continue;
+                        if (($v['inventory_management'] ?? '') === '') continue;
+                        if (($v['inventory_policy'] ?? 'deny') === 'continue') continue;
+                        $stock = (int)($v['inventory_quantity'] ?? 0);
+                        if ($stock > 0) continue;
+                        $rows[] = [
+                            'product_id'    => (string)($p['id'] ?? ''),
+                            'product_title' => $p['title'] ?? '',
+                            'variant_title' => $v['title'] ?? '',
+                            'sku'           => $sku,
+                            'stock'         => $stock,
+                            'recent_qty'    => $sales[$sku]['qty'],
+                            'last_order'    => $sales[$sku]['last_order'],
+                            'last_date'     => $sales[$sku]['last_date'],
+                        ];
+                    }
+                }
+                usort($rows, fn($a, $b) => $b['recent_qty'] <=> $a['recent_qty']);
+                return ['rows' => $rows, 'products' => count($products), 'variants' => $variantCount, 'orders' => count($orders), 'start' => $start, 'end' => $end];
+            }, 30);
+
+        return compact('iaResult', 'iaError', 'iaStart', 'iaEnd');
+    }
+
+    // ── ShipStation Shipment Aging ───────────────────────────────────────────
+
+    private static function loadShipmentAging(string $action, array $ctx): array
+    {
+        $saThreshold = max(1, (int)($_POST['sa_threshold'] ?? $_GET['sa_threshold'] ?? 3));
+        $saResult = null;
+        $saError  = '';
+
+        if ($action === 'scan_shipmentaging') {
+            $runStartedAt = date('Y-m-d H:i:s');
+            $t0 = microtime(true);
+            $saThreshold = max(1, (int)($_POST['sa_threshold'] ?? 3));
+            if ($err = self::requireSS($ctx)) {
+                $saError = $err;
+                RunLog::append([
+                    'tool'       => 'scan_shipmentaging',
+                    'status'     => 'config_error',
+                    'created_at' => $runStartedAt,
+                    'duration'   => round(microtime(true) - $t0, 2),
+                    'error'      => $saError,
+                    'meta'       => ['threshold' => $saThreshold],
+                ]);
+            } else {
+                try {
+                    self::setLimits(180);
+                    $ss     = new ShipStation($ctx['ssKey'], $ctx['ssSecret']);
+                    $orders = self::suppressOutput(fn() => $ss->fetchAwaitingOrders());
+                    $now    = time();
+                    $rows   = [];
+                    $bySku  = [];
+                    $byType = [];
+
+                    foreach ($orders as $o) {
+                        $dateRaw = $o['orderDate'] ?? $o['createDate'] ?? '';
+                        $orderTs = strtotime($dateRaw);
+                        if (!$orderTs) continue;
+                        $days = (int)floor(($now - $orderTs) / 86400);
+                        if ($days < $saThreshold) continue;
+
+                        $items = $o['items'] ?? [];
+                        $fakeOrder = ['line_items' => array_map(fn($item) => [
+                            'sku'   => $item['sku'] ?? '',
+                            'title' => $item['name'] ?? '',
+                        ], $items)];
+                        $orderType = Comparator::classifyOrder($fakeOrder);
+
+                        $skus = [];
+                        foreach ($items as $item) {
+                            $sku = trim((string)($item['sku'] ?? ''));
+                            if ($sku === '') continue;
+                            $qty = (int)($item['quantity'] ?? 1);
+                            $skus[$sku] = ($skus[$sku] ?? 0) + $qty;
+                            if (!isset($bySku[$sku])) $bySku[$sku] = ['sku' => $sku, 'orders' => 0, 'qty' => 0, 'oldest_days' => 0];
+                            $bySku[$sku]['qty'] += $qty;
+                            $bySku[$sku]['oldest_days'] = max($bySku[$sku]['oldest_days'], $days);
+                        }
+                        foreach (array_keys($skus) as $sku) {
+                            $bySku[$sku]['orders']++;
+                        }
+                        if (!isset($byType[$orderType])) $byType[$orderType] = ['type' => $orderType, 'orders' => 0, 'oldest_days' => 0];
+                        $byType[$orderType]['orders']++;
+                        $byType[$orderType]['oldest_days'] = max($byType[$orderType]['oldest_days'], $days);
+
+                        $rows[] = [
+                            'ss_order_id'  => $o['orderId'] ?? '',
+                            'order_number' => $o['orderNumber'] ?? '',
+                            'order_date'   => self::dateOnly($dateRaw),
+                            'days'         => $days,
+                            'customer'     => trim($o['shipTo']['name'] ?? ''),
+                            'email'        => $o['customerEmail'] ?? '',
+                            'total'        => $o['orderTotal'] ?? '',
+                            'status'       => $o['orderStatus'] ?? '',
+                            'order_type'   => $orderType,
+                            'skus'         => $skus,
+                        ];
+                    }
+                    usort($rows, fn($a, $b) => $b['days'] <=> $a['days']);
+                    usort($bySku, fn($a, $b) => $b['oldest_days'] <=> $a['oldest_days'] ?: $b['orders'] <=> $a['orders']);
+                    usort($byType, fn($a, $b) => $b['oldest_days'] <=> $a['oldest_days'] ?: $b['orders'] <=> $a['orders']);
+                    $saResult = [
+                        'rows'      => $rows,
+                        'scanned'   => count($orders),
+                        'threshold' => $saThreshold,
+                        'by_sku'    => array_values($bySku),
+                        'by_type'   => array_values($byType),
+                    ];
+                    RunLog::append([
+                        'tool'       => 'scan_shipmentaging',
+                        'status'     => count($rows) > 0 ? 'issues_found' : 'ok',
+                        'created_at' => $runStartedAt,
+                        'duration'   => round(microtime(true) - $t0, 2),
+                        'scanned'    => count($orders),
+                        'rows_found' => count($rows),
+                        'meta'       => ['threshold' => $saThreshold],
+                    ]);
+                } catch (Throwable $e) {
+                    $saError = $e->getMessage();
+                    RunLog::append([
+                        'tool'       => 'scan_shipmentaging',
+                        'status'     => 'error',
+                        'created_at' => $runStartedAt,
+                        'duration'   => round(microtime(true) - $t0, 2),
+                        'error'      => $saError,
+                        'meta'       => ['threshold' => $saThreshold],
+                    ]);
+                }
+            }
+        }
+
+        return compact('saResult', 'saError', 'saThreshold');
+    }
+
+    private static function firstFulfillmentAt(array $order): string
+    {
+        $first = '';
+        foreach ($order['fulfillments'] ?? [] as $f) {
+            $ts = $f['created_at'] ?? '';
+            if ($ts && (!$first || $ts < $first)) $first = $ts;
+        }
+        return $first;
+    }
+
+    private static function shippingMethod(array $order): string
+    {
+        $line = ($order['shipping_lines'] ?? [])[0] ?? [];
+        return trim((string)($line['title'] ?? $line['code'] ?? 'Unknown'));
+    }
+
+    private static function addressRegion(?array $addr): string
+    {
+        if (!$addr) return 'Unknown';
+        return implode(', ', array_filter([
+            $addr['province_code'] ?? $addr['province'] ?? '',
+            $addr['country_code'] ?? $addr['country'] ?? '',
+        ])) ?: 'Unknown';
+    }
+
+    private static function addressLine(array $addr): string
+    {
+        return implode(', ', array_filter([
+            $addr['address1']      ?? '',
+            $addr['city']          ?? '',
+            $addr['province_code'] ?? '',
+            $addr['zip']           ?? '',
+            $addr['country_code']  ?? '',
+        ]));
+    }
+
+    private static function addressKey(array $addr): string
+    {
+        return strtolower(implode('|', array_filter([
+            trim((string)($addr['address1'] ?? '')),
+            trim((string)($addr['city'] ?? '')),
+            trim((string)($addr['zip'] ?? '')),
+            trim((string)($addr['country_code'] ?? $addr['country'] ?? '')),
+        ])));
+    }
+
+    /**
+     * @return string[]
+     */
+    private static function orderTags(array $order): array
+    {
+        $raw = $order['tags'] ?? [];
+        if (is_string($raw)) {
+            $raw = array_map('trim', explode(',', $raw));
+        }
+        return array_values(array_filter(array_map('trim', (array)$raw), fn($tag) => $tag !== ''));
+    }
+
+    /**
+     * @return array{required?: array<int, array<string, mixed>>, forbidden?: array<int, array<string, mixed>>}
+     */
+    private static function tagPolicyConfig(): array
+    {
+        $file = __DIR__ . '/../tag_policy.json';
+        if (!file_exists($file)) return [];
+        $decoded = json_decode(file_get_contents($file), true);
+        return is_array($decoded) ? $decoded : [];
     }
 }

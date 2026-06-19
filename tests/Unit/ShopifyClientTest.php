@@ -93,7 +93,7 @@ class ShopifyClientTest extends TestCase
         $page1Orders = [['id' => 1], ['id' => 2]];
         $page2Orders = [['id' => 3]];
 
-        $nextUrl = 'https://test.myshopify.com/admin/api/2025-04/orders.json?page_info=abc';
+        $nextUrl = 'https://test.myshopify.com/admin/api/' . Shopify::API_VERSION . '/orders.json?page_info=abc';
         $link    = "<{$nextUrl}>; rel=\"next\"";
 
         $shopify = $this->shopify([
@@ -199,5 +199,41 @@ class ShopifyClientTest extends TestCase
         ]);
 
         $this->assertFalse($shopify->isOnHold('123'));
+    }
+
+    public function testFetchOrdersForSlaRequestsFulfillmentFields(): void
+    {
+        $history = [];
+        $shopify = $this->shopify([$this->json(['orders' => []])], $history);
+
+        $shopify->fetchOrdersForSla('2026-06-01', '2026-06-19');
+
+        $uri = urldecode((string) $history[0]['request']->getUri());
+        $this->assertStringContainsString('financial_status=paid,partially_paid', $uri);
+        $this->assertStringContainsString('fulfillments', $uri);
+        $this->assertStringContainsString('shipping_lines', $uri);
+    }
+
+    public function testFetchOrdersForDiscountAuditRequestsDiscountCodes(): void
+    {
+        $history = [];
+        $shopify = $this->shopify([$this->json(['orders' => []])], $history);
+
+        $shopify->fetchOrdersForDiscountAudit('2026-06-01', '2026-06-19');
+
+        $uri = urldecode((string) $history[0]['request']->getUri());
+        $this->assertStringContainsString('discount_codes', $uri);
+        $this->assertStringContainsString('shipping_address', $uri);
+    }
+
+    public function testFetchCancelledOrdersUsesCancelledStatus(): void
+    {
+        $history = [];
+        $shopify = $this->shopify([$this->json(['orders' => []])], $history);
+
+        $shopify->fetchCancelledOrders('2026-06-01', '2026-06-19');
+
+        $uri = (string) $history[0]['request']->getUri();
+        $this->assertStringContainsString('status=cancelled', $uri);
     }
 }
