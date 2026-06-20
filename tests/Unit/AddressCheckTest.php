@@ -3,8 +3,10 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 
+require_once __DIR__ . '/../../src/OrderAnomalyPageLoader.php';
+
 /**
- * Tests for PageLoader::checkAddress() via reflection (private method).
+ * Tests for OrderAnomalyPageLoader::checkAddress() via reflection (private method).
  */
 class AddressCheckTest extends TestCase
 {
@@ -12,7 +14,7 @@ class AddressCheckTest extends TestCase
 
     public static function setUpBeforeClass(): void
     {
-        $ref = new \ReflectionClass(PageLoader::class);
+        $ref = new \ReflectionClass(OrderAnomalyPageLoader::class);
         self::$method = $ref->getMethod('checkAddress');
     }
 
