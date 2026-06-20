@@ -28,6 +28,7 @@ require_once __DIR__ . '/src/Actions.php';
 require_once __DIR__ . '/src/ToolRegistry.php';
 require_once __DIR__ . '/src/ManageSettingsPageLoader.php';
 require_once __DIR__ . '/src/SearchLookupPageLoader.php';
+require_once __DIR__ . '/src/PackingSlipPageLoader.php';
 require_once __DIR__ . '/src/PageLoader.php';
 
 Dotenv\Dotenv::createUnsafeImmutable(__DIR__)->safeLoad();

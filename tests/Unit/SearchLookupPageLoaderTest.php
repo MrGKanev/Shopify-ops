@@ -85,6 +85,59 @@ class SearchLookupPageLoaderTest extends TestCase
         $this->assertSame('vip', $data['tagInput']);
     }
 
+    public function testSpotCheckPrefillAndValidationErrors(): void
+    {
+        $_GET['prefill'] = '#1001';
+        $initial = SearchLookupPageLoader::load('spotcheck', '', $this->ctx());
+
+        $this->assertSame('#1001', $initial['spotInput']);
+        $this->assertSame('', $initial['spotError']);
+        $this->assertNull($initial['spotResults']);
+
+        $_GET = [];
+        $_POST = ['orders' => " \n "];
+        $empty = SearchLookupPageLoader::load('spotcheck', 'spotcheck', $this->ctx());
+
+        $this->assertSame('Enter at least one order number.', $empty['spotError']);
+
+        $_POST = ['orders' => implode(' ', range(1, 51))];
+        $tooMany = SearchLookupPageLoader::load('spotcheck', 'spotcheck', $this->ctx());
+
+        $this->assertSame('Maximum 50 order numbers at once.', $tooMany['spotError']);
+
+        $_POST = ['orders' => '1001', 'spotcheck_mode' => 'both'];
+        $missingCredentials = SearchLookupPageLoader::load('spotcheck', 'spotcheck', $this->ctx());
+
+        $this->assertSame('SS_API_KEY / SS_API_SECRET not set in .env.', $missingCredentials['spotError']);
+    }
+
+    public function testSpotCheckShopifyOnlyWithoutCredentialsPreservesNullLookupResult(): void
+    {
+        $_POST = ['orders' => '#1001', 'spotcheck_mode' => 'shopify'];
+
+        $data = SearchLookupPageLoader::load('spotcheck', 'spotcheck', $this->ctx());
+
+        $this->assertSame('', $data['spotError']);
+        $this->assertSame('1001', $data['spotResults'][0]['number']);
+        $this->assertSame('shopify', $data['spotResults'][0]['mode']);
+        $this->assertNull($data['spotResults'][0]['ss_orders']);
+        $this->assertNull($data['spotResults'][0]['shopify_orders']);
+        $this->assertFalse($data['spotResults'][0]['found']);
+    }
+
+    public function testMetafieldsReportsMissingShopifyCredentials(): void
+    {
+        $data = SearchLookupPageLoader::load('metafields', '', $this->ctx());
+
+        $this->assertNull($data['metafieldDefs']);
+        $this->assertNull($data['metafieldOrders']);
+        $this->assertSame('', $data['metafieldInput']);
+        $this->assertSame('SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.', $data['metafieldError']);
+        $this->assertSame('', $data['metafieldFilter']);
+        $this->assertNull($data['metafieldSearch']);
+        $this->assertSame('', $data['metafieldSearchError']);
+    }
+
     public function testCustomerLookupPrefillAndValidationErrors(): void
     {
         $_GET['email'] = 'customer@example.com';
