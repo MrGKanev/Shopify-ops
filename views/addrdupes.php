@@ -1,10 +1,10 @@
 <?= topbar('Duplicate Shipping Addresses', 'Different customer emails shipping to the same address') ?>
 
 <?= featureInfoStart('addrdupes', 'Duplicate Shipping Addresses') ?>
-  <p><strong>Duplicate Shipping Addresses</strong> finds paid orders where two or more <em>different</em> customer emails are shipping to the exact same address — a signal for multi-account abuse, reseller networks, or dropshipping schemes.</p>
+  <p><strong>Duplicate Shipping Addresses</strong> finds paid orders where two or more <em>different</em> customer emails are shipping to the exact same address - a signal for multi-account abuse, reseller networks, or dropshipping schemes.</p>
   <ul>
     <li>Matching is based on <strong>address1 + city + ZIP + country</strong> (normalised to lowercase). Province and name are not part of the key so slight variations don't hide matches.</li>
-    <li>Multiple orders from the <em>same email</em> to the same address are excluded — only cross-email duplicates are flagged.</li>
+    <li>Multiple orders from the <em>same email</em> to the same address are excluded - only cross-email duplicates are flagged.</li>
     <li>Sort by <strong>Emails</strong> descending to find the most suspicious clusters first.</li>
   </ul>
 <?= featureInfoEnd() ?>

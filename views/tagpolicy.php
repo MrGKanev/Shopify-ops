@@ -27,7 +27,7 @@
     <?php dateRangePartial('tp', $tpStart, $tpEnd) ?>
   </form>
   <?php if ($tpResult !== null): ?>
-    <div class="duration-note mt-4 mb-0">Scanned <strong><?= $tpResult['scanned'] ?></strong> orders — <strong><?= count($tpResult['rows']) ?></strong> policy violations</div>
+    <div class="duration-note mt-4 mb-0">Scanned <strong><?= $tpResult['scanned'] ?></strong> orders - <strong><?= count($tpResult['rows']) ?></strong> policy violations</div>
   <?php endif; ?>
 </div>
 

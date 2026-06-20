@@ -44,7 +44,7 @@ class Logger extends AbstractLogger
             date('Y-m-d H:i:s'),
             strtoupper((string) $level),
             $this->interpolate((string) $message, $context),
-            isset($context['exception']) ? ' — ' . $context['exception'] : ''
+            isset($context['exception']) ? ' - ' . $context['exception'] : ''
         );
 
         file_put_contents($this->path, $line, FILE_APPEND | LOCK_EX);

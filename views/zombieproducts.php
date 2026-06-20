@@ -1,10 +1,10 @@
 <?= topbar('Zombie Products', 'Active products that can never be purchased') ?>
 
 <?= featureInfoStart('zombieproducts', 'Zombie Products') ?>
-  <p><strong>Zombie Products</strong> finds active (published) products that cannot be purchased — either because they have no variants defined, or because every tracked variant is permanently out of stock with a <em>deny</em> oversell policy.</p>
+  <p><strong>Zombie Products</strong> finds active (published) products that cannot be purchased - either because they have no variants defined, or because every tracked variant is permanently out of stock with a <em>deny</em> oversell policy.</p>
   <ul>
-    <li><strong>No variants</strong> — the product exists in the catalogue but has no purchasable options at all.</li>
-    <li><strong>All at 0</strong> — every variant that has inventory tracking enabled (and denies overselling) currently has zero or negative stock. These show as "Sold Out" on the storefront indefinitely.</li>
+    <li><strong>No variants</strong> - the product exists in the catalogue but has no purchasable options at all.</li>
+    <li><strong>All at 0</strong> - every variant that has inventory tracking enabled (and denies overselling) currently has zero or negative stock. These show as "Sold Out" on the storefront indefinitely.</li>
     <li>Variants with <em>continue selling when out of stock</em> or <em>untracked inventory</em> are excluded from the zero-stock check.</li>
   </ul>
 <?= featureInfoEnd() ?>

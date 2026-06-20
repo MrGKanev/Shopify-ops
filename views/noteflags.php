@@ -1,9 +1,9 @@
 <?= topbar('Note Flags', 'Paid unfulfilled orders with flagged keywords in notes') ?>
 
 <?= featureInfoStart('noteflags', 'Note Flags') ?>
-  <p><strong>Note Flags</strong> scans paid, unfulfilled orders for specific keywords in the order note field — surfacing orders that need immediate attention before shipment.</p>
+  <p><strong>Note Flags</strong> scans paid, unfulfilled orders for specific keywords in the order note field - surfacing orders that need immediate attention before shipment.</p>
   <ul>
-    <li>Only <strong>paid or partially-paid, unfulfilled or partial</strong> orders are scanned — already-fulfilled orders are excluded.</li>
+    <li>Only <strong>paid or partially-paid, unfulfilled or partial</strong> orders are scanned - already-fulfilled orders are excluded.</li>
     <li>Keyword matching is <strong>case-insensitive</strong> and checks for substring presence (e.g. <code>cancel</code> matches <em>please cancel this order</em>).</li>
     <li>Customise the keyword list to match your team's internal flags.</li>
   </ul>

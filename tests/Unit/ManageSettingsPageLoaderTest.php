@@ -7,6 +7,9 @@ require_once __DIR__ . '/../../src/SlackRules.php';
 require_once __DIR__ . '/../../src/SlackNotifier.php';
 require_once __DIR__ . '/../../src/UserActionLog.php';
 require_once __DIR__ . '/../../src/RunLog.php';
+require_once __DIR__ . '/../../src/Shopify.php';
+require_once __DIR__ . '/../../src/ApiHealth.php';
+require_once __DIR__ . '/../../src/ConfigValidator.php';
 require_once __DIR__ . '/../../src/ManageSettingsPageLoader.php';
 
 use PHPUnit\Framework\TestCase;
@@ -71,6 +74,42 @@ class ManageSettingsPageLoaderTest extends TestCase
         $this->assertSame('SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env', $settings['connResults']['shopify']['error']);
     }
 
+    public function testApiHealthListsShopifyFlowStatusesFromRunLog(): void
+    {
+        RunLog::append([
+            'tool'       => 'scan_addresses',
+            'status'     => 'error',
+            'created_at' => '2026-06-20 09:00:00',
+            'error'      => 'Shopify GraphQL: missing scope',
+        ]);
+        RunLog::append([
+            'tool'       => 'scan_bundle',
+            'status'     => 'issues_found',
+            'created_at' => '2026-06-20 10:00:00',
+            'rows_found' => 2,
+        ]);
+
+        $data = ManageSettingsPageLoader::load('apihealth', '', $this->ctx());
+
+        $this->assertNull($data['apiHealth']);
+        $this->assertGreaterThan(20, $data['shopifyFlowHealth']['summary']['total']);
+        $this->assertSame(1, $data['shopifyFlowHealth']['summary']['attention']);
+        $this->assertSame(1, $data['shopifyFlowHealth']['summary']['healthy']);
+
+        $addressFlow = $this->flowByTool($data['shopifyFlowHealth']['flows'], 'scan_addresses');
+        $this->assertSame('Address validation', $addressFlow['label']);
+        $this->assertSame('error', $addressFlow['status']);
+        $this->assertSame('Shopify GraphQL: missing scope', $addressFlow['error_message']);
+        $this->assertSame(1, $addressFlow['errors']);
+
+        $bundleFlow = $this->flowByTool($data['shopifyFlowHealth']['flows'], 'scan_bundle');
+        $this->assertSame('issues_found', $bundleFlow['status']);
+        $this->assertSame(2, $bundleFlow['latest']['rows_found']);
+
+        $productFlow = $this->flowByTool($data['shopifyFlowHealth']['flows'], 'scan_products');
+        $this->assertSame('never_run', $productFlow['status']);
+    }
+
     public function testLoadsManageAndSettingsDataSources(): void
     {
         JobQueue::enqueue('audit', ['start' => '2026-06-01'], 'Audit');
@@ -106,6 +145,21 @@ class ManageSettingsPageLoaderTest extends TestCase
             'ssKey'        => '',
             'ssSecret'     => '',
         ];
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $flows
+     * @return array<string, mixed>
+     */
+    private function flowByTool(array $flows, string $tool): array
+    {
+        foreach ($flows as $flow) {
+            if (($flow['tool'] ?? '') === $tool) {
+                return $flow;
+            }
+        }
+
+        $this->fail("Flow {$tool} was not listed.");
     }
 
     private function removeDir(string $dir): void

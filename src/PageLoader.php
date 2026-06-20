@@ -75,7 +75,7 @@ class PageLoader
 
     private static function loadGlobal(array $ctx): array
     {
-        // Probabilistic background prune — keeps cache dir tidy without blocking every request
+        // Probabilistic background prune - keeps cache dir tidy without blocking every request
         if ($ctx['cacheObj'] && mt_rand(1, 10) === 1) {
             $ctx['cacheObj']->pruneExpired();
         }
@@ -318,7 +318,7 @@ class PageLoader
         $ignoredOrders = $ctx['ignoredOrders'] ?? [];
         $cacheObj      = $ctx['cacheObj'];
 
-        // Push stats — last 30 days
+        // Push stats - last 30 days
         $cutoff30      = date('Y-m-d', strtotime('-30 days'));
         $dbPushRecent  = array_values(array_filter(
             $pushLog,

@@ -4,7 +4,7 @@
   <p><strong>On-Hold Stall</strong> finds Shopify orders that are currently in <em>on-hold</em> fulfillment status and were placed within the scanned date range.</p>
   <ul>
     <li>Uses the Shopify GraphQL <code>fulfillmentOrders</code> API, which requires the <code>read_merchant_managed_fulfillment_orders</code> or <code>read_assigned_fulfillment_orders</code> API scope.</li>
-    <li>The <strong>Waiting</strong> column counts days since the order was placed — a proxy for how long it has been waiting.</li>
+    <li>The <strong>Waiting</strong> column counts days since the order was placed - a proxy for how long it has been waiting.</li>
     <li>The <strong>Hold Reason</strong> is reported by Shopify (e.g. <code>MANUAL</code>, <code>HIGH_RISK_OF_FRAUD</code>, <code>AWAITING_PAYMENT</code>, etc.).</li>
   </ul>
 <?= featureInfoEnd() ?>

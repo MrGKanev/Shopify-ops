@@ -2,8 +2,8 @@
 /**
  * Partial: date-range row.
  * Required: $partialStartName, $partialStartVal, $partialEndName, $partialEndVal
- * Optional: $partialFromLabel   (default 'From' — may contain HTML)
- *           $partialToLabel     (default 'To'   — may contain HTML)
+ * Optional: $partialFromLabel   (default 'From' - may contain HTML)
+ *           $partialToLabel     (default 'To'   - may contain HTML)
  *           $partialExtraHtml   (raw HTML inserted before the submit button)
  *           $partialSubmitLabel (default 'Scan')
  */

@@ -21,7 +21,7 @@ if ($latestDate) {
 <div class="topbar">
   <div>
     <h1>Dashboard</h1>
-    <div class="meta">Operations overview — no API calls, instant load</div>
+    <div class="meta">Operations overview - no API calls, instant load</div>
   </div>
   <div class="flex items-center gap-2">
     <?php if ($dbCacheCount > 0): ?>
@@ -44,7 +44,7 @@ if ($latestDate) {
           <span style="font-size:1.1rem;color:<?= $trendColor ?>"><?= $trendIcon ?></span>
         <?php endif; ?>
       <?php else: ?>
-        <span style="font-size:1.2rem;color:var(--muted)">—</span>
+        <span style="font-size:1.2rem;color:var(--muted)">-</span>
       <?php endif; ?>
     </div>
     <div class="db-card-sub">
@@ -116,7 +116,7 @@ if ($latestDate) {
 <!-- ── Action Queue ──────────────────────────────────────────────────── -->
 <div class="db-section">
   <div class="db-section-title">
-    ⚠ Action Queue — Missing Orders
+    ⚠ Action Queue - Missing Orders
     <?php if ($latestDate): ?>
       <a href="?date=<?= esc($latestDate) ?>">View full report &rarr;</a>
     <?php endif; ?>

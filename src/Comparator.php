@@ -318,7 +318,7 @@ class Comparator
         return self::$loadedConfig;
     }
 
-    /** Inject config for tests — call resetOrderTypesConfig() in tearDown. */
+    /** Inject config for tests - call resetOrderTypesConfig() in tearDown. */
     public static function setOrderTypesConfig(array $config): void
     {
         self::$overrideConfig = $config;

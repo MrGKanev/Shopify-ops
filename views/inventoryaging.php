@@ -17,7 +17,7 @@
     <?php dateRangePartial('ia', $iaStart, $iaEnd) ?>
   </form>
   <?php if ($iaResult !== null): ?>
-    <div class="duration-note mt-4 mb-0">Scanned <strong><?= $iaResult['products'] ?></strong> products, <strong><?= $iaResult['variants'] ?></strong> variants, and <strong><?= $iaResult['orders'] ?></strong> orders — <strong><?= count($iaResult['rows']) ?></strong> zero-stock sellers</div>
+    <div class="duration-note mt-4 mb-0">Scanned <strong><?= $iaResult['products'] ?></strong> products, <strong><?= $iaResult['variants'] ?></strong> variants, and <strong><?= $iaResult['orders'] ?></strong> orders - <strong><?= count($iaResult['rows']) ?></strong> zero-stock sellers</div>
   <?php endif; ?>
 </div>
 

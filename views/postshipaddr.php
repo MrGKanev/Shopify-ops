@@ -1,7 +1,7 @@
 <?= topbar('Post-Ship Address Change', 'Shipping address edited after the order was fulfilled') ?>
 
 <?= featureInfoStart('postshipaddr', 'Post-Ship Address Change') ?>
-  <p><strong>Post-Ship Address Change</strong> finds orders where the shipping address was updated <em>after</em> the first fulfillment was created — meaning the package is already in transit and the new address cannot be applied.</p>
+  <p><strong>Post-Ship Address Change</strong> finds orders where the shipping address was updated <em>after</em> the first fulfillment was created - meaning the package is already in transit and the new address cannot be applied.</p>
   <ul>
     <li>Different from the <a href="?page=addrchanges">Address Changes</a> audit, which flags <em>any</em> post-placement address edit.</li>
     <li>The <strong>Changed</strong> column shows when the edit happened. The <strong>Shipped</strong> column shows when the first fulfillment was created.</li>
