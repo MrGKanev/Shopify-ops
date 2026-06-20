@@ -6,6 +6,7 @@ use GuzzleHttp\HandlerStack;
 require_once __DIR__ . '/ShopifyGraphQLClient.php';
 require_once __DIR__ . '/ShopifyGraphQLNormalizer.php';
 require_once __DIR__ . '/ShopifyGraphQLQueries.php';
+require_once __DIR__ . '/ShopifyOrderFetcher.php';
 
 /**
  * Shopify Admin API client.
@@ -20,6 +21,7 @@ class Shopify
 
     private readonly ?Cache $cache;
     private readonly ShopifyGraphQLClient $graphqlClient;
+    private readonly ShopifyOrderFetcher $orderFetcher;
 
     public function __construct(
         string $store,
@@ -32,6 +34,7 @@ class Shopify
 
         $this->cache         = $cache;
         $this->graphqlClient = new ShopifyGraphQLClient($baseUrl, $accessToken, $stack);
+        $this->orderFetcher  = new ShopifyOrderFetcher($this->graphqlClient);
     }
 
     // ── Public ────────────────────────────────────────────────────────
@@ -596,7 +599,7 @@ class Shopify
      */
     public function fetchOrdersForAddressScan(string $startDate, string $endDate, bool $unfulfilledOnly = false): array
     {
-        return $this->fetchGraphQLOrdersByQuery(
+        return $this->orderFetcher->fetchOrdersByQuery(
             ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate, $unfulfilledOnly),
             ShopifyGraphQLQueries::orderCoreFields()
                 . ShopifyGraphQLQueries::shippingAddressFields()
@@ -612,7 +615,7 @@ class Shopify
      */
     public function fetchOrdersForHighValue(string $startDate, string $endDate): array
     {
-        return $this->fetchGraphQLOrdersByQuery(
+        return $this->orderFetcher->fetchOrdersByQuery(
             ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate, true),
             ShopifyGraphQLQueries::orderCoreFields()
                 . ShopifyGraphQLQueries::shippingAddressFields()
@@ -630,7 +633,7 @@ class Shopify
     public function fetchOrdersWithAddressChanges(string $startDate, string $endDate): array
     {
         $changed = [];
-        foreach ($this->fetchGraphQLEventsByQuery(ShopifyGraphQLQueries::orderEventDateRangeQuery($startDate, $endDate)) as $ev) {
+        foreach ($this->orderFetcher->fetchEventsByQuery(ShopifyGraphQLQueries::orderEventDateRangeQuery($startDate, $endDate)) as $ev) {
             if (!ShopifyGraphQLNormalizer::isAddressChangeEvent($ev)) {
                 continue;
             }
@@ -648,7 +651,7 @@ class Shopify
 
         if (empty($changed)) return [];
 
-        $ordersById = $this->fetchGraphQLOrdersByIds(
+        $ordersById = $this->orderFetcher->fetchOrdersByIds(
             array_keys($changed),
             ShopifyGraphQLQueries::orderCoreFields()
                 . ShopifyGraphQLQueries::shippingAddressFields()
@@ -683,7 +686,7 @@ class Shopify
     public function fetchEditedOrders(string $startDate, string $endDate): array
     {
         $byOrder = [];
-        foreach ($this->fetchGraphQLEventsByQuery(ShopifyGraphQLQueries::orderEventDateRangeQuery($startDate, $endDate)) as $ev) {
+        foreach ($this->orderFetcher->fetchEventsByQuery(ShopifyGraphQLQueries::orderEventDateRangeQuery($startDate, $endDate)) as $ev) {
             if (!ShopifyGraphQLNormalizer::isOrderEditEvent($ev)) {
                 continue;
             }
@@ -709,7 +712,7 @@ class Shopify
         if (empty($byOrder)) return [];
 
         $rows = [];
-        $ordersById = $this->fetchGraphQLOrdersByIds(
+        $ordersById = $this->orderFetcher->fetchOrdersByIds(
             array_keys($byOrder),
             ShopifyGraphQLQueries::orderCoreFields()
         );
@@ -739,7 +742,7 @@ class Shopify
 
     public function fetchRefundedOrders(string $startDate, string $endDate): array
     {
-        return $this->fetchGraphQLOrdersByQuery(
+        return $this->orderFetcher->fetchOrdersByQuery(
             ShopifyGraphQLQueries::refundedOrdersQuery($startDate, $endDate),
             ShopifyGraphQLQueries::orderCoreFields()
                 . ShopifyGraphQLQueries::refundFields(),
@@ -946,7 +949,7 @@ class Shopify
      */
     public function fetchOrdersForCountryMismatch(string $startDate, string $endDate): array
     {
-        return $this->fetchGraphQLOrdersByQuery(
+        return $this->orderFetcher->fetchOrdersByQuery(
             ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate),
             ShopifyGraphQLQueries::orderCoreFields()
                 . ShopifyGraphQLQueries::billingAddressFields()
@@ -962,7 +965,7 @@ class Shopify
      */
     public function fetchPartiallyFulfilledOrders(string $startDate, string $endDate): array
     {
-        return $this->fetchGraphQLOrdersByQuery(
+        return $this->orderFetcher->fetchOrdersByQuery(
             ShopifyGraphQLQueries::partiallyFulfilledOrdersQuery($startDate, $endDate),
             ShopifyGraphQLQueries::orderCoreFields()
                 . ShopifyGraphQLQueries::lineItemFields()
@@ -1085,7 +1088,7 @@ class Shopify
      */
     public function fetchFulfilledOrdersWithTracking(string $startDate, string $endDate): array
     {
-        return $this->fetchGraphQLOrdersByQuery(
+        return $this->orderFetcher->fetchOrdersByQuery(
             ShopifyGraphQLQueries::fulfilledOrPartialOrdersQuery($startDate, $endDate),
             ShopifyGraphQLQueries::orderCoreFields()
                 . ShopifyGraphQLQueries::fulfillmentFields(),
@@ -1107,7 +1110,7 @@ class Shopify
     public function fetchPostShipAddressChanges(string $startDate, string $endDate): array
     {
         $changed = [];
-        foreach ($this->fetchGraphQLEventsByQuery(ShopifyGraphQLQueries::orderEventDateRangeQuery($startDate, $endDate)) as $ev) {
+        foreach ($this->orderFetcher->fetchEventsByQuery(ShopifyGraphQLQueries::orderEventDateRangeQuery($startDate, $endDate)) as $ev) {
             if (!ShopifyGraphQLNormalizer::isAddressChangeEvent($ev)) {
                 continue;
             }
@@ -1126,7 +1129,7 @@ class Shopify
         if (empty($changed)) return [];
 
         $orders = [];
-        $ordersById = $this->fetchGraphQLOrdersByIds(
+        $ordersById = $this->orderFetcher->fetchOrdersByIds(
             array_keys($changed),
             ShopifyGraphQLQueries::orderCoreFields()
                 . ShopifyGraphQLQueries::shippingAddressFields()
@@ -1165,7 +1168,7 @@ class Shopify
      */
     public function fetchOrdersWithNotes(string $startDate, string $endDate): array
     {
-        return $this->fetchGraphQLOrdersByQuery(
+        return $this->orderFetcher->fetchOrdersByQuery(
             ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate, true),
             ShopifyGraphQLQueries::orderCoreFields()
                 . ShopifyGraphQLQueries::orderNoteFields()
@@ -1179,7 +1182,7 @@ class Shopify
      */
     public function fetchOrdersForAddrDupes(string $startDate, string $endDate): array
     {
-        return $this->fetchGraphQLOrdersByQuery(
+        return $this->orderFetcher->fetchOrdersByQuery(
             ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate),
             ShopifyGraphQLQueries::orderCoreFields()
                 . ShopifyGraphQLQueries::shippingAddressFields()
@@ -1193,7 +1196,7 @@ class Shopify
      */
     public function fetchOrdersForSla(string $startDate, string $endDate): array
     {
-        return $this->fetchGraphQLOrdersByQuery(
+        return $this->orderFetcher->fetchOrdersByQuery(
             ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate),
             ShopifyGraphQLQueries::orderCoreFields()
                 . ShopifyGraphQLQueries::shippingAddressFields()
@@ -1210,7 +1213,7 @@ class Shopify
      */
     public function fetchCancelledOrders(string $startDate, string $endDate): array
     {
-        return $this->fetchGraphQLOrdersByQuery(
+        return $this->orderFetcher->fetchOrdersByQuery(
             ShopifyGraphQLQueries::orderDateRangeQuery($startDate, $endDate),
             ShopifyGraphQLQueries::orderCoreFields()
                 . ShopifyGraphQLQueries::orderCancelReasonFields(),
@@ -1225,7 +1228,7 @@ class Shopify
      */
     public function fetchOrdersForDiscountAudit(string $startDate, string $endDate): array
     {
-        return $this->fetchGraphQLOrdersByQuery(
+        return $this->orderFetcher->fetchOrdersByQuery(
             ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate),
             ShopifyGraphQLQueries::orderCoreFields()
                 . ShopifyGraphQLQueries::shippingAddressFields()
@@ -1240,7 +1243,7 @@ class Shopify
      */
     public function fetchOrdersForTagPolicy(string $startDate, string $endDate): array
     {
-        return $this->fetchGraphQLOrdersByQuery(
+        return $this->orderFetcher->fetchOrdersByQuery(
             ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate),
             ShopifyGraphQLQueries::orderCoreFields()
                 . ShopifyGraphQLQueries::orderTagFields()
@@ -1257,133 +1260,6 @@ class Shopify
     private function graphql(string $query, array $variables = []): array
     {
         return $this->graphqlClient->graphql($query, $variables);
-    }
-
-    /**
-     * @return array<int, array<string, mixed>>
-     */
-    private function fetchGraphQLEventsByQuery(string $queryStr, int $maxPages = 1000): array
-    {
-        $events = [];
-        $query = <<<'GQL'
-        query FetchOrderEventsByQuery($query: String!, $after: String) {
-          events(first: 250, sortKey: CREATED_AT, reverse: true, query: $query, after: $after) {
-            pageInfo { hasNextPage endCursor }
-            edges {
-              node {
-                {{EVENT_FIELDS}}
-              }
-            }
-          }
-        }
-        GQL;
-        $query = str_replace('{{EVENT_FIELDS}}', ShopifyGraphQLQueries::eventFields(), $query);
-
-        $this->paginateGraphQLVariables(
-            $query,
-            'events',
-            ['query' => $queryStr],
-            function (array $edges) use (&$events) {
-                foreach ($edges as $edge) {
-                    $node = $edge['node'] ?? null;
-                    if (is_array($node)) {
-                        $events[] = ShopifyGraphQLNormalizer::normalizeEvent($node);
-                    }
-                }
-            },
-            $maxPages
-        );
-
-        return $events;
-    }
-
-    /**
-     * @param array<int|string, int|string> $orderIds
-     * @return array<string, array<string, mixed>>
-     */
-    private function fetchGraphQLOrdersByIds(array $orderIds, string $nodeFields): array
-    {
-        $ids = [];
-        foreach ($orderIds as $orderId) {
-            $id = (string)$orderId;
-            if ($id === '') {
-                continue;
-            }
-            $ids[] = ShopifyGraphQLNormalizer::orderGid($id);
-        }
-        $ids = array_values(array_unique($ids));
-        if ($ids === []) {
-            return [];
-        }
-
-        $query = <<<'GQL'
-        query FetchOrdersByIds($ids: [ID!]!) {
-          nodes(ids: $ids) {
-            ... on Order {
-              {{NODE_FIELDS}}
-            }
-          }
-        }
-        GQL;
-        $query = str_replace('{{NODE_FIELDS}}', $nodeFields, $query);
-
-        $orders = [];
-        foreach (array_chunk($ids, 250) as $chunk) {
-            $data = $this->graphql($query, ['ids' => $chunk]);
-            foreach (($data['data']['nodes'] ?? []) as $node) {
-                if (!is_array($node)) {
-                    continue;
-                }
-
-                $order = ShopifyGraphQLNormalizer::normalizeOrder($node);
-                $id    = (string)($order['id'] ?? '');
-                if ($id !== '') {
-                    $orders[$id] = $order;
-                }
-            }
-        }
-
-        return $orders;
-    }
-
-    /**
-     * @param callable(array<string, mixed>): bool|null $nodeFilter
-     * @return array<int, array<string, mixed>>
-     */
-    private function fetchGraphQLOrdersByQuery(string $queryStr, string $nodeFields, ?callable $nodeFilter = null): array
-    {
-        $all = [];
-        $query = <<<'GQL'
-        query FetchOrdersByQuery($query: String!, $after: String) {
-          orders(first: 250, sortKey: CREATED_AT, reverse: true, query: $query, after: $after) {
-            pageInfo { hasNextPage endCursor }
-            edges {
-              node {
-                {{NODE_FIELDS}}
-              }
-            }
-          }
-        }
-        GQL;
-        $query = str_replace('{{NODE_FIELDS}}', $nodeFields, $query);
-
-        $this->paginateGraphQLVariables(
-            $query,
-            'orders',
-            ['query' => $queryStr],
-            function (array $edges) use (&$all, $nodeFilter) {
-                foreach ($edges as $edge) {
-                    $node = $edge['node'] ?? [];
-                    if ($nodeFilter !== null && !$nodeFilter($node)) {
-                        continue;
-                    }
-                    $all[] = ShopifyGraphQLNormalizer::normalizeOrder($node);
-                }
-            },
-            1000
-        );
-
-        return $all;
     }
 
     /**
