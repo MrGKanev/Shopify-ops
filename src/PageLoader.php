@@ -1885,7 +1885,7 @@ class PageLoader
         }
 
         if ($action === 'test_connection') {
-            $ping = function (string $url, array $headers): array {
+            $ping = function (string $url, array $headers, string $method = 'GET', ?string $body = null): array {
                 $ch = curl_init($url);
                 curl_setopt_array($ch, [
                     CURLOPT_RETURNTRANSFER => true,
@@ -1893,6 +1893,12 @@ class PageLoader
                     CURLOPT_HTTPHEADER     => $headers,
                     CURLOPT_USERAGENT      => 'ShopifyOps/1.0',
                 ]);
+                if ($method !== 'GET') {
+                    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+                }
+                if ($body !== null) {
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+                }
                 $t0   = microtime(true);
                 curl_exec($ch);
                 $ms   = (int) round((microtime(true) - $t0) * 1000);
@@ -1914,8 +1920,14 @@ class PageLoader
             if ($ctx['shopifyToken'] && $ctx['shopifyStore'] !== 'N/A') {
                 $host = str_contains($ctx['shopifyStore'], '.') ? $ctx['shopifyStore'] : "{$ctx['shopifyStore']}.myshopify.com";
                 $connResults['shopify'] = $ping(
-                    "https://{$host}/admin/api/" . Shopify::API_VERSION . "/shop.json",
-                    ["X-Shopify-Access-Token: {$ctx['shopifyToken']}", 'Accept: application/json']
+                    "https://{$host}/admin/api/" . Shopify::API_VERSION . "/graphql.json",
+                    [
+                        "X-Shopify-Access-Token: {$ctx['shopifyToken']}",
+                        'Accept: application/json',
+                        'Content-Type: application/json',
+                    ],
+                    'POST',
+                    json_encode(['query' => '{ shop { name } }'])
                 );
             } else {
                 $connResults['shopify'] = ['ok' => false, 'code' => 0, 'ms' => 0, 'error' => 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env'];
