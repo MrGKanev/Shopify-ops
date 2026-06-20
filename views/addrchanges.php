@@ -1,11 +1,11 @@
 <?= topbar('Address Changes', 'Orders whose shipping address was edited after the order was placed') ?>
 
 <?= featureInfoStart('addrchanges', 'Address Changes') ?>
-    <p><strong>Address Changes</strong> uses Shopify's Events API to find orders where the shipping address was modified after the order was placed. This is useful for catching last-minute customer requests, fraudulent address swaps, or support edits that may not have reached ShipStation in time.</p>
+    <p><strong>Address Changes</strong> uses Shopify order events via GraphQL to find orders where the shipping address was modified after the order was placed. This is useful for catching last-minute customer requests, fraudulent address swaps, or support edits that may not have reached ShipStation in time.</p>
     <ul>
       <li>Only orders with an explicit <em>shipping address updated</em> event are returned - not just any order edit.</li>
       <li>The <strong>Changed</strong> column shows when the address was last modified, not when the order was created.</li>
-      <li>Large date ranges may take longer as the Events API is paginated separately from orders.</li>
+      <li>Large date ranges may take longer as order events are paginated separately from orders.</li>
     </ul>
 <?= featureInfoEnd() ?>
 

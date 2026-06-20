@@ -26,7 +26,7 @@
       <?php endif; ?>
 
       <?php if ($key === 'shopify'): ?>
-        <?php $scopeCheckOk = (bool)($h['checks']['scopes']['ok'] ?? false); ?>
+        <?php $scopeCheckOk = (bool)($h['checks']['graphql']['ok'] ?? false); ?>
         <table>
           <tbody>
             <tr><th>Requested API version</th><td><?= esc($h['requested_version'] ?? '') ?></td></tr>

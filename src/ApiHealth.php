@@ -9,7 +9,7 @@ class ApiHealth
     /**
      * @return array<string, mixed>
      */
-    public static function checkShopify(string $store, string $token): array
+    public static function checkShopify(string $store, string $token, ?callable $request = null): array
     {
         if (!$token || $store === 'N/A') {
             return ['ok' => false, 'error' => 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set.', 'checks' => []];
@@ -18,26 +18,40 @@ class ApiHealth
         $host = str_contains($store, '.') ? $store : "{$store}.myshopify.com";
         $base = "https://{$host}/admin/api/" . Shopify::API_VERSION;
         $checks = [];
+        $request ??= [self::class, 'curlJson'];
 
-        $shop = self::curlJson("{$base}/shop.json", ["X-Shopify-Access-Token: {$token}", 'Accept: application/json']);
-        $checks['shop'] = $shop;
-
-        $scopes = self::curlJson("https://{$host}/admin/oauth/access_scopes.json", ["X-Shopify-Access-Token: {$token}", 'Accept: application/json']);
-        $checks['scopes'] = $scopes;
+        $query = <<<'GQL'
+        query ShopifyHealth {
+          shop { name }
+          currentAppInstallation {
+            accessScopes { handle }
+          }
+        }
+        GQL;
+        $graphql = $request("{$base}/graphql.json", [
+            "X-Shopify-Access-Token: {$token}",
+            'Accept: application/json',
+            'Content-Type: application/json',
+        ], ['query' => $query]);
+        if (!empty($graphql['json']['errors'])) {
+            $graphql['ok'] = false;
+            $graphql['error'] = json_encode($graphql['json']['errors']);
+        }
+        $checks['graphql'] = $graphql;
 
         $scopeNames = [];
-        foreach (($scopes['json']['access_scopes'] ?? []) as $scope) {
+        foreach (($graphql['json']['data']['currentAppInstallation']['accessScopes'] ?? []) as $scope) {
             $scopeNames[] = $scope['handle'] ?? '';
         }
         $scopeNames = array_values(array_filter($scopeNames));
         $required = ['read_orders', 'read_fulfillments'];
-        $missing = ($scopes['ok'] ?? false) ? array_values(array_diff($required, $scopeNames)) : [];
+        $missing = ($graphql['ok'] ?? false) ? array_values(array_diff($required, $scopeNames)) : [];
 
         return [
-            'ok'                 => ($shop['ok'] ?? false) && ($scopes['ok'] ?? false) && $missing === [],
+            'ok'                 => ($graphql['ok'] ?? false) && $missing === [],
             'requested_version'  => Shopify::API_VERSION,
-            'returned_version'   => $shop['headers']['x-shopify-api-version'] ?? '',
-            'shop_name'          => $shop['json']['shop']['name'] ?? '',
+            'returned_version'   => $graphql['headers']['x-shopify-api-version'] ?? '',
+            'shop_name'          => $graphql['json']['data']['shop']['name'] ?? '',
             'scopes'             => $scopeNames,
             'missing_scopes'     => $missing,
             'checks'             => $checks,
@@ -70,11 +84,11 @@ class ApiHealth
     /**
      * @return array<string, mixed>
      */
-    private static function curlJson(string $url, array $headers): array
+    private static function curlJson(string $url, array $headers, ?array $jsonBody = null): array
     {
         $ch = curl_init($url);
         $responseHeaders = [];
-        curl_setopt_array($ch, [
+        $options = [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => 12,
             CURLOPT_HTTPHEADER     => $headers,
@@ -87,7 +101,12 @@ class ApiHealth
                 }
                 return $len;
             },
-        ]);
+        ];
+        if ($jsonBody !== null) {
+            $options[CURLOPT_POST] = true;
+            $options[CURLOPT_POSTFIELDS] = json_encode($jsonBody);
+        }
+        curl_setopt_array($ch, $options);
 
         $t0 = microtime(true);
         $raw = curl_exec($ch);
