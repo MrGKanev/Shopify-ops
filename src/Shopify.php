@@ -9,6 +9,7 @@ require_once __DIR__ . '/ShopifyGraphQLQueries.php';
 require_once __DIR__ . '/ShopifyOrderFetcher.php';
 require_once __DIR__ . '/ShopifyOrderAudits.php';
 require_once __DIR__ . '/ShopifyAdminLookups.php';
+require_once __DIR__ . '/ShopifyCatalogAndFulfillment.php';
 
 /**
  * Shopify Admin API client.
@@ -26,6 +27,7 @@ class Shopify
     private readonly ShopifyOrderFetcher $orderFetcher;
     private readonly ShopifyOrderAudits $orderAudits;
     private readonly ShopifyAdminLookups $adminLookups;
+    private readonly ShopifyCatalogAndFulfillment $catalogAndFulfillment;
 
     public function __construct(
         string $store,
@@ -36,11 +38,12 @@ class Shopify
         $host = str_contains($store, '.') ? $store : "{$store}.myshopify.com";
         $baseUrl = "https://{$host}/admin/api/" . self::API_VERSION;
 
-        $this->cache         = $cache;
-        $this->graphqlClient = new ShopifyGraphQLClient($baseUrl, $accessToken, $stack);
-        $this->orderFetcher  = new ShopifyOrderFetcher($this->graphqlClient);
-        $this->orderAudits   = new ShopifyOrderAudits($this->orderFetcher);
-        $this->adminLookups  = new ShopifyAdminLookups($this->graphqlClient, $cache);
+        $this->cache                 = $cache;
+        $this->graphqlClient         = new ShopifyGraphQLClient($baseUrl, $accessToken, $stack);
+        $this->orderFetcher          = new ShopifyOrderFetcher($this->graphqlClient);
+        $this->orderAudits           = new ShopifyOrderAudits($this->orderFetcher);
+        $this->adminLookups          = new ShopifyAdminLookups($this->graphqlClient, $cache);
+        $this->catalogAndFulfillment = new ShopifyCatalogAndFulfillment($this->graphqlClient);
     }
 
     // ── Public ────────────────────────────────────────────────────────
@@ -338,54 +341,7 @@ class Shopify
      */
     public function fetchAllProducts(string $status = 'active'): array
     {
-        $all      = [];
-        $queryArg = ShopifyGraphQLQueries::productStatusGraphQLArg($status);
-        $template = <<<GQL
-        {
-          products(first: 250{$queryArg}{{AFTER}}) {
-            pageInfo { hasNextPage endCursor }
-            edges {
-              node {
-                id
-                legacyResourceId
-                title
-                status
-                descriptionHtml
-                vendor
-                productType
-                mediaCount { count }
-                variants(first: 250) {
-                  edges {
-                    node {
-                      id
-                      legacyResourceId
-                      title
-                      sku
-                      barcode
-                      inventoryQuantity
-                      inventoryPolicy
-                      inventoryItem { tracked }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-        GQL;
-
-        $this->paginateGraphQL(
-            $template,
-            'products',
-            function (array $edges) use (&$all) {
-                foreach ($edges as $edge) {
-                    $all[] = ShopifyGraphQLNormalizer::normalizeProduct($edge['node'] ?? []);
-                }
-            },
-            1000
-        );
-
-        return $all;
+        return $this->catalogAndFulfillment->fetchAllProducts($status);
     }
 
     /**
@@ -396,46 +352,7 @@ class Shopify
      */
     public function fetchOnHoldFulfillmentOrders(string $startDate, string $endDate): array
     {
-        $all      = [];
-        $template = <<<'GQL'
-        {
-          fulfillmentOrders(first: 250, query: "status:on_hold"{{AFTER}}) {
-            pageInfo { hasNextPage endCursor }
-            edges {
-              node {
-                id
-                status
-                order {
-                  id
-                  legacyResourceId
-                  name
-                  email
-                  createdAt
-                  displayFinancialStatus
-                  displayFulfillmentStatus
-                  totalPriceSet { shopMoney { amount } }
-                }
-                fulfillmentHolds {
-                  reason
-                  reasonNotes
-                }
-              }
-            }
-          }
-        }
-        GQL;
-
-        $this->paginateGraphQL($template, 'fulfillmentOrders', function (array $edges) use (&$all, $startDate, $endDate) {
-            foreach ($edges as $e) {
-                $node      = $e['node'];
-                $orderDate = substr($node['order']['createdAt'] ?? '', 0, 10);
-                if ($orderDate >= $startDate && $orderDate <= $endDate) {
-                    $all[] = $node;
-                }
-            }
-        }, 40);
-
-        return $all;
+        return $this->catalogAndFulfillment->fetchOnHoldFulfillmentOrders($startDate, $endDate);
     }
 
     /**
