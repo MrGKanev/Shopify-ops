@@ -7,6 +7,7 @@ require_once __DIR__ . '/ShopifyGraphQLClient.php';
 require_once __DIR__ . '/ShopifyGraphQLNormalizer.php';
 require_once __DIR__ . '/ShopifyGraphQLQueries.php';
 require_once __DIR__ . '/ShopifyOrderFetcher.php';
+require_once __DIR__ . '/ShopifyOrderAudits.php';
 
 /**
  * Shopify Admin API client.
@@ -22,6 +23,7 @@ class Shopify
     private readonly ?Cache $cache;
     private readonly ShopifyGraphQLClient $graphqlClient;
     private readonly ShopifyOrderFetcher $orderFetcher;
+    private readonly ShopifyOrderAudits $orderAudits;
 
     public function __construct(
         string $store,
@@ -35,6 +37,7 @@ class Shopify
         $this->cache         = $cache;
         $this->graphqlClient = new ShopifyGraphQLClient($baseUrl, $accessToken, $stack);
         $this->orderFetcher  = new ShopifyOrderFetcher($this->graphqlClient);
+        $this->orderAudits   = new ShopifyOrderAudits($this->orderFetcher);
     }
 
     // ── Public ────────────────────────────────────────────────────────
@@ -599,12 +602,7 @@ class Shopify
      */
     public function fetchOrdersForAddressScan(string $startDate, string $endDate, bool $unfulfilledOnly = false): array
     {
-        return $this->orderFetcher->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate, $unfulfilledOnly),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::shippingAddressFields()
-                . ShopifyGraphQLQueries::shippingLineFields()
-        );
+        return $this->orderAudits->fetchOrdersForAddressScan($startDate, $endDate, $unfulfilledOnly);
     }
 
     /**
@@ -615,12 +613,7 @@ class Shopify
      */
     public function fetchOrdersForHighValue(string $startDate, string $endDate): array
     {
-        return $this->orderFetcher->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate, true),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::shippingAddressFields()
-                . ShopifyGraphQLQueries::shippingLineFields()
-        );
+        return $this->orderAudits->fetchOrdersForHighValue($startDate, $endDate);
     }
 
     /**
@@ -632,46 +625,7 @@ class Shopify
      */
     public function fetchOrdersWithAddressChanges(string $startDate, string $endDate): array
     {
-        $changed = [];
-        foreach ($this->orderFetcher->fetchEventsByQuery(ShopifyGraphQLQueries::orderEventDateRangeQuery($startDate, $endDate)) as $ev) {
-            if (!ShopifyGraphQLNormalizer::isAddressChangeEvent($ev)) {
-                continue;
-            }
-
-            $id = (string)($ev['subject_id'] ?? '');
-            if ($id === '') {
-                continue;
-            }
-
-            $ts = $ev['created_at'] ?? '';
-            if (!isset($changed[$id]) || $ts > $changed[$id]) {
-                $changed[$id] = $ts;
-            }
-        }
-
-        if (empty($changed)) return [];
-
-        $ordersById = $this->orderFetcher->fetchOrdersByIds(
-            array_keys($changed),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::shippingAddressFields()
-        );
-
-        $orders = [];
-        foreach ($ordersById as $id => $order) {
-            if (!isset($changed[$id])) {
-                continue;
-            }
-
-            $orders[] = [
-                'order'      => $order,
-                'changed_at' => $changed[$id],
-            ];
-        }
-
-        usort($orders, fn($a, $b) => strcmp($b['changed_at'], $a['changed_at']));
-
-        return $orders;
+        return $this->orderAudits->fetchOrdersWithAddressChanges($startDate, $endDate);
     }
 
     /**
@@ -685,73 +639,12 @@ class Shopify
      */
     public function fetchEditedOrders(string $startDate, string $endDate): array
     {
-        $byOrder = [];
-        foreach ($this->orderFetcher->fetchEventsByQuery(ShopifyGraphQLQueries::orderEventDateRangeQuery($startDate, $endDate)) as $ev) {
-            if (!ShopifyGraphQLNormalizer::isOrderEditEvent($ev)) {
-                continue;
-            }
-
-            $id = (string)($ev['subject_id'] ?? '');
-            if ($id === '') {
-                continue;
-            }
-
-            $ts = $ev['created_at'] ?? '';
-            if (!isset($byOrder[$id])) {
-                $byOrder[$id] = ['latest_at' => $ts, 'summary' => []];
-            } elseif ($ts > $byOrder[$id]['latest_at']) {
-                $byOrder[$id]['latest_at'] = $ts;
-            }
-
-            $short = ucfirst((string)($ev['message'] ?? ''));
-            if ($short !== '' && count($byOrder[$id]['summary']) < 4 && !in_array($short, $byOrder[$id]['summary'], true)) {
-                $byOrder[$id]['summary'][] = $short;
-            }
-        }
-
-        if (empty($byOrder)) return [];
-
-        $rows = [];
-        $ordersById = $this->orderFetcher->fetchOrdersByIds(
-            array_keys($byOrder),
-            ShopifyGraphQLQueries::orderCoreFields()
-        );
-
-        foreach ($ordersById as $oid => $o) {
-            $ev        = $byOrder[$oid] ?? [];
-            $createdTs = strtotime($o['created_at'] ?? '');
-            $editedTs  = strtotime($ev['latest_at']  ?? '');
-            $diffMins  = ($createdTs && $editedTs) ? max(0, (int)(($editedTs - $createdTs) / 60)) : 0;
-            $rows[] = [
-                'shopify_id'   => (string)$oid,
-                'order_number' => $o['name']                ?? '',
-                'created_at'   => substr($o['created_at']   ?? '', 0, 10),
-                'edited_at'    => substr($ev['latest_at']   ?? '', 0, 16),
-                'diff_mins'    => $diffMins,
-                'email'        => $o['email']               ?? '',
-                'total'        => $o['total_price']         ?? '',
-                'financial'    => $o['financial_status']    ?? '',
-                'fulfillment'  => $o['fulfillment_status']  ?? '',
-                'edit_summary' => $ev['summary']            ?? [],
-            ];
-        }
-
-        usort($rows, fn($a, $b) => strcmp($b['edited_at'], $a['edited_at']));
-        return $rows;
+        return $this->orderAudits->fetchEditedOrders($startDate, $endDate);
     }
 
     public function fetchRefundedOrders(string $startDate, string $endDate): array
     {
-        return $this->orderFetcher->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::refundedOrdersQuery($startDate, $endDate),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::refundFields(),
-            fn(array $node) => in_array(
-                ShopifyGraphQLNormalizer::normalizeFinancialStatus($node['displayFinancialStatus'] ?? null),
-                ['refunded', 'partially_refunded'],
-                true
-            )
-        );
+        return $this->orderAudits->fetchRefundedOrders($startDate, $endDate);
     }
 
     /**
@@ -949,12 +842,7 @@ class Shopify
      */
     public function fetchOrdersForCountryMismatch(string $startDate, string $endDate): array
     {
-        return $this->orderFetcher->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::billingAddressFields()
-                . ShopifyGraphQLQueries::shippingAddressFields()
-        );
+        return $this->orderAudits->fetchOrdersForCountryMismatch($startDate, $endDate);
     }
 
     /**
@@ -965,13 +853,7 @@ class Shopify
      */
     public function fetchPartiallyFulfilledOrders(string $startDate, string $endDate): array
     {
-        return $this->orderFetcher->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::partiallyFulfilledOrdersQuery($startDate, $endDate),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::lineItemFields()
-                . ShopifyGraphQLQueries::fulfillmentFields(),
-            fn(array $node) => ShopifyGraphQLNormalizer::normalizeFulfillmentStatus($node['displayFulfillmentStatus'] ?? null) === 'partial'
-        );
+        return $this->orderAudits->fetchPartiallyFulfilledOrders($startDate, $endDate);
     }
 
     /**
@@ -1088,16 +970,7 @@ class Shopify
      */
     public function fetchFulfilledOrdersWithTracking(string $startDate, string $endDate): array
     {
-        return $this->orderFetcher->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::fulfilledOrPartialOrdersQuery($startDate, $endDate),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::fulfillmentFields(),
-            fn(array $node) => in_array(
-                ShopifyGraphQLNormalizer::normalizeFulfillmentStatus($node['displayFulfillmentStatus'] ?? null),
-                ['fulfilled', 'partial'],
-                true
-            )
-        );
+        return $this->orderAudits->fetchFulfilledOrdersWithTracking($startDate, $endDate);
     }
 
     /**
@@ -1109,56 +982,7 @@ class Shopify
      */
     public function fetchPostShipAddressChanges(string $startDate, string $endDate): array
     {
-        $changed = [];
-        foreach ($this->orderFetcher->fetchEventsByQuery(ShopifyGraphQLQueries::orderEventDateRangeQuery($startDate, $endDate)) as $ev) {
-            if (!ShopifyGraphQLNormalizer::isAddressChangeEvent($ev)) {
-                continue;
-            }
-
-            $id = (string)($ev['subject_id'] ?? '');
-            if ($id === '') {
-                continue;
-            }
-
-            $ts = $ev['created_at'] ?? '';
-            if (!isset($changed[$id]) || $ts > $changed[$id]) {
-                $changed[$id] = $ts;
-            }
-        }
-
-        if (empty($changed)) return [];
-
-        $orders = [];
-        $ordersById = $this->orderFetcher->fetchOrdersByIds(
-            array_keys($changed),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::shippingAddressFields()
-                . ShopifyGraphQLQueries::fulfillmentFields()
-        );
-
-        foreach ($ordersById as $oid => $o) {
-            $changedAt = $changed[$oid] ?? '';
-
-            $firstFulfillAt = '';
-            foreach ($o['fulfillments'] ?? [] as $f) {
-                $fa = $f['created_at'] ?? '';
-                if ($fa && (!$firstFulfillAt || $fa < $firstFulfillAt)) {
-                    $firstFulfillAt = $fa;
-                }
-            }
-
-            // Only flag if address changed AFTER first fulfillment
-            if (!$firstFulfillAt || $changedAt <= $firstFulfillAt) continue;
-
-            $orders[] = [
-                'order'          => $o,
-                'changed_at'     => $changedAt,
-                'fulfillment_at' => $firstFulfillAt,
-            ];
-        }
-
-        usort($orders, fn($a, $b) => strcmp($b['changed_at'], $a['changed_at']));
-        return $orders;
+        return $this->orderAudits->fetchPostShipAddressChanges($startDate, $endDate);
     }
 
     /**
@@ -1168,11 +992,7 @@ class Shopify
      */
     public function fetchOrdersWithNotes(string $startDate, string $endDate): array
     {
-        return $this->orderFetcher->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate, true),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::orderNoteFields()
-        );
+        return $this->orderAudits->fetchOrdersWithNotes($startDate, $endDate);
     }
 
     /**
@@ -1182,11 +1002,7 @@ class Shopify
      */
     public function fetchOrdersForAddrDupes(string $startDate, string $endDate): array
     {
-        return $this->orderFetcher->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::shippingAddressFields()
-        );
+        return $this->orderAudits->fetchOrdersForAddrDupes($startDate, $endDate);
     }
 
     /**
@@ -1196,14 +1012,7 @@ class Shopify
      */
     public function fetchOrdersForSla(string $startDate, string $endDate): array
     {
-        return $this->orderFetcher->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::shippingAddressFields()
-                . ShopifyGraphQLQueries::shippingLineFields()
-                . ShopifyGraphQLQueries::lineItemFields()
-                . ShopifyGraphQLQueries::fulfillmentFields()
-        );
+        return $this->orderAudits->fetchOrdersForSla($startDate, $endDate);
     }
 
     /**
@@ -1213,12 +1022,7 @@ class Shopify
      */
     public function fetchCancelledOrders(string $startDate, string $endDate): array
     {
-        return $this->orderFetcher->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::orderDateRangeQuery($startDate, $endDate),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::orderCancelReasonFields(),
-            fn(array $node) => !empty($node['cancelledAt'])
-        );
+        return $this->orderAudits->fetchCancelledOrders($startDate, $endDate);
     }
 
     /**
@@ -1228,12 +1032,7 @@ class Shopify
      */
     public function fetchOrdersForDiscountAudit(string $startDate, string $endDate): array
     {
-        return $this->orderFetcher->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::shippingAddressFields()
-                . ShopifyGraphQLQueries::discountApplicationFields()
-        );
+        return $this->orderAudits->fetchOrdersForDiscountAudit($startDate, $endDate);
     }
 
     /**
@@ -1243,11 +1042,7 @@ class Shopify
      */
     public function fetchOrdersForTagPolicy(string $startDate, string $endDate): array
     {
-        return $this->orderFetcher->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::orderTagFields()
-        );
+        return $this->orderAudits->fetchOrdersForTagPolicy($startDate, $endDate);
     }
 
     // ── Private ───────────────────────────────────────────────────────
