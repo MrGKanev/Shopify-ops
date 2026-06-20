@@ -5,6 +5,7 @@ use GuzzleHttp\HandlerStack;
 
 require_once __DIR__ . '/ShopifyGraphQLClient.php';
 require_once __DIR__ . '/ShopifyGraphQLNormalizer.php';
+require_once __DIR__ . '/ShopifyGraphQLQueries.php';
 
 /**
  * Shopify Admin API client.
@@ -596,10 +597,10 @@ class Shopify
     public function fetchOrdersForAddressScan(string $startDate, string $endDate, bool $unfulfilledOnly = false): array
     {
         return $this->fetchGraphQLOrdersByQuery(
-            self::paidOrdersQuery($startDate, $endDate, $unfulfilledOnly),
-            self::graphQLOrderCoreFields()
-                . self::graphQLShippingAddressFields()
-                . self::graphQLShippingLineFields()
+            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate, $unfulfilledOnly),
+            ShopifyGraphQLQueries::orderCoreFields()
+                . ShopifyGraphQLQueries::shippingAddressFields()
+                . ShopifyGraphQLQueries::shippingLineFields()
         );
     }
 
@@ -612,10 +613,10 @@ class Shopify
     public function fetchOrdersForHighValue(string $startDate, string $endDate): array
     {
         return $this->fetchGraphQLOrdersByQuery(
-            self::paidOrdersQuery($startDate, $endDate, true),
-            self::graphQLOrderCoreFields()
-                . self::graphQLShippingAddressFields()
-                . self::graphQLShippingLineFields()
+            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate, true),
+            ShopifyGraphQLQueries::orderCoreFields()
+                . ShopifyGraphQLQueries::shippingAddressFields()
+                . ShopifyGraphQLQueries::shippingLineFields()
         );
     }
 
@@ -629,7 +630,7 @@ class Shopify
     public function fetchOrdersWithAddressChanges(string $startDate, string $endDate): array
     {
         $changed = [];
-        foreach ($this->fetchGraphQLEventsByQuery(self::orderEventDateRangeQuery($startDate, $endDate)) as $ev) {
+        foreach ($this->fetchGraphQLEventsByQuery(ShopifyGraphQLQueries::orderEventDateRangeQuery($startDate, $endDate)) as $ev) {
             if (!ShopifyGraphQLNormalizer::isAddressChangeEvent($ev)) {
                 continue;
             }
@@ -649,8 +650,8 @@ class Shopify
 
         $ordersById = $this->fetchGraphQLOrdersByIds(
             array_keys($changed),
-            self::graphQLOrderCoreFields()
-                . self::graphQLShippingAddressFields()
+            ShopifyGraphQLQueries::orderCoreFields()
+                . ShopifyGraphQLQueries::shippingAddressFields()
         );
 
         $orders = [];
@@ -682,7 +683,7 @@ class Shopify
     public function fetchEditedOrders(string $startDate, string $endDate): array
     {
         $byOrder = [];
-        foreach ($this->fetchGraphQLEventsByQuery(self::orderEventDateRangeQuery($startDate, $endDate)) as $ev) {
+        foreach ($this->fetchGraphQLEventsByQuery(ShopifyGraphQLQueries::orderEventDateRangeQuery($startDate, $endDate)) as $ev) {
             if (!ShopifyGraphQLNormalizer::isOrderEditEvent($ev)) {
                 continue;
             }
@@ -710,7 +711,7 @@ class Shopify
         $rows = [];
         $ordersById = $this->fetchGraphQLOrdersByIds(
             array_keys($byOrder),
-            self::graphQLOrderCoreFields()
+            ShopifyGraphQLQueries::orderCoreFields()
         );
 
         foreach ($ordersById as $oid => $o) {
@@ -739,9 +740,9 @@ class Shopify
     public function fetchRefundedOrders(string $startDate, string $endDate): array
     {
         return $this->fetchGraphQLOrdersByQuery(
-            self::refundedOrdersQuery($startDate, $endDate),
-            self::graphQLOrderCoreFields()
-                . self::graphQLRefundFields(),
+            ShopifyGraphQLQueries::refundedOrdersQuery($startDate, $endDate),
+            ShopifyGraphQLQueries::orderCoreFields()
+                . ShopifyGraphQLQueries::refundFields(),
             fn(array $node) => in_array(
                 ShopifyGraphQLNormalizer::normalizeFinancialStatus($node['displayFinancialStatus'] ?? null),
                 ['refunded', 'partially_refunded'],
@@ -946,10 +947,10 @@ class Shopify
     public function fetchOrdersForCountryMismatch(string $startDate, string $endDate): array
     {
         return $this->fetchGraphQLOrdersByQuery(
-            self::paidOrdersQuery($startDate, $endDate),
-            self::graphQLOrderCoreFields()
-                . self::graphQLBillingAddressFields()
-                . self::graphQLShippingAddressFields()
+            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate),
+            ShopifyGraphQLQueries::orderCoreFields()
+                . ShopifyGraphQLQueries::billingAddressFields()
+                . ShopifyGraphQLQueries::shippingAddressFields()
         );
     }
 
@@ -962,10 +963,10 @@ class Shopify
     public function fetchPartiallyFulfilledOrders(string $startDate, string $endDate): array
     {
         return $this->fetchGraphQLOrdersByQuery(
-            self::partiallyFulfilledOrdersQuery($startDate, $endDate),
-            self::graphQLOrderCoreFields()
-                . self::graphQLLineItemFields()
-                . self::graphQLFulfillmentFields(),
+            ShopifyGraphQLQueries::partiallyFulfilledOrdersQuery($startDate, $endDate),
+            ShopifyGraphQLQueries::orderCoreFields()
+                . ShopifyGraphQLQueries::lineItemFields()
+                . ShopifyGraphQLQueries::fulfillmentFields(),
             fn(array $node) => ShopifyGraphQLNormalizer::normalizeFulfillmentStatus($node['displayFulfillmentStatus'] ?? null) === 'partial'
         );
     }
@@ -978,7 +979,7 @@ class Shopify
     public function fetchAllProducts(string $status = 'active'): array
     {
         $all      = [];
-        $queryArg = $this->productStatusGraphQLArg($status);
+        $queryArg = ShopifyGraphQLQueries::productStatusGraphQLArg($status);
         $template = <<<GQL
         {
           products(first: 250{$queryArg}{{AFTER}}) {
@@ -1085,9 +1086,9 @@ class Shopify
     public function fetchFulfilledOrdersWithTracking(string $startDate, string $endDate): array
     {
         return $this->fetchGraphQLOrdersByQuery(
-            self::fulfilledOrPartialOrdersQuery($startDate, $endDate),
-            self::graphQLOrderCoreFields()
-                . self::graphQLFulfillmentFields(),
+            ShopifyGraphQLQueries::fulfilledOrPartialOrdersQuery($startDate, $endDate),
+            ShopifyGraphQLQueries::orderCoreFields()
+                . ShopifyGraphQLQueries::fulfillmentFields(),
             fn(array $node) => in_array(
                 ShopifyGraphQLNormalizer::normalizeFulfillmentStatus($node['displayFulfillmentStatus'] ?? null),
                 ['fulfilled', 'partial'],
@@ -1106,7 +1107,7 @@ class Shopify
     public function fetchPostShipAddressChanges(string $startDate, string $endDate): array
     {
         $changed = [];
-        foreach ($this->fetchGraphQLEventsByQuery(self::orderEventDateRangeQuery($startDate, $endDate)) as $ev) {
+        foreach ($this->fetchGraphQLEventsByQuery(ShopifyGraphQLQueries::orderEventDateRangeQuery($startDate, $endDate)) as $ev) {
             if (!ShopifyGraphQLNormalizer::isAddressChangeEvent($ev)) {
                 continue;
             }
@@ -1127,9 +1128,9 @@ class Shopify
         $orders = [];
         $ordersById = $this->fetchGraphQLOrdersByIds(
             array_keys($changed),
-            self::graphQLOrderCoreFields()
-                . self::graphQLShippingAddressFields()
-                . self::graphQLFulfillmentFields()
+            ShopifyGraphQLQueries::orderCoreFields()
+                . ShopifyGraphQLQueries::shippingAddressFields()
+                . ShopifyGraphQLQueries::fulfillmentFields()
         );
 
         foreach ($ordersById as $oid => $o) {
@@ -1165,9 +1166,9 @@ class Shopify
     public function fetchOrdersWithNotes(string $startDate, string $endDate): array
     {
         return $this->fetchGraphQLOrdersByQuery(
-            self::paidOrdersQuery($startDate, $endDate, true),
-            self::graphQLOrderCoreFields()
-                . self::graphQLOrderNoteFields()
+            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate, true),
+            ShopifyGraphQLQueries::orderCoreFields()
+                . ShopifyGraphQLQueries::orderNoteFields()
         );
     }
 
@@ -1179,9 +1180,9 @@ class Shopify
     public function fetchOrdersForAddrDupes(string $startDate, string $endDate): array
     {
         return $this->fetchGraphQLOrdersByQuery(
-            self::paidOrdersQuery($startDate, $endDate),
-            self::graphQLOrderCoreFields()
-                . self::graphQLShippingAddressFields()
+            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate),
+            ShopifyGraphQLQueries::orderCoreFields()
+                . ShopifyGraphQLQueries::shippingAddressFields()
         );
     }
 
@@ -1193,12 +1194,12 @@ class Shopify
     public function fetchOrdersForSla(string $startDate, string $endDate): array
     {
         return $this->fetchGraphQLOrdersByQuery(
-            self::paidOrdersQuery($startDate, $endDate),
-            self::graphQLOrderCoreFields()
-                . self::graphQLShippingAddressFields()
-                . self::graphQLShippingLineFields()
-                . self::graphQLLineItemFields()
-                . self::graphQLFulfillmentFields()
+            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate),
+            ShopifyGraphQLQueries::orderCoreFields()
+                . ShopifyGraphQLQueries::shippingAddressFields()
+                . ShopifyGraphQLQueries::shippingLineFields()
+                . ShopifyGraphQLQueries::lineItemFields()
+                . ShopifyGraphQLQueries::fulfillmentFields()
         );
     }
 
@@ -1210,9 +1211,9 @@ class Shopify
     public function fetchCancelledOrders(string $startDate, string $endDate): array
     {
         return $this->fetchGraphQLOrdersByQuery(
-            self::orderDateRangeQuery($startDate, $endDate),
-            self::graphQLOrderCoreFields()
-                . self::graphQLOrderCancelReasonFields(),
+            ShopifyGraphQLQueries::orderDateRangeQuery($startDate, $endDate),
+            ShopifyGraphQLQueries::orderCoreFields()
+                . ShopifyGraphQLQueries::orderCancelReasonFields(),
             fn(array $node) => !empty($node['cancelledAt'])
         );
     }
@@ -1225,10 +1226,10 @@ class Shopify
     public function fetchOrdersForDiscountAudit(string $startDate, string $endDate): array
     {
         return $this->fetchGraphQLOrdersByQuery(
-            self::paidOrdersQuery($startDate, $endDate),
-            self::graphQLOrderCoreFields()
-                . self::graphQLShippingAddressFields()
-                . self::graphQLDiscountApplicationFields()
+            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate),
+            ShopifyGraphQLQueries::orderCoreFields()
+                . ShopifyGraphQLQueries::shippingAddressFields()
+                . ShopifyGraphQLQueries::discountApplicationFields()
         );
     }
 
@@ -1240,9 +1241,9 @@ class Shopify
     public function fetchOrdersForTagPolicy(string $startDate, string $endDate): array
     {
         return $this->fetchGraphQLOrdersByQuery(
-            self::paidOrdersQuery($startDate, $endDate),
-            self::graphQLOrderCoreFields()
-                . self::graphQLOrderTagFields()
+            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate),
+            ShopifyGraphQLQueries::orderCoreFields()
+                . ShopifyGraphQLQueries::orderTagFields()
         );
     }
 
@@ -1256,303 +1257,6 @@ class Shopify
     private function graphql(string $query, array $variables = []): array
     {
         return $this->graphqlClient->graphql($query, $variables);
-    }
-
-    private static function orderDateRangeQuery(string $startDate, string $endDate): string
-    {
-        return implode(' ', [
-            'status:any',
-            'created_at:>=' . $startDate . 'T00:00:00Z',
-            'created_at:<=' . $endDate   . 'T23:59:59Z',
-        ]);
-    }
-
-    private static function paidOrdersQuery(string $startDate, string $endDate, bool $unfulfilledOnly = false): string
-    {
-        $filters = [
-            'status:any',
-            '(financial_status:paid OR financial_status:partially_paid)',
-            'created_at:>=' . $startDate . 'T00:00:00Z',
-            'created_at:<=' . $endDate   . 'T23:59:59Z',
-        ];
-        if ($unfulfilledOnly) {
-            $filters[] = '(fulfillment_status:unfulfilled OR fulfillment_status:partial)';
-        }
-
-        return implode(' ', $filters);
-    }
-
-    private static function refundedOrdersQuery(string $startDate, string $endDate): string
-    {
-        return implode(' ', [
-            'status:any',
-            '(financial_status:refunded OR financial_status:partially_refunded)',
-            'created_at:>=' . $startDate . 'T00:00:00Z',
-            'created_at:<=' . $endDate   . 'T23:59:59Z',
-        ]);
-    }
-
-    private static function partiallyFulfilledOrdersQuery(string $startDate, string $endDate): string
-    {
-        return implode(' ', [
-            'status:open',
-            'fulfillment_status:partial',
-            'created_at:>=' . $startDate . 'T00:00:00Z',
-            'created_at:<=' . $endDate   . 'T23:59:59Z',
-        ]);
-    }
-
-    private static function fulfilledOrPartialOrdersQuery(string $startDate, string $endDate): string
-    {
-        return implode(' ', [
-            'status:any',
-            '(fulfillment_status:fulfilled OR fulfillment_status:partial)',
-            'created_at:>=' . $startDate . 'T00:00:00Z',
-            'created_at:<=' . $endDate   . 'T23:59:59Z',
-        ]);
-    }
-
-    private static function graphQLOrderCoreFields(): string
-    {
-        return <<<'GQL'
-                id
-                legacyResourceId
-                name
-                createdAt
-                cancelledAt
-                email
-                displayFinancialStatus
-                displayFulfillmentStatus
-                totalPriceSet { shopMoney { amount currencyCode } }
-
-GQL;
-    }
-
-    private static function graphQLShippingAddressFields(): string
-    {
-        return <<<'GQL'
-                shippingAddress {
-                  firstName
-                  lastName
-                  name
-                  company
-                  address1
-                  address2
-                  city
-                  province
-                  provinceCode
-                  country
-                  countryCodeV2
-                  zip
-                  phone
-                }
-
-GQL;
-    }
-
-    private static function graphQLBillingAddressFields(): string
-    {
-        return <<<'GQL'
-                billingAddress {
-                  firstName
-                  lastName
-                  name
-                  company
-                  address1
-                  address2
-                  city
-                  province
-                  provinceCode
-                  country
-                  countryCodeV2
-                  zip
-                  phone
-                }
-
-GQL;
-    }
-
-    private static function graphQLShippingLineFields(): string
-    {
-        return <<<'GQL'
-                shippingLines(first: 250) {
-                  nodes {
-                    id
-                    title
-                    code
-                    originalPriceSet { shopMoney { amount currencyCode } }
-                  }
-                }
-
-GQL;
-    }
-
-    private static function graphQLLineItemFields(): string
-    {
-        return <<<'GQL'
-                lineItems(first: 250) {
-                  nodes {
-                    id
-                    title
-                    name
-                    sku
-                    quantity
-                    unfulfilledQuantity
-                    variantTitle
-                    originalUnitPriceSet { shopMoney { amount currencyCode } }
-                  }
-                }
-
-GQL;
-    }
-
-    private static function graphQLFulfillmentFields(): string
-    {
-        return <<<'GQL'
-                fulfillments(first: 250) {
-                  id
-                  legacyResourceId
-                  createdAt
-                  status
-                  displayStatus
-                  trackingInfo(first: 10) {
-                    company
-                    number
-                    url
-                  }
-                  fulfillmentLineItems(first: 250) {
-                    edges {
-                      node {
-                        quantity
-                        lineItem {
-                          id
-                          title
-                          name
-                          sku
-                          quantity
-                          variantTitle
-                          originalUnitPriceSet { shopMoney { amount currencyCode } }
-                        }
-                      }
-                    }
-                  }
-                }
-
-GQL;
-    }
-
-    private static function graphQLRefundFields(): string
-    {
-        return <<<'GQL'
-                refunds {
-                  id
-                  legacyResourceId
-                  createdAt
-                  note
-                  totalRefundedSet { shopMoney { amount currencyCode } }
-                  refundLineItems(first: 250) {
-                    nodes {
-                      quantity
-                      subtotalSet { shopMoney { amount currencyCode } }
-                      lineItem {
-                        id
-                        title
-                        name
-                        sku
-                        quantity
-                      }
-                    }
-                  }
-                  transactions(first: 250) {
-                    nodes {
-                      id
-                      kind
-                      status
-                      amountSet { shopMoney { amount currencyCode } }
-                    }
-                  }
-                }
-
-GQL;
-    }
-
-    private static function graphQLDiscountApplicationFields(): string
-    {
-        return <<<'GQL'
-                discountApplications(first: 250) {
-                  nodes {
-                    __typename
-                    allocationMethod
-                    targetSelection
-                    targetType
-                    value {
-                      __typename
-                      ... on MoneyV2 {
-                        amount
-                        currencyCode
-                      }
-                      ... on PricingPercentageValue {
-                        percentage
-                      }
-                    }
-                    ... on DiscountCodeApplication {
-                      code
-                    }
-                  }
-                }
-
-GQL;
-    }
-
-    private static function graphQLOrderNoteFields(): string
-    {
-        return <<<'GQL'
-                note
-
-GQL;
-    }
-
-    private static function graphQLOrderTagFields(): string
-    {
-        return <<<'GQL'
-                tags
-
-GQL;
-    }
-
-    private static function graphQLOrderCancelReasonFields(): string
-    {
-        return <<<'GQL'
-                cancelReason
-
-GQL;
-    }
-
-    private static function graphQLEventFields(): string
-    {
-        return <<<'GQL'
-                  __typename
-                  id
-                  action
-                  appTitle
-                  createdAt
-                  message
-                  ... on BasicEvent {
-                    subjectId
-                    subjectType
-                  }
-
-GQL;
-    }
-
-    private static function orderEventDateRangeQuery(string $startDate, string $endDate): string
-    {
-        return implode(' ', [
-            'subject_type:ORDER',
-            'comments:false',
-            'created_at:>=' . $startDate . 'T00:00:00Z',
-            'created_at:<=' . $endDate   . 'T23:59:59Z',
-        ]);
     }
 
     /**
@@ -1573,7 +1277,7 @@ GQL;
           }
         }
         GQL;
-        $query = str_replace('{{EVENT_FIELDS}}', self::graphQLEventFields(), $query);
+        $query = str_replace('{{EVENT_FIELDS}}', ShopifyGraphQLQueries::eventFields(), $query);
 
         $this->paginateGraphQLVariables(
             $query,
@@ -1682,19 +1386,6 @@ GQL;
         return $all;
     }
 
-    private function productStatusGraphQLArg(string $status): string
-    {
-        $normalized = strtolower(trim($status));
-        if ($normalized === '' || $normalized === 'any') {
-            return '';
-        }
-
-        if (!in_array($normalized, ['active', 'draft', 'archived'], true)) {
-            throw new InvalidArgumentException("Unsupported Shopify product status: {$status}");
-        }
-
-        return ', query: "status:' . $normalized . '"';
-    }
     /**
      * Runs a paginated GraphQL query, calling $processor with each page's edges.
      * The query template must contain {{AFTER}} where the cursor argument goes
