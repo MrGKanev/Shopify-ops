@@ -10,6 +10,8 @@ class SearchLookupPageLoader
     {
         return match ($page) {
             'globalsearch' => self::loadGlobalSearch($ctx, $globalData),
+            'spotcheck'    => self::loadSpotCheck($action, $ctx),
+            'metafields'   => self::loadMetafields($action, $ctx),
             'tagsearch'    => self::loadTagSearch($action, $ctx),
             'customer'     => self::loadCustomer($action, $ctx),
             'tracking'     => self::loadTracking($action, $ctx),
@@ -49,6 +51,165 @@ class SearchLookupPageLoader
         }
 
         return compact('gsResults');
+    }
+
+    private static function loadSpotCheck(string $action, array $ctx): array
+    {
+        $spotResults = null;
+        $spotError   = '';
+        $spotInput   = trim($_GET['prefill'] ?? '');
+
+        if ($action === 'spotcheck') {
+            $spotInput = trim($_POST['orders'] ?? '');
+            $numbers   = array_filter(array_map('trim', preg_split('/[\s,]+/', $spotInput)));
+
+            if (empty($numbers)) {
+                $spotError = 'Enter at least one order number.';
+            } elseif (count($numbers) > 50) {
+                $spotError = 'Maximum 50 order numbers at once.';
+            } else {
+                $spotMode = $_POST['spotcheck_mode'] ?? 'both';
+                $checkSS  = in_array($spotMode, ['both', 'ss'], true);
+                $checkSh  = in_array($spotMode, ['both', 'shopify'], true)
+                    && $ctx['shopifyToken'] && $ctx['shopifyStore'] !== 'N/A';
+
+                if ($checkSS && ($err = self::requireSS($ctx))) {
+                    $spotError = $err;
+                } else {
+                    try {
+                        $ss      = $checkSS ? new ShipStation($ctx['ssKey'], $ctx['ssSecret']) : null;
+                        $shopify = $checkSh ? new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']) : null;
+
+                        $spotResults = [];
+                        foreach ($numbers as $num) {
+                            $clean    = ltrim(trim($num), '#');
+                            $ssOrders = $ss      ? $ss->findByOrderNumber($clean)     : null;
+                            $shOrders = $shopify ? $shopify->findByOrderNumber($clean) : null;
+
+                            $spotResults[] = [
+                                'input'          => $num,
+                                'number'         => $clean,
+                                'mode'           => $spotMode,
+                                'ss_orders'      => $ssOrders,
+                                'ss_found'       => !empty($ssOrders),
+                                'shopify_orders' => $shOrders,
+                                'shopify_found'  => !empty($shOrders),
+                                'orders'         => $ssOrders ?? [],
+                                'found'          => !empty($ssOrders),
+                            ];
+                        }
+                    } catch (Throwable $e) {
+                        $spotError = 'Error: ' . $e->getMessage();
+                    }
+                }
+            }
+        }
+
+        return compact('spotResults', 'spotInput', 'spotError');
+    }
+
+    private static function loadMetafields(string $action, array $ctx): array
+    {
+        $metafieldDefs        = null;
+        $metafieldOrders      = null;
+        $metafieldInput       = '';
+        $metafieldError       = '';
+        $metafieldFilter      = '';
+        $metafieldSearch      = null;
+        $metafieldSearchError = '';
+
+        if ($err = self::requireShopify($ctx)) {
+            $metafieldError = $err;
+            return compact('metafieldDefs', 'metafieldOrders', 'metafieldInput', 'metafieldError',
+                           'metafieldFilter', 'metafieldSearch', 'metafieldSearchError');
+        }
+
+        $shopifyMeta = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+
+        try {
+            $metafieldDefs = $shopifyMeta->fetchMetafieldDefinitions('ORDER');
+        } catch (Throwable $e) {
+            $metafieldError = 'Could not load metafield definitions: ' . $e->getMessage();
+        }
+
+        if ($action === 'metafield_search') {
+            $mfNs    = trim($_POST['mf_ns']    ?? '');
+            $mfKey   = trim($_POST['mf_key']   ?? '');
+            $mfVal   = trim($_POST['mf_value'] ?? '');
+            $mfStart = trim($_POST['mf_start'] ?? '');
+            $mfEnd   = trim($_POST['mf_end']   ?? '');
+
+            if (!$mfNs || !$mfKey) {
+                $metafieldSearchError = 'Namespace and key are required.';
+            } else {
+                try {
+                    self::setLimits(120);
+                    $result = $shopifyMeta->searchOrdersByMetafield($mfNs, $mfKey, $mfVal, $mfStart, $mfEnd);
+                    $metafieldSearch = [
+                        'namespace'     => $mfNs,
+                        'key'           => $mfKey,
+                        'value'         => $mfVal,
+                        'start'         => $mfStart,
+                        'end'           => $mfEnd,
+                        'orders'        => $result['matches'],
+                        'scanned'       => $result['scanned'],
+                        'with_mf'       => $result['with_mf'],
+                        'sample_values' => $result['sample_values'],
+                        'pages'         => $result['pages'],
+                        'truncated'     => $result['truncated'],
+                    ];
+                } catch (Throwable $e) {
+                    $metafieldSearchError = $e->getMessage();
+                }
+            }
+        }
+
+        if ($action === 'metafield_lookup') {
+            $metafieldInput  = trim($_POST['mf_orders'] ?? '');
+            $metafieldFilter = trim($_POST['mf_filter'] ?? '');
+            $numbers         = array_filter(array_map('trim', preg_split('/[\s,]+/', $metafieldInput)));
+
+            if (empty($numbers)) {
+                $metafieldError = 'Enter at least one order number.';
+            } elseif (count($numbers) > 20) {
+                $metafieldError = 'Maximum 20 order numbers at once.';
+            } else {
+                $metafieldOrders = [];
+                foreach ($numbers as $num) {
+                    $clean    = ltrim($num, '#');
+                    $shOrders = $shopifyMeta->findByOrderNumber($clean);
+
+                    if (empty($shOrders)) {
+                        $metafieldOrders[] = ['number' => $clean, 'shopify_id' => null, 'metafields' => [], 'found' => false];
+                        continue;
+                    }
+
+                    foreach ($shOrders as $shOrder) {
+                        $oid = (string) ($shOrder['id'] ?? '');
+                        $mfs = $oid ? $shopifyMeta->getOrderMetafields($oid) : [];
+
+                        if ($metafieldFilter !== '') {
+                            $mfs = array_values(array_filter($mfs, function ($mf) use ($metafieldFilter) {
+                                $nk = ($mf['namespace'] ?? '') . '.' . ($mf['key'] ?? '');
+                                return stripos($nk, $metafieldFilter) !== false
+                                    || stripos((string) ($mf['value'] ?? ''), $metafieldFilter) !== false;
+                            }));
+                        }
+
+                        $metafieldOrders[] = [
+                            'number'     => $clean,
+                            'shopify_id' => $oid,
+                            'name'       => $shOrder['name'] ?? ('#' . $clean),
+                            'metafields' => $mfs,
+                            'found'      => true,
+                        ];
+                    }
+                }
+            }
+        }
+
+        return compact('metafieldDefs', 'metafieldOrders', 'metafieldInput', 'metafieldError',
+                       'metafieldFilter', 'metafieldSearch', 'metafieldSearchError');
     }
 
     private static function loadTagSearch(string $action, array $ctx): array
