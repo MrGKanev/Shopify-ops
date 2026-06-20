@@ -26,7 +26,7 @@ class Client
                 if ($res?->getStatusCode() !== 429 || $retries >= 5) return false;
                 $h    = $res->getHeaderLine('Retry-After');
                 $wait = $h !== '' ? (int)$h : 10;
-                echo "\n  [Shopify] Rate limited - waiting {$wait}s ...\n";
+                $this->logWarning('Shopify GraphQL rate limited; retrying after {seconds}s', ['seconds' => $wait]);
                 return true;
             },
             function ($retries, $res) {
@@ -148,5 +148,12 @@ class Client
         $options['headers']['Content-Type']           ??= 'application/json';
 
         return $this->http->request($method, $url, $options);
+    }
+
+    private function logWarning(string $message, array $context = []): void
+    {
+        if (class_exists(\Logger::class)) {
+            \Logger::getInstance()->warning($message, $context);
+        }
     }
 }

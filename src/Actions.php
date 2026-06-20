@@ -152,7 +152,7 @@ class Actions
         $end   = trim($_POST['audit_end'] ?? '');
         $loc   = '?page=jobs';
 
-        if ($err = self::validateDates($start, $end)) {
+        if ($err = DateRange::validate($start, $end)) {
             header('Location: ' . $loc . '&queue_error=' . urlencode($err)); exit;
         }
 
@@ -260,14 +260,4 @@ class Actions
         return $loc;
     }
 
-    private static function validateDates(string $start, string $end): ?string
-    {
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $start) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $end)) {
-            return 'Invalid date format. Use YYYY-MM-DD.';
-        }
-        if ($start > $end) {
-            return 'Start date must be before end date.';
-        }
-        return null;
-    }
 }

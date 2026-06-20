@@ -19,11 +19,15 @@ require_once __DIR__ . '/src/Shopify.php';
 require_once __DIR__ . '/src/ApiHealth.php';
 require_once __DIR__ . '/src/ConfigValidator.php';
 require_once __DIR__ . '/src/Comparator.php';
+require_once __DIR__ . '/src/DateRange.php';
 require_once __DIR__ . '/src/Reporter.php';
 require_once __DIR__ . '/src/SlackNotifier.php';
+require_once __DIR__ . '/src/ScanRunner.php';
 require_once __DIR__ . '/src/ViewHelpers.php';
 require_once __DIR__ . '/src/Actions.php';
 require_once __DIR__ . '/src/ToolRegistry.php';
+require_once __DIR__ . '/src/ManageSettingsPageLoader.php';
+require_once __DIR__ . '/src/SearchLookupPageLoader.php';
 require_once __DIR__ . '/src/PageLoader.php';
 
 Dotenv\Dotenv::createUnsafeImmutable(__DIR__)->safeLoad();

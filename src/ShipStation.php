@@ -35,7 +35,7 @@ class ShipStation
                 if ($res?->getStatusCode() !== 429 || $retries >= 5) return false;
                 $h    = $res->getHeaderLine('Retry-After');
                 $wait = $h !== '' ? (int)$h : 60;
-                echo "\n  [ShipStation] Rate limited - waiting {$wait}s ...\n";
+                $this->logWarning('ShipStation rate limited; retrying after {seconds}s', ['seconds' => $wait]);
                 return true;
             },
             function ($retries, $res) {
@@ -63,7 +63,10 @@ class ShipStation
         if (file_exists($metaFile)) {
             $meta = json_decode(file_get_contents($metaFile), true);
             if (is_array($meta) && ($meta['expires_at'] ?? 0) > time()) {
-                echo "  [cache] ShipStation orders loaded from checkpoint ({$startDate} → {$endDate})\n";
+                $this->logInfo('ShipStation orders loaded from checkpoint ({start} -> {end})', [
+                    'start' => $startDate,
+                    'end'   => $endDate,
+                ]);
                 return $this->mergePageFiles($cpDir);
             }
         }
@@ -77,9 +80,7 @@ class ShipStation
         $startPage     = count($existingPages) + 1;
 
         if ($startPage > 1) {
-            echo "  [checkpoint] Resuming ShipStation fetch from page {$startPage}";
-        } else {
-            echo "  Fetching ShipStation orders";
+            $this->logInfo('Resuming ShipStation fetch from page {page}', ['page' => $startPage]);
         }
 
         $page       = $startPage;
@@ -103,7 +104,6 @@ class ShipStation
             // Write page to disk immediately - survives a crash
             file_put_contents($cpDir . '/page_' . $page . '.json', json_encode($batch), LOCK_EX);
             unset($batch, $data);
-            echo '.';
             $page++;
         } while ($page <= $totalPages);
 
@@ -112,8 +112,11 @@ class ShipStation
         file_put_contents($metaFile, json_encode(['expires_at' => time() + $ttl]), LOCK_EX);
 
         $all = $this->mergePageFiles($cpDir);
-        echo " done (" . count($all) . " orders)\n";
-        echo "  [cache] ShipStation orders stored ({$startDate} → {$endDate})\n";
+        $this->logInfo('ShipStation orders stored ({start} -> {end}); {count} orders', [
+            'start' => $startDate,
+            'end'   => $endDate,
+            'count' => count($all),
+        ]);
 
         return $all;
     }
@@ -367,5 +370,19 @@ class ShipStation
         }
 
         return $decoded;
+    }
+
+    private function logInfo(string $message, array $context = []): void
+    {
+        if (class_exists(Logger::class)) {
+            Logger::getInstance()->info($message, $context);
+        }
+    }
+
+    private function logWarning(string $message, array $context = []): void
+    {
+        if (class_exists(Logger::class)) {
+            Logger::getInstance()->warning($message, $context);
+        }
     }
 }
