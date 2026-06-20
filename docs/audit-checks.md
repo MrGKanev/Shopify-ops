@@ -31,14 +31,14 @@ Shows shipments voided in ShipStation within the selected date range. Intended f
 - Displays: order#, void date, original ship date, carrier, service, tracking number, ship-to address
 
 ### Address Changes
-Uses the Shopify Events API to find orders where the shipping address was edited after placement. Only surfaces orders with an explicit "shipping address updated" event — not just any edit.
+Uses Shopify order events via GraphQL to find orders where the shipping address was edited after placement. Only surfaces orders with an explicit "shipping address updated" event — not just any edit.
 
 - Useful for catching last-minute requests, fraudulent address swaps, or support edits that didn't reach ShipStation
-- Large date ranges are slower due to Events API pagination
+- Large date ranges are slower due to order event pagination
 - Shows time gap between placement and change
 
 ### Order Edit History
-Uses the Shopify Events API to detect post-placement edits to line items, discounts, notes, or custom attributes. Distinct from Address Changes (which is tracked separately).
+Uses Shopify order events via GraphQL to detect post-placement edits to line items, discounts, notes, or custom attributes. Distinct from Address Changes (which is tracked separately).
 
 - Edit summary shows the actual event messages Shopify logged
 - Time gap color-coded: red ≥ 1 day, yellow ≥ 1 hour

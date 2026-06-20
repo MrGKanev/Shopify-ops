@@ -1,12 +1,12 @@
 <?= topbar('Order Edit History', 'Orders edited after placement - line items, discounts, notes, custom attributes') ?>
 
 <?= featureInfoStart('orderedits', 'Order Edit History') ?>
-  <p><strong>Order Edit History</strong> uses Shopify's Events API to find orders that were modified after they were placed. It detects changes to line items (added/removed), discounts, order notes, and custom attributes.</p>
+  <p><strong>Order Edit History</strong> uses Shopify order events via GraphQL to find orders that were modified after they were placed. It detects changes to line items (added/removed), discounts, order notes, and custom attributes.</p>
   <ul>
     <li>The <strong>Edit summary</strong> column shows the actual event messages Shopify logged for each change.</li>
     <li>The <strong>Time gap</strong> column shows how long after placement the most recent edit occurred.</li>
     <li>Address changes are shown on the separate <a href="?page=addrchanges">Address Changes</a> page.</li>
-    <li>Large date ranges may be slower - the Events API is paginated separately from orders.</li>
+    <li>Large date ranges may be slower because order events are paginated separately from orders.</li>
   </ul>
 <?= featureInfoEnd() ?>
 
