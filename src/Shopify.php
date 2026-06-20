@@ -10,6 +10,7 @@ require_once __DIR__ . '/ShopifyOrderFetcher.php';
 require_once __DIR__ . '/ShopifyOrderAudits.php';
 require_once __DIR__ . '/ShopifyAdminLookups.php';
 require_once __DIR__ . '/ShopifyCatalogAndFulfillment.php';
+require_once __DIR__ . '/ShopifyOrderArchive.php';
 
 /**
  * Shopify Admin API client.
@@ -19,11 +20,10 @@ require_once __DIR__ . '/ShopifyCatalogAndFulfillment.php';
  */
 class Shopify
 {
-    private const int PAGE_SIZE = 250; // max allowed by Shopify
     public const string API_VERSION = '2026-04';
 
-    private readonly ?Cache $cache;
     private readonly ShopifyGraphQLClient $graphqlClient;
+    private readonly ShopifyOrderArchive $orderArchive;
     private readonly ShopifyOrderFetcher $orderFetcher;
     private readonly ShopifyOrderAudits $orderAudits;
     private readonly ShopifyAdminLookups $adminLookups;
@@ -38,8 +38,8 @@ class Shopify
         $host = str_contains($store, '.') ? $store : "{$store}.myshopify.com";
         $baseUrl = "https://{$host}/admin/api/" . self::API_VERSION;
 
-        $this->cache                 = $cache;
         $this->graphqlClient         = new ShopifyGraphQLClient($baseUrl, $accessToken, $stack);
+        $this->orderArchive          = new ShopifyOrderArchive($this->graphqlClient, $cache);
         $this->orderFetcher          = new ShopifyOrderFetcher($this->graphqlClient);
         $this->orderAudits           = new ShopifyOrderAudits($this->orderFetcher);
         $this->adminLookups          = new ShopifyAdminLookups($this->graphqlClient, $cache);
@@ -56,77 +56,7 @@ class Shopify
      */
     public function fetchAllOrders(string $startDate, string $endDate): array
     {
-        $fetch = function () use ($startDate, $endDate): array {
-            $all      = [];
-            $queryStr = 'status:any created_at:>=' . $startDate . 'T00:00:00Z created_at:<=' . $endDate . 'T23:59:59Z';
-            $query    = <<<'GQL'
-            query FetchOrdersForAudit($query: String!, $after: String) {
-              orders(first: 250, sortKey: CREATED_AT, query: $query, after: $after) {
-                pageInfo { hasNextPage endCursor }
-                edges {
-                  node {
-                    id
-                    legacyResourceId
-                    name
-                    createdAt
-                    cancelledAt
-                    email
-                    displayFinancialStatus
-                    displayFulfillmentStatus
-                    totalPriceSet { shopMoney { amount currencyCode } }
-                    lineItems(first: 250) {
-                      nodes {
-                        id
-                        title
-                        name
-                        sku
-                        quantity
-                        variantTitle
-                        originalUnitPriceSet { shopMoney { amount currencyCode } }
-                      }
-                    }
-                    shippingLines(first: 250) {
-                      nodes {
-                        id
-                        title
-                        code
-                        originalPriceSet { shopMoney { amount currencyCode } }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-            GQL;
-
-            echo "  Fetching Shopify orders";
-
-            $this->paginateGraphQLVariables(
-                $query,
-                'orders',
-                ['query' => $queryStr],
-                function (array $edges) use (&$all) {
-                    foreach ($edges as $edge) {
-                        $all[] = ShopifyGraphQLNormalizer::normalizeOrder($edge['node'] ?? []);
-                    }
-                    echo '.';
-                },
-                1000
-            );
-
-            echo " done (" . count($all) . " orders)\n";
-            return $all;
-        };
-
-        if ($this->cache) {
-            return $this->cache->remember('shopify', "{$startDate}|{$endDate}", function () use ($fetch, $startDate, $endDate) {
-                $orders = $fetch();
-                echo "  [cache] Shopify orders stored ({$startDate} → {$endDate})\n";
-                return $orders;
-            });
-        }
-
-        return $fetch();
+        return $this->orderArchive->fetchAllOrders($startDate, $endDate);
     }
 
     /**
@@ -437,48 +367,4 @@ class Shopify
         return $this->orderAudits->fetchOrdersForTagPolicy($startDate, $endDate);
     }
 
-    // ── Private ───────────────────────────────────────────────────────
-
-    /**
-     * Executes a GraphQL query against the Shopify Admin API.
-     *
-     * @return array<string, mixed>
-     */
-    private function graphql(string $query, array $variables = []): array
-    {
-        return $this->graphqlClient->graphql($query, $variables);
-    }
-
-    /**
-     * Runs a paginated GraphQL query, calling $processor with each page's edges.
-     * The query template must contain {{AFTER}} where the cursor argument goes
-     * (e.g. `orders(first: 250, query: "..."{{AFTER}}) {`).
-     *
-     * @param  callable(array $edges): void $processor
-     * @return array{truncated: bool, pages: int}
-     */
-    private function paginateGraphQL(
-        string   $queryTemplate,
-        string   $rootKey,
-        callable $processor,
-        int      $maxPages = 20
-    ): array {
-        return $this->graphqlClient->paginateGraphQL($queryTemplate, $rootKey, $processor, $maxPages);
-    }
-
-    /**
-     * Runs a paginated GraphQL query that uses an `$after` variable.
-     *
-     * @param  callable(array $edges): void $processor
-     * @return array{truncated: bool, pages: int}
-     */
-    private function paginateGraphQLVariables(
-        string   $query,
-        string   $rootKey,
-        array    $variables,
-        callable $processor,
-        int      $maxPages = 20
-    ): array {
-        return $this->graphqlClient->paginateGraphQLVariables($query, $rootKey, $variables, $processor, $maxPages);
-    }
 }
