@@ -1,12 +1,14 @@
 <?php
 declare(strict_types=1);
 
+namespace Shopify\GraphQL;
+
 /**
  * Catalog and fulfillment-order utility queries.
  */
-class ShopifyCatalogAndFulfillment
+class CatalogAndFulfillment
 {
-    public function __construct(private readonly ShopifyGraphQLClient $client)
+    public function __construct(private readonly Client $client)
     {
     }
 
@@ -16,7 +18,7 @@ class ShopifyCatalogAndFulfillment
     public function fetchAllProducts(string $status = 'active'): array
     {
         $all      = [];
-        $queryArg = ShopifyGraphQLQueries::productStatusGraphQLArg($status);
+        $queryArg = Queries::productStatusGraphQLArg($status);
         $template = <<<GQL
         {
           products(first: 250{$queryArg}{{AFTER}}) {
@@ -56,7 +58,7 @@ class ShopifyCatalogAndFulfillment
             'products',
             function (array $edges) use (&$all) {
                 foreach ($edges as $edge) {
-                    $all[] = ShopifyGraphQLNormalizer::normalizeProduct($edge['node'] ?? []);
+                    $all[] = Normalizer::normalizeProduct($edge['node'] ?? []);
                 }
             },
             1000

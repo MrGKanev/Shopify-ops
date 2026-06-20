@@ -1,21 +1,23 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/ShopifyOrderQueryAudits.php';
-require_once __DIR__ . '/ShopifyOrderEventAudits.php';
+namespace Shopify\GraphQL;
+
+require_once __DIR__ . '/OrderQueryAudits.php';
+require_once __DIR__ . '/OrderEventAudits.php';
 
 /**
  * Backward-compatible facade for Shopify order audit workflows.
  */
-class ShopifyOrderAudits
+class OrderAudits
 {
-    private readonly ShopifyOrderQueryAudits $queryAudits;
-    private readonly ShopifyOrderEventAudits $eventAudits;
+    private readonly OrderQueryAudits $queryAudits;
+    private readonly OrderEventAudits $eventAudits;
 
-    public function __construct(ShopifyOrderFetcher $orders)
+    public function __construct(OrderFetcher $orders)
     {
-        $this->queryAudits = new ShopifyOrderQueryAudits($orders);
-        $this->eventAudits = new ShopifyOrderEventAudits($orders);
+        $this->queryAudits = new OrderQueryAudits($orders);
+        $this->eventAudits = new OrderEventAudits($orders);
     }
 
     /**

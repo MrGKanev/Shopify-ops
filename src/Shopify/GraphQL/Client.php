@@ -1,7 +1,9 @@
 <?php
 declare(strict_types=1);
 
-use GuzzleHttp\Client;
+namespace Shopify\GraphQL;
+
+use GuzzleHttp\Client as HttpClient;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use Psr\Http\Message\ResponseInterface;
@@ -9,9 +11,9 @@ use Psr\Http\Message\ResponseInterface;
 /**
  * Thin Admin GraphQL transport wrapper for Shopify.
  */
-class ShopifyGraphQLClient
+class Client
 {
-    private readonly Client $http;
+    private readonly HttpClient $http;
 
     public function __construct(
         private readonly string $baseUrl,
@@ -32,7 +34,7 @@ class ShopifyGraphQLClient
                 return ($h !== '' ? (int)$h : 10) * 1000;
             }
         ));
-        $this->http = new Client(['handler' => $stack]);
+        $this->http = new HttpClient(['handler' => $stack]);
     }
 
     /**
@@ -55,12 +57,12 @@ class ShopifyGraphQLClient
         $body = (string) $response->getBody();
 
         if ($code < 200 || $code >= 300) {
-            throw new RuntimeException("Shopify GraphQL error {$code}: {$body}");
+            throw new \RuntimeException("Shopify GraphQL error {$code}: {$body}");
         }
 
         $decoded = json_decode($body, true);
         if (isset($decoded['errors'])) {
-            throw new RuntimeException("Shopify GraphQL: " . json_encode($decoded['errors']));
+            throw new \RuntimeException("Shopify GraphQL: " . json_encode($decoded['errors']));
         }
 
         return is_array($decoded) ? $decoded : [];

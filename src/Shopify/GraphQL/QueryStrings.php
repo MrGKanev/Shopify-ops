@@ -1,10 +1,12 @@
 <?php
 declare(strict_types=1);
 
+namespace Shopify\GraphQL;
+
 /**
  * Search query-string builders for Shopify Admin GraphQL connections.
  */
-class ShopifyGraphQLQueryStrings
+class QueryStrings
 {
     public static function orderDateRangeQuery(string $startDate, string $endDate): string
     {
@@ -78,7 +80,7 @@ class ShopifyGraphQLQueryStrings
         }
 
         if (!in_array($normalized, ['active', 'draft', 'archived'], true)) {
-            throw new InvalidArgumentException("Unsupported Shopify product status: {$status}");
+            throw new \InvalidArgumentException("Unsupported Shopify product status: {$status}");
         }
 
         return ', query: "status:' . $normalized . '"';

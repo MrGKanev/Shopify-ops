@@ -1,10 +1,12 @@
 <?php
 declare(strict_types=1);
 
+namespace Shopify\GraphQL;
+
 /**
  * Shared Shopify Admin GraphQL ID helpers.
  */
-class ShopifyGraphQLIds
+class Ids
 {
     public static function orderGid(string $orderId): string
     {
@@ -14,7 +16,7 @@ class ShopifyGraphQLIds
         }
 
         if (!ctype_digit($trimmed)) {
-            throw new InvalidArgumentException("Unsupported Shopify order ID: {$orderId}");
+            throw new \InvalidArgumentException("Unsupported Shopify order ID: {$orderId}");
         }
 
         return "gid://shopify/Order/{$trimmed}";

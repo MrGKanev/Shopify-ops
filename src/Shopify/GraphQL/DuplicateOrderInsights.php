@@ -1,12 +1,14 @@
 <?php
 declare(strict_types=1);
 
+namespace Shopify\GraphQL;
+
 /**
  * Duplicate-order detection for Shopify orders.
  */
-class ShopifyDuplicateOrderInsights
+class DuplicateOrderInsights
 {
-    public function __construct(private readonly ShopifyGraphQLClient $client)
+    public function __construct(private readonly Client $client)
     {
     }
 

@@ -1,10 +1,12 @@
 <?php
 declare(strict_types=1);
 
+namespace Shopify\GraphQL;
+
 /**
  * Maps Shopify Admin GraphQL event payloads into the legacy REST event shape.
  */
-class ShopifyEventNormalizer
+class EventNormalizer
 {
     /**
      * @return array<string, mixed>
@@ -13,14 +15,14 @@ class ShopifyEventNormalizer
     {
         $subjectGid = (string)($event['subjectId'] ?? '');
         if ($subjectGid === '' && $fallbackOrderId !== null) {
-            $subjectGid = ShopifyGraphQLIds::orderGid($fallbackOrderId);
+            $subjectGid = Ids::orderGid($fallbackOrderId);
         }
 
-        $subjectId = $subjectGid !== '' ? ShopifyGraphQLIds::legacyId(null, $subjectGid) : '';
+        $subjectId = $subjectGid !== '' ? Ids::legacyId(null, $subjectGid) : '';
         $action    = strtolower((string)($event['action'] ?? ''));
 
         return [
-            'id'                   => ShopifyGraphQLIds::legacyId(null, $event['id'] ?? null),
+            'id'                   => Ids::legacyId(null, $event['id'] ?? null),
             'admin_graphql_api_id' => $event['id'] ?? '',
             'verb'                 => $action,
             'action'               => $action,

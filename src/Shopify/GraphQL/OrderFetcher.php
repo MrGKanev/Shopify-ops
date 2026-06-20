@@ -1,12 +1,14 @@
 <?php
 declare(strict_types=1);
 
+namespace Shopify\GraphQL;
+
 /**
  * Shared GraphQL batch fetches for orders and order events.
  */
-class ShopifyOrderFetcher
+class OrderFetcher
 {
-    public function __construct(private readonly ShopifyGraphQLClient $client)
+    public function __construct(private readonly Client $client)
     {
     }
 
@@ -28,7 +30,7 @@ class ShopifyOrderFetcher
           }
         }
         GQL;
-        $query = str_replace('{{EVENT_FIELDS}}', ShopifyGraphQLQueries::eventFields(), $query);
+        $query = str_replace('{{EVENT_FIELDS}}', Queries::eventFields(), $query);
 
         $this->client->paginateGraphQLVariables(
             $query,
@@ -38,7 +40,7 @@ class ShopifyOrderFetcher
                 foreach ($edges as $edge) {
                     $node = $edge['node'] ?? null;
                     if (is_array($node)) {
-                        $events[] = ShopifyGraphQLNormalizer::normalizeEvent($node);
+                        $events[] = Normalizer::normalizeEvent($node);
                     }
                 }
             },
@@ -60,7 +62,7 @@ class ShopifyOrderFetcher
             if ($id === '') {
                 continue;
             }
-            $ids[] = ShopifyGraphQLNormalizer::orderGid($id);
+            $ids[] = Normalizer::orderGid($id);
         }
         $ids = array_values(array_unique($ids));
         if ($ids === []) {
@@ -86,7 +88,7 @@ class ShopifyOrderFetcher
                     continue;
                 }
 
-                $order = ShopifyGraphQLNormalizer::normalizeOrder($node);
+                $order = Normalizer::normalizeOrder($node);
                 $id    = (string)($order['id'] ?? '');
                 if ($id !== '') {
                     $orders[$id] = $order;
@@ -128,7 +130,7 @@ class ShopifyOrderFetcher
                     if ($nodeFilter !== null && !$nodeFilter($node)) {
                         continue;
                     }
-                    $all[] = ShopifyGraphQLNormalizer::normalizeOrder($node);
+                    $all[] = Normalizer::normalizeOrder($node);
                 }
             },
             1000
