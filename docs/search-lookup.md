@@ -75,14 +75,14 @@ Shows the complete order history for a customer, looked up by email address.
 ### Metafields
 Three modes on one page:
 
-1. **Definitions** — lists all order metafield definitions from the store via GraphQL
-2. **Search by value** — paginate through orders in a date range filtered by namespace + key, optionally by value. Leave value empty to find all orders that have a given metafield set at all. Scans up to 2,500 orders.
-3. **Lookup by order number** — fetch all metafields on one or more specific orders, filterable by namespace.key or value substring
+1. **Definitions** - lists all order metafield definitions from the store via GraphQL
+2. **Search by value** - paginate through orders in a date range filtered by namespace + key, optionally by value. Leave value empty to find all orders that have a given metafield set at all. Scans up to 2,500 orders.
+3. **Lookup by order number** - fetch all metafields on one or more specific orders, filterable by namespace.key or value substring
 
 Live API calls, not cached.
 
 ### Tag Search
-Finds all Shopify orders carrying a specific tag using Shopify's native tag index (`tag:"value"` in the GraphQL query string). No full table scan — fast regardless of store size.
+Finds all Shopify orders carrying a specific tag using Shopify's native tag index (`tag:"value"` in the GraphQL query string). No full table scan - fast regardless of store size.
 
 - Exact, case-insensitive match (partial matching not supported by the index)
 - Optional date range; omit to search all orders

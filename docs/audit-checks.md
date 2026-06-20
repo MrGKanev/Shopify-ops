@@ -31,7 +31,7 @@ Shows shipments voided in ShipStation within the selected date range. Intended f
 - Displays: order#, void date, original ship date, carrier, service, tracking number, ship-to address
 
 ### Address Changes
-Uses Shopify order events via GraphQL to find orders where the shipping address was edited after placement. Only surfaces orders with an explicit "shipping address updated" event — not just any edit.
+Uses Shopify order events via GraphQL to find orders where the shipping address was edited after placement. Only surfaces orders with an explicit "shipping address updated" event - not just any edit.
 
 - Useful for catching last-minute requests, fraudulent address swaps, or support edits that didn't reach ShipStation
 - Large date ranges are slower due to order event pagination
@@ -49,7 +49,7 @@ Uses Shopify order events via GraphQL to detect post-placement edits to line ite
 ## Fraud & Compliance
 
 ### Country Mismatch
-Finds paid orders where the billing country differs from the shipping country — a documented Shopify fraud signal. Common in freight forwarding, stolen card abuse, and drop-ship fraud. Most matches are legitimate, but outliers are worth reviewing manually.
+Finds paid orders where the billing country differs from the shipping country - a documented Shopify fraud signal. Common in freight forwarding, stolen card abuse, and drop-ship fraud. Most matches are legitimate, but outliers are worth reviewing manually.
 
 - In-table search by order#, email, country
 
@@ -93,7 +93,7 @@ Finds Shopify orders that are refunded or cancelled but still active in ShipStat
 - Uses the same normalized order matching as the audit engine
 
 ### Bundle Check
-Scans for orders missing required companion items as defined in `order_types.json` under `required_items`. Covers fulfilled orders too — catching shipped bundles missing a component is the most urgent case. See [order-types.md](order-types.md) for configuration.
+Scans for orders missing required companion items as defined in `order_types.json` under `required_items`. Covers fulfilled orders too - catching shipped bundles missing a component is the most urgent case. See [order-types.md](order-types.md) for configuration.
 
 ---
 

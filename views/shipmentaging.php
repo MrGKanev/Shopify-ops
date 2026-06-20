@@ -20,7 +20,7 @@
     </div>
   </form>
   <?php if ($saResult !== null): ?>
-    <div class="duration-note mt-4 mb-0">Scanned <strong><?= $saResult['scanned'] ?></strong> awaiting orders — <strong><?= count($saResult['rows']) ?></strong> older than <?= (int)$saResult['threshold'] ?> days</div>
+    <div class="duration-note mt-4 mb-0">Scanned <strong><?= $saResult['scanned'] ?></strong> awaiting orders - <strong><?= count($saResult['rows']) ?></strong> older than <?= (int)$saResult['threshold'] ?> days</div>
   <?php endif; ?>
 </div>
 

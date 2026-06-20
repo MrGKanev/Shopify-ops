@@ -3,7 +3,7 @@
 <?= featureInfoStart('notracking', 'Fulfilled Without Tracking') ?>
   <p><strong>Fulfilled Without Tracking</strong> finds orders that Shopify has marked as fulfilled (or partially fulfilled) but where one or more fulfillments have no tracking number after the configured grace period.</p>
   <ul>
-    <li>Only fulfillments older than the <strong>grace period</strong> (default 24 h) are flagged — newly created fulfillments often have tracking added within minutes.</li>
+    <li>Only fulfillments older than the <strong>grace period</strong> (default 24 h) are flagged - newly created fulfillments often have tracking added within minutes.</li>
     <li>Carriers sometimes scan packages without a tracking upload. This check surfaces those gaps before customers notice.</li>
     <li>Fulfillments that have <code>tracking_company</code> set but no <code>tracking_number</code> are also included.</li>
   </ul>

@@ -17,7 +17,7 @@
     <?php dateRangePartial('as', $asStart, $asEnd) ?>
   </form>
   <?php if ($asResult !== null): ?>
-    <div class="duration-note mt-4 mb-0">Scanned <strong><?= $asResult['scanned'] ?></strong> Shopify exception orders and <strong><?= $asResult['active_ss'] ?></strong> active ShipStation orders — <strong><?= count($asResult['rows']) ?></strong> conflicts</div>
+    <div class="duration-note mt-4 mb-0">Scanned <strong><?= $asResult['scanned'] ?></strong> Shopify exception orders and <strong><?= $asResult['active_ss'] ?></strong> active ShipStation orders - <strong><?= count($asResult['rows']) ?></strong> conflicts</div>
   <?php endif; ?>
 </div>
 

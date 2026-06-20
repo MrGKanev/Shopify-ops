@@ -2,15 +2,15 @@
 
 A self-hosted Shopify operations toolkit. Audits and surfaces Shopify order issues, provides search and lookup tools, and optionally syncs with ShipStation for order matching and push. Runs on plain PHP - no framework, no build step.
 
-> **Shopify is the only required integration.** Most pages work with a Shopify access token alone. ShipStation credentials are optional — needed only for the audit engine, push log, and order matching features.
+> **Shopify is the only required integration.** Most pages work with a Shopify access token alone. ShipStation credentials are optional - needed only for the audit engine, push log, and order matching features.
 
 ---
 
 ## Tools
 
-- **Audit** — Run Audit, Reports, Trends, duplicate/refund/address/email/fraud/product/inventory checks → [full list](docs/tools.md#audit)
-- **Search & Lookup** — Spot-check, Order Timeline, Metafields, Tag Search, Customer Lookup, Tracking, Packing Slip → [full list](docs/tools.md#search--lookup)
-- **Manage** — Ignored Orders, Push Log, Settings → [full list](docs/tools.md#manage)
+- **Audit** - Run Audit, Reports, Trends, duplicate/refund/address/email/fraud/product/inventory checks → [full list](docs/tools.md#audit)
+- **Search & Lookup** - Spot-check, Order Timeline, Metafields, Tag Search, Customer Lookup, Tracking, Packing Slip → [full list](docs/tools.md#search--lookup)
+- **Manage** - Ignored Orders, Push Log, Settings → [full list](docs/tools.md#manage)
 
 ---
 
@@ -19,7 +19,7 @@ A self-hosted Shopify operations toolkit. Audits and surfaces Shopify order issu
 - PHP 8.3+ with the `curl` extension
 - A web server (Apache / Nginx / Caddy) or `php -S` for local use
 - Shopify Admin API access token (`read_orders`, `read_fulfillments`, `read_metaobjects` scopes)
-- ShipStation API credentials _(optional — audit and push features only)_
+- ShipStation API credentials _(optional - audit and push features only)_
 
 ---
 
@@ -81,8 +81,8 @@ php worker.php --store store_id --once
 
 ## Further reading
 
-- [Audit engine — how it works, skip rules, duplicate detection](docs/audit.md)
-- [Audit checks — address, email, fraud, product, inventory checks](docs/audit-checks.md)
-- [Search & Lookup — spot-check, timeline, metafields, tags, customer](docs/search-lookup.md)
-- [Order type classification — rules, JSON config, required items](docs/order-types.md)
-- [Configuration — all ENV vars, caching, security](docs/configuration.md)
+- [Audit engine - how it works, skip rules, duplicate detection](docs/audit.md)
+- [Audit checks - address, email, fraud, product, inventory checks](docs/audit-checks.md)
+- [Search & Lookup - spot-check, timeline, metafields, tags, customer](docs/search-lookup.md)
+- [Order type classification - rules, JSON config, required items](docs/order-types.md)
+- [Configuration - all ENV vars, caching, security](docs/configuration.md)

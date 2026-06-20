@@ -8,8 +8,8 @@ declare(strict_types=1);
  * with a wrapper: { "expires_at": <unix>, "data": [...] }
  *
  * Two separate time controls:
- *   $ttl       — how long the data is considered fresh (reused on next request)
- *   $retention — how long the file stays on disk AFTER expiry (for debugging)
+ *   $ttl       - how long the data is considered fresh (reused on next request)
+ *   $retention - how long the file stays on disk AFTER expiry (for debugging)
  */
 class Cache
 {
@@ -55,7 +55,7 @@ class Cache
                     return $wrapper['data'];
                 }
             }
-            // Expired — file stays on disk until pruneExpired() removes it after retention period
+            // Expired - file stays on disk until pruneExpired() removes it after retention period
         }
 
         $data    = $fetch();

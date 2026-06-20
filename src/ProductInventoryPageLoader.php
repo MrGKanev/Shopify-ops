@@ -73,8 +73,12 @@ class ProductInventoryPageLoader
         $pcError  = '';
 
         if ($action === 'scan_products') {
+            $runStartedAt = date('Y-m-d H:i:s');
+            $t0 = microtime(true);
+
             if ($err = self::requireShopify($ctx)) {
                 $pcError = $err;
+                self::appendRunLog('scan_products', 'config_error', $runStartedAt, $t0, $pcError);
             } else {
                 try {
                     self::setLimits(120);
@@ -128,8 +132,17 @@ class ProductInventoryPageLoader
                         'critical' => count(array_filter($rows, fn($r) => $r['severity'] === 'critical')),
                         'warnings' => count(array_filter($rows, fn($r) => $r['severity'] === 'warning')),
                     ];
+                    self::appendRunLog(
+                        'scan_products',
+                        count($rows) > 0 ? 'issues_found' : 'ok',
+                        $runStartedAt,
+                        $t0,
+                        scanned: $scanned,
+                        rowsFound: count($rows)
+                    );
                 } catch (Throwable $e) {
                     $pcError = $e->getMessage();
+                    self::appendRunLog('scan_products', 'error', $runStartedAt, $t0, $pcError);
                 }
             }
         }
@@ -143,8 +156,12 @@ class ProductInventoryPageLoader
         $sdError  = '';
 
         if ($action === 'scan_skudupes') {
+            $runStartedAt = date('Y-m-d H:i:s');
+            $t0 = microtime(true);
+
             if ($err = self::requireShopify($ctx)) {
                 $sdError = $err;
+                self::appendRunLog('scan_skudupes', 'config_error', $runStartedAt, $t0, $sdError);
             } else {
                 try {
                     self::setLimits(120);
@@ -185,8 +202,18 @@ class ProductInventoryPageLoader
                         'scanned'  => count($products),
                         'variants' => $totalVariants,
                     ];
+                    self::appendRunLog(
+                        'scan_skudupes',
+                        count($rows) > 0 ? 'issues_found' : 'ok',
+                        $runStartedAt,
+                        $t0,
+                        scanned: count($products),
+                        rowsFound: count($rows),
+                        meta: ['variants' => $totalVariants]
+                    );
                 } catch (Throwable $e) {
                     $sdError = $e->getMessage();
+                    self::appendRunLog('scan_skudupes', 'error', $runStartedAt, $t0, $sdError);
                 }
             }
         }
@@ -200,10 +227,15 @@ class ProductInventoryPageLoader
         $ioError  = '';
 
         if ($action === 'scan_inventory') {
+            $runStartedAt = date('Y-m-d H:i:s');
+            $t0 = microtime(true);
+
             if ($err = self::requireShopify($ctx)) {
                 $ioError = $err;
+                self::appendRunLog('scan_inventory', 'config_error', $runStartedAt, $t0, $ioError);
             } elseif ($err = self::requireSS($ctx)) {
                 $ioError = $err;
+                self::appendRunLog('scan_inventory', 'config_error', $runStartedAt, $t0, $ioError);
             } else {
                 try {
                     self::setLimits(300);
@@ -264,8 +296,18 @@ class ProductInventoryPageLoader
                         'products_scanned' => count($products),
                         'ss_orders'        => count($ssOrders),
                     ];
+                    self::appendRunLog(
+                        'scan_inventory',
+                        count($rows) > 0 ? 'issues_found' : 'ok',
+                        $runStartedAt,
+                        $t0,
+                        scanned: count($products),
+                        rowsFound: count($rows),
+                        meta: ['shipstation_orders' => count($ssOrders)]
+                    );
                 } catch (Throwable $e) {
                     $ioError = $e->getMessage();
+                    self::appendRunLog('scan_inventory', 'error', $runStartedAt, $t0, $ioError);
                 }
             }
         }
@@ -279,8 +321,12 @@ class ProductInventoryPageLoader
         $zpError  = '';
 
         if ($action === 'scan_zombieproducts') {
+            $runStartedAt = date('Y-m-d H:i:s');
+            $t0 = microtime(true);
+
             if ($err = self::requireShopify($ctx)) {
                 $zpError = $err;
+                self::appendRunLog('scan_zombieproducts', 'config_error', $runStartedAt, $t0, $zpError);
             } else {
                 try {
                     self::setLimits(120);
@@ -329,8 +375,17 @@ class ProductInventoryPageLoader
                     }
 
                     $zpResult = ['rows' => $rows, 'scanned' => count($products)];
+                    self::appendRunLog(
+                        'scan_zombieproducts',
+                        count($rows) > 0 ? 'issues_found' : 'ok',
+                        $runStartedAt,
+                        $t0,
+                        scanned: count($products),
+                        rowsFound: count($rows)
+                    );
                 } catch (Throwable $e) {
                     $zpError = $e->getMessage();
+                    self::appendRunLog('scan_zombieproducts', 'error', $runStartedAt, $t0, $zpError);
                 }
             }
         }
@@ -420,6 +475,28 @@ class ProductInventoryPageLoader
         return (!$ctx['ssKey'] || !$ctx['ssSecret'])
             ? 'SS_API_KEY / SS_API_SECRET not set in .env.'
             : null;
+    }
+
+    private static function appendRunLog(
+        string $tool,
+        string $status,
+        string $createdAt,
+        float $startedAt,
+        string $error = '',
+        ?int $scanned = null,
+        ?int $rowsFound = null,
+        array $meta = []
+    ): void {
+        RunLog::append([
+            'tool'       => $tool,
+            'status'     => $status,
+            'created_at' => $createdAt,
+            'duration'   => round(microtime(true) - $startedAt, 2),
+            'scanned'    => $scanned,
+            'rows_found' => $rowsFound,
+            'error'      => $error,
+            'meta'       => ['api_version' => Shopify::API_VERSION] + $meta,
+        ]);
     }
 
     private static function suppressOutput(callable $fn): mixed

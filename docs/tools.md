@@ -24,7 +24,7 @@
 | **SKU Duplicates** | Detect variants sharing the same SKU across the catalogue. |
 | **Inventory Oversell Risk** | Surface variants where ShipStation awaiting qty exceeds available Shopify stock. |
 | **Inventory Aging** | Find active tracked zero-stock variants that still sold recently. |
-| **Billing ≠ Shipping Country** | Flag orders where billing and shipping countries differ — a documented fraud signal. |
+| **Billing ≠ Shipping Country** | Flag orders where billing and shipping countries differ - a documented fraud signal. |
 | **Discount Abuse** | Group discount-code use by shipping address and flag clusters across multiple customer emails. |
 | **Tag Policy Audit** | Validate required and forbidden tag combinations from `tag_policy.json`. |
 | **Partial Fulfillment Stalls** | Open orders partially shipped with unfulfilled items stalled for N+ days. |
@@ -36,7 +36,7 @@
 | --- | --- |
 | **Spot-check** | Live lookup of 1–50 order numbers in ShipStation and/or Shopify simultaneously. |
 | **Metafields** | Browse metafield definitions, search orders by metafield value, or look up all metafields on a specific order. |
-| **Tag Search** | Find all Shopify orders with a specific tag — fast, native index, no full scan. |
+| **Tag Search** | Find all Shopify orders with a specific tag - fast, native index, no full scan. |
 | **Tag Audit** | Build a complete tag inventory across a date range with frequency and last-seen info. |
 | **Customer Lookup** | Full order history for a customer by email, with lifetime spend summary and CSV export. |
 | **Tracking Feed** | Live tracking details for 1–30 orders with direct links to carrier tracking pages. |

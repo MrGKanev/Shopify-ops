@@ -17,7 +17,7 @@
     <?php dateRangePartial('da', $daStart, $daEnd, '<div class="field"><label>Min emails</label><input type="number" name="da_min_emails" min="2" value="' . esc($daMinEmails) . '"></div>') ?>
   </form>
   <?php if ($daResult !== null): ?>
-    <div class="duration-note mt-4 mb-0">Scanned <strong><?= $daResult['scanned'] ?></strong> paid orders — <strong><?= count($daResult['rows']) ?></strong> suspicious clusters</div>
+    <div class="duration-note mt-4 mb-0">Scanned <strong><?= $daResult['scanned'] ?></strong> paid orders - <strong><?= count($daResult['rows']) ?></strong> suspicious clusters</div>
   <?php endif; ?>
 </div>
 

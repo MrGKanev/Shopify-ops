@@ -18,7 +18,7 @@
     <?php dateRangePartial('sla', $slaStart, $slaEnd, '<div class="field"><label>SLA days</label><input type="number" name="sla_threshold" min="1" value="' . esc($slaThreshold) . '"></div>') ?>
   </form>
   <?php if ($slaResult !== null): ?>
-    <div class="duration-note mt-4 mb-0">Scanned <strong><?= $slaResult['scanned'] ?></strong> orders (<?= esc($slaResult['start']) ?> → <?= esc($slaResult['end']) ?>) — <strong><?= count($slaResult['rows']) ?></strong> breached <?= (int)$slaResult['threshold'] ?> day SLA</div>
+    <div class="duration-note mt-4 mb-0">Scanned <strong><?= $slaResult['scanned'] ?></strong> orders (<?= esc($slaResult['start']) ?> → <?= esc($slaResult['end']) ?>) - <strong><?= count($slaResult['rows']) ?></strong> breached <?= (int)$slaResult['threshold'] ?> day SLA</div>
   <?php endif; ?>
 </div>
 

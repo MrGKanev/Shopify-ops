@@ -1,11 +1,11 @@
 <?= topbar('SS Shipped / Shopify Unfulfilled', 'ShipStation shipped orders that Shopify still shows as unfulfilled') ?>
 
 <?= featureInfoStart('ssshipped', 'SS Shipped / Shopify Unfulfilled') ?>
-  <p><strong>SS Shipped / Shopify Unfulfilled</strong> is the reverse of the standard audit. It finds orders that ShipStation has marked as <em>shipped</em> but that still show as <em>unfulfilled</em> (or partially fulfilled) in Shopify — a sign of a sync failure.</p>
+  <p><strong>SS Shipped / Shopify Unfulfilled</strong> is the reverse of the standard audit. It finds orders that ShipStation has marked as <em>shipped</em> but that still show as <em>unfulfilled</em> (or partially fulfilled) in Shopify - a sign of a sync failure.</p>
   <ul>
     <li>Common causes: webhook delivery failure, API timeout during fulfillment sync, or a manually shipped order in ShipStation without a Shopify fulfillment hook.</li>
-    <li>Orders that are <em>fulfilled</em> in both systems are excluded — only the discrepancy is shown.</li>
-    <li>Orders not found in Shopify at all (true orphans) are excluded — use the <a href="?page=orphans">Orphan Detector</a> for those.</li>
+    <li>Orders that are <em>fulfilled</em> in both systems are excluded - only the discrepancy is shown.</li>
+    <li>Orders not found in Shopify at all (true orphans) are excluded - use the <a href="?page=orphans">Orphan Detector</a> for those.</li>
   </ul>
 <?= featureInfoEnd() ?>
 
