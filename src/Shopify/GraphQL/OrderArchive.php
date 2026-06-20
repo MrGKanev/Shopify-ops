@@ -1,14 +1,16 @@
 <?php
 declare(strict_types=1);
 
+namespace Shopify\GraphQL;
+
 /**
  * Cached full-order range fetch used by the main ShipStation comparison audit.
  */
-class ShopifyOrderArchive
+class OrderArchive
 {
     public function __construct(
-        private readonly ShopifyGraphQLClient $client,
-        private readonly ?Cache $cache = null
+        private readonly Client $client,
+        private readonly ?\Cache $cache = null
     ) {
     }
 
@@ -71,7 +73,7 @@ class ShopifyOrderArchive
                 ['query' => $queryStr],
                 function (array $edges) use (&$all) {
                     foreach ($edges as $edge) {
-                        $all[] = ShopifyGraphQLNormalizer::normalizeOrder($edge['node'] ?? []);
+                        $all[] = Normalizer::normalizeOrder($edge['node'] ?? []);
                     }
                     echo '.';
                 },

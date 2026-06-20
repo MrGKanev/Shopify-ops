@@ -1,14 +1,16 @@
 <?php
 declare(strict_types=1);
 
+namespace Shopify\GraphQL;
+
 /**
  * Fulfillment hold-state lookup for Shopify orders.
  */
-class ShopifyOrderHoldLookup
+class OrderHoldLookup
 {
     public function __construct(
-        private readonly ShopifyGraphQLClient $client,
-        private readonly ?Cache $cache = null
+        private readonly Client $client,
+        private readonly ?\Cache $cache = null
     ) {
     }
 
@@ -32,7 +34,7 @@ class ShopifyOrderHoldLookup
             $cursor = null;
             do {
                 $data = $this->client->graphql($query, [
-                    'id'    => ShopifyGraphQLNormalizer::orderGid($orderId),
+                    'id'    => Normalizer::orderGid($orderId),
                     'after' => $cursor,
                 ]);
 

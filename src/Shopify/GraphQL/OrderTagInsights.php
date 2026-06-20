@@ -1,12 +1,14 @@
 <?php
 declare(strict_types=1);
 
+namespace Shopify\GraphQL;
+
 /**
  * Tag search and tag statistics for Shopify orders.
  */
-class ShopifyOrderTagInsights
+class OrderTagInsights
 {
-    public function __construct(private readonly ShopifyGraphQLClient $client)
+    public function __construct(private readonly Client $client)
     {
     }
 

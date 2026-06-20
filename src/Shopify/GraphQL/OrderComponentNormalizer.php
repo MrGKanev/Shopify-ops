@@ -1,12 +1,14 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/ShopifyGraphQLIds.php';
+namespace Shopify\GraphQL;
+
+require_once __DIR__ . '/Ids.php';
 
 /**
  * Normalizes nested Order component payloads from Shopify Admin GraphQL.
  */
-class ShopifyOrderComponentNormalizer
+class OrderComponentNormalizer
 {
     public static function orderNumberFromName(string $name): int|string
     {
@@ -46,7 +48,7 @@ class ShopifyOrderComponentNormalizer
     public static function normalizeLineItem(array $lineItem): array
     {
         $normalized = [
-            'id'                   => ShopifyGraphQLIds::legacyId(null, $lineItem['id'] ?? null),
+            'id'                   => Ids::legacyId(null, $lineItem['id'] ?? null),
             'title'                => $lineItem['title'] ?? $lineItem['name'] ?? '',
             'name'                 => $lineItem['name'] ?? $lineItem['title'] ?? '',
             'sku'                  => $lineItem['sku'] ?? '',
@@ -69,7 +71,7 @@ class ShopifyOrderComponentNormalizer
     public static function normalizeShippingLine(array $shippingLine): array
     {
         return [
-            'id'                   => ShopifyGraphQLIds::legacyId(null, $shippingLine['id'] ?? null),
+            'id'                   => Ids::legacyId(null, $shippingLine['id'] ?? null),
             'title'                => $shippingLine['title'] ?? '',
             'code'                 => $shippingLine['code'] ?? '',
             'price'                => $shippingLine['originalPriceSet']['shopMoney']['amount'] ?? '0.00',
@@ -101,7 +103,7 @@ class ShopifyOrderComponentNormalizer
         }
 
         return [
-            'id'                   => ShopifyGraphQLIds::legacyId($fulfillment['legacyResourceId'] ?? null, $fulfillment['id'] ?? null),
+            'id'                   => Ids::legacyId($fulfillment['legacyResourceId'] ?? null, $fulfillment['id'] ?? null),
             'admin_graphql_api_id' => $fulfillment['id'] ?? '',
             'created_at'           => $fulfillment['createdAt'] ?? '',
             'status'               => strtolower((string)($fulfillment['status'] ?? '')),
@@ -131,7 +133,7 @@ class ShopifyOrderComponentNormalizer
             $refundLineItems[] = [
                 'quantity'     => (int)($node['quantity'] ?? 0),
                 'subtotal'     => $node['subtotalSet']['shopMoney']['amount'] ?? '0.00',
-                'line_item_id' => ShopifyGraphQLIds::legacyId(null, $lineItem['id'] ?? null),
+                'line_item_id' => Ids::legacyId(null, $lineItem['id'] ?? null),
                 'line_item'    => self::normalizeLineItem($lineItem),
             ];
         }
@@ -143,7 +145,7 @@ class ShopifyOrderComponentNormalizer
             }
 
             $transactions[] = [
-                'id'                   => ShopifyGraphQLIds::legacyId(null, $node['id'] ?? null),
+                'id'                   => Ids::legacyId(null, $node['id'] ?? null),
                 'kind'                 => strtolower((string)($node['kind'] ?? '')),
                 'status'               => strtolower((string)($node['status'] ?? '')),
                 'amount'               => $node['amountSet']['shopMoney']['amount'] ?? '0.00',
@@ -152,7 +154,7 @@ class ShopifyOrderComponentNormalizer
         }
 
         return [
-            'id'                   => ShopifyGraphQLIds::legacyId($refund['legacyResourceId'] ?? null, $refund['id'] ?? null),
+            'id'                   => Ids::legacyId($refund['legacyResourceId'] ?? null, $refund['id'] ?? null),
             'admin_graphql_api_id' => $refund['id'] ?? '',
             'created_at'           => $refund['createdAt'] ?? '',
             'note'                 => $refund['note'] ?? '',

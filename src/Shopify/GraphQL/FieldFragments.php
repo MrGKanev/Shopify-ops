@@ -1,10 +1,12 @@
 <?php
 declare(strict_types=1);
 
+namespace Shopify\GraphQL;
+
 /**
  * Reusable Shopify Admin GraphQL field fragments.
  */
-class ShopifyGraphQLFieldFragments
+class FieldFragments
 {
     public static function orderCoreFields(): string
     {

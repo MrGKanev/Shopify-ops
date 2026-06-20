@@ -1,12 +1,14 @@
 <?php
 declare(strict_types=1);
 
+namespace Shopify\GraphQL;
+
 /**
  * Direct Shopify order lookup operations.
  */
-class ShopifyOrderDirectLookup
+class OrderDirectLookup
 {
-    public function __construct(private readonly ShopifyGraphQLClient $client)
+    public function __construct(private readonly Client $client)
     {
     }
 
@@ -39,7 +41,7 @@ class ShopifyOrderDirectLookup
 
         $data  = $this->client->graphql($query, ['query' => "name:{$clean}"]);
         $edges = $data['data']['orders']['edges'] ?? [];
-        return array_map(fn($edge) => ShopifyGraphQLNormalizer::normalizeOrder($edge['node'] ?? []), $edges);
+        return array_map(fn($edge) => Normalizer::normalizeOrder($edge['node'] ?? []), $edges);
     }
 
     /**
@@ -115,8 +117,8 @@ class ShopifyOrderDirectLookup
         }
         GQL;
 
-        $data = $this->client->graphql($query, ['id' => ShopifyGraphQLNormalizer::orderGid($orderId)]);
+        $data = $this->client->graphql($query, ['id' => Normalizer::orderGid($orderId)]);
         $node = $data['data']['order'] ?? null;
-        return is_array($node) ? ShopifyGraphQLNormalizer::normalizeOrder($node) : [];
+        return is_array($node) ? Normalizer::normalizeOrder($node) : [];
     }
 }

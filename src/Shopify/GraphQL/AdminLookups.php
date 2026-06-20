@@ -1,26 +1,28 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/ShopifyOrderLookup.php';
-require_once __DIR__ . '/ShopifyCustomDataLookups.php';
-require_once __DIR__ . '/ShopifyOrderInsights.php';
+namespace Shopify\GraphQL;
+
+require_once __DIR__ . '/OrderLookup.php';
+require_once __DIR__ . '/CustomDataLookups.php';
+require_once __DIR__ . '/OrderInsights.php';
 
 /**
  * Facade for non-audit Shopify Admin lookups and order searches.
  */
-class ShopifyAdminLookups
+class AdminLookups
 {
-    private readonly ShopifyOrderLookup $orders;
-    private readonly ShopifyCustomDataLookups $customData;
-    private readonly ShopifyOrderInsights $insights;
+    private readonly OrderLookup $orders;
+    private readonly CustomDataLookups $customData;
+    private readonly OrderInsights $insights;
 
     public function __construct(
-        ShopifyGraphQLClient $client,
-        ?Cache $cache = null
+        Client $client,
+        ?\Cache $cache = null
     ) {
-        $this->orders     = new ShopifyOrderLookup($client, $cache);
-        $this->customData = new ShopifyCustomDataLookups($client);
-        $this->insights   = new ShopifyOrderInsights($client);
+        $this->orders     = new OrderLookup($client, $cache);
+        $this->customData = new CustomDataLookups($client);
+        $this->insights   = new OrderInsights($client);
     }
 
     /**

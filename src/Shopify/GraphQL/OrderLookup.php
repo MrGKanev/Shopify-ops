@@ -1,26 +1,28 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/ShopifyOrderDirectLookup.php';
-require_once __DIR__ . '/ShopifyOrderHoldLookup.php';
-require_once __DIR__ . '/ShopifyOrderEventLookup.php';
+namespace Shopify\GraphQL;
+
+require_once __DIR__ . '/OrderDirectLookup.php';
+require_once __DIR__ . '/OrderHoldLookup.php';
+require_once __DIR__ . '/OrderEventLookup.php';
 
 /**
  * Backward-compatible facade for Shopify order lookup operations.
  */
-class ShopifyOrderLookup
+class OrderLookup
 {
-    private readonly ShopifyOrderDirectLookup $directLookup;
-    private readonly ShopifyOrderHoldLookup $holdLookup;
-    private readonly ShopifyOrderEventLookup $eventLookup;
+    private readonly OrderDirectLookup $directLookup;
+    private readonly OrderHoldLookup $holdLookup;
+    private readonly OrderEventLookup $eventLookup;
 
     public function __construct(
-        ShopifyGraphQLClient $client,
-        ?Cache $cache = null
+        Client $client,
+        ?\Cache $cache = null
     ) {
-        $this->directLookup = new ShopifyOrderDirectLookup($client);
-        $this->holdLookup   = new ShopifyOrderHoldLookup($client, $cache);
-        $this->eventLookup  = new ShopifyOrderEventLookup($client);
+        $this->directLookup = new OrderDirectLookup($client);
+        $this->holdLookup   = new OrderHoldLookup($client, $cache);
+        $this->eventLookup  = new OrderEventLookup($client);
     }
 
     /**

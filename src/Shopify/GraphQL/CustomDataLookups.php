@@ -1,12 +1,14 @@
 <?php
 declare(strict_types=1);
 
+namespace Shopify\GraphQL;
+
 /**
  * Shopify metafield definition and value lookup operations.
  */
-class ShopifyCustomDataLookups
+class CustomDataLookups
 {
-    public function __construct(private readonly ShopifyGraphQLClient $client)
+    public function __construct(private readonly Client $client)
     {
     }
 
@@ -64,7 +66,7 @@ class ShopifyCustomDataLookups
         $cursor     = null;
         do {
             $data = $this->client->graphql($query, [
-                'id'    => ShopifyGraphQLNormalizer::orderGid($orderId),
+                'id'    => Normalizer::orderGid($orderId),
                 'after' => $cursor,
             ]);
 
@@ -75,7 +77,7 @@ class ShopifyCustomDataLookups
 
             foreach (($connection['nodes'] ?? []) as $node) {
                 if (is_array($node)) {
-                    $metafields[] = ShopifyGraphQLNormalizer::normalizeMetafield($node, $orderId);
+                    $metafields[] = Normalizer::normalizeMetafield($node, $orderId);
                 }
             }
 

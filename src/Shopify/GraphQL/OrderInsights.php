@@ -1,24 +1,26 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/ShopifyOrderTagInsights.php';
-require_once __DIR__ . '/ShopifyCustomerOrderInsights.php';
-require_once __DIR__ . '/ShopifyDuplicateOrderInsights.php';
+namespace Shopify\GraphQL;
+
+require_once __DIR__ . '/OrderTagInsights.php';
+require_once __DIR__ . '/CustomerOrderInsights.php';
+require_once __DIR__ . '/DuplicateOrderInsights.php';
 
 /**
  * Backward-compatible facade for Shopify order insight workflows.
  */
-class ShopifyOrderInsights
+class OrderInsights
 {
-    private readonly ShopifyOrderTagInsights $tagInsights;
-    private readonly ShopifyCustomerOrderInsights $customerInsights;
-    private readonly ShopifyDuplicateOrderInsights $duplicateInsights;
+    private readonly OrderTagInsights $tagInsights;
+    private readonly CustomerOrderInsights $customerInsights;
+    private readonly DuplicateOrderInsights $duplicateInsights;
 
-    public function __construct(ShopifyGraphQLClient $client)
+    public function __construct(Client $client)
     {
-        $this->tagInsights       = new ShopifyOrderTagInsights($client);
-        $this->customerInsights  = new ShopifyCustomerOrderInsights($client);
-        $this->duplicateInsights = new ShopifyDuplicateOrderInsights($client);
+        $this->tagInsights       = new OrderTagInsights($client);
+        $this->customerInsights  = new CustomerOrderInsights($client);
+        $this->duplicateInsights = new DuplicateOrderInsights($client);
     }
 
     /**

@@ -1,12 +1,14 @@
 <?php
 declare(strict_types=1);
 
+namespace Shopify\GraphQL;
+
 /**
  * Event-backed order audit workflows.
  */
-class ShopifyOrderEventAudits
+class OrderEventAudits
 {
-    public function __construct(private readonly ShopifyOrderFetcher $orders)
+    public function __construct(private readonly OrderFetcher $orders)
     {
     }
 
@@ -22,8 +24,8 @@ class ShopifyOrderEventAudits
 
         $ordersById = $this->orders->fetchOrdersByIds(
             array_keys($changed),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::shippingAddressFields()
+            Queries::orderCoreFields()
+                . Queries::shippingAddressFields()
         );
 
         $orders = [];
@@ -51,8 +53,8 @@ class ShopifyOrderEventAudits
     public function fetchEditedOrders(string $startDate, string $endDate): array
     {
         $byOrder = [];
-        foreach ($this->orders->fetchEventsByQuery(ShopifyGraphQLQueries::orderEventDateRangeQuery($startDate, $endDate)) as $ev) {
-            if (!ShopifyGraphQLNormalizer::isOrderEditEvent($ev)) {
+        foreach ($this->orders->fetchEventsByQuery(Queries::orderEventDateRangeQuery($startDate, $endDate)) as $ev) {
+            if (!Normalizer::isOrderEditEvent($ev)) {
                 continue;
             }
 
@@ -79,7 +81,7 @@ class ShopifyOrderEventAudits
         $rows = [];
         $ordersById = $this->orders->fetchOrdersByIds(
             array_keys($byOrder),
-            ShopifyGraphQLQueries::orderCoreFields()
+            Queries::orderCoreFields()
         );
 
         foreach ($ordersById as $oid => $o) {
@@ -116,9 +118,9 @@ class ShopifyOrderEventAudits
         $orders = [];
         $ordersById = $this->orders->fetchOrdersByIds(
             array_keys($changed),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::shippingAddressFields()
-                . ShopifyGraphQLQueries::fulfillmentFields()
+            Queries::orderCoreFields()
+                . Queries::shippingAddressFields()
+                . Queries::fulfillmentFields()
         );
 
         foreach ($ordersById as $oid => $o) {
@@ -151,8 +153,8 @@ class ShopifyOrderEventAudits
     private function changedAddressOrderIds(string $startDate, string $endDate): array
     {
         $changed = [];
-        foreach ($this->orders->fetchEventsByQuery(ShopifyGraphQLQueries::orderEventDateRangeQuery($startDate, $endDate)) as $ev) {
-            if (!ShopifyGraphQLNormalizer::isAddressChangeEvent($ev)) {
+        foreach ($this->orders->fetchEventsByQuery(Queries::orderEventDateRangeQuery($startDate, $endDate)) as $ev) {
+            if (!Normalizer::isAddressChangeEvent($ev)) {
                 continue;
             }
 

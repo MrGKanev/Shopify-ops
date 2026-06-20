@@ -1,12 +1,14 @@
 <?php
 declare(strict_types=1);
 
+namespace Shopify\GraphQL;
+
 /**
  * Event log lookup for Shopify orders.
  */
-class ShopifyOrderEventLookup
+class OrderEventLookup
 {
-    public function __construct(private readonly ShopifyGraphQLClient $client)
+    public function __construct(private readonly Client $client)
     {
     }
 
@@ -43,7 +45,7 @@ class ShopifyOrderEventLookup
         $cursor = null;
         do {
             $data = $this->client->graphql($query, [
-                'id'    => ShopifyGraphQLNormalizer::orderGid($orderId),
+                'id'    => Normalizer::orderGid($orderId),
                 'after' => $cursor,
             ]);
 
@@ -55,7 +57,7 @@ class ShopifyOrderEventLookup
             foreach (($connection['edges'] ?? []) as $edge) {
                 $node = $edge['node'] ?? null;
                 if (is_array($node)) {
-                    $events[] = ShopifyGraphQLNormalizer::normalizeEvent($node, $orderId);
+                    $events[] = Normalizer::normalizeEvent($node, $orderId);
                 }
             }
 

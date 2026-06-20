@@ -2,15 +2,14 @@
 declare(strict_types=1);
 
 use GuzzleHttp\HandlerStack;
+use Shopify\GraphQL\AdminLookups;
+use Shopify\GraphQL\CatalogAndFulfillment;
+use Shopify\GraphQL\Client as GraphQLClient;
+use Shopify\GraphQL\OrderArchive;
+use Shopify\GraphQL\OrderAudits;
+use Shopify\GraphQL\OrderFetcher;
 
-require_once __DIR__ . '/ShopifyGraphQLClient.php';
-require_once __DIR__ . '/ShopifyGraphQLNormalizer.php';
-require_once __DIR__ . '/ShopifyGraphQLQueries.php';
-require_once __DIR__ . '/ShopifyOrderFetcher.php';
-require_once __DIR__ . '/ShopifyOrderAudits.php';
-require_once __DIR__ . '/ShopifyAdminLookups.php';
-require_once __DIR__ . '/ShopifyCatalogAndFulfillment.php';
-require_once __DIR__ . '/ShopifyOrderArchive.php';
+require_once __DIR__ . '/Shopify/GraphQL/bootstrap.php';
 
 /**
  * Shopify Admin API client.
@@ -22,12 +21,12 @@ class Shopify
 {
     public const string API_VERSION = '2026-04';
 
-    private readonly ShopifyGraphQLClient $graphqlClient;
-    private readonly ShopifyOrderArchive $orderArchive;
-    private readonly ShopifyOrderFetcher $orderFetcher;
-    private readonly ShopifyOrderAudits $orderAudits;
-    private readonly ShopifyAdminLookups $adminLookups;
-    private readonly ShopifyCatalogAndFulfillment $catalogAndFulfillment;
+    private readonly GraphQLClient $graphqlClient;
+    private readonly OrderArchive $orderArchive;
+    private readonly OrderFetcher $orderFetcher;
+    private readonly OrderAudits $orderAudits;
+    private readonly AdminLookups $adminLookups;
+    private readonly CatalogAndFulfillment $catalogAndFulfillment;
 
     public function __construct(
         string $store,
@@ -38,12 +37,12 @@ class Shopify
         $host = str_contains($store, '.') ? $store : "{$store}.myshopify.com";
         $baseUrl = "https://{$host}/admin/api/" . self::API_VERSION;
 
-        $this->graphqlClient         = new ShopifyGraphQLClient($baseUrl, $accessToken, $stack);
-        $this->orderArchive          = new ShopifyOrderArchive($this->graphqlClient, $cache);
-        $this->orderFetcher          = new ShopifyOrderFetcher($this->graphqlClient);
-        $this->orderAudits           = new ShopifyOrderAudits($this->orderFetcher);
-        $this->adminLookups          = new ShopifyAdminLookups($this->graphqlClient, $cache);
-        $this->catalogAndFulfillment = new ShopifyCatalogAndFulfillment($this->graphqlClient);
+        $this->graphqlClient         = new GraphQLClient($baseUrl, $accessToken, $stack);
+        $this->orderArchive          = new OrderArchive($this->graphqlClient, $cache);
+        $this->orderFetcher          = new OrderFetcher($this->graphqlClient);
+        $this->orderAudits           = new OrderAudits($this->orderFetcher);
+        $this->adminLookups          = new AdminLookups($this->graphqlClient, $cache);
+        $this->catalogAndFulfillment = new CatalogAndFulfillment($this->graphqlClient);
     }
 
     // ── Public ────────────────────────────────────────────────────────

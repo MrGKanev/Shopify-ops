@@ -1,10 +1,12 @@
 <?php
 declare(strict_types=1);
 
+namespace Shopify\GraphQL;
+
 /**
  * Maps Shopify Admin GraphQL Product payloads into the legacy REST product shape.
  */
-class ShopifyProductNormalizer
+class ProductNormalizer
 {
     /**
      * Maps Admin GraphQL Product nodes into the legacy REST product shape used by the UI.
@@ -13,14 +15,14 @@ class ShopifyProductNormalizer
      */
     public static function normalizeProduct(array $node): array
     {
-        $productId = ShopifyGraphQLIds::legacyId($node['legacyResourceId'] ?? null, $node['id'] ?? null);
+        $productId = Ids::legacyId($node['legacyResourceId'] ?? null, $node['id'] ?? null);
         $images    = array_fill(0, max(0, (int)($node['mediaCount']['count'] ?? 0)), []);
 
         $variants = [];
         foreach (($node['variants']['edges'] ?? []) as $edge) {
             $variant = $edge['node'] ?? [];
             $variants[] = [
-                'id'                   => ShopifyGraphQLIds::legacyId($variant['legacyResourceId'] ?? null, $variant['id'] ?? null),
+                'id'                   => Ids::legacyId($variant['legacyResourceId'] ?? null, $variant['id'] ?? null),
                 'product_id'           => $productId,
                 'title'                => $variant['title'] ?? '',
                 'sku'                  => $variant['sku'] ?? '',

@@ -1,12 +1,14 @@
 <?php
 declare(strict_types=1);
 
+namespace Shopify\GraphQL;
+
 /**
  * Query-backed order audit fetchers.
  */
-class ShopifyOrderQueryAudits
+class OrderQueryAudits
 {
-    public function __construct(private readonly ShopifyOrderFetcher $orders)
+    public function __construct(private readonly OrderFetcher $orders)
     {
     }
 
@@ -18,10 +20,10 @@ class ShopifyOrderQueryAudits
     public function fetchOrdersForAddressScan(string $startDate, string $endDate, bool $unfulfilledOnly = false): array
     {
         return $this->orders->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate, $unfulfilledOnly),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::shippingAddressFields()
-                . ShopifyGraphQLQueries::shippingLineFields()
+            Queries::paidOrdersQuery($startDate, $endDate, $unfulfilledOnly),
+            Queries::orderCoreFields()
+                . Queries::shippingAddressFields()
+                . Queries::shippingLineFields()
         );
     }
 
@@ -34,10 +36,10 @@ class ShopifyOrderQueryAudits
     public function fetchOrdersForHighValue(string $startDate, string $endDate): array
     {
         return $this->orders->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate, true),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::shippingAddressFields()
-                . ShopifyGraphQLQueries::shippingLineFields()
+            Queries::paidOrdersQuery($startDate, $endDate, true),
+            Queries::orderCoreFields()
+                . Queries::shippingAddressFields()
+                . Queries::shippingLineFields()
         );
     }
 
@@ -47,11 +49,11 @@ class ShopifyOrderQueryAudits
     public function fetchRefundedOrders(string $startDate, string $endDate): array
     {
         return $this->orders->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::refundedOrdersQuery($startDate, $endDate),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::refundFields(),
+            Queries::refundedOrdersQuery($startDate, $endDate),
+            Queries::orderCoreFields()
+                . Queries::refundFields(),
             fn(array $node) => in_array(
-                ShopifyGraphQLNormalizer::normalizeFinancialStatus($node['displayFinancialStatus'] ?? null),
+                Normalizer::normalizeFinancialStatus($node['displayFinancialStatus'] ?? null),
                 ['refunded', 'partially_refunded'],
                 true
             )
@@ -64,10 +66,10 @@ class ShopifyOrderQueryAudits
     public function fetchOrdersForCountryMismatch(string $startDate, string $endDate): array
     {
         return $this->orders->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::billingAddressFields()
-                . ShopifyGraphQLQueries::shippingAddressFields()
+            Queries::paidOrdersQuery($startDate, $endDate),
+            Queries::orderCoreFields()
+                . Queries::billingAddressFields()
+                . Queries::shippingAddressFields()
         );
     }
 
@@ -77,11 +79,11 @@ class ShopifyOrderQueryAudits
     public function fetchPartiallyFulfilledOrders(string $startDate, string $endDate): array
     {
         return $this->orders->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::partiallyFulfilledOrdersQuery($startDate, $endDate),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::lineItemFields()
-                . ShopifyGraphQLQueries::fulfillmentFields(),
-            fn(array $node) => ShopifyGraphQLNormalizer::normalizeFulfillmentStatus($node['displayFulfillmentStatus'] ?? null) === 'partial'
+            Queries::partiallyFulfilledOrdersQuery($startDate, $endDate),
+            Queries::orderCoreFields()
+                . Queries::lineItemFields()
+                . Queries::fulfillmentFields(),
+            fn(array $node) => Normalizer::normalizeFulfillmentStatus($node['displayFulfillmentStatus'] ?? null) === 'partial'
         );
     }
 
@@ -91,11 +93,11 @@ class ShopifyOrderQueryAudits
     public function fetchFulfilledOrdersWithTracking(string $startDate, string $endDate): array
     {
         return $this->orders->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::fulfilledOrPartialOrdersQuery($startDate, $endDate),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::fulfillmentFields(),
+            Queries::fulfilledOrPartialOrdersQuery($startDate, $endDate),
+            Queries::orderCoreFields()
+                . Queries::fulfillmentFields(),
             fn(array $node) => in_array(
-                ShopifyGraphQLNormalizer::normalizeFulfillmentStatus($node['displayFulfillmentStatus'] ?? null),
+                Normalizer::normalizeFulfillmentStatus($node['displayFulfillmentStatus'] ?? null),
                 ['fulfilled', 'partial'],
                 true
             )
@@ -108,9 +110,9 @@ class ShopifyOrderQueryAudits
     public function fetchOrdersWithNotes(string $startDate, string $endDate): array
     {
         return $this->orders->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate, true),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::orderNoteFields()
+            Queries::paidOrdersQuery($startDate, $endDate, true),
+            Queries::orderCoreFields()
+                . Queries::orderNoteFields()
         );
     }
 
@@ -120,9 +122,9 @@ class ShopifyOrderQueryAudits
     public function fetchOrdersForAddrDupes(string $startDate, string $endDate): array
     {
         return $this->orders->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::shippingAddressFields()
+            Queries::paidOrdersQuery($startDate, $endDate),
+            Queries::orderCoreFields()
+                . Queries::shippingAddressFields()
         );
     }
 
@@ -132,12 +134,12 @@ class ShopifyOrderQueryAudits
     public function fetchOrdersForSla(string $startDate, string $endDate): array
     {
         return $this->orders->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::shippingAddressFields()
-                . ShopifyGraphQLQueries::shippingLineFields()
-                . ShopifyGraphQLQueries::lineItemFields()
-                . ShopifyGraphQLQueries::fulfillmentFields()
+            Queries::paidOrdersQuery($startDate, $endDate),
+            Queries::orderCoreFields()
+                . Queries::shippingAddressFields()
+                . Queries::shippingLineFields()
+                . Queries::lineItemFields()
+                . Queries::fulfillmentFields()
         );
     }
 
@@ -147,9 +149,9 @@ class ShopifyOrderQueryAudits
     public function fetchCancelledOrders(string $startDate, string $endDate): array
     {
         return $this->orders->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::orderDateRangeQuery($startDate, $endDate),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::orderCancelReasonFields(),
+            Queries::orderDateRangeQuery($startDate, $endDate),
+            Queries::orderCoreFields()
+                . Queries::orderCancelReasonFields(),
             fn(array $node) => !empty($node['cancelledAt'])
         );
     }
@@ -160,10 +162,10 @@ class ShopifyOrderQueryAudits
     public function fetchOrdersForDiscountAudit(string $startDate, string $endDate): array
     {
         return $this->orders->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::shippingAddressFields()
-                . ShopifyGraphQLQueries::discountApplicationFields()
+            Queries::paidOrdersQuery($startDate, $endDate),
+            Queries::orderCoreFields()
+                . Queries::shippingAddressFields()
+                . Queries::discountApplicationFields()
         );
     }
 
@@ -173,9 +175,9 @@ class ShopifyOrderQueryAudits
     public function fetchOrdersForTagPolicy(string $startDate, string $endDate): array
     {
         return $this->orders->fetchOrdersByQuery(
-            ShopifyGraphQLQueries::paidOrdersQuery($startDate, $endDate),
-            ShopifyGraphQLQueries::orderCoreFields()
-                . ShopifyGraphQLQueries::orderTagFields()
+            Queries::paidOrdersQuery($startDate, $endDate),
+            Queries::orderCoreFields()
+                . Queries::orderTagFields()
         );
     }
 }

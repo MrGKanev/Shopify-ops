@@ -1,106 +1,108 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/ShopifyGraphQLQueryStrings.php';
-require_once __DIR__ . '/ShopifyGraphQLFieldFragments.php';
+namespace Shopify\GraphQL;
+
+require_once __DIR__ . '/QueryStrings.php';
+require_once __DIR__ . '/FieldFragments.php';
 
 /**
  * Backward-compatible facade for Shopify Admin GraphQL query helpers.
  */
-class ShopifyGraphQLQueries
+class Queries
 {
     public static function orderDateRangeQuery(string $startDate, string $endDate): string
     {
-        return ShopifyGraphQLQueryStrings::orderDateRangeQuery($startDate, $endDate);
+        return QueryStrings::orderDateRangeQuery($startDate, $endDate);
     }
 
     public static function paidOrdersQuery(string $startDate, string $endDate, bool $unfulfilledOnly = false): string
     {
-        return ShopifyGraphQLQueryStrings::paidOrdersQuery($startDate, $endDate, $unfulfilledOnly);
+        return QueryStrings::paidOrdersQuery($startDate, $endDate, $unfulfilledOnly);
     }
 
     public static function refundedOrdersQuery(string $startDate, string $endDate): string
     {
-        return ShopifyGraphQLQueryStrings::refundedOrdersQuery($startDate, $endDate);
+        return QueryStrings::refundedOrdersQuery($startDate, $endDate);
     }
 
     public static function partiallyFulfilledOrdersQuery(string $startDate, string $endDate): string
     {
-        return ShopifyGraphQLQueryStrings::partiallyFulfilledOrdersQuery($startDate, $endDate);
+        return QueryStrings::partiallyFulfilledOrdersQuery($startDate, $endDate);
     }
 
     public static function fulfilledOrPartialOrdersQuery(string $startDate, string $endDate): string
     {
-        return ShopifyGraphQLQueryStrings::fulfilledOrPartialOrdersQuery($startDate, $endDate);
+        return QueryStrings::fulfilledOrPartialOrdersQuery($startDate, $endDate);
     }
 
     public static function orderEventDateRangeQuery(string $startDate, string $endDate): string
     {
-        return ShopifyGraphQLQueryStrings::orderEventDateRangeQuery($startDate, $endDate);
+        return QueryStrings::orderEventDateRangeQuery($startDate, $endDate);
     }
 
     public static function productStatusGraphQLArg(string $status): string
     {
-        return ShopifyGraphQLQueryStrings::productStatusGraphQLArg($status);
+        return QueryStrings::productStatusGraphQLArg($status);
     }
 
     public static function orderCoreFields(): string
     {
-        return ShopifyGraphQLFieldFragments::orderCoreFields();
+        return FieldFragments::orderCoreFields();
     }
 
     public static function shippingAddressFields(): string
     {
-        return ShopifyGraphQLFieldFragments::shippingAddressFields();
+        return FieldFragments::shippingAddressFields();
     }
 
     public static function billingAddressFields(): string
     {
-        return ShopifyGraphQLFieldFragments::billingAddressFields();
+        return FieldFragments::billingAddressFields();
     }
 
     public static function shippingLineFields(): string
     {
-        return ShopifyGraphQLFieldFragments::shippingLineFields();
+        return FieldFragments::shippingLineFields();
     }
 
     public static function lineItemFields(): string
     {
-        return ShopifyGraphQLFieldFragments::lineItemFields();
+        return FieldFragments::lineItemFields();
     }
 
     public static function fulfillmentFields(): string
     {
-        return ShopifyGraphQLFieldFragments::fulfillmentFields();
+        return FieldFragments::fulfillmentFields();
     }
 
     public static function refundFields(): string
     {
-        return ShopifyGraphQLFieldFragments::refundFields();
+        return FieldFragments::refundFields();
     }
 
     public static function discountApplicationFields(): string
     {
-        return ShopifyGraphQLFieldFragments::discountApplicationFields();
+        return FieldFragments::discountApplicationFields();
     }
 
     public static function orderNoteFields(): string
     {
-        return ShopifyGraphQLFieldFragments::orderNoteFields();
+        return FieldFragments::orderNoteFields();
     }
 
     public static function orderTagFields(): string
     {
-        return ShopifyGraphQLFieldFragments::orderTagFields();
+        return FieldFragments::orderTagFields();
     }
 
     public static function orderCancelReasonFields(): string
     {
-        return ShopifyGraphQLFieldFragments::orderCancelReasonFields();
+        return FieldFragments::orderCancelReasonFields();
     }
 
     public static function eventFields(): string
     {
-        return ShopifyGraphQLFieldFragments::eventFields();
+        return FieldFragments::eventFields();
     }
 }
