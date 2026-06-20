@@ -1,0 +1,132 @@
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/../../src/Cache.php';
+require_once __DIR__ . '/../../src/JobQueue.php';
+require_once __DIR__ . '/../../src/SlackRules.php';
+require_once __DIR__ . '/../../src/SlackNotifier.php';
+require_once __DIR__ . '/../../src/UserActionLog.php';
+require_once __DIR__ . '/../../src/RunLog.php';
+require_once __DIR__ . '/../../src/ManageSettingsPageLoader.php';
+
+use PHPUnit\Framework\TestCase;
+
+class ManageSettingsPageLoaderTest extends TestCase
+{
+    private string $tmpDir;
+    private Cache $cache;
+    private string|false $previousSlackWebhook;
+
+    protected function setUp(): void
+    {
+        $this->tmpDir = sys_get_temp_dir() . '/manage_settings_loader_' . uniqid();
+        mkdir($this->tmpDir, 0755, true);
+
+        $this->cache = new Cache($this->tmpDir . '/cache', ttl: 3600);
+        JobQueue::setDataDir($this->tmpDir);
+        SlackRules::setDataDir($this->tmpDir);
+        UserActionLog::setDataDir($this->tmpDir);
+        RunLog::setDataDir($this->tmpDir);
+
+        $this->previousSlackWebhook = getenv('SLACK_WEBHOOK_URL');
+        putenv('SLACK_WEBHOOK_URL');
+    }
+
+    protected function tearDown(): void
+    {
+        if ($this->previousSlackWebhook === false) {
+            putenv('SLACK_WEBHOOK_URL');
+        } else {
+            putenv('SLACK_WEBHOOK_URL=' . $this->previousSlackWebhook);
+        }
+
+        $this->removeDir($this->tmpDir);
+    }
+
+    public function testSettingsListsAndFlushesCacheEntries(): void
+    {
+        $this->cache->put('shop', 'one', ['a' => 1]);
+        $this->cache->put('ss', 'two', ['b' => 2]);
+
+        $settings = ManageSettingsPageLoader::load('settings', '', $this->ctx());
+
+        $this->assertNull($settings['connResults']);
+        $this->assertSame(0, $settings['cacheFlushed']);
+        $this->assertSame(3600, $settings['cacheTtl']);
+        $this->assertCount(2, $settings['cacheEntries']);
+
+        $flushed = ManageSettingsPageLoader::load('settings', 'flush_cache', $this->ctx());
+
+        $this->assertSame(2, $flushed['cacheFlushed']);
+        $this->assertSame([], $flushed['cacheEntries']);
+    }
+
+    public function testSettingsConnectionCheckReportsMissingCredentialsWithoutNetwork(): void
+    {
+        $settings = ManageSettingsPageLoader::load('settings', 'test_connection', $this->ctx());
+
+        $this->assertFalse($settings['connResults']['ss']['ok']);
+        $this->assertSame('SS_API_KEY / SS_API_SECRET not set in .env', $settings['connResults']['ss']['error']);
+        $this->assertFalse($settings['connResults']['shopify']['ok']);
+        $this->assertSame('SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env', $settings['connResults']['shopify']['error']);
+    }
+
+    public function testLoadsManageAndSettingsDataSources(): void
+    {
+        JobQueue::enqueue('audit', ['start' => '2026-06-01'], 'Audit');
+        SlackRules::save(['audit_enabled' => false, 'scan_enabled' => true, 'scan_min_rows' => 3]);
+        UserActionLog::append('ignore_order', ['order_number' => '1001']);
+        putenv('SLACK_WEBHOOK_URL=https://hooks.slack.test/example');
+
+        $jobs = ManageSettingsPageLoader::load('jobs', '', $this->ctx());
+        $slack = ManageSettingsPageLoader::load('slackrules', '', $this->ctx());
+        $actions = ManageSettingsPageLoader::load('actionlog', '', $this->ctx());
+
+        $this->assertSame('audit', $jobs['jobs'][0]['type']);
+        $this->assertFalse($slack['slackRules']['audit_enabled']);
+        $this->assertTrue($slack['slackRules']['scan_enabled']);
+        $this->assertSame(3, $slack['slackRules']['scan_min_rows']);
+        $this->assertTrue($slack['slackConfigured']);
+        $this->assertSame('ignore_order', $actions['actionLog'][0]['action']);
+        $this->assertSame('1001', $actions['actionLog'][0]['details']['order_number']);
+    }
+
+    public function testUnknownPageReturnsEmptyData(): void
+    {
+        $this->assertSame([], ManageSettingsPageLoader::load('unknown', '', $this->ctx()));
+    }
+
+    private function ctx(): array
+    {
+        return [
+            'cacheObj'     => $this->cache,
+            'cacheTtl'     => 3600,
+            'shopifyStore' => 'N/A',
+            'shopifyToken' => '',
+            'ssKey'        => '',
+            'ssSecret'     => '',
+        ];
+    }
+
+    private function removeDir(string $dir): void
+    {
+        if (!is_dir($dir)) {
+            return;
+        }
+
+        foreach (scandir($dir) ?: [] as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+
+            $path = $dir . '/' . $entry;
+            if (is_dir($path)) {
+                $this->removeDir($path);
+            } else {
+                unlink($path);
+            }
+        }
+
+        rmdir($dir);
+    }
+}

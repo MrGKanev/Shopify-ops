@@ -20,16 +20,16 @@ class PageLoader
         $data += match ($page) {
             'dashboard'   => self::loadDashboard($ctx, $data),
             'run'         => self::loadAudit($action, $ctx, $data),
-            'globalsearch'=> self::loadGlobalSearch($ctx, $data),
+            'globalsearch'=> SearchLookupPageLoader::load($page, $action, $ctx, $data),
             'spotcheck'   => self::loadSpotCheck($action, $ctx),
             'metafields'=> self::loadMetafields($action, $ctx),
-            'tagsearch' => self::loadTagSearch($action, $ctx),
+            'tagsearch' => SearchLookupPageLoader::load($page, $action, $ctx, $data),
             'tagaudit'  => self::loadTagAudit($action, $ctx),
             'dupes'     => self::loadDuplicates($action, $ctx),
-            'customer'  => self::loadCustomer($action, $ctx),
+            'customer'  => SearchLookupPageLoader::load($page, $action, $ctx, $data),
             'refunds'   => self::loadRefunds($action, $ctx),
             'addrcheck'  => self::loadAddrCheck($action, $ctx),
-            'tracking'   => self::loadTracking($action, $ctx),
+            'tracking'   => SearchLookupPageLoader::load($page, $action, $ctx, $data),
             'compare'    => self::loadCompare($action, $ctx),
             'emailcheck' => self::loadEmailCheck($action, $ctx),
             'orphans'       => self::loadOrphans($action, $ctx),
@@ -59,12 +59,12 @@ class PageLoader
             'tagpolicy'         => self::loadTagPolicy($action, $ctx),
             'inventoryaging'    => self::loadInventoryAging($action, $ctx),
             'shipmentaging'     => self::loadShipmentAging($action, $ctx),
-            'jobs'              => self::loadJobs(),
-            'slackrules'        => self::loadSlackRules(),
-            'apihealth'         => self::loadApiHealth($action, $ctx),
-            'configcheck'       => self::loadConfigCheck(),
-            'actionlog'         => self::loadActionLog(),
-            'settings'          => self::loadSettings($action, $ctx),
+            'jobs',
+            'slackrules',
+            'apihealth',
+            'configcheck',
+            'actionlog',
+            'settings'          => ManageSettingsPageLoader::load($page, $action, $ctx),
             default     => [],
         };
 
@@ -166,7 +166,7 @@ class PageLoader
             $auditEnd   = $_POST['audit_end']   ?? '';
             $runStartedAt = date('Y-m-d H:i:s');
 
-            if ($err = self::validateDates($auditStart, $auditEnd)) {
+            if ($err = DateRange::validate($auditStart, $auditEnd)) {
                 $auditError = $err;
                 RunLog::append([
                     'tool'       => 'run_audit',
@@ -455,50 +455,12 @@ class PageLoader
                        'metafieldFilter', 'metafieldSearch', 'metafieldSearchError');
     }
 
-    // ── Tag search ────────────────────────────────────────────────────────────
-
-    private static function loadTagSearch(string $action, array $ctx): array
-    {
-        $tagSearch      = null;
-        $tagSearchError = '';
-        $tagInput       = '';
-        $tagStart       = '';
-        $tagEnd         = '';
-
-        if ($action === 'tag_search') {
-            $tagInput = trim($_POST['tag_input'] ?? '');
-            $tagStart = trim($_POST['tag_start'] ?? '');
-            $tagEnd   = trim($_POST['tag_end']   ?? '');
-
-            if (!$tagInput) {
-                $tagSearchError = 'Enter at least one tag.';
-            } elseif ($err = self::requireShopify($ctx)) {
-                $tagSearchError = $err;
-            } else {
-                try {
-                    self::setLimits(120);
-                    $shopifyTag = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
-                    $tagResult  = $shopifyTag->searchOrdersByTag($tagInput, $tagStart, $tagEnd);
-                    $tagSearch  = array_merge($tagResult, [
-                        'tag'   => $tagInput,
-                        'start' => $tagStart,
-                        'end'   => $tagEnd,
-                    ]);
-                } catch (Throwable $e) {
-                    $tagSearchError = $e->getMessage();
-                }
-            }
-        }
-
-        return compact('tagSearch', 'tagSearchError', 'tagInput', 'tagStart', 'tagEnd');
-    }
-
     // ── Tag Audit ─────────────────────────────────────────────────────────────
 
     private static function loadTagAudit(string $action, array $ctx): array
     {
         ['result' => $tagAuditResult, 'error' => $tagAuditError, 'start' => $taStart, 'end' => $taEnd] =
-            self::runScan($action, 'tag_audit', $ctx, 'ta', function ($ctx, $start, $end) {
+            ScanRunner::run($action, 'tag_audit', $ctx, 'ta', function ($ctx, $start, $end) {
                 self::setLimits(300);
                 $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
                 $result  = $shopify->fetchTagStats($start, $end);
@@ -518,7 +480,7 @@ class PageLoader
         $poBoxOnly       = (bool)($_POST['po_box_only']      ?? false);
 
         ['result' => $addrResult, 'error' => $addrError, 'start' => $addrStart, 'end' => $addrEnd] =
-            self::runScan($action, 'scan_addresses', $ctx, 'addr', function ($ctx, $start, $end) use (&$unfulfilledOnly, &$poBoxOnly) {
+            ScanRunner::run($action, 'scan_addresses', $ctx, 'addr', function ($ctx, $start, $end) use (&$unfulfilledOnly, &$poBoxOnly) {
                 $unfulfilledOnly = (bool)($_POST['unfulfilled_only'] ?? false);
                 $poBoxOnly       = (bool)($_POST['po_box_only']      ?? false);
                 self::setLimits(180);
@@ -630,7 +592,7 @@ class PageLoader
     private static function loadRefunds(string $action, array $ctx): array
     {
         ['result' => $refundsResult, 'error' => $refundsError, 'start' => $refundsStart, 'end' => $refundsEnd] =
-            self::runScan($action, 'find_refunds', $ctx, 'refunds', function ($ctx, $start, $end) {
+            ScanRunner::run($action, 'find_refunds', $ctx, 'refunds', function ($ctx, $start, $end) {
                 self::setLimits(300);
                 $shopify        = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken'], $ctx['cacheObj']);
                 $refundedOrders = self::suppressOutput(fn() => $shopify->fetchRefundedOrders($start, $end));
@@ -702,43 +664,13 @@ class PageLoader
         return compact('refundsResult', 'refundsError', 'refundsStart', 'refundsEnd');
     }
 
-    // ── Customer Lookup ───────────────────────────────────────────────────────
-
-    private static function loadCustomer(string $action, array $ctx): array
-    {
-        $customerResult = null;
-        $customerError  = '';
-        $customerEmail  = trim($_GET['email'] ?? $_POST['customer_email'] ?? '');
-
-        if ($action === 'customer_lookup') {
-            $customerEmail = trim($_POST['customer_email'] ?? '');
-
-            if (!$customerEmail || !filter_var($customerEmail, FILTER_VALIDATE_EMAIL)) {
-                $customerError = 'Enter a valid email address.';
-            } elseif ($err = self::requireShopify($ctx)) {
-                $customerError = $err;
-            } else {
-                try {
-                    self::setLimits(120);
-                    $shopify        = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
-                    $customerResult = $shopify->lookupCustomer($customerEmail);
-                    $customerResult['email'] = $customerEmail;
-                } catch (Throwable $e) {
-                    $customerError = $e->getMessage();
-                }
-            }
-        }
-
-        return compact('customerResult', 'customerError', 'customerEmail');
-    }
-
     // ── Duplicate Detector ────────────────────────────────────────────────────
 
     private static function loadDuplicates(string $action, array $ctx): array
     {
         $dupesResult = null;
         $dupesError  = '';
-        [$dupesStart, $dupesEnd] = self::extractDateRange('dupes');
+        [$dupesStart, $dupesEnd] = DateRange::fromRequest('dupes');
 
         if ($action === 'find_dupes') {
             $dupesStart = trim($_POST['dupes_start'] ?? '');
@@ -746,7 +678,7 @@ class PageLoader
 
             if ($err = self::requireShopify($ctx)) {
                 $dupesError = $err;
-            } elseif ($err = self::validateDates($dupesStart, $dupesEnd)) {
+            } elseif ($err = DateRange::validate($dupesStart, $dupesEnd)) {
                 $dupesError = $err;
             } else {
                 try {
@@ -762,76 +694,6 @@ class PageLoader
         }
 
         return compact('dupesResult', 'dupesError', 'dupesStart', 'dupesEnd');
-    }
-
-    // ── Shipment Tracking Feed ────────────────────────────────────────────────
-
-    private static function loadTracking(string $action, array $ctx): array
-    {
-        $trackingResults = null;
-        $trackingError   = '';
-        $trackingInput   = trim($_GET['prefill'] ?? '');
-
-        if ($action === 'lookup_tracking') {
-            $trackingInput = trim($_POST['tracking_orders'] ?? '');
-            $numbers = array_filter(array_map('trim', preg_split('/[\s,]+/', $trackingInput)));
-
-            if (empty($numbers)) {
-                $trackingError = 'Enter at least one order number.';
-            } elseif (count($numbers) > 30) {
-                $trackingError = 'Maximum 30 order numbers at once.';
-            } elseif ($err = self::requireSS($ctx)) {
-                $trackingError = $err;
-            } else {
-                try {
-                    $ss = new ShipStation($ctx['ssKey'], $ctx['ssSecret']);
-                    $trackingResults = [];
-
-                    $carrierUrls = [
-                        'usps'    => 'https://tools.usps.com/go/TrackConfirmAction?tLabels=',
-                        'fedex'   => 'https://www.fedex.com/fedextrack/?tracknumbers=',
-                        'ups'     => 'https://www.ups.com/track?tracknum=',
-                        'dhl'     => 'https://www.dhl.com/en/express/tracking.html?AWB=',
-                        'stamps_com' => 'https://tools.usps.com/go/TrackConfirmAction?tLabels=',
-                        'ontrac'  => 'https://www.ontrac.com/tracking/?number=',
-                        'lasership' => 'https://www.lasership.com/track/',
-                    ];
-
-                    foreach ($numbers as $num) {
-                        $clean    = ltrim(trim($num), '#');
-                        $ssOrders = $ss->findByOrderNumber($clean);
-
-                        if (empty($ssOrders)) {
-                            $trackingResults[] = ['number' => $clean, 'found' => false, 'shipments' => []];
-                            continue;
-                        }
-
-                        $shipments = [];
-                        foreach ($ssOrders as $o) {
-                            $carrier  = strtolower($o['carrierCode'] ?? '');
-                            $tracking = $o['trackingNumber'] ?? '';
-                            $baseUrl  = $carrierUrls[$carrier] ?? null;
-                            $shipments[] = [
-                                'orderId'        => $o['orderId']        ?? '',
-                                'orderStatus'    => $o['orderStatus']    ?? '',
-                                'carrierCode'    => $o['carrierCode']    ?? '',
-                                'serviceCode'    => $o['serviceCode']    ?? '',
-                                'trackingNumber' => $tracking,
-                                'shipDate'       => $o['shipDate']       ?? '',
-                                'trackingUrl'    => ($baseUrl && $tracking) ? $baseUrl . urlencode($tracking) : null,
-                                'ssUrl'          => $o['orderId'] ? 'https://app.shipstation.com/#!/orders/order-details/' . urlencode($o['orderId']) : null,
-                            ];
-                        }
-
-                        $trackingResults[] = ['number' => $clean, 'found' => true, 'shipments' => $shipments];
-                    }
-                } catch (Throwable $e) {
-                    $trackingError = $e->getMessage();
-                }
-            }
-        }
-
-        return compact('trackingResults', 'trackingError', 'trackingInput');
     }
 
     // ── Order Comparison Tool ─────────────────────────────────────────────────
@@ -880,10 +742,10 @@ class PageLoader
     {
         $emailResult = null;
         $emailError  = '';
-        [$emailStart, $emailEnd] = self::extractDateRange('email');
+        [$emailStart, $emailEnd] = DateRange::fromRequest('email');
 
         ['result' => $emailResult, 'error' => $emailError, 'start' => $emailStart, 'end' => $emailEnd] =
-            self::runScan($action, 'scan_emails', $ctx, 'email', function ($ctx, $start, $end) {
+            ScanRunner::run($action, 'scan_emails', $ctx, 'email', function ($ctx, $start, $end) {
                 self::setLimits(180);
                 $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
                 $orders  = self::suppressOutput(fn() => $shopify->fetchOrdersForAddressScan($start, $end));
@@ -955,10 +817,10 @@ class PageLoader
     {
         $orphanResult = null;
         $orphanError  = '';
-        [$orphanStart, $orphanEnd] = self::extractDateRange('orphan');
+        [$orphanStart, $orphanEnd] = DateRange::fromRequest('orphan');
 
         ['result' => $orphanResult, 'error' => $orphanError, 'start' => $orphanStart, 'end' => $orphanEnd] =
-            self::runScan($action, 'find_orphans', $ctx, 'orphan', function ($ctx, $start, $end) {
+            ScanRunner::run($action, 'find_orphans', $ctx, 'orphan', function ($ctx, $start, $end) {
                 self::setLimits(300);
                 [$ssOrders, $shOrders] = self::suppressOutput(function () use ($ctx, $start, $end) {
                     $ss      = new ShipStation($ctx['ssKey'], $ctx['ssSecret'], $ctx['cacheObj']);
@@ -1007,7 +869,7 @@ class PageLoader
         $hvMin = max(0, (int)($_POST['hv_min'] ?? $_GET['hv_min'] ?? 200));
 
         ['result' => $hvResult, 'error' => $hvError, 'start' => $hvStart, 'end' => $hvEnd] =
-            self::runScan($action, 'scan_hvorders', $ctx, 'hv', function ($ctx, $start, $end) use (&$hvMin) {
+            ScanRunner::run($action, 'scan_hvorders', $ctx, 'hv', function ($ctx, $start, $end) use (&$hvMin) {
                 $hvMin   = max(0, (int)($_POST['hv_min'] ?? 200));
                 self::setLimits(180);
                 $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
@@ -1042,7 +904,7 @@ class PageLoader
         $rrMinCount = max(2, (int)($_POST['rr_min_count'] ?? $_GET['rr_min_count'] ?? 2));
 
         ['result' => $rrResult, 'error' => $rrError, 'start' => $rrStart, 'end' => $rrEnd] =
-            self::runScan($action, 'scan_repeat_refunds', $ctx, 'rr', function ($ctx, $start, $end) use (&$rrMinCount) {
+            ScanRunner::run($action, 'scan_repeat_refunds', $ctx, 'rr', function ($ctx, $start, $end) use (&$rrMinCount) {
                 $rrMinCount     = max(2, (int)($_POST['rr_min_count'] ?? 2));
                 self::setLimits(300);
                 $shopify        = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken'], $ctx['cacheObj']);
@@ -1093,7 +955,7 @@ class PageLoader
     {
         $fsResult = null;
         $fsError  = '';
-        [$fsStart, $fsEnd] = self::extractDateRange('fs');
+        [$fsStart, $fsEnd] = DateRange::fromRequest('fs');
 
         if ($action === 'scan_failed_shipments') {
             $fsStart = trim($_POST['fs_start'] ?? '');
@@ -1101,7 +963,7 @@ class PageLoader
 
             if ($err = self::requireSS($ctx)) {
                 $fsError = str_replace('SS_API_KEY / SS_API_SECRET', 'SHIPSTATION_API_KEY / SHIPSTATION_API_SECRET', $err);
-            } elseif ($err = self::validateDates($fsStart, $fsEnd)) {
+            } elseif ($err = DateRange::validate($fsStart, $fsEnd)) {
                 $fsError = $err;
             } else {
                 try {
@@ -1143,10 +1005,10 @@ class PageLoader
     {
         $acResult = null;
         $acError  = '';
-        [$acStart, $acEnd] = self::extractDateRange('ac');
+        [$acStart, $acEnd] = DateRange::fromRequest('ac');
 
         ['result' => $acResult, 'error' => $acError, 'start' => $acStart, 'end' => $acEnd] =
-            self::runScan($action, 'scan_addr_changes', $ctx, 'ac', function ($ctx, $start, $end) {
+            ScanRunner::run($action, 'scan_addr_changes', $ctx, 'ac', function ($ctx, $start, $end) {
                 self::setLimits(240);
                 $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
                 $entries = self::suppressOutput(fn() => $shopify->fetchOrdersWithAddressChanges($start, $end));
@@ -1471,10 +1333,10 @@ class PageLoader
     {
         $bcResult = null;
         $bcError  = '';
-        [$bcStart, $bcEnd] = self::extractDateRange('bc', 30);
+        [$bcStart, $bcEnd] = DateRange::fromRequest('bc', 30);
 
         ['result' => $bcResult, 'error' => $bcError, 'start' => $bcStart, 'end' => $bcEnd] =
-            self::runScan($action, 'scan_bundle', $ctx, 'bc', function ($ctx, $start, $end) {
+            ScanRunner::run($action, 'scan_bundle', $ctx, 'bc', function ($ctx, $start, $end) {
                 self::setLimits(300);
                 $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken'], $ctx['cacheObj']);
                 $orders  = self::suppressOutput(fn() => $shopify->fetchAllOrders($start, $end));
@@ -1735,10 +1597,10 @@ class PageLoader
     {
         $cmResult = null;
         $cmError  = '';
-        [$cmStart, $cmEnd] = self::extractDateRange('cm');
+        [$cmStart, $cmEnd] = DateRange::fromRequest('cm');
 
         ['result' => $cmResult, 'error' => $cmError, 'start' => $cmStart, 'end' => $cmEnd] =
-            self::runScan($action, 'scan_country_mismatch', $ctx, 'cm', function ($ctx, $start, $end) {
+            ScanRunner::run($action, 'scan_country_mismatch', $ctx, 'cm', function ($ctx, $start, $end) {
                 self::setLimits(180);
                 $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
                 $orders  = self::suppressOutput(fn() => $shopify->fetchOrdersForCountryMismatch($start, $end));
@@ -1777,7 +1639,7 @@ class PageLoader
         $pfThreshold = max(1, (int)($_POST['pf_threshold'] ?? $_GET['pf_threshold'] ?? 7));
 
         ['result' => $pfResult, 'error' => $pfError, 'start' => $pfStart, 'end' => $pfEnd] =
-            self::runScan($action, 'scan_partial_fulfill', $ctx, 'pf', function ($ctx, $start, $end) use (&$pfThreshold) {
+            ScanRunner::run($action, 'scan_partial_fulfill', $ctx, 'pf', function ($ctx, $start, $end) use (&$pfThreshold) {
                 $pfThreshold = max(1, (int)($_POST['pf_threshold'] ?? 7));
                 self::setLimits(240);
                 $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
@@ -1826,117 +1688,6 @@ class PageLoader
         return compact('pfResult', 'pfError', 'pfStart', 'pfEnd', 'pfThreshold');
     }
 
-    // ── Settings ──────────────────────────────────────────────────────────────
-
-    private static function loadJobs(): array
-    {
-        $jobs = JobQueue::all();
-        return compact('jobs');
-    }
-
-    private static function loadSlackRules(): array
-    {
-        $slackRules = SlackRules::load();
-        $slackConfigured = SlackNotifier::isConfigured();
-        return compact('slackRules', 'slackConfigured');
-    }
-
-    private static function loadApiHealth(string $action, array $ctx): array
-    {
-        $apiHealth = null;
-        if ($action === 'refresh_api_health') {
-            $apiHealth = [
-                'shopify'     => ApiHealth::checkShopify($ctx['shopifyStore'], $ctx['shopifyToken']),
-                'shipstation' => ApiHealth::checkShipStation($ctx['ssKey'], $ctx['ssSecret']),
-                'checked_at'   => date('Y-m-d H:i:s'),
-            ];
-            RunLog::append([
-                'tool'       => 'api_health',
-                'status'     => (($apiHealth['shopify']['ok'] ?? false) && ($apiHealth['shipstation']['ok'] ?? false)) ? 'ok' : 'issues_found',
-                'rows_found' => count($apiHealth['shopify']['missing_scopes'] ?? []),
-                'meta'       => ['api_version' => Shopify::API_VERSION],
-            ]);
-        }
-        return compact('apiHealth');
-    }
-
-    private static function loadConfigCheck(): array
-    {
-        $configResults = ConfigValidator::validateAll(dirname(__DIR__));
-        return compact('configResults');
-    }
-
-    private static function loadActionLog(): array
-    {
-        $actionLog = UserActionLog::all();
-        return compact('actionLog');
-    }
-
-    private static function loadSettings(string $action, array $ctx): array
-    {
-        $connResults  = null;
-        $cacheEntries = $ctx['cacheObj']->entries();
-        $cacheFlushed = 0;
-        $cacheTtl     = $ctx['cacheTtl'];
-
-        if ($action === 'flush_cache') {
-            $cacheFlushed = $ctx['cacheObj']->flush();
-            $cacheEntries = $ctx['cacheObj']->entries();
-        }
-
-        if ($action === 'test_connection') {
-            $ping = function (string $url, array $headers, string $method = 'GET', ?string $body = null): array {
-                $ch = curl_init($url);
-                curl_setopt_array($ch, [
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_TIMEOUT        => 10,
-                    CURLOPT_HTTPHEADER     => $headers,
-                    CURLOPT_USERAGENT      => 'ShopifyOps/1.0',
-                ]);
-                if ($method !== 'GET') {
-                    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
-                }
-                if ($body !== null) {
-                    curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
-                }
-                $t0   = microtime(true);
-                curl_exec($ch);
-                $ms   = (int) round((microtime(true) - $t0) * 1000);
-                $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                $err  = curl_error($ch);
-                return ['ok' => ($code >= 200 && $code < 300), 'code' => $code, 'ms' => $ms, 'error' => $err ?: null];
-            };
-
-            if ($ctx['ssKey'] && $ctx['ssSecret']) {
-                $auth = base64_encode("{$ctx['ssKey']}:{$ctx['ssSecret']}");
-                $connResults['ss'] = $ping(
-                    'https://ssapi.shipstation.com/orders?pageSize=1',
-                    ["Authorization: Basic {$auth}", 'Accept: application/json']
-                );
-            } else {
-                $connResults['ss'] = ['ok' => false, 'code' => 0, 'ms' => 0, 'error' => 'SS_API_KEY / SS_API_SECRET not set in .env'];
-            }
-
-            if ($ctx['shopifyToken'] && $ctx['shopifyStore'] !== 'N/A') {
-                $host = str_contains($ctx['shopifyStore'], '.') ? $ctx['shopifyStore'] : "{$ctx['shopifyStore']}.myshopify.com";
-                $connResults['shopify'] = $ping(
-                    "https://{$host}/admin/api/" . Shopify::API_VERSION . "/graphql.json",
-                    [
-                        "X-Shopify-Access-Token: {$ctx['shopifyToken']}",
-                        'Accept: application/json',
-                        'Content-Type: application/json',
-                    ],
-                    'POST',
-                    json_encode(['query' => '{ shop { name } }'])
-                );
-            } else {
-                $connResults['shopify'] = ['ok' => false, 'code' => 0, 'ms' => 0, 'error' => 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env'];
-            }
-        }
-
-        return compact('connResults', 'cacheEntries', 'cacheFlushed', 'cacheTtl');
-    }
-
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     // ── Order Edit History ────────────────────────────────────────────────────
@@ -1945,7 +1696,7 @@ class PageLoader
     {
         $oeResult = null;
         $oeError  = '';
-        [$oeStart, $oeEnd] = self::extractDateRange('oe', 30);
+        [$oeStart, $oeEnd] = DateRange::fromRequest('oe', 30);
 
         if ($action === 'scan_order_edits') {
             $oeStart = trim($_POST['oe_start'] ?? '');
@@ -1953,7 +1704,7 @@ class PageLoader
 
             if ($err = self::requireShopify($ctx)) {
                 $oeError = $err;
-            } elseif ($err = self::validateDates($oeStart, $oeEnd)) {
+            } elseif ($err = DateRange::validate($oeStart, $oeEnd)) {
                 $oeError = $err;
             } else {
                 try {
@@ -1975,61 +1726,9 @@ class PageLoader
         return substr($dt, 0, 10);
     }
 
-    // ── Global Search ─────────────────────────────────────────────────────────
-
-    private static function loadGlobalSearch(array $ctx, array $globalData): array
-    {
-        $q         = trim($_GET['q'] ?? '');
-        $gsResults = null;
-
-        if ($q !== '') {
-            $norm = Comparator::normalise($q);
-            $gsResults = ['query' => $q, 'reports' => [], 'push' => [], 'ignored' => []];
-
-            foreach (($globalData['orderHistory'] ?? []) as $num => $entry) {
-                if ($norm && (str_contains($num, $norm) || str_contains($norm, $num))) {
-                    $gsResults['reports'][] = ['number' => $num] + $entry;
-                }
-            }
-
-            foreach (($globalData['pushLog'] ?? []) as $entry) {
-                $entryNorm = Comparator::normalise($entry['order_number'] ?? '');
-                if ($norm && ($entryNorm === $norm || str_contains($entryNorm, $norm) || str_contains($norm, $entryNorm))) {
-                    $gsResults['push'][] = $entry;
-                }
-            }
-
-            foreach (($ctx['ignoredOrders'] ?? []) as $num => $entry) {
-                if ($norm && (str_contains($num, $norm) || str_contains($norm, $num))) {
-                    $gsResults['ignored'][] = ['number' => $num] + $entry;
-                }
-            }
-        }
-
-        return compact('gsResults');
-    }
-
     private static function setLimits(int $secs = 300): void
     {
         if (function_exists('set_time_limit')) set_time_limit($secs);
-    }
-
-    private static function extractDateRange(string $prefix, int $defaultDays = 30): array
-    {
-        $start = $_POST["{$prefix}_start"] ?? $_GET["{$prefix}_start"] ?? date('Y-m-d', strtotime("-{$defaultDays} days"));
-        $end   = $_POST["{$prefix}_end"]   ?? $_GET["{$prefix}_end"]   ?? date('Y-m-d');
-        return [$start, $end];
-    }
-
-    private static function validateDates(string $start, string $end): ?string
-    {
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $start) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $end)) {
-            return 'Invalid date format. Use YYYY-MM-DD.';
-        }
-        if ($start > $end) {
-            return 'Start date must be before end date.';
-        }
-        return null;
     }
 
     // ── Packing Slip Preview ─────────────────────────────────────────────────
@@ -2091,108 +1790,6 @@ class PageLoader
         } finally {
             ob_end_clean();
         }
-    }
-
-    /**
-     * Shared scaffold for all on-demand scan pages.
-     * Handles date extraction, credential checks, validation, and try/catch.
-     * The callable receives ($ctx, $start, $end) and should return the result array.
-     * Extra validation or POST params can be read and mutated via closure bindings.
-     */
-    private static function runScan(
-        string   $action,
-        string   $trigger,
-        array    $ctx,
-        string   $prefix,
-        callable $fn,
-        int      $defaultDays = 30,
-        bool     $needsSS     = false
-    ): array {
-        [$start, $end] = self::extractDateRange($prefix, $defaultDays);
-        $result = null;
-        $error  = '';
-
-        if ($action === $trigger) {
-            $runStartedAt = date('Y-m-d H:i:s');
-            $t0 = microtime(true);
-            $logged = false;
-            $start = trim($_POST["{$prefix}_start"] ?? '');
-            $end   = trim($_POST["{$prefix}_end"]   ?? '');
-
-            if     ($needsSS && ($err = self::requireSS($ctx)))    { $error = $err; }
-            elseif ($err = self::requireShopify($ctx))             { $error = $err; }
-            elseif ($err = self::validateDates($start, $end))      { $error = $err; }
-            else {
-                try {
-                    $result = $fn($ctx, $start, $end);
-                    $rowsFound = self::resultRowCount($result);
-                    RunLog::append([
-                        'tool'       => $trigger,
-                        'status'     => $rowsFound > 0 ? 'issues_found' : 'ok',
-                        'created_at' => $runStartedAt,
-                        'duration'   => round(microtime(true) - $t0, 2),
-                        'start_date' => $start,
-                        'end_date'   => $end,
-                        'scanned'    => is_array($result) ? ($result['scanned'] ?? $result['total_orders'] ?? null) : null,
-                        'rows_found' => $rowsFound,
-                        'meta'       => ['api_version' => Shopify::API_VERSION],
-                    ]);
-                    if ($rowsFound !== null && SlackRules::shouldNotifyScan($rowsFound) && ($notifier = SlackNotifier::fromEnvironment())) {
-                        try {
-                            $notifier->notifyScan([
-                                'tool'       => $trigger,
-                                'rows_found' => $rowsFound,
-                                'scanned'    => is_array($result) ? ($result['scanned'] ?? $result['total_orders'] ?? null) : null,
-                                'start'      => $start,
-                                'end'        => $end,
-                            ]);
-                        } catch (Throwable $e) {
-                            Logger::getInstance()->warning('Slack scan notification failed: {message}', [
-                                'message'   => $e->getMessage(),
-                                'exception' => $e->getFile() . ':' . $e->getLine(),
-                            ]);
-                        }
-                    }
-                    $logged = true;
-                } catch (Throwable $e) {
-                    $error = $e->getMessage();
-                    RunLog::append([
-                        'tool'       => $trigger,
-                        'status'     => 'error',
-                        'created_at' => $runStartedAt,
-                        'duration'   => round(microtime(true) - $t0, 2),
-                        'start_date' => $start,
-                        'end_date'   => $end,
-                        'error'      => $error,
-                        'meta'       => ['api_version' => Shopify::API_VERSION],
-                    ]);
-                    $logged = true;
-                }
-            }
-            if (!$logged && $error !== '' && $result === null) {
-                RunLog::append([
-                    'tool'       => $trigger,
-                    'status'     => 'validation_error',
-                    'created_at' => $runStartedAt,
-                    'duration'   => round(microtime(true) - $t0, 2),
-                    'start_date' => $start,
-                    'end_date'   => $end,
-                    'error'      => $error,
-                    'meta'       => ['api_version' => Shopify::API_VERSION],
-                ]);
-            }
-        }
-
-        return compact('result', 'error', 'start', 'end');
-    }
-
-    private static function resultRowCount(mixed $result): ?int
-    {
-        if (!is_array($result)) return null;
-        if (isset($result['rows']) && is_array($result['rows'])) return count($result['rows']);
-        if (isset($result['matches']) && is_array($result['matches'])) return count($result['matches']);
-        if (isset($result['pairs']) && is_array($result['pairs'])) return count($result['pairs']);
-        return null;
     }
 
     // ── Dashboard ─────────────────────────────────────────────────────────────
@@ -2307,7 +1904,7 @@ class PageLoader
     private static function loadOnHoldStall(string $action, array $ctx): array
     {
         ['result' => $ohResult, 'error' => $ohError, 'start' => $ohStart, 'end' => $ohEnd] =
-            self::runScan($action, 'scan_onhold', $ctx, 'oh', function ($ctx, $start, $end) {
+            ScanRunner::run($action, 'scan_onhold', $ctx, 'oh', function ($ctx, $start, $end) {
                 self::setLimits(240);
                 $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
                 $nodes   = self::suppressOutput(fn() => $shopify->fetchOnHoldFulfillmentOrders($start, $end));
@@ -2346,7 +1943,7 @@ class PageLoader
         $ntThreshold = max(1, (int)($_POST['nt_threshold'] ?? $_GET['nt_threshold'] ?? 24));
 
         ['result' => $ntResult, 'error' => $ntError, 'start' => $ntStart, 'end' => $ntEnd] =
-            self::runScan($action, 'scan_notracking', $ctx, 'nt', function ($ctx, $start, $end) use (&$ntThreshold) {
+            ScanRunner::run($action, 'scan_notracking', $ctx, 'nt', function ($ctx, $start, $end) use (&$ntThreshold) {
                 $ntThreshold = max(1, (int)($_POST['nt_threshold'] ?? 24));
                 self::setLimits(180);
                 $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
@@ -2399,7 +1996,7 @@ class PageLoader
     private static function loadPostShipAddrChange(string $action, array $ctx): array
     {
         ['result' => $psResult, 'error' => $psError, 'start' => $psStart, 'end' => $psEnd] =
-            self::runScan($action, 'scan_postshipaddr', $ctx, 'ps', function ($ctx, $start, $end) {
+            ScanRunner::run($action, 'scan_postshipaddr', $ctx, 'ps', function ($ctx, $start, $end) {
                 self::setLimits(240);
                 $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
                 $entries = self::suppressOutput(fn() => $shopify->fetchPostShipAddressChanges($start, $end));
@@ -2448,7 +2045,7 @@ class PageLoader
         $nfKeywordsRaw   = trim($_POST['nf_keywords'] ?? $_GET['nf_keywords'] ?? $defaultKeywords);
 
         ['result' => $nfResult, 'error' => $nfError, 'start' => $nfStart, 'end' => $nfEnd] =
-            self::runScan($action, 'scan_noteflags', $ctx, 'nf', function ($ctx, $start, $end) use (&$nfKeywordsRaw, $defaultKeywords) {
+            ScanRunner::run($action, 'scan_noteflags', $ctx, 'nf', function ($ctx, $start, $end) use (&$nfKeywordsRaw, $defaultKeywords) {
                 $nfKeywordsRaw = trim($_POST['nf_keywords'] ?? $defaultKeywords);
                 $keywords = array_values(array_filter(array_map('trim', explode(',', strtolower($nfKeywordsRaw)))));
                 if (empty($keywords)) {
@@ -2498,10 +2095,10 @@ class PageLoader
     {
         $ssuResult = null;
         $ssuError  = '';
-        [$ssuStart, $ssuEnd] = self::extractDateRange('ssu');
+        [$ssuStart, $ssuEnd] = DateRange::fromRequest('ssu');
 
         ['result' => $ssuResult, 'error' => $ssuError, 'start' => $ssuStart, 'end' => $ssuEnd] =
-            self::runScan($action, 'scan_ssshipped', $ctx, 'ssu', function ($ctx, $start, $end) {
+            ScanRunner::run($action, 'scan_ssshipped', $ctx, 'ssu', function ($ctx, $start, $end) {
                 self::setLimits(300);
 
                 [$ssOrders, $shOrders] = self::suppressOutput(function () use ($ctx, $start, $end) {
@@ -2634,7 +2231,7 @@ class PageLoader
     private static function loadAddrDupes(string $action, array $ctx): array
     {
         ['result' => $adResult, 'error' => $adError, 'start' => $adStart, 'end' => $adEnd] =
-            self::runScan($action, 'scan_addrdupes', $ctx, 'ad', function ($ctx, $start, $end) {
+            ScanRunner::run($action, 'scan_addrdupes', $ctx, 'ad', function ($ctx, $start, $end) {
                 self::setLimits(180);
                 $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
                 $orders  = self::suppressOutput(fn() => $shopify->fetchOrdersForAddrDupes($start, $end));
@@ -2698,7 +2295,7 @@ class PageLoader
         $slaThreshold = max(1, (int)($_POST['sla_threshold'] ?? $_GET['sla_threshold'] ?? 3));
 
         ['result' => $slaResult, 'error' => $slaError, 'start' => $slaStart, 'end' => $slaEnd] =
-            self::runScan($action, 'scan_sla', $ctx, 'sla', function ($ctx, $start, $end) use (&$slaThreshold) {
+            ScanRunner::run($action, 'scan_sla', $ctx, 'sla', function ($ctx, $start, $end) use (&$slaThreshold) {
                 $slaThreshold = max(1, (int)($_POST['sla_threshold'] ?? 3));
                 self::setLimits(240);
                 $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
@@ -2749,7 +2346,7 @@ class PageLoader
     private static function loadActiveSsConflicts(string $action, array $ctx): array
     {
         ['result' => $asResult, 'error' => $asError, 'start' => $asStart, 'end' => $asEnd] =
-            self::runScan($action, 'scan_activess', $ctx, 'as', function ($ctx, $start, $end) {
+            ScanRunner::run($action, 'scan_activess', $ctx, 'as', function ($ctx, $start, $end) {
                 self::setLimits(300);
                 [$refunded, $cancelled, $activeSs] = self::suppressOutput(function () use ($ctx, $start, $end) {
                     $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
@@ -2814,7 +2411,7 @@ class PageLoader
         $daMinEmails = max(2, (int)($_POST['da_min_emails'] ?? $_GET['da_min_emails'] ?? 3));
 
         ['result' => $daResult, 'error' => $daError, 'start' => $daStart, 'end' => $daEnd] =
-            self::runScan($action, 'scan_discountabuse', $ctx, 'da', function ($ctx, $start, $end) use (&$daMinEmails) {
+            ScanRunner::run($action, 'scan_discountabuse', $ctx, 'da', function ($ctx, $start, $end) use (&$daMinEmails) {
                 $daMinEmails = max(2, (int)($_POST['da_min_emails'] ?? 3));
                 self::setLimits(180);
                 $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
@@ -2879,7 +2476,7 @@ class PageLoader
         $tpConfig = self::tagPolicyConfig();
 
         ['result' => $tpResult, 'error' => $tpError, 'start' => $tpStart, 'end' => $tpEnd] =
-            self::runScan($action, 'scan_tagpolicy', $ctx, 'tp', function ($ctx, $start, $end) use ($tpConfig) {
+            ScanRunner::run($action, 'scan_tagpolicy', $ctx, 'tp', function ($ctx, $start, $end) use ($tpConfig) {
                 $rules = array_merge($tpConfig['required'] ?? [], $tpConfig['forbidden'] ?? []);
                 if (empty($rules)) {
                     return ['rows' => [], 'scanned' => 0, 'start' => $start, 'end' => $end, 'configured' => false];
@@ -2947,7 +2544,7 @@ class PageLoader
     private static function loadInventoryAging(string $action, array $ctx): array
     {
         ['result' => $iaResult, 'error' => $iaError, 'start' => $iaStart, 'end' => $iaEnd] =
-            self::runScan($action, 'scan_inventoryaging', $ctx, 'ia', function ($ctx, $start, $end) {
+            ScanRunner::run($action, 'scan_inventoryaging', $ctx, 'ia', function ($ctx, $start, $end) {
                 self::setLimits(240);
                 [$products, $orders] = self::suppressOutput(function () use ($ctx, $start, $end) {
                     $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken'], $ctx['cacheObj']);

@@ -133,6 +133,12 @@ document.querySelectorAll('.js-localtime').forEach(function(el) {
     metafield_search: true, metafield_lookup: true, lookup_tracking: true,
     scan_hvorders: true, scan_repeat_refunds: true, scan_failed_shipments: true,
     scan_addr_changes: true, scan_bundle: true, scan_sla: true,
+    scan_country_mismatch: true, scan_partial_fulfill: true,
+    scan_onhold: true, scan_notracking: true, scan_postshipaddr: true,
+    scan_noteflags: true, scan_ssshipped: true, scan_inventory: true,
+    scan_zombieproducts: true, scan_addrdupes: true,
+    scan_products: true, scan_skudupes: true, scan_order_edits: true,
+    order_timeline: true, packingslip: true, test_connection: true,
     scan_activess: true, scan_discountabuse: true, scan_tagpolicy: true,
     scan_inventoryaging: true, scan_shipmentaging: true, refresh_api_health: true
   };

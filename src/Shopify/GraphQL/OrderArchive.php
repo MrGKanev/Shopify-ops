@@ -65,8 +65,6 @@ class OrderArchive
             }
             GQL;
 
-            echo "  Fetching Shopify orders";
-
             $this->client->paginateGraphQLVariables(
                 $query,
                 'orders',
@@ -75,23 +73,32 @@ class OrderArchive
                     foreach ($edges as $edge) {
                         $all[] = Normalizer::normalizeOrder($edge['node'] ?? []);
                     }
-                    echo '.';
                 },
                 1000
             );
 
-            echo " done (" . count($all) . " orders)\n";
             return $all;
         };
 
         if ($this->cache) {
             return $this->cache->remember('shopify', "{$startDate}|{$endDate}", function () use ($fetch, $startDate, $endDate) {
                 $orders = $fetch();
-                echo "  [cache] Shopify orders stored ({$startDate} → {$endDate})\n";
+                $this->logInfo('Shopify orders stored ({start} -> {end}); {count} orders', [
+                    'start' => $startDate,
+                    'end'   => $endDate,
+                    'count' => count($orders),
+                ]);
                 return $orders;
             });
         }
 
         return $fetch();
+    }
+
+    private function logInfo(string $message, array $context = []): void
+    {
+        if (class_exists(\Logger::class)) {
+            \Logger::getInstance()->info($message, $context);
+        }
     }
 }

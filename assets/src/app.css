@@ -746,12 +746,15 @@ input[type="checkbox"] { @apply cursor-pointer; accent-color: var(--accent); wid
   content: '';
   position: absolute;
   left: .7rem; top: 50%;
-  transform: translateY(-50%);
+  transform: translateY(-50%) rotate(0deg);
   width: 13px; height: 13px;
   border-radius: 50%;
   border: 2px solid currentColor;
   border-top-color: transparent;
-  animation: spin .7s linear infinite;
+  animation: btn-spin .7s linear infinite;
+}
+@keyframes btn-spin {
+  to { transform: translateY(-50%) rotate(360deg); }
 }
 /* ── Mobile header ── */
 .mobile-header {

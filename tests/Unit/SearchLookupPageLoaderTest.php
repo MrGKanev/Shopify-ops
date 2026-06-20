@@ -1,0 +1,151 @@
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/../../src/Comparator.php';
+require_once __DIR__ . '/../../src/SearchLookupPageLoader.php';
+
+use PHPUnit\Framework\TestCase;
+
+class SearchLookupPageLoaderTest extends TestCase
+{
+    private array $previousGet;
+    private array $previousPost;
+
+    protected function setUp(): void
+    {
+        $this->previousGet = $_GET;
+        $this->previousPost = $_POST;
+        $_GET = [];
+        $_POST = [];
+    }
+
+    protected function tearDown(): void
+    {
+        $_GET = $this->previousGet;
+        $_POST = $this->previousPost;
+    }
+
+    public function testGlobalSearchReturnsNullWhenQueryIsEmpty(): void
+    {
+        $data = SearchLookupPageLoader::load('globalsearch', '', $this->ctx(), []);
+
+        $this->assertNull($data['gsResults']);
+    }
+
+    public function testGlobalSearchMatchesReportsPushLogAndIgnoredOrders(): void
+    {
+        $_GET['q'] = '#1001';
+
+        $data = SearchLookupPageLoader::load('globalsearch', '', $this->ctx([
+            'ignoredOrders' => [
+                '1001' => ['reason' => 'test ignore', 'ignored_at' => '2026-06-01'],
+                '2002' => ['reason' => 'other'],
+            ],
+        ]), [
+            'orderHistory' => [
+                '1001' => ['count' => 2, 'first' => '2026-06-01', 'last' => '2026-06-10'],
+                '9999' => ['count' => 1, 'first' => '2026-06-01', 'last' => '2026-06-01'],
+            ],
+            'pushLog' => [
+                ['order_number' => '#1001', 'pushed_at' => '2026-06-11'],
+                ['order_number' => '#2002', 'pushed_at' => '2026-06-12'],
+            ],
+        ]);
+
+        $this->assertSame('#1001', $data['gsResults']['query']);
+        $this->assertSame('1001', $data['gsResults']['reports'][0]['number']);
+        $this->assertSame('#1001', $data['gsResults']['push'][0]['order_number']);
+        $this->assertSame('1001', $data['gsResults']['ignored'][0]['number']);
+    }
+
+    public function testTagSearchInitialStateAndValidationError(): void
+    {
+        $initial = SearchLookupPageLoader::load('tagsearch', '', $this->ctx());
+
+        $this->assertNull($initial['tagSearch']);
+        $this->assertSame('', $initial['tagSearchError']);
+        $this->assertSame('', $initial['tagInput']);
+
+        $_POST = ['tag_input' => '   ', 'tag_start' => '2026-06-01', 'tag_end' => '2026-06-20'];
+        $submitted = SearchLookupPageLoader::load('tagsearch', 'tag_search', $this->ctx());
+
+        $this->assertSame('Enter at least one tag.', $submitted['tagSearchError']);
+        $this->assertSame('', $submitted['tagInput']);
+        $this->assertSame('2026-06-01', $submitted['tagStart']);
+        $this->assertSame('2026-06-20', $submitted['tagEnd']);
+    }
+
+    public function testTagSearchReportsMissingShopifyCredentials(): void
+    {
+        $_POST = ['tag_input' => 'vip'];
+
+        $data = SearchLookupPageLoader::load('tagsearch', 'tag_search', $this->ctx());
+
+        $this->assertSame('SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.', $data['tagSearchError']);
+        $this->assertSame('vip', $data['tagInput']);
+    }
+
+    public function testCustomerLookupPrefillAndValidationErrors(): void
+    {
+        $_GET['email'] = 'customer@example.com';
+        $initial = SearchLookupPageLoader::load('customer', '', $this->ctx());
+
+        $this->assertSame('customer@example.com', $initial['customerEmail']);
+        $this->assertSame('', $initial['customerError']);
+        $this->assertNull($initial['customerResult']);
+
+        $_GET = [];
+        $_POST = ['customer_email' => 'not-an-email'];
+        $invalid = SearchLookupPageLoader::load('customer', 'customer_lookup', $this->ctx());
+
+        $this->assertSame('Enter a valid email address.', $invalid['customerError']);
+        $this->assertSame('not-an-email', $invalid['customerEmail']);
+
+        $_POST = ['customer_email' => 'customer@example.com'];
+        $missingCredentials = SearchLookupPageLoader::load('customer', 'customer_lookup', $this->ctx());
+
+        $this->assertSame('SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.', $missingCredentials['customerError']);
+    }
+
+    public function testTrackingPrefillAndValidationErrors(): void
+    {
+        $_GET['prefill'] = '#1001';
+        $initial = SearchLookupPageLoader::load('tracking', '', $this->ctx());
+
+        $this->assertSame('#1001', $initial['trackingInput']);
+        $this->assertSame('', $initial['trackingError']);
+        $this->assertNull($initial['trackingResults']);
+
+        $_GET = [];
+        $_POST = ['tracking_orders' => " \n "];
+        $empty = SearchLookupPageLoader::load('tracking', 'lookup_tracking', $this->ctx());
+
+        $this->assertSame('Enter at least one order number.', $empty['trackingError']);
+
+        $_POST = ['tracking_orders' => implode(' ', range(1, 31))];
+        $tooMany = SearchLookupPageLoader::load('tracking', 'lookup_tracking', $this->ctx());
+
+        $this->assertSame('Maximum 30 order numbers at once.', $tooMany['trackingError']);
+
+        $_POST = ['tracking_orders' => '1001'];
+        $missingCredentials = SearchLookupPageLoader::load('tracking', 'lookup_tracking', $this->ctx());
+
+        $this->assertSame('SS_API_KEY / SS_API_SECRET not set in .env.', $missingCredentials['trackingError']);
+    }
+
+    public function testUnknownPageReturnsEmptyData(): void
+    {
+        $this->assertSame([], SearchLookupPageLoader::load('unknown', '', $this->ctx()));
+    }
+
+    private function ctx(array $overrides = []): array
+    {
+        return $overrides + [
+            'shopifyStore'  => 'N/A',
+            'shopifyToken'  => '',
+            'ssKey'         => '',
+            'ssSecret'      => '',
+            'ignoredOrders' => [],
+        ];
+    }
+}
