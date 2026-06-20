@@ -29,6 +29,10 @@ require_once __DIR__ . '/src/ToolRegistry.php';
 require_once __DIR__ . '/src/ManageSettingsPageLoader.php';
 require_once __DIR__ . '/src/SearchLookupPageLoader.php';
 require_once __DIR__ . '/src/PackingSlipPageLoader.php';
+require_once __DIR__ . '/src/SimpleScanPageLoader.php';
+require_once __DIR__ . '/src/FulfillmentIssuePageLoader.php';
+require_once __DIR__ . '/src/ProductInventoryPageLoader.php';
+require_once __DIR__ . '/src/OrderAnomalyPageLoader.php';
 require_once __DIR__ . '/src/PageLoader.php';
 
 Dotenv\Dotenv::createUnsafeImmutable(__DIR__)->safeLoad();
