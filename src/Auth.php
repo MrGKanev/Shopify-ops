@@ -6,10 +6,21 @@ declare(strict_types=1);
  */
 class Auth
 {
-    private const string ATTEMPTS_FILE = __DIR__ . '/../data/login_attempts.json';
-    private const int    LOCK_DURATION  = 604800; // 1 week
-    private const int    ATTEMPT_WINDOW = 3600;   // sliding window (1 hour)
-    private const int    MAX_ATTEMPTS   = 3;
+    private const int LOCK_DURATION  = 604800; // 1 week
+    private const int ATTEMPT_WINDOW = 3600;   // sliding window (1 hour)
+    private const int MAX_ATTEMPTS   = 3;
+
+    private static string $customFile = '';
+
+    public static function setDataDir(string $dir): void
+    {
+        self::$customFile = rtrim($dir, '/') . '/login_attempts.json';
+    }
+
+    private static function file(): string
+    {
+        return self::$customFile ?: (__DIR__ . '/../data/login_attempts.json');
+    }
 
     /**
      * Attempt a login. Returns an empty string on success, an error message on failure.
@@ -22,7 +33,7 @@ class Auth
         string $correctPass,
         string $ip
     ): string {
-        $attemptsFile = self::ATTEMPTS_FILE;
+        $attemptsFile = self::file();
         if (!is_dir(dirname($attemptsFile))) {
             mkdir(dirname($attemptsFile), 0755, true);
         }
@@ -122,7 +133,7 @@ class Auth
      */
     public static function unban(string $ip): void
     {
-        $attemptsFile = self::ATTEMPTS_FILE;
+        $attemptsFile = self::file();
         if (!$ip || !file_exists($attemptsFile)) {
             return;
         }
@@ -143,7 +154,7 @@ class Auth
      */
     public static function bannedIps(): array
     {
-        $attemptsFile = self::ATTEMPTS_FILE;
+        $attemptsFile = self::file();
         if (!file_exists($attemptsFile)) {
             return [];
         }

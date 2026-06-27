@@ -14,6 +14,7 @@ class Stores
     public static function init(string $rootDir): void
     {
         self::$jsonPath = $rootDir . '/stores.json';
+        self::$cache    = null;
     }
 
     public static function isMultiStore(): bool

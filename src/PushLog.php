@@ -6,6 +6,8 @@ declare(strict_types=1);
  */
 class PushLog
 {
+    use JsonFileLock;
+
     private static string $customFile = '';
 
     public static function setDataDir(string $dir): void
@@ -25,18 +27,10 @@ class PushLog
      */
     public static function append(array $entry): void
     {
-        $file = self::file();
-        if (!is_dir(dirname($file))) {
-            mkdir(dirname($file), 0755, true);
-        }
-        $fh = fopen($file, 'c+');
-        flock($fh, LOCK_EX);
-        $raw = stream_get_contents($fh);
-        $log = $raw ? (json_decode($raw, true) ?: []) : [];
-        $log[] = $entry;
-        ftruncate($fh, 0); rewind($fh);
-        fwrite($fh, json_encode($log, JSON_PRETTY_PRINT));
-        flock($fh, LOCK_UN); fclose($fh);
+        self::writeJson(self::file(), function (array $log) use ($entry): array {
+            $log[] = $entry;
+            return $log;
+        });
     }
 
     /**
@@ -46,10 +40,6 @@ class PushLog
      */
     public static function all(): array
     {
-        $file = self::file();
-        if (!file_exists($file)) {
-            return [];
-        }
-        return array_reverse(json_decode(file_get_contents($file), true) ?: []);
+        return array_reverse(self::readJson(self::file()));
     }
 }

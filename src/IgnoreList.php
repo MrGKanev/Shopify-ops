@@ -9,6 +9,8 @@ use League\Csv\Reader;
  */
 class IgnoreList
 {
+    use JsonFileLock;
+
     private static string $customFile = '';
 
     public static function setDataDir(string $dir): void
@@ -30,11 +32,7 @@ class IgnoreList
      */
     public static function load(): array
     {
-        $file = self::file();
-        if (!file_exists($file)) {
-            return [];
-        }
-        return json_decode(file_get_contents($file), true) ?: [];
+        return self::readJson(self::file());
     }
 
     // ── Write ─────────────────────────────────────────────────────────
@@ -45,7 +43,7 @@ class IgnoreList
     public static function add(string $normNum, string $reason, string $orderName = ''): void
     {
         if (!$normNum) return;
-        self::write(function (array $data) use ($normNum, $reason): array {
+        self::writeJson(self::file(), function (array $data) use ($normNum, $reason): array {
             $data[$normNum] = ['reason' => $reason, 'ignored_at' => date('Y-m-d')];
             return $data;
         });
@@ -57,7 +55,7 @@ class IgnoreList
     public static function remove(string $normNum): void
     {
         if (!$normNum) return;
-        self::write(function (array $data) use ($normNum): array {
+        self::writeJson(self::file(), function (array $data) use ($normNum): array {
             unset($data[$normNum]);
             return $data;
         });
@@ -71,7 +69,7 @@ class IgnoreList
      */
     public static function bulkAdd(array $entries): void
     {
-        self::write(function (array $data) use ($entries): array {
+        self::writeJson(self::file(), function (array $data) use ($entries): array {
             foreach ($entries as $e) {
                 $norm = $e['number'] ?? '';
                 if ($norm) {
@@ -89,7 +87,7 @@ class IgnoreList
      */
     public static function bulkRemove(array $normNums): void
     {
-        self::write(function (array $data) use ($normNums): array {
+        self::writeJson(self::file(), function (array $data) use ($normNums): array {
             foreach ($normNums as $n) {
                 unset($data[$n]);
             }
@@ -133,25 +131,4 @@ class IgnoreList
         return $count;
     }
 
-    // ── Private ───────────────────────────────────────────────────────
-
-    /**
-     * Read-modify-write with exclusive locking.
-     * $mutator receives the current array and must return the updated array.
-     */
-    private static function write(callable $mutator): void
-    {
-        $file = self::file();
-        if (!is_dir(dirname($file))) {
-            mkdir(dirname($file), 0755, true);
-        }
-        $fh = fopen($file, 'c+');
-        flock($fh, LOCK_EX);
-        $raw  = stream_get_contents($fh);
-        $data = $raw ? (json_decode($raw, true) ?: []) : [];
-        $data = $mutator($data);
-        ftruncate($fh, 0); rewind($fh);
-        fwrite($fh, json_encode($data, JSON_PRETTY_PRINT));
-        flock($fh, LOCK_UN); fclose($fh);
-    }
 }

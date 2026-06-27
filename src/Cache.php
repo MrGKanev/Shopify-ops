@@ -44,16 +44,11 @@ class Cache
         $file = $this->path($prefix, $key);
 
         if (file_exists($file)) {
-            $fh   = fopen($file, 'r');
-            $head = $fh ? fread($fh, 64) : '';
-            if ($fh) fclose($fh);
-            preg_match('/"expires_at"\s*:\s*(\d+)/', $head, $m);
-            if (isset($m[1]) && (int) $m[1] > time()) {
-                $wrapper = json_decode(file_get_contents($file), true);
-                if (is_array($wrapper)) {
-                    $this->hits[$prefix] = true;
-                    return $wrapper['data'];
-                }
+            $raw     = file_get_contents($file);
+            $wrapper = $raw ? json_decode($raw, true) : null;
+            if (is_array($wrapper) && ($wrapper['expires_at'] ?? 0) > time()) {
+                $this->hits[$prefix] = true;
+                return $wrapper['data'];
             }
             // Expired - file stays on disk until pruneExpired() removes it after retention period
         }
