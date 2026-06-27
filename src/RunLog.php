@@ -6,6 +6,8 @@ declare(strict_types=1);
  */
 class RunLog
 {
+    use JsonFileLock;
+
     private const int MAX_ENTRIES = 500;
     private static string $customFile = '';
 
@@ -24,11 +26,6 @@ class RunLog
      */
     public static function append(array $entry): void
     {
-        $file = self::file();
-        if (!is_dir(dirname($file))) {
-            mkdir(dirname($file), 0755, true);
-        }
-
         $entry += [
             'id'          => bin2hex(random_bytes(6)),
             'created_at'  => date('Y-m-d H:i:s'),
@@ -43,17 +40,10 @@ class RunLog
             'meta'        => [],
         ];
 
-        $fh = fopen($file, 'c+');
-        flock($fh, LOCK_EX);
-        $raw = stream_get_contents($fh);
-        $log = $raw ? (json_decode($raw, true) ?: []) : [];
-        $log[] = $entry;
-        if (count($log) > self::MAX_ENTRIES) {
-            $log = array_slice($log, -self::MAX_ENTRIES);
-        }
-        ftruncate($fh, 0); rewind($fh);
-        fwrite($fh, json_encode($log, JSON_PRETTY_PRINT));
-        flock($fh, LOCK_UN); fclose($fh);
+        self::writeJson(self::file(), function (array $log) use ($entry): array {
+            $log[] = $entry;
+            return count($log) > self::MAX_ENTRIES ? array_slice($log, -self::MAX_ENTRIES) : $log;
+        });
     }
 
     /**
@@ -61,10 +51,6 @@ class RunLog
      */
     public static function all(): array
     {
-        $file = self::file();
-        if (!file_exists($file)) {
-            return [];
-        }
-        return array_reverse(json_decode(file_get_contents($file), true) ?: []);
+        return array_reverse(self::readJson(self::file()));
     }
 }

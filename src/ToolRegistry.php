@@ -6,6 +6,9 @@ declare(strict_types=1);
  */
 class ToolRegistry
 {
+    /** @var array<string, array<string, mixed>>|null */
+    private static ?array $toolMapCache = null;
+
     /** @var array<string, array<string, mixed>> */
     private const HUBS = [
         'audit' => [
@@ -170,6 +173,9 @@ class ToolRegistry
      */
     private static function toolMap(): array
     {
+        if (self::$toolMapCache !== null) {
+            return self::$toolMapCache;
+        }
         $tools = [];
         foreach (self::HUBS as $group => $hub) {
             foreach (($hub['sections'] ?? []) as $sectionTools) {
@@ -179,6 +185,6 @@ class ToolRegistry
                 }
             }
         }
-        return $tools;
+        return self::$toolMapCache = $tools;
     }
 }

@@ -6,6 +6,8 @@ declare(strict_types=1);
  */
 class JobQueue
 {
+    use JsonFileLock;
+
     private const int MAX_ENTRIES = 500;
     private static string $customFile = '';
 
@@ -38,7 +40,7 @@ class JobQueue
             'error'       => '',
         ];
 
-        self::write(function (array $jobs) use ($job): array {
+        self::writeJson(self::file(), function (array $jobs) use ($job): array {
             $jobs[] = $job;
             return count($jobs) > self::MAX_ENTRIES ? array_slice($jobs, -self::MAX_ENTRIES) : $jobs;
         });
@@ -51,7 +53,7 @@ class JobQueue
      */
     public static function all(): array
     {
-        return array_reverse(self::read());
+        return array_reverse(self::readJson(self::file()));
     }
 
     /**
@@ -60,7 +62,7 @@ class JobQueue
     public static function claimNext(): ?array
     {
         $claimed = null;
-        self::write(function (array $jobs) use (&$claimed): array {
+        self::writeJson(self::file(), function (array $jobs) use (&$claimed): array {
             foreach ($jobs as &$job) {
                 if (($job['status'] ?? '') !== 'pending') continue;
                 $job['status'] = 'running';
@@ -101,7 +103,7 @@ class JobQueue
      */
     private static function update(string $id, array $patch): void
     {
-        self::write(function (array $jobs) use ($id, $patch): array {
+        self::writeJson(self::file(), function (array $jobs) use ($id, $patch): array {
             foreach ($jobs as &$job) {
                 if (($job['id'] ?? '') === $id) {
                     $job = array_merge($job, $patch);
@@ -113,32 +115,4 @@ class JobQueue
         });
     }
 
-    /**
-     * @return array<int, array<string, mixed>>
-     */
-    private static function read(): array
-    {
-        $file = self::file();
-        if (!file_exists($file)) {
-            return [];
-        }
-        $decoded = json_decode(file_get_contents($file), true);
-        return is_array($decoded) ? $decoded : [];
-    }
-
-    private static function write(callable $mutator): void
-    {
-        $file = self::file();
-        if (!is_dir(dirname($file))) {
-            mkdir(dirname($file), 0755, true);
-        }
-        $fh = fopen($file, 'c+');
-        flock($fh, LOCK_EX);
-        $raw = stream_get_contents($fh);
-        $jobs = $raw ? (json_decode($raw, true) ?: []) : [];
-        $jobs = $mutator($jobs);
-        ftruncate($fh, 0); rewind($fh);
-        fwrite($fh, json_encode($jobs, JSON_PRETTY_PRINT));
-        flock($fh, LOCK_UN); fclose($fh);
-    }
 }

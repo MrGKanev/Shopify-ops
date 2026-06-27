@@ -207,4 +207,75 @@ class CacheTest extends TestCase
     {
         $this->assertSame(60, $this->cache->getTtl());
     }
+
+    // ── expiry behaviour ──────────────────────────────────────────────────────
+
+    public function testRememberBypassesExpiredEntryAndCallsFetchAgain(): void
+    {
+        // Pre-populate an already-expired cache file for the key
+        $file = $this->tmpDir . '/pfx_' . hash('sha256', 'key') . '.json';
+        file_put_contents($file, json_encode(['expires_at' => time() - 10, 'data' => ['old' => true]]));
+
+        $calls  = 0;
+        $result = $this->cache->remember('pfx', 'key', function () use (&$calls) {
+            $calls++;
+            return ['new' => true];
+        });
+
+        $this->assertSame(1, $calls);
+        $this->assertSame(['new' => true], $result);
+    }
+
+    public function testExpiredFileRemainsOnDiskUntilExplicitlyPruned(): void
+    {
+        // Write an expired file for key A
+        $fileA = $this->tmpDir . '/pfx_' . hash('sha256', 'keyA') . '.json';
+        file_put_contents($fileA, json_encode(['expires_at' => time() - 10, 'data' => ['stale']]));
+
+        // Call remember() for a completely different key — should not touch key A's file
+        $this->cache->remember('pfx', 'keyB', fn() => ['fresh']);
+
+        $this->assertTrue(file_exists($fileA), 'Expired file must stay on disk until pruneExpired() is called');
+    }
+
+    // ── pruneExpired ──────────────────────────────────────────────────────────
+
+    public function testPruneExpiredDeletesFilesPastRetentionPeriod(): void
+    {
+        // Use a short retention window so we can trigger deletion without sleeping
+        $pruneCache = new Cache($this->tmpDir, ttl: 60, retention: 60);
+
+        $file = $this->tmpDir . '/old_' . hash('sha256', 'k') . '.json';
+        // Expired 2 minutes ago — past the 60 s retention
+        file_put_contents($file, json_encode(['expires_at' => time() - 120, 'data' => []]));
+
+        $deleted = $pruneCache->pruneExpired();
+
+        $this->assertSame(1, $deleted);
+        $this->assertFalse(file_exists($file));
+    }
+
+    public function testPruneExpiredKeepsRecentlyExpiredFilesWithinRetentionWindow(): void
+    {
+        // retention = 1 hour; file expired only 30 s ago — should be kept
+        $pruneCache = new Cache($this->tmpDir, ttl: 60, retention: 3600);
+
+        $file = $this->tmpDir . '/recent_' . hash('sha256', 'k') . '.json';
+        file_put_contents($file, json_encode(['expires_at' => time() - 30, 'data' => []]));
+
+        $deleted = $pruneCache->pruneExpired();
+
+        $this->assertSame(0, $deleted);
+        $this->assertTrue(file_exists($file));
+    }
+
+    public function testPruneExpiredKeepsFreshFiles(): void
+    {
+        $this->cache->remember('pfx', 'fresh', fn() => ['ok' => true]);
+
+        $deleted = $this->cache->pruneExpired();
+
+        $this->assertSame(0, $deleted);
+        $this->assertCount(1, glob($this->tmpDir . '/*.json'));
+    }
 }
