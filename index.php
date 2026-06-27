@@ -89,20 +89,38 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !Auth::validateCsrf($_PO
 }
 
 if ($action === 'login') {
-    $ip    = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    $error = Auth::attempt($_POST['username'] ?? '', $_POST['password'] ?? '', getenv('WEB_USERNAME') ?: 'admin', getenv('WEB_PASSWORD') ?: 'changeme', $ip);
-    if ($error === '') {
-        session_regenerate_id(true);
-        $_SESSION['authed'] = true;
-        $csrfToken = Auth::rotateCsrfToken();
-        header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
-        exit;
+    $ip        = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $usersFile = __DIR__ . '/data/users.json';
+    if (file_exists($usersFile)) {
+        // Multi-user mode: users.json takes precedence over ENV credentials
+        $role = Auth::attemptMultiUser($_POST['username'] ?? '', $_POST['password'] ?? '', $ip);
+        if ($role !== '') {
+            session_regenerate_id(true);
+            $_SESSION['authed']    = true;
+            $_SESSION['user_role'] = $role;
+            $csrfToken = Auth::rotateCsrfToken();
+            header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
+            exit;
+        }
+        $error = 'Incorrect username or password.';
+    } else {
+        // Legacy single-user mode via ENV vars
+        $error = Auth::attempt($_POST['username'] ?? '', $_POST['password'] ?? '', getenv('WEB_USERNAME') ?: 'admin', getenv('WEB_PASSWORD') ?: 'changeme', $ip);
+        if ($error === '') {
+            session_regenerate_id(true);
+            $_SESSION['authed']    = true;
+            $_SESSION['user_role'] = 'admin';
+            $csrfToken = Auth::rotateCsrfToken();
+            header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
+            exit;
+        }
     }
 }
 
 if ($action === 'dev_login' && $isLocalhost) {
     session_regenerate_id(true);
-    $_SESSION['authed'] = true;
+    $_SESSION['authed']    = true;
+    $_SESSION['user_role'] = 'admin';
     $csrfToken = Auth::rotateCsrfToken();
     header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
     exit;
@@ -114,7 +132,8 @@ if ($action === 'logout') {
     exit;
 }
 
-$authed = !empty($_SESSION['authed']);
+$authed   = !empty($_SESSION['authed']);
+$userRole = $_SESSION['user_role'] ?? 'admin'; // legacy sessions default to admin
 
 // ── Store config (multi-store or single .env) ─────────────────────────────────
 
@@ -176,7 +195,32 @@ if ($authed) {
 
 $ctx = compact('authed', 'action', 'ssKey', 'ssSecret', 'shopifyToken', 'shopifyStore',
                'cacheObj', 'cacheTtl', 'reportDir', 'ignoredOrders', 'appVersion',
-               'storeId', 'storeLabel');
+               'storeId', 'storeLabel', 'userRole');
+
+// Role-based access control for sensitive POST actions
+if ($authed && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && $action !== '') {
+    $operatorActions = [
+        'push_to_shipstation', 'bulk_push',
+        'ignore_order', 'unignore_order', 'bulk_ignore_orders', 'bulk_unignore_orders', 'import_ignore_csv',
+        'flush_cache', 'run_audit', 'queue_audit',
+    ];
+    $adminActions = [
+        'save_settings', 'ban_ip', 'unban_ip',
+        'save_slack_rules',
+        'add_user', 'delete_user',
+    ];
+
+    if (in_array($action, $operatorActions, true) && !Auth::can('push')) {
+        http_response_code(403);
+        echo '<h1>403 Forbidden</h1><p>Your role does not have permission to perform this action.</p>';
+        exit;
+    }
+    if (in_array($action, $adminActions, true) && !Auth::can('manage_settings')) {
+        http_response_code(403);
+        echo '<h1>403 Forbidden</h1><p>Your role does not have permission to perform this action.</p>';
+        exit;
+    }
+}
 
 Actions::dispatch($action, $ctx);
 

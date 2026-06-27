@@ -92,7 +92,7 @@
         <?php endif; ?>
       </a>
       <a href="?page=settings" class="flat-nav-link <?= $activeGroup === 'settings' ? 'active' : '' ?>" title="Settings">
-        <span class="flat-nav-icon">⚙</span><span class="nav-label"> Settings</span>
+        <span class="flat-nav-icon">⚙</span><span class="nav-label"> Settings<?php if (($userRole ?? 'admin') !== 'admin'): ?> 🔒<?php endif; ?></span>
       </a>
 
     </nav>

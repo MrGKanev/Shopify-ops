@@ -25,6 +25,8 @@ class Actions
             'preview_push'        => self::previewPush($ctx),
             'order_detail'        => self::orderDetail($ctx),
             'flush_cache'         => self::flushCache($ctx),
+            'add_user'            => self::addUser($ctx),
+            'delete_user'         => self::deleteUser($ctx),
             default               => null,
         };
 
@@ -230,6 +232,50 @@ class Actions
     private static function flushCache(array $ctx): void
     {
         // Handled in PageLoader (needs to return flushed count to view) - no early exit.
+    }
+
+    private static function addUser(array $ctx): void
+    {
+        $username = trim($_POST['new_username'] ?? '');
+        $password = $_POST['new_password'] ?? '';
+        $role     = $_POST['new_role'] ?? 'viewer';
+
+        if (!in_array($role, ['viewer', 'operator', 'admin'], true)) {
+            header('Location: ?page=settings&user_error=' . urlencode('Invalid role.')); exit;
+        }
+        if ($username === '' || $password === '') {
+            header('Location: ?page=settings&user_error=' . urlencode('Username and password are required.')); exit;
+        }
+
+        $users = Auth::loadUsers();
+        foreach ($users as $u) {
+            if (($u['name'] ?? '') === $username) {
+                header('Location: ?page=settings&user_error=' . urlencode('A user with that username already exists.')); exit;
+            }
+        }
+
+        $users[] = [
+            'name'          => $username,
+            'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+            'role'          => $role,
+        ];
+        Auth::saveUsers($users);
+        UserActionLog::append('add_user', ['username' => $username, 'role' => $role]);
+        header('Location: ?page=settings&user_added=1'); exit;
+    }
+
+    private static function deleteUser(array $ctx): void
+    {
+        $username = trim($_POST['username'] ?? '');
+        if ($username === '') {
+            header('Location: ?page=settings'); exit;
+        }
+
+        $users = Auth::loadUsers();
+        $users = array_values(array_filter($users, fn($u) => ($u['name'] ?? '') !== $username));
+        Auth::saveUsers($users);
+        UserActionLog::append('delete_user', ['username' => $username]);
+        header('Location: ?page=settings&user_deleted=1'); exit;
     }
 
     private static function csvDownload(array $ctx): void
