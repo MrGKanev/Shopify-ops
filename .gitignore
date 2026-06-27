@@ -11,6 +11,7 @@ reports/*
 
 data/*
 !data/.htaccess
+!data/note_templates.json.example
 /temp
 *.DS_Store
 /*.txt

@@ -1,0 +1,14 @@
+[
+  {
+    "label": "Address correction needed",
+    "template": "Please verify shipping address for {{order_number}}. Customer was contacted on {{date}}."
+  },
+  {
+    "label": "Replacement sent",
+    "template": "Replacement order sent for {{order_number}}. Original tracking: {{tracking}}."
+  },
+  {
+    "label": "Fraud review",
+    "template": "Order {{order_number}} flagged for fraud review on {{date}}. Placed on hold pending verification."
+  }
+]

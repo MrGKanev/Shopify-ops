@@ -60,58 +60,85 @@
   <?php if (empty($addrResult['rows'])): ?>
     <?= tableWrapEmpty('All addresses look good', 'No address problems found in ' . $addrResult['scanned'] . ' orders for this date range.') ?>
   <?php else: ?>
-    <div class="table-wrap">
-      <?= tableWrapHeader($addrResult['rows'], 'tbl-addrcheck', 'Address Issues', 'address-issues', $addrResult['start']) ?>
-      <table id="tbl-addrcheck">
-        <thead>
-          <tr>
-            <th>Order</th>
-            <th>Date</th>
-            <th>Email</th>
-            <th>Shipping address</th>
-            <th>Issues</th>
-            <th>Severity</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($addrResult['rows'] as $row):
-            $adminUrl = $row['shopify_id'] ? $shopifyAdminBase . '/' . esc($row['shopify_id']) : null;
-            $addr     = $row['address'];
-            $addrLine = formatAddressLine($addr);
-            $recipientName = trim(($addr['first_name'] ?? '') . ' ' . ($addr['last_name'] ?? ''));
-          ?>
-          <tr>
-            <?= orderNumCell($row['order_number'], $adminUrl) ?>
-            <td><?= esc($row['created_at']) ?></td>
-            <td class="td-email"><?= esc($row['email']) ?></td>
-            <td class="td-email">
-              <?php if ($recipientName): ?>
-                <div class="font-medium"><?= esc($recipientName) ?></div>
-              <?php endif; ?>
-              <?php if ($addrLine): ?>
-                <div class="text-xs text-muted"><?= esc($addrLine) ?></div>
-              <?php endif; ?>
-            </td>
-            <td>
-              <div class="flex flex-col gap-1">
-                <?php foreach ($row['issues'] as $issue): ?>
-                  <span class="addr-issue addr-issue-<?= $issue['level'] ?>">
-                    <?= esc($issue['message']) ?>
-                  </span>
-                <?php endforeach; ?>
-              </div>
-            </td>
-            <td>
-              <span class="refund-risk-badge <?= $row['severity'] === 'critical' ? 'refund-risk-active' : 'refund-risk-missing' ?>">
-                <?= $row['severity'] ?>
-              </span>
-            </td>
-            <?= actionLinks(['shopifyUrl' => $adminUrl, 'shopifyLabel' => 'Edit in Shopify', 'orderNum' => $row['order_number'], 'email' => $row['email'], 'spotcheck' => true]) ?>
-          </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
+    <form method="post" id="bulk-addrcheck-form">
+      <input type="hidden" name="action" value="bulk_ignore_orders">
+      <input type="hidden" name="redirect_page" value="addrcheck">
+
+      <div class="bulk-bar" id="bar-addrcheck">
+        <span class="bulk-count" id="cnt-addrcheck">0 selected</span>
+        <input type="text" class="bulk-reason" name="reason" placeholder="Reason (optional)">
+        <button class="btn btn-sm btn-danger" type="submit">Ignore selected</button>
+        <button class="btn btn-sm btn-ghost" type="button"
+          onclick="document.querySelectorAll('#addrcheck-tbody .js-row-check').forEach(function(c){c.checked=false});updateBulkBar('addrcheck')">
+          Clear
+        </button>
+        <button class="btn btn-sm btn-ghost" type="button"
+          onclick="exportSelectedCSV('addrcheck','#tbl-addrcheck','address-issues-selected.csv')">
+          Export selected
+        </button>
+      </div>
+
+      <div class="table-wrap">
+        <?= tableWrapHeader($addrResult['rows'], 'tbl-addrcheck', 'Address Issues', 'address-issues', $addrResult['start']) ?>
+        <table id="tbl-addrcheck">
+          <thead>
+            <tr>
+              <th class="col-check">
+                <input type="checkbox" class="js-select-all" data-target="addrcheck-tbody" data-bar="addrcheck" title="Select all">
+              </th>
+              <th>Order</th>
+              <th>Date</th>
+              <th>Email</th>
+              <th>Shipping address</th>
+              <th>Issues</th>
+              <th>Severity</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="addrcheck-tbody">
+            <?php foreach ($addrResult['rows'] as $row):
+              $adminUrl = $row['shopify_id'] ? $shopifyAdminBase . '/' . esc($row['shopify_id']) : null;
+              $addr     = $row['address'];
+              $addrLine = formatAddressLine($addr);
+              $recipientName = trim(($addr['first_name'] ?? '') . ' ' . ($addr['last_name'] ?? ''));
+            ?>
+            <tr>
+              <td class="col-check">
+                <input type="checkbox" class="js-row-check" name="order_numbers[]"
+                       value="<?= esc(ltrim($row['order_number'], '#')) ?>"
+                       data-bar="addrcheck" onchange="updateBulkBar('addrcheck')">
+              </td>
+              <?= orderNumCell($row['order_number'], $adminUrl) ?>
+              <td><?= esc($row['created_at']) ?></td>
+              <td class="td-email"><?= esc($row['email']) ?></td>
+              <td class="td-email">
+                <?php if ($recipientName): ?>
+                  <div class="font-medium"><?= esc($recipientName) ?></div>
+                <?php endif; ?>
+                <?php if ($addrLine): ?>
+                  <div class="text-xs text-muted"><?= esc($addrLine) ?></div>
+                <?php endif; ?>
+              </td>
+              <td>
+                <div class="flex flex-col gap-1">
+                  <?php foreach ($row['issues'] as $issue): ?>
+                    <span class="addr-issue addr-issue-<?= $issue['level'] ?>">
+                      <?= esc($issue['message']) ?>
+                    </span>
+                  <?php endforeach; ?>
+                </div>
+              </td>
+              <td>
+                <span class="refund-risk-badge <?= $row['severity'] === 'critical' ? 'refund-risk-active' : 'refund-risk-missing' ?>">
+                  <?= $row['severity'] ?>
+                </span>
+              </td>
+              <?= actionLinks(['shopifyUrl' => $adminUrl, 'shopifyLabel' => 'Edit in Shopify', 'orderNum' => $row['order_number'], 'email' => $row['email'], 'spotcheck' => true]) ?>
+            </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </form>
   <?php endif; ?>
 <?php endif; ?>

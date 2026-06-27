@@ -27,6 +27,7 @@ class Actions
             'flush_cache'         => self::flushCache($ctx),
             'add_user'            => self::addUser($ctx),
             'delete_user'         => self::deleteUser($ctx),
+            'save_order_note'     => self::saveOrderNote($ctx),
             default               => null,
         };
 
@@ -276,6 +277,33 @@ class Actions
         Auth::saveUsers($users);
         UserActionLog::append('delete_user', ['username' => $username]);
         header('Location: ?page=settings&user_deleted=1'); exit;
+    }
+
+    private static function saveOrderNote(array $ctx): void
+    {
+        $shopifyId = trim($_POST['shopify_id'] ?? '');
+        $note      = trim($_POST['note'] ?? '');
+        $loc       = self::redirectBack('spotcheck');
+
+        if (!$shopifyId) {
+            header('Location: ' . $loc . '&note_error=' . urlencode('Missing order ID.') . '&note_order=' . urlencode($shopifyId));
+            exit;
+        }
+
+        if (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
+            header('Location: ' . $loc . '&note_error=' . urlencode('Shopify credentials not configured.') . '&note_order=' . urlencode($shopifyId));
+            exit;
+        }
+
+        try {
+            $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+            $shopify->updateOrderNote($shopifyId, $note);
+            UserActionLog::append('save_order_note', ['shopify_id' => $shopifyId, 'note_length' => strlen($note)]);
+            header('Location: ' . $loc . '&note_ok=' . urlencode($shopifyId));
+        } catch (Throwable $e) {
+            header('Location: ' . $loc . '&note_error=' . urlencode($e->getMessage()) . '&note_order=' . urlencode($shopifyId));
+        }
+        exit;
     }
 
     private static function csvDownload(array $ctx): void

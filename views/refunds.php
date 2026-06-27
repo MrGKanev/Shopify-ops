@@ -62,104 +62,131 @@
       </div>
     </div>
   <?php else: ?>
-    <div class="table-wrap">
-      <div class="table-header">
-        <h2>Refunded Orders</h2>
-        <div class="flex items-center gap-2">
-          <span><?= count($rows) ?> order<?= count($rows) !== 1 ? 's' : '' ?></span>
-          <button class="btn btn-sm btn-ghost" data-csv-btn="#tbl-refunds" data-csv-filename="refunds-<?= esc($refundsResult['start']) ?>-<?= esc($refundsResult['end']) ?>.csv">Export CSV</button>
-        </div>
-      </div>
-      <table id="tbl-refunds">
-        <thead>
-          <tr>
-            <th>Order</th>
-            <th>Date</th>
-            <th>Email</th>
-            <th>Shopify status</th>
-            <th>Order total</th>
-            <th>Refunded</th>
-            <?php if ($hasss): ?>
-              <th>ShipStation status</th>
-              <th>Risk</th>
-            <?php endif; ?>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($rows as $row):
-            $adminUrl  = $row['shopify_id'] ? $shopifyAdminBase . '/' . esc($row['shopify_id']) : null;
-            $finStatus = $row['financial_status'];
-            $finChip   = $finStatus === 'refunded' ? 'chip-unpaid' : 'chip-partial';
-            $finLabel  = $finStatus === 'partially_refunded' ? 'Partially refunded' : ucfirst($finStatus);
+    <form method="post" id="bulk-refunds-form">
+      <input type="hidden" name="action" value="bulk_ignore_orders">
+      <input type="hidden" name="redirect_page" value="refunds">
 
-            $riskLabel = match($row['risk']) {
-              'active'  => ['label' => 'Active in SS',  'cls' => 'refund-risk-active'],
-              'missing' => ['label' => 'Not in SS',     'cls' => 'refund-risk-missing'],
-              default   => ['label' => 'OK',            'cls' => 'refund-risk-ok'],
-            };
-          ?>
-          <tr>
-            <td class="order-num">
-              <?php if ($adminUrl): ?>
-                <a href="<?= $adminUrl ?>" target="_blank" rel="noopener"><?= esc($row['order_number']) ?></a>
-              <?php else: ?>
-                <?= esc($row['order_number']) ?>
+      <div class="bulk-bar" id="bar-refunds">
+        <span class="bulk-count" id="cnt-refunds">0 selected</span>
+        <input type="text" class="bulk-reason" name="reason" placeholder="Reason (optional)">
+        <button class="btn btn-sm btn-danger" type="submit">Ignore selected</button>
+        <button class="btn btn-sm btn-ghost" type="button"
+          onclick="document.querySelectorAll('#refunds-tbody .js-row-check').forEach(function(c){c.checked=false});updateBulkBar('refunds')">
+          Clear
+        </button>
+        <button class="btn btn-sm btn-ghost" type="button"
+          onclick="exportSelectedCSV('refunds','#tbl-refunds','refunds-selected.csv')">
+          Export selected
+        </button>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-header">
+          <h2>Refunded Orders</h2>
+          <div class="flex items-center gap-2">
+            <span><?= count($rows) ?> order<?= count($rows) !== 1 ? 's' : '' ?></span>
+            <button class="btn btn-sm btn-ghost" type="button" data-csv-btn="#tbl-refunds" data-csv-filename="refunds-<?= esc($refundsResult['start']) ?>-<?= esc($refundsResult['end']) ?>.csv">Export CSV</button>
+          </div>
+        </div>
+        <table id="tbl-refunds">
+          <thead>
+            <tr>
+              <th class="col-check">
+                <input type="checkbox" class="js-select-all" data-target="refunds-tbody" data-bar="refunds" title="Select all">
+              </th>
+              <th>Order</th>
+              <th>Date</th>
+              <th>Email</th>
+              <th>Shopify status</th>
+              <th>Order total</th>
+              <th>Refunded</th>
+              <?php if ($hasss): ?>
+                <th>ShipStation status</th>
+                <th>Risk</th>
               <?php endif; ?>
-              <button class="copy-btn" data-copy="<?= esc(ltrim($row['order_number'], '#')) ?>" title="Copy">⧉</button>
-            </td>
-            <td><?= esc($row['created_at']) ?></td>
-            <td class="td-email"><?= esc($row['email']) ?></td>
-            <td><span class="chip <?= $finChip ?>"><?= esc($finLabel) ?></span></td>
-            <td class="td-price"><?= formatPrice($row['total_price']) ?></td>
-            <td class="td-price">
-              <?php if ($row['refunded_amount'] > 0): ?>
-                <span style="color:var(--danger)">-$<?= number_format($row['refunded_amount'], 2) ?></span>
-              <?php else: ?>
-                -
-              <?php endif; ?>
-            </td>
-            <?php if ($hasss): ?>
-              <td>
-                <?php if (empty($row['ss_orders'])): ?>
-                  <span class="chip chip-unknown">Not found</span>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="refunds-tbody">
+            <?php foreach ($rows as $row):
+              $adminUrl  = $row['shopify_id'] ? $shopifyAdminBase . '/' . esc($row['shopify_id']) : null;
+              $finStatus = $row['financial_status'];
+              $finChip   = $finStatus === 'refunded' ? 'chip-unpaid' : 'chip-partial';
+              $finLabel  = $finStatus === 'partially_refunded' ? 'Partially refunded' : ucfirst($finStatus);
+
+              $riskLabel = match($row['risk']) {
+                'active'  => ['label' => 'Active in SS',  'cls' => 'refund-risk-active'],
+                'missing' => ['label' => 'Not in SS',     'cls' => 'refund-risk-missing'],
+                default   => ['label' => 'OK',            'cls' => 'refund-risk-ok'],
+              };
+            ?>
+            <tr>
+              <td class="col-check">
+                <input type="checkbox" class="js-row-check" name="order_numbers[]"
+                       value="<?= esc(ltrim($row['order_number'], '#')) ?>"
+                       data-bar="refunds" onchange="updateBulkBar('refunds')">
+              </td>
+              <td class="order-num">
+                <?php if ($adminUrl): ?>
+                  <a href="<?= $adminUrl ?>" target="_blank" rel="noopener"><?= esc($row['order_number']) ?></a>
                 <?php else: ?>
-                  <div class="flex flex-wrap gap-1">
-                    <?php foreach ($row['ss_statuses'] as $i => $st):
-                      $ssChip = match($st) {
-                        'cancelled'         => 'chip-unpaid',
-                        'shipped', 'delivered' => 'chip-paid',
-                        'awaiting_shipment' => 'chip-partial',
-                        default             => 'chip-unknown',
-                      };
-                      $ssUrl = !empty($row['ss_orders'][$i]['orderId'])
-                        ? 'https://app.shipstation.com/#!/orders/order-details/' . urlencode($row['ss_orders'][$i]['orderId'])
-                        : null;
-                    ?>
-                      <?php if ($ssUrl): ?>
-                        <a href="<?= esc($ssUrl) ?>" target="_blank" rel="noopener"
-                           class="chip <?= $ssChip ?>" style="text-decoration:none"><?= esc(str_replace('_', ' ', $st)) ?></a>
-                      <?php else: ?>
-                        <span class="chip <?= $ssChip ?>"><?= esc(str_replace('_', ' ', $st)) ?></span>
-                      <?php endif; ?>
-                    <?php endforeach; ?>
-                  </div>
+                  <?= esc($row['order_number']) ?>
+                <?php endif; ?>
+                <button class="copy-btn" data-copy="<?= esc(ltrim($row['order_number'], '#')) ?>" title="Copy">⧉</button>
+              </td>
+              <td><?= esc($row['created_at']) ?></td>
+              <td class="td-email"><?= esc($row['email']) ?></td>
+              <td><span class="chip <?= $finChip ?>"><?= esc($finLabel) ?></span></td>
+              <td class="td-price"><?= formatPrice($row['total_price']) ?></td>
+              <td class="td-price">
+                <?php if ($row['refunded_amount'] > 0): ?>
+                  <span style="color:var(--danger)">-$<?= number_format($row['refunded_amount'], 2) ?></span>
+                <?php else: ?>
+                  -
                 <?php endif; ?>
               </td>
-              <td>
-                <span class="refund-risk-badge <?= $riskLabel['cls'] ?>"><?= $riskLabel['label'] ?></span>
-              </td>
-            <?php endif; ?>
-            <td class="td-actions">
-              <a class="ignore-btn" href="?page=spotcheck&prefill=<?= urlencode(ltrim($row['order_number'], '#')) ?>">Spot-check</a>
-              <?php if ($row['email']): ?>
-                <a class="ignore-btn" href="?page=customer&email=<?= urlencode($row['email']) ?>">Customer</a>
+              <?php if ($hasss): ?>
+                <td>
+                  <?php if (empty($row['ss_orders'])): ?>
+                    <span class="chip chip-unknown">Not found</span>
+                  <?php else: ?>
+                    <div class="flex flex-wrap gap-1">
+                      <?php foreach ($row['ss_statuses'] as $i => $st):
+                        $ssChip = match($st) {
+                          'cancelled'         => 'chip-unpaid',
+                          'shipped', 'delivered' => 'chip-paid',
+                          'awaiting_shipment' => 'chip-partial',
+                          default             => 'chip-unknown',
+                        };
+                        $ssUrl = !empty($row['ss_orders'][$i]['orderId'])
+                          ? 'https://app.shipstation.com/#!/orders/order-details/' . urlencode($row['ss_orders'][$i]['orderId'])
+                          : null;
+                      ?>
+                        <?php if ($ssUrl): ?>
+                          <a href="<?= esc($ssUrl) ?>" target="_blank" rel="noopener"
+                             class="chip <?= $ssChip ?>" style="text-decoration:none"><?= esc(str_replace('_', ' ', $st)) ?></a>
+                        <?php else: ?>
+                          <span class="chip <?= $ssChip ?>"><?= esc(str_replace('_', ' ', $st)) ?></span>
+                        <?php endif; ?>
+                      <?php endforeach; ?>
+                    </div>
+                  <?php endif; ?>
+                </td>
+                <td>
+                  <span class="refund-risk-badge <?= $riskLabel['cls'] ?>"><?= $riskLabel['label'] ?></span>
+                </td>
               <?php endif; ?>
-            </td>
-          </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
+              <td class="td-actions">
+                <a class="ignore-btn" href="?page=spotcheck&prefill=<?= urlencode(ltrim($row['order_number'], '#')) ?>">Spot-check</a>
+                <?php if ($row['email']): ?>
+                  <a class="ignore-btn" href="?page=customer&email=<?= urlencode($row['email']) ?>">Customer</a>
+                <?php endif; ?>
+              </td>
+            </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </form>
   <?php endif; ?>
 <?php endif; ?>

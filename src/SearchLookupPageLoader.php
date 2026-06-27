@@ -62,6 +62,15 @@ class SearchLookupPageLoader
         $spotInput           = trim($_GET['prefill'] ?? '');
         $spotcheckRiskScores = [];
 
+        $noteTemplates     = [];
+        $noteTemplatesPath = __DIR__ . '/../data/note_templates.json';
+        if (file_exists($noteTemplatesPath)) {
+            $decoded = json_decode((string) file_get_contents($noteTemplatesPath), true);
+            if (is_array($decoded)) {
+                $noteTemplates = $decoded;
+            }
+        }
+
         if ($action === 'spotcheck') {
             $spotInput = trim($_POST['orders'] ?? '');
             $numbers   = array_filter(array_map('trim', preg_split('/[\s,]+/', $spotInput)));
@@ -118,7 +127,7 @@ class SearchLookupPageLoader
             }
         }
 
-        return compact('spotResults', 'spotInput', 'spotError', 'spotcheckRiskScores');
+        return compact('spotResults', 'spotInput', 'spotError', 'spotcheckRiskScores', 'noteTemplates');
     }
 
     private static function loadMetafields(string $action, array $ctx): array
