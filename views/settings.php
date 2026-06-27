@@ -84,6 +84,99 @@
   <?php endif; ?>
 </div>
 
+<?php if (($userRole ?? 'admin') === 'admin'): ?>
+<?php
+  $usersJsonPath = __DIR__ . '/../data/users.json';
+  $multiUserMode = file_exists($usersJsonPath);
+  $allUsers      = $multiUserMode ? Auth::loadUsers() : [];
+?>
+<div class="table-wrap mb-6">
+  <div class="table-header">
+    <h2>Users</h2>
+    <?php if ($multiUserMode): ?>
+      <span><?= count($allUsers) ?> user<?= count($allUsers) !== 1 ? 's' : '' ?></span>
+    <?php else: ?>
+      <span class="text-muted">Legacy mode</span>
+    <?php endif; ?>
+  </div>
+
+  <?php if (isset($_GET['user_added'])): ?>
+    <div class="flash flash-ok">✓ User added successfully.</div>
+  <?php endif; ?>
+  <?php if (isset($_GET['user_deleted'])): ?>
+    <div class="flash flash-ok">✓ User deleted.</div>
+  <?php endif; ?>
+  <?php if (isset($_GET['user_error'])): ?>
+    <div class="flash flash-err">✗ <?= esc($_GET['user_error']) ?></div>
+  <?php endif; ?>
+
+  <?php if (!$multiUserMode): ?>
+    <div class="empty p-6">
+      <div class="icon">ℹ️</div>
+      <h3>Using legacy single-user mode</h3>
+      <p>Create <code>data/users.json</code> (see <code>data/users.json.example</code>) to enable multi-user support with roles.</p>
+    </div>
+  <?php else: ?>
+    <?php if (!empty($allUsers)): ?>
+    <table>
+      <thead>
+        <tr><th>Username</th><th>Role</th><th></th></tr>
+      </thead>
+      <tbody>
+        <?php foreach ($allUsers as $u): ?>
+        <tr>
+          <td class="font-mono"><?= esc($u['name']) ?></td>
+          <td>
+            <?php
+              $roleBadge = match ($u['role'] ?? '') {
+                  'admin'    => 'badge-warn',
+                  'operator' => 'badge-ok',
+                  default    => 'badge-neutral',
+              };
+            ?>
+            <span class="badge <?= $roleBadge ?>"><?= esc($u['role'] ?? '') ?></span>
+          </td>
+          <td>
+            <form method="post" class="inline">
+              <input type="hidden" name="action" value="delete_user">
+              <input type="hidden" name="username" value="<?= esc($u['name']) ?>">
+              <button class="btn btn-sm btn-danger" type="submit"
+                      onclick="return confirm('Delete user <?= esc($u['name'] ?? '') ?>?')">Delete</button>
+            </form>
+          </td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+    <?php endif; ?>
+
+    <div class="run-form mt-6">
+      <h3>Add user</h3>
+      <form method="post">
+        <input type="hidden" name="action" value="add_user">
+        <div class="form-row">
+          <label>Username</label>
+          <input type="text" name="new_username" required autocomplete="off">
+        </div>
+        <div class="form-row">
+          <label>Password</label>
+          <input type="password" name="new_password" required autocomplete="new-password">
+        </div>
+        <div class="form-row">
+          <label>Role</label>
+          <select name="new_role">
+            <option value="viewer">viewer — read-only</option>
+            <option value="operator">operator — can push, ignore, run audits</option>
+            <option value="admin">admin — full access</option>
+          </select>
+        </div>
+        <button class="btn" type="submit">Add user</button>
+      </form>
+    </div>
+  <?php endif; ?>
+</div>
+<?php endif; ?>
+
 <div class="table-wrap">
   <div class="table-header"><h2>Current configuration</h2></div>
   <table>

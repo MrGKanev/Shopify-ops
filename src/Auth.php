@@ -128,6 +128,143 @@ class Auth
         return isset($_SESSION['_csrf']) && hash_equals((string)$_SESSION['_csrf'], $token);
     }
 
+    // ── RBAC ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Returns the role of the currently logged-in user ('viewer'|'operator'|'admin').
+     * Defaults to 'admin' so that existing sessions (pre-RBAC) are not downgraded.
+     */
+    public static function role(): string
+    {
+        return $_SESSION['user_role'] ?? 'admin';
+    }
+
+    /**
+     * Check if the current user may perform the given abstract action.
+     *
+     * Actions understood:
+     *   'push'            – push orders to ShipStation (operator+)
+     *   'ignore'          – ignore/unignore orders (operator+)
+     *   'run_audit'       – run / queue audits (operator+)
+     *   'flush_cache'     – flush cache (operator+)
+     *   'queue_audit'     – queue audit jobs (operator+)
+     *   'manage_settings' – change settings, ban/unban IPs, Slack rules (admin only)
+     *   'manage_users'    – add/delete users (admin only)
+     */
+    public static function can(string $action): bool
+    {
+        $role = self::role();
+        $adminOnly    = ['manage_settings', 'manage_users'];
+        $operatorPlus = ['push', 'ignore', 'run_audit', 'flush_cache', 'queue_audit'];
+
+        if (in_array($action, $adminOnly, true)) {
+            return $role === 'admin';
+        }
+        if (in_array($action, $operatorPlus, true)) {
+            return in_array($role, ['operator', 'admin'], true);
+        }
+        return true; // viewers can read everything
+    }
+
+    // ── Multi-user support ────────────────────────────────────────────────────
+
+    /**
+     * Attempt login against data/users.json.
+     * Applies the same brute-force tracking as attempt().
+     * Returns the matched role string on success, '' on failure (bad credentials or locked out).
+     */
+    public static function attemptMultiUser(string $username, string $password, string $ip): string
+    {
+        $attemptsFile = self::file();
+        if (!is_dir(dirname($attemptsFile))) {
+            mkdir(dirname($attemptsFile), 0755, true);
+        }
+
+        $fh = fopen($attemptsFile, 'c+');
+        flock($fh, LOCK_EX);
+        $raw      = stream_get_contents($fh);
+        $attempts = $raw ? (json_decode($raw, true) ?: []) : [];
+
+        $now = time();
+        $attempts = array_filter(
+            $attempts,
+            fn($e) => ($e['until'] ?? 0) > $now || ($e['first'] ?? 0) > $now - self::ATTEMPT_WINDOW
+        );
+
+        $entry     = $attempts[$ip] ?? ['count' => 0, 'first' => $now, 'until' => 0];
+        $lockedOut = ($entry['until'] ?? 0) > $now;
+
+        if ($lockedOut) {
+            flock($fh, LOCK_UN);
+            fclose($fh);
+            return '';
+        }
+
+        // Verify credentials against users.json
+        $role  = '';
+        $users = self::loadUsers();
+        foreach ($users as $user) {
+            if (isset($user['name'], $user['password_hash'], $user['role'])
+                && hash_equals((string) $user['name'], $username)
+                && self::verifyPassword($password, (string) $user['password_hash'])
+            ) {
+                $role = (string) $user['role'];
+                break;
+            }
+        }
+
+        if ($role !== '') {
+            unset($attempts[$ip]);
+            ftruncate($fh, 0); rewind($fh);
+            fwrite($fh, json_encode($attempts));
+            flock($fh, LOCK_UN); fclose($fh);
+            return $role;
+        }
+
+        $entry['count'] = ($entry['count'] ?? 0) + 1;
+        if (!isset($entry['first'])) $entry['first'] = $now;
+        if ($entry['count'] >= self::MAX_ATTEMPTS) {
+            $entry['until'] = $now + self::LOCK_DURATION;
+        }
+        $attempts[$ip] = $entry;
+        ftruncate($fh, 0); rewind($fh);
+        fwrite($fh, json_encode($attempts));
+        flock($fh, LOCK_UN); fclose($fh);
+        return '';
+    }
+
+    /**
+     * Load all users from data/users.json.
+     *
+     * @return array<int, array<string, string>>
+     */
+    public static function loadUsers(): array
+    {
+        $file = self::usersFile();
+        if (!file_exists($file)) return [];
+        $data = json_decode((string) file_get_contents($file), true);
+        return is_array($data) ? $data : [];
+    }
+
+    /**
+     * Persist the users array to data/users.json.
+     *
+     * @param array<int, array<string, string>> $users
+     */
+    public static function saveUsers(array $users): void
+    {
+        $file = self::usersFile();
+        if (!is_dir(dirname($file))) {
+            mkdir(dirname($file), 0755, true);
+        }
+        file_put_contents($file, json_encode(array_values($users), JSON_PRETTY_PRINT));
+    }
+
+    private static function usersFile(): string
+    {
+        return __DIR__ . '/../data/users.json';
+    }
+
     /**
      * Remove a specific IP from the ban list.
      */
