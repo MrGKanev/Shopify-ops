@@ -11,6 +11,9 @@ require_once __DIR__ . '/src/Comparator.php';
 require_once __DIR__ . '/src/Reporter.php';
 require_once __DIR__ . '/src/SlackNotifier.php';
 require_once __DIR__ . '/src/SlackRules.php';
+require_once __DIR__ . '/src/EmailNotifier.php';
+require_once __DIR__ . '/src/EmailRules.php';
+require_once __DIR__ . '/src/DiscordNotifier.php';
 require_once __DIR__ . '/src/RunLog.php';
 
 // ── Load .env ─────────────────────────────────────────────────────
@@ -137,21 +140,37 @@ try {
 
     Reporter::saveReports($result['missing'], $startDate, $endDate);
 
+    $auditSummary = [
+        'store'          => $shopifyStore,
+        'start'          => $startDate,
+        'end'            => $endDate,
+        'missing_count'  => count($result['missing']),
+        'missing_orders' => $result['missing'],
+        'found'          => count($result['found']),
+        'skipped'        => count($result['skipped']),
+        'ignored'        => count($result['ignored']),
+        'total_ss'       => count($ssOrders),
+    ];
+
     if (SlackRules::shouldNotifyAudit(count($result['missing'])) && ($notifier = SlackNotifier::fromEnvironment())) {
-        $sent = $notifier->notifyAuditSafely([
-            'store'          => $shopifyStore,
-            'start'          => $startDate,
-            'end'            => $endDate,
-            'missing_count'  => count($result['missing']),
-            'missing_orders' => $result['missing'],
-            'found'          => count($result['found']),
-            'skipped'        => count($result['skipped']),
-            'ignored'        => count($result['ignored']),
-            'total_ss'       => count($ssOrders),
-        ]);
+        $sent = $notifier->notifyAuditSafely($auditSummary);
         echo $sent
             ? "  Slack notification sent.\n"
             : "  Slack notification failed; audit result was still saved.\n";
+    }
+
+    if (EmailRules::shouldNotifyAudit(count($result['missing'])) && ($emailNotifier = EmailNotifier::fromEnvironment())) {
+        $sent = $emailNotifier->notifyAuditSafely($auditSummary);
+        echo $sent
+            ? "  Email notification sent.\n"
+            : "  Email notification failed; audit result was still saved.\n";
+    }
+
+    if ($discordNotifier = DiscordNotifier::fromEnvironment()) {
+        $sent = $discordNotifier->notifyAuditSafely($auditSummary);
+        echo $sent
+            ? "  Discord notification sent.\n"
+            : "  Discord notification failed; audit result was still saved.\n";
     }
 
     RunLog::append([
