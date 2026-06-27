@@ -9,13 +9,14 @@ class ProductInventoryPageLoader
     public static function load(string $page, string $action, array $ctx): array
     {
         return match ($page) {
-            'bundlecheck'       => self::loadBundleCheck($action, $ctx),
-            'productcheck'      => self::loadProductCheck($action, $ctx),
-            'skudupes'          => self::loadSkuDupes($action, $ctx),
-            'inventoryoversell' => self::loadInventoryOversell($action, $ctx),
-            'zombieproducts'    => self::loadZombieProducts($action, $ctx),
-            'inventoryaging'    => self::loadInventoryAging($action, $ctx),
-            default             => [],
+            'bundlecheck'        => self::loadBundleCheck($action, $ctx),
+            'productcheck'       => self::loadProductCheck($action, $ctx),
+            'skudupes'           => self::loadSkuDupes($action, $ctx),
+            'inventoryoversell'  => self::loadInventoryOversell($action, $ctx),
+            'zombieproducts'     => self::loadZombieProducts($action, $ctx),
+            'inventoryaging'     => self::loadInventoryAging($action, $ctx),
+            'inventoryforecast'  => self::loadInventoryForecast($action, $ctx),
+            default              => [],
         };
     }
 
@@ -451,6 +452,121 @@ class ProductInventoryPageLoader
             }, 30);
 
         return compact('iaResult', 'iaError', 'iaStart', 'iaEnd');
+    }
+
+    private static function loadInventoryForecast(string $action, array $ctx): array
+    {
+        $ifResult = null;
+        $ifError  = '';
+
+        if ($action === 'scan_inventoryforecast') {
+            $runStartedAt = date('Y-m-d H:i:s');
+            $t0 = microtime(true);
+
+            if ($err = self::requireShopify($ctx)) {
+                $ifError = $err;
+                self::appendRunLog('scan_inventoryforecast', 'config_error', $runStartedAt, $t0, $ifError);
+            } else {
+                try {
+                    self::setLimits(300);
+
+                    $end   = date('Y-m-d');
+                    $start = date('Y-m-d', strtotime('-30 days'));
+
+                    $shopify  = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken'], $ctx['cacheObj']);
+                    [$products, $orders] = self::suppressOutput(function () use ($shopify, $start, $end) {
+                        return [
+                            $shopify->fetchAllProducts('active'),
+                            $shopify->fetchAllOrders($start, $end),
+                        ];
+                    });
+
+                    // Build SKU sales map over last 30 days
+                    $skuSales = [];
+                    foreach ($orders as $o) {
+                        if (!empty($o['cancelled_at'])) continue;
+                        foreach ($o['line_items'] ?? [] as $li) {
+                            $sku = trim((string)($li['sku'] ?? ''));
+                            if ($sku === '') continue;
+                            $skuSales[$sku] = ($skuSales[$sku] ?? 0) + (int)($li['quantity'] ?? 1);
+                        }
+                    }
+
+                    $rows        = [];
+                    $variantCount = 0;
+                    foreach ($products as $p) {
+                        foreach ($p['variants'] ?? [] as $v) {
+                            $variantCount++;
+                            if (($v['inventory_management'] ?? '') === '') continue;
+                            if (($v['inventory_policy'] ?? 'deny') === 'continue') continue;
+
+                            $sku   = trim((string)($v['sku'] ?? ''));
+                            $stock = (int)($v['inventory_quantity'] ?? 0);
+                            $sold  = (int)($skuSales[$sku] ?? 0);
+
+                            // Only forecast variants that have had sales in the period
+                            // or are at critical stock levels
+                            if ($sold === 0 && $stock > 30) continue;
+
+                            $dailyRate   = round($sold / 30, 3);
+                            $daysToZero  = ($dailyRate > 0 && $stock > 0)
+                                ? (int) ceil($stock / $dailyRate)
+                                : null;
+
+                            // Skip rows with no risk and no recent sales
+                            if ($daysToZero === null && $sold === 0) continue;
+
+                            $rows[] = [
+                                'product_id'    => (string)($p['id'] ?? ''),
+                                'product_title' => $p['title'] ?? '',
+                                'variant_title' => $v['title'] ?? '',
+                                'sku'           => $sku,
+                                'stock'         => $stock,
+                                'sold_30d'      => $sold,
+                                'daily_rate'    => $dailyRate,
+                                'days_to_zero'  => $daysToZero,
+                            ];
+                        }
+                    }
+
+                    // Sort: null days_to_zero (infinite stock) last, then ascending by days_to_zero
+                    usort($rows, function ($a, $b) {
+                        $az = $a['days_to_zero'];
+                        $bz = $b['days_to_zero'];
+                        if ($az === null && $bz === null) return 0;
+                        if ($az === null) return 1;
+                        if ($bz === null) return -1;
+                        return $az <=> $bz;
+                    });
+
+                    $ifResult = [
+                        'rows'      => $rows,
+                        'products'  => count($products),
+                        'variants'  => $variantCount,
+                        'orders'    => count($orders),
+                        'start'     => $start,
+                        'end'       => $end,
+                        'critical'  => count(array_filter($rows, fn($r) => $r['days_to_zero'] !== null && $r['days_to_zero'] < 7)),
+                        'warning'   => count(array_filter($rows, fn($r) => $r['days_to_zero'] !== null && $r['days_to_zero'] >= 7 && $r['days_to_zero'] < 14)),
+                    ];
+
+                    self::appendRunLog(
+                        'scan_inventoryforecast',
+                        count($rows) > 0 ? 'issues_found' : 'ok',
+                        $runStartedAt,
+                        $t0,
+                        scanned: count($products),
+                        rowsFound: count($rows),
+                        meta: ['orders' => count($orders)]
+                    );
+                } catch (Throwable $e) {
+                    $ifError = $e->getMessage();
+                    self::appendRunLog('scan_inventoryforecast', 'error', $runStartedAt, $t0, $ifError);
+                }
+            }
+        }
+
+        return compact('ifResult', 'ifError');
     }
 
     private static function dateOnly(string $dt): string

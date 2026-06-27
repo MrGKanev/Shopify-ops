@@ -9,13 +9,15 @@ class ManageSettingsPageLoader
     public static function load(string $page, string $action, array $ctx): array
     {
         return match ($page) {
-            'jobs'        => self::loadJobs(),
-            'slackrules'  => self::loadSlackRules(),
-            'apihealth'   => self::loadApiHealth($action, $ctx),
-            'configcheck' => self::loadConfigCheck(),
-            'actionlog'   => self::loadActionLog(),
-            'settings'    => self::loadSettings($action, $ctx),
-            default       => [],
+            'jobs'          => self::loadJobs(),
+            'slackrules'    => self::loadSlackRules(),
+            'apihealth'     => self::loadApiHealth($action, $ctx),
+            'configcheck'   => self::loadConfigCheck(),
+            'actionlog'     => self::loadActionLog(),
+            'settings'      => self::loadSettings($action, $ctx),
+            'webhookhealth' => self::loadWebhookHealth($ctx),
+            'printqueue'    => self::loadPrintQueue($action),
+            default         => [],
         };
     }
 
@@ -234,5 +236,52 @@ class ManageSettingsPageLoader
         }
 
         return compact('connResults', 'cacheEntries', 'cacheFlushed', 'cacheTtl');
+    }
+
+    private static function loadWebhookHealth(array $ctx): array
+    {
+        $whWebhooks = [];
+        $whError    = '';
+
+        if (!$ctx['shopifyToken'] || $ctx['shopifyStore'] === 'N/A') {
+            $whError = 'SHOPIFY_ACCESS_TOKEN / SHOPIFY_STORE not set in .env.';
+        } else {
+            try {
+                $shopify    = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+                $result     = $shopify->fetchWebhooks();
+                $whWebhooks = $result['webhooks'];
+                $whError    = $result['error'];
+            } catch (Throwable $e) {
+                $whError = $e->getMessage();
+            }
+        }
+
+        return compact('whWebhooks', 'whError');
+    }
+
+    private static function loadPrintQueue(string $action): array
+    {
+        $pqMessage = '';
+        $pqError   = '';
+
+        if ($action === 'pq_add') {
+            $num = trim($_POST['pq_order_number'] ?? '');
+            if ($num === '') {
+                $pqError = 'Order number cannot be empty.';
+            } else {
+                PrintQueue::add($num, trim($_POST['pq_note'] ?? ''));
+                $pqMessage = "Order #{$num} added to the print queue.";
+            }
+        } elseif ($action === 'pq_remove') {
+            $num = trim($_POST['pq_order_number'] ?? '');
+            PrintQueue::remove($num);
+            $pqMessage = "Order #{$num} removed from the queue.";
+        } elseif ($action === 'pq_clear') {
+            PrintQueue::clear();
+            $pqMessage = 'Print queue cleared.';
+        }
+
+        $pqItems = PrintQueue::all();
+        return compact('pqItems', 'pqMessage', 'pqError');
     }
 }

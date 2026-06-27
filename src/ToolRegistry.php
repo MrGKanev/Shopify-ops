@@ -25,6 +25,7 @@ class ToolRegistry
                     ['page' => 'dupes',         'icon' => '🔁', 'name' => 'Duplicate Detector',          'desc' => 'Same customer, same total - placed within 10 minutes'],
                     ['page' => 'refunds',       'icon' => '💸', 'name' => 'Refunds Tracker',             'desc' => 'Refunded Shopify orders cross-checked against ShipStation'],
                     ['page' => 'repeatrefunds', 'icon' => '♻',  'name' => 'Repeat Refunds',              'desc' => 'Customers with multiple refunded orders in a date range'],
+                    ['page' => 'returns',       'icon' => '↩',  'name' => 'Return / RMA Tracker',        'desc' => 'Refunded orders with item-level return details and per-SKU return rate summary'],
                     ['page' => 'orphans',       'icon' => '👻', 'name' => 'Orphan Detector',             'desc' => 'ShipStation orders with no matching Shopify order'],
                     ['page' => 'activess',      'icon' => '🛑', 'name' => 'Active SS Conflicts',         'desc' => 'Refunded or cancelled Shopify orders still active in ShipStation'],
                     ['page' => 'ssshipped',     'icon' => '🔄', 'name' => 'SS Shipped / Shopify Unful.', 'title' => 'SS Shipped / Shopify Unfulfilled', 'desc' => 'ShipStation shipped orders that Shopify still shows as unfulfilled (sync failure)'],
@@ -48,11 +49,15 @@ class ToolRegistry
                     ['page' => 'notracking',     'icon' => '📪', 'name' => 'Fulfilled Without Tracking', 'desc' => 'Fulfilled orders with no tracking number after a configurable grace period'],
                     ['page' => 'shipmentaging',  'icon' => '🕒', 'name' => 'Shipment Aging',             'desc' => 'ShipStation awaiting-shipment orders older than a configurable threshold'],
                 ],
+                'Carrier Analytics' => [
+                    ['page' => 'carrierperf', 'icon' => '🚚', 'name' => 'Carrier Performance', 'desc' => 'Avg delivery time, late rate, and order count grouped by carrier for a date range'],
+                ],
                 'Products & Inventory' => [
                     ['page' => 'productcheck',      'icon' => '🖼', 'name' => 'Product Completeness',   'desc' => 'Active products missing images, descriptions, or variant SKUs'],
                     ['page' => 'skudupes',          'icon' => '🔑', 'name' => 'SKU Duplicates',          'desc' => 'Variants sharing the same SKU across your product catalog'],
                     ['page' => 'inventoryoversell', 'icon' => '📉', 'name' => 'Inventory Oversell Risk', 'desc' => 'SKUs where ShipStation awaiting qty exceeds available Shopify stock'],
                     ['page' => 'inventoryaging',    'icon' => '📦', 'name' => 'Inventory Aging',         'desc' => 'Zero-stock active variants that still sold recently'],
+                    ['page' => 'inventoryforecast', 'icon' => '🔮', 'name' => 'Inventory Forecast',      'desc' => 'Days until zero stock based on 30-day sell-through rate per SKU'],
                     ['page' => 'zombieproducts',    'icon' => '🧟', 'name' => 'Zombie Products',         'desc' => 'Active products with no variants or all tracked variants permanently out of stock'],
                 ],
                 'Fraud & Compliance' => [
@@ -90,19 +95,21 @@ class ToolRegistry
 
     /** @var array<string, array{group: string, title: string}> */
     private const STANDALONE = [
-        'dashboard'  => ['group' => 'audit',    'title' => 'Dashboard'],
-        'hub-audit'  => ['group' => 'audit',    'title' => 'Audit'],
-        'hub-search' => ['group' => 'search',   'title' => 'Search & Lookup'],
-        'globalsearch' => ['group' => 'search', 'title' => 'Global Search'],
-        'ignored'    => ['group' => 'manage',   'title' => 'Ignored Orders'],
-        'pushlog'    => ['group' => 'manage',   'title' => 'Push Log'],
-        'runlog'     => ['group' => 'manage',   'title' => 'Run History'],
-        'jobs'       => ['group' => 'manage',   'title' => 'Job Queue'],
-        'actionlog'  => ['group' => 'manage',   'title' => 'Action Log'],
-        'settings'   => ['group' => 'settings', 'title' => 'Settings'],
-        'slackrules' => ['group' => 'settings', 'title' => 'Slack Rules'],
-        'apihealth'  => ['group' => 'settings', 'title' => 'API Health'],
-        'configcheck'=> ['group' => 'settings', 'title' => 'Config Check'],
+        'dashboard'     => ['group' => 'audit',    'title' => 'Dashboard'],
+        'hub-audit'     => ['group' => 'audit',    'title' => 'Audit'],
+        'hub-search'    => ['group' => 'search',   'title' => 'Search & Lookup'],
+        'globalsearch'  => ['group' => 'search',   'title' => 'Global Search'],
+        'ignored'       => ['group' => 'manage',   'title' => 'Ignored Orders'],
+        'pushlog'       => ['group' => 'manage',   'title' => 'Push Log'],
+        'runlog'        => ['group' => 'manage',   'title' => 'Run History'],
+        'jobs'          => ['group' => 'manage',   'title' => 'Job Queue'],
+        'actionlog'     => ['group' => 'manage',   'title' => 'Action Log'],
+        'printqueue'    => ['group' => 'manage',   'title' => 'Print Queue'],
+        'settings'      => ['group' => 'settings', 'title' => 'Settings'],
+        'slackrules'    => ['group' => 'settings', 'title' => 'Slack Rules'],
+        'apihealth'     => ['group' => 'settings', 'title' => 'API Health'],
+        'configcheck'   => ['group' => 'settings', 'title' => 'Config Check'],
+        'webhookhealth' => ['group' => 'settings', 'title' => 'Webhook Health'],
     ];
 
     /**

@@ -15,6 +15,7 @@ class FulfillmentIssuePageLoader
             'ssshipped'    => self::loadSsShippedUnfulfilled($action, $ctx),
             'slabreaches'  => self::loadSlaBreaches($action, $ctx),
             'shipmentaging'=> self::loadShipmentAging($action, $ctx),
+            'carrierperf'  => self::loadCarrierPerf($action, $ctx),
             default        => [],
         };
     }
@@ -378,6 +379,80 @@ class FulfillmentIssuePageLoader
         }
 
         return compact('saResult', 'saError', 'saThreshold');
+    }
+
+    private static function loadCarrierPerf(string $action, array $ctx): array
+    {
+        $cpResult = null;
+        $cpError  = '';
+        [$cpStart, $cpEnd] = DateRange::fromRequest('cp', 30);
+
+        ['result' => $cpResult, 'error' => $cpError, 'start' => $cpStart, 'end' => $cpEnd] =
+            ScanRunner::run($action, 'scan_carrierperf', $ctx, 'cp', function ($ctx, $start, $end) {
+                self::setLimits(240);
+                $ss        = new ShipStation($ctx['ssKey'], $ctx['ssSecret']);
+                $shipments = self::suppressOutput(fn() => $ss->fetchShipmentsByDate($start, $end));
+
+                // Group by carrier code
+                $byCarrier = [];
+                foreach ($shipments as $s) {
+                    $carrier = trim((string)($s['carrierCode'] ?? 'Unknown'));
+                    if ($carrier === '') $carrier = 'Unknown';
+
+                    if (!isset($byCarrier[$carrier])) {
+                        $byCarrier[$carrier] = [
+                            'carrier'         => $carrier,
+                            'count'           => 0,
+                            'with_delivery'   => 0,
+                            'total_days'      => 0,
+                            'late_count'      => 0,
+                        ];
+                    }
+
+                    $byCarrier[$carrier]['count']++;
+
+                    $shipDateTs    = $s['shipDate']     ? strtotime($s['shipDate'])     : null;
+                    $deliveryDateTs = $s['deliveryDate'] ? strtotime($s['deliveryDate']) : null;
+
+                    if ($shipDateTs && $deliveryDateTs && $deliveryDateTs >= $shipDateTs) {
+                        $days = (int) ceil(($deliveryDateTs - $shipDateTs) / 86400);
+                        $byCarrier[$carrier]['total_days']    += $days;
+                        $byCarrier[$carrier]['with_delivery'] += 1;
+                        // Flag as late if delivery took more than 5 business days (simple threshold)
+                        if ($days > 5) {
+                            $byCarrier[$carrier]['late_count']++;
+                        }
+                    }
+                }
+
+                $rows = [];
+                foreach ($byCarrier as $carrier => $stat) {
+                    $count       = $stat['count'];
+                    $withDel     = $stat['with_delivery'];
+                    $avgDays     = $withDel > 0 ? round($stat['total_days'] / $withDel, 1) : null;
+                    $latePct     = $withDel > 0 ? round($stat['late_count'] / $withDel * 100, 1) : null;
+
+                    $rows[] = [
+                        'carrier'          => $carrier,
+                        'count'            => $count,
+                        'with_delivery'    => $withDel,
+                        'avg_days'         => $avgDays,
+                        'late_pct'         => $latePct,
+                        'late_count'       => $stat['late_count'],
+                    ];
+                }
+
+                usort($rows, fn($a, $b) => $b['count'] <=> $a['count']);
+
+                return [
+                    'rows'     => $rows,
+                    'scanned'  => count($shipments),
+                    'start'    => $start,
+                    'end'      => $end,
+                ];
+            }, 30, true);
+
+        return compact('cpResult', 'cpError', 'cpStart', 'cpEnd');
     }
 
     private static function firstFulfillmentAt(array $order): string
