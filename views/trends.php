@@ -26,7 +26,6 @@ $repeatOffenders = array_slice($repeatOffenders, 0, 20, true);
     <li><strong>Summary stats</strong> - total missing orders across all runs, average per report, worst single day, and number of all-clear reports.</li>
     <li><strong>Repeat offenders</strong> - orders that have appeared as missing in 2 or more reports. These are the highest-priority items to investigate, as they have been missed repeatedly.</li>
   </ul>
-  <p>Data is derived entirely from the local report CSV files - no API calls are made on this page.</p>
 <?= featureInfoEnd() ?>
 
 <?php if ($totalReports === 0): ?>

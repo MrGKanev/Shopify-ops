@@ -317,6 +317,13 @@ class PageLoader
         $pushLog       = $already['pushLog']   ?? [];
         $ignoredOrders = $ctx['ignoredOrders'] ?? [];
         $cacheObj      = $ctx['cacheObj'];
+        $action        = $ctx['action'] ?? '';
+
+        // Cache flush from dashboard
+        $dbCacheFlushed = 0;
+        if ($action === 'flush_cache' && $cacheObj) {
+            $dbCacheFlushed = $cacheObj->flush();
+        }
 
         // Push stats - last 30 days
         $cutoff30      = date('Y-m-d', strtotime('-30 days'));
@@ -390,6 +397,38 @@ class PageLoader
             $dbAvgCadence = (float) round(array_sum($gaps) / count($gaps), 1);
         }
 
+        // Pushes today and this week
+        $today     = date('Y-m-d');
+        $weekStart = date('Y-m-d', strtotime('-6 days'));
+        $dbPushesToday = count(array_filter($pushLog, fn($e) => substr($e['pushed_at'] ?? '', 0, 10) === $today));
+        $dbPushesWeek  = count(array_filter($pushLog, fn($e) => substr($e['pushed_at'] ?? '', 0, 10) >= $weekStart));
+
+        // 7-day audit timeline (null = no audit ran that day)
+        $dbLast7DayAudits = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $dbLast7DayAudits[date('Y-m-d', strtotime("-{$i} days"))] = null;
+        }
+        foreach ($reports as $r) {
+            if (array_key_exists($r['date'], $dbLast7DayAudits)) {
+                $dbLast7DayAudits[$r['date']] = $r['count'];
+            }
+        }
+
+        // Cache freshness
+        $dbCacheNewestRefresh  = null;
+        $dbCacheFreshCount     = 0;
+        $dbCacheExpiredCount   = 0;
+        if ($cacheObj) {
+            $entries = $cacheObj->entries();
+            $dbCacheFreshCount   = count(array_filter($entries, fn($e) => !$e['expired']));
+            $dbCacheExpiredCount = count(array_filter($entries, fn($e) => $e['expired']));
+            $ttl = $ctx['cacheTtl'] ?? 0;
+            if ($entries && $ttl > 0) {
+                $maxExpiry = max(array_column($entries, 'expires_at'));
+                $dbCacheNewestRefresh = $maxExpiry - $ttl;
+            }
+        }
+
         // Average days from first-seen-as-missing to pushed
         $dbAvgResolutionDays = null;
         $orderHistory        = $already['orderHistory'] ?? [];
@@ -412,7 +451,10 @@ class PageLoader
             'dbTotalReports', 'dbTotalMissing', 'dbTrend',
             'dbLastPush', 'dbCacheCount',
             'dbDaysSinceAudit', 'dbOldestMissingDays', 'dbStaleIgnored',
-            'dbMissingByType', 'dbAvgCadence', 'dbAvgResolutionDays'
+            'dbMissingByType', 'dbAvgCadence', 'dbAvgResolutionDays',
+            'dbPushesToday', 'dbPushesWeek',
+            'dbLast7DayAudits',
+            'dbCacheNewestRefresh', 'dbCacheFreshCount', 'dbCacheExpiredCount', 'dbCacheFlushed'
         );
     }
 

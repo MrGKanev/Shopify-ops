@@ -16,20 +16,51 @@ $latestCardMod = '';
 if ($latestDate) {
     $latestCardMod = $latestCount === 0 ? 'db-card--ok' : ($latestCount >= 5 ? 'db-card--danger' : 'db-card--warn');
 }
+
+// Cache helpers (used in topbar widget)
+$cacheFreshColor = 'var(--muted)';
+$cacheAgeLabel   = null;
+if ($dbCacheCount > 0) {
+    $freshPct        = (int) round($dbCacheFreshCount / $dbCacheCount * 100);
+    $cacheFreshColor = $freshPct >= 80 ? 'var(--ok)' : ($freshPct >= 40 ? 'var(--warn)' : 'var(--danger)');
+    if ($dbCacheNewestRefresh) {
+        $ageMin      = (int) round((time() - $dbCacheNewestRefresh) / 60);
+        $cacheAgeLabel = $ageMin < 60 ? "{$ageMin}m ago" : round($ageMin / 60, 1) . 'h ago';
+    }
+}
+
+// 7-day helpers
+$has7DayData = array_filter($dbLast7DayAudits, fn($v) => $v !== null);
+$trend7Max   = $has7DayData ? max($has7DayData) : 0;
 ?>
 
 <div class="topbar">
   <div>
     <h1>Dashboard</h1>
-    <div class="meta">Operations overview - no API calls, instant load</div>
   </div>
-  <div class="flex items-center gap-2">
+  <div class="flex items-center gap-3">
     <?php if ($dbCacheCount > 0): ?>
-      <span class="text-xs" style="color:var(--muted)"><?= $dbCacheCount ?> cache entries</span>
+      <div class="db-topbar-cache">
+        <span class="db-topbar-cache-dot" style="color:<?= $cacheFreshColor ?>">●</span>
+        <span><?= $dbCacheFreshCount ?>/<?= $dbCacheCount ?> fresh</span>
+        <?php if ($cacheAgeLabel): ?>
+          <span class="db-topbar-cache-age"><?= esc($cacheAgeLabel) ?></span>
+        <?php endif; ?>
+        <form method="post" class="db-topbar-cache-form">
+          <input type="hidden" name="action" value="flush_cache">
+          <button type="submit" class="db-topbar-cache-flush">Flush</button>
+        </form>
+      </div>
     <?php endif; ?>
     <a href="?page=run" class="btn btn-sm">▶ Run Audit</a>
   </div>
 </div>
+
+<?php if ($dbCacheFlushed > 0): ?>
+  <div class="flash flash-ok toast" style="margin-bottom:1rem">
+    Flushed <?= $dbCacheFlushed ?> cache entr<?= $dbCacheFlushed === 1 ? 'y' : 'ies' ?>.
+  </div>
+<?php endif; ?>
 
 <!-- ── Stat cards ─────────────────────────────────────────────────────── -->
 <div class="db-cards">
@@ -108,6 +139,22 @@ if ($latestDate) {
         <span style="color:var(--warn)"><?= $dbStaleIgnored ?> stale (60+ days)</span> &middot;
       <?php endif; ?>
       <a href="?page=ignored">Manage &rarr;</a>
+    </div>
+  </div>
+
+  <!-- Pushes today / this week -->
+  <div class="db-card">
+    <div class="db-card-label">Pushed Today / 7 days</div>
+    <div class="db-card-num" style="font-size:1.7rem">
+      <?= $dbPushesToday ?>
+      <span style="font-size:.95rem;color:var(--muted);font-weight:500"> / <?= $dbPushesWeek ?></span>
+    </div>
+    <div class="db-card-sub">
+      <?php if ($dbLastPush): ?>
+        last: <?= esc(substr($dbLastPush, 0, 10)) ?>
+      <?php else: ?>
+        No pushes yet
+      <?php endif; ?>
     </div>
   </div>
 
@@ -201,15 +248,53 @@ if ($latestDate) {
   <?php endif; ?>
 </div>
 
-<!-- ── Bottom: History + Quick Actions ──────────────────────────────── -->
-<div class="db-two-col">
+<!-- ── Three-col: 7-day trend · History · Quick Actions ─────────────── -->
+<div class="db-three-col">
+
+  <!-- 7-day audit trend -->
+  <div>
+    <div class="db-section-title">
+      📅 7-Day Trend
+      <span style="font-size:.72rem;font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">missing / day</span>
+    </div>
+    <div class="db-panel">
+      <div class="db-7day">
+        <?php foreach ($dbLast7DayAudits as $day => $count):
+          $isToday  = $day === date('Y-m-d');
+          $dayShort = date('D', strtotime($day))[0];
+          if ($count === null) {
+            $barColor = 'var(--border)';
+            $barH     = 6;
+            $tooltip  = "$day: no audit";
+          } else {
+            $barColor = $count === 0 ? 'var(--ok)' : ($count >= 5 ? 'var(--danger)' : 'var(--warn)');
+            $barH     = $trend7Max > 0 ? max(8, (int) round($count / $trend7Max * 52)) : 8;
+            if ($count === 0) $barH = 8;
+            $tooltip  = "$day: $count missing";
+          }
+        ?>
+        <div class="db-7day-col<?= $isToday ? ' db-7day-today' : '' ?>" title="<?= esc($tooltip) ?>">
+          <div class="db-7day-bar-wrap">
+            <div class="db-7day-bar" style="height:<?= $barH ?>px;background:<?= $barColor ?><?= $count === null ? ';background:transparent;border:1.5px dashed var(--border)' : '' ?>"></div>
+          </div>
+          <div class="db-7day-label"><?= $dayShort ?></div>
+          <?php if ($count !== null): ?>
+            <div class="db-7day-count" style="color:<?= $barColor ?>"><?= $count ?></div>
+          <?php else: ?>
+            <div class="db-7day-count" style="color:var(--border)">–</div>
+          <?php endif; ?>
+        </div>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  </div>
 
   <!-- Audit History -->
   <div>
     <div class="db-section-title">
       📊 Audit History
       <?php if ($dbTotalReports > 10): ?>
-        <a href="?page=trends">All trends &rarr;</a>
+        <a href="?page=trends">All &rarr;</a>
       <?php endif; ?>
     </div>
     <?php if (empty($dbTrendReports)): ?>
@@ -239,7 +324,7 @@ if ($latestDate) {
     <?php endif; ?>
   </div>
 
-  <!-- Quick Actions -->
+  <!-- Quick Actions + Recent Pushes -->
   <div>
     <div class="db-section-title">⚡ Quick Actions</div>
     <div class="db-quick-grid">
@@ -256,11 +341,11 @@ if ($latestDate) {
     </div>
 
     <?php if (!empty($dbPushRecent)): ?>
-      <div class="db-section-title" style="margin-top:1.5rem">
+      <div class="db-section-title" style="margin-top:1rem">
         📤 Recent Pushes
         <a href="?page=pushlog">All &rarr;</a>
       </div>
-      <div class="db-panel" style="padding:.75rem 1rem">
+      <div class="db-panel">
         <?php foreach (array_slice($dbPushRecent, 0, 5) as $p): ?>
         <div class="db-history-row">
           <div class="db-history-date" style="width:auto;flex:1">
