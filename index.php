@@ -145,6 +145,7 @@ $_appTitleEnv  = getenv('APP_TITLE') ?: '';
 $appTitle      = $_appTitleEnv ? "{$_appTitleEnv} - Shopify OPS" : 'Shopify OPS';
 $appBrand      = $_appTitleEnv ?: 'Shopify OPS';
 $appLogo       = getenv('APP_LOGO') ?: '';
+$loginBgImage  = getenv('LOGIN_BG_IMAGE') ?: '';
 $appVersion    = json_decode((string) file_get_contents(__DIR__ . '/composer.json'), true)['version'] ?? 'dev';
 $cacheTtl       = (int) (getenv('CACHE_TTL')           ?: 82800);   // data validity, default 23 h
 $cacheRetention = (int) (getenv('CACHE_RETENTION')    ?: 1209600); // keep on disk after expiry, default 2 weeks
