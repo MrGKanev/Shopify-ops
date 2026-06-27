@@ -105,6 +105,7 @@
         <li><a href="?page=runlog" class="<?= $page === 'runlog' ? 'active' : '' ?>">Run History</a></li>
         <li><a href="?page=jobs" class="<?= $page === 'jobs' ? 'active' : '' ?>">Job Queue</a></li>
         <li><a href="?page=actionlog" class="<?= $page === 'actionlog' ? 'active' : '' ?>">Action Log</a></li>
+        <li><a href="?page=printqueue" class="<?= $page === 'printqueue' ? 'active' : '' ?>">Print Queue</a></li>
       </ul>
     <?php endif; ?>
 
@@ -115,6 +116,7 @@
         <li><a href="?page=apihealth" class="<?= $page === 'apihealth' ? 'active' : '' ?>">API Health</a></li>
         <li><a href="?page=configcheck" class="<?= $page === 'configcheck' ? 'active' : '' ?>">Config Check</a></li>
         <li><a href="?page=slackrules" class="<?= $page === 'slackrules' ? 'active' : '' ?>">Slack Rules</a></li>
+        <li><a href="?page=webhookhealth" class="<?= $page === 'webhookhealth' ? 'active' : '' ?>">Webhook Health</a></li>
       </ul>
     <?php endif; ?>
 

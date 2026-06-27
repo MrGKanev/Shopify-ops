@@ -14,6 +14,7 @@ class SimpleScanPageLoader
             'hvorders'        => self::loadHvOrders($action, $ctx),
             'countrymismatch' => self::loadCountryMismatch($action, $ctx),
             'partialfulfill'  => self::loadPartialFulfill($action, $ctx),
+            'returns'         => self::loadReturns($action, $ctx),
             default           => [],
         };
     }
@@ -230,6 +231,74 @@ class SimpleScanPageLoader
             }, 90);
 
         return compact('pfResult', 'pfError', 'pfStart', 'pfEnd', 'pfThreshold');
+    }
+
+    private static function loadReturns(string $action, array $ctx): array
+    {
+        ['result' => $rtResult, 'error' => $rtError, 'start' => $rtStart, 'end' => $rtEnd] =
+            ScanRunner::run($action, 'scan_returns', $ctx, 'rt', function ($ctx, $start, $end) {
+                self::setLimits(240);
+                $shopify = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
+                $orders  = self::suppressOutput(fn() => $shopify->fetchRefundedOrders($start, $end));
+
+                $rows    = [];
+                $skuStat = [];  // [sku => ['units' => int, 'orders' => int, 'revenue' => float]]
+
+                foreach ($orders as $o) {
+                    foreach ($o['refunds'] ?? [] as $refund) {
+                        $items = [];
+                        foreach ($refund['refund_line_items'] ?? [] as $rli) {
+                            $li  = $rli['line_item'] ?? [];
+                            $sku = trim((string)($li['sku'] ?? ''));
+                            $qty = (int)($rli['quantity'] ?? 0);
+                            $sub = (float)($rli['subtotal'] ?? 0);
+
+                            $items[] = [
+                                'name'     => $li['name'] ?? $li['title'] ?? '',
+                                'sku'      => $sku,
+                                'quantity' => $qty,
+                                'subtotal' => $sub,
+                            ];
+
+                            if ($sku !== '' && $qty > 0) {
+                                if (!isset($skuStat[$sku])) {
+                                    $skuStat[$sku] = ['sku' => $sku, 'units' => 0, 'orders' => 0, 'revenue' => 0.0];
+                                }
+                                $skuStat[$sku]['units']   += $qty;
+                                $skuStat[$sku]['revenue'] += $sub;
+                                $skuStat[$sku]['orders']++;
+                            }
+                        }
+
+                        $rows[] = [
+                            'shopify_id'     => $o['id']            ?? '',
+                            'order_number'   => $o['name']          ?? '',
+                            'created_at'     => self::dateOnly($o['created_at'] ?? ''),
+                            'refund_date'    => self::dateOnly($refund['created_at'] ?? ''),
+                            'email'          => $o['email']         ?? '',
+                            'financial'      => $o['financial_status'] ?? '',
+                            'refund_total'   => (float)($refund['total_refunded'] ?? 0),
+                            'reason'         => trim($refund['note'] ?? ''),
+                            'items'          => $items,
+                        ];
+                    }
+                }
+
+                usort($rows, fn($a, $b) => strcmp($b['refund_date'], $a['refund_date']));
+
+                // Sort SKU stats by units returned descending
+                usort($skuStat, fn($a, $b) => $b['units'] <=> $a['units']);
+
+                return [
+                    'rows'     => $rows,
+                    'sku_stat' => array_values($skuStat),
+                    'scanned'  => count($orders),
+                    'start'    => $start,
+                    'end'      => $end,
+                ];
+            }, 30);
+
+        return compact('rtResult', 'rtError', 'rtStart', 'rtEnd');
     }
 
     private static function dateOnly(string $dt): string

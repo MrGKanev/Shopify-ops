@@ -246,6 +246,33 @@ class ShipStation
     }
 
     /**
+     * Fetches all shipments created in a date range.
+     * Each shipment includes carrierCode, serviceCode, shipDate, deliveryDate, trackingNumber.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function fetchShipmentsByDate(string $startDate, string $endDate): array
+    {
+        $all  = [];
+        $page = 1;
+        do {
+            $params = http_build_query([
+                'shipDate_start' => $startDate . ' 00:00:00',
+                'shipDate_end'   => $endDate   . ' 23:59:59',
+                'pageSize'       => 500,
+                'page'           => $page,
+            ]);
+            $result = $this->get("/shipments?{$params}");
+            $items  = $result['shipments'] ?? [];
+            if (empty($items)) break;
+            array_push($all, ...$items);
+            $total = $result['total'] ?? 0;
+            $page++;
+        } while (count($all) < $total);
+        return $all;
+    }
+
+    /**
      * Fetches all orders currently in awaiting_shipment status (no date filter).
      * Used for oversell risk checks.
      *

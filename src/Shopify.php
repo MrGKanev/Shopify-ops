@@ -27,6 +27,8 @@ class Shopify
     private readonly OrderAudits $orderAudits;
     private readonly AdminLookups $adminLookups;
     private readonly CatalogAndFulfillment $catalogAndFulfillment;
+    private readonly string $baseUrl;
+    private readonly string $accessToken;
 
     public function __construct(
         string $store,
@@ -37,7 +39,9 @@ class Shopify
         $host = str_contains($store, '.') ? $store : "{$store}.myshopify.com";
         $baseUrl = "https://{$host}/admin/api/" . self::API_VERSION;
 
-        $this->graphqlClient         = new GraphQLClient($baseUrl, $accessToken, $stack);
+        $this->baseUrl       = $baseUrl;
+        $this->accessToken   = $accessToken;
+        $this->graphqlClient = new GraphQLClient($baseUrl, $accessToken, $stack);
         $this->orderArchive          = new OrderArchive($this->graphqlClient, $cache);
         $this->orderFetcher          = new OrderFetcher($this->graphqlClient);
         $this->orderAudits           = new OrderAudits($this->orderFetcher);
@@ -364,6 +368,43 @@ class Shopify
     public function fetchOrdersForTagPolicy(string $startDate, string $endDate): array
     {
         return $this->orderAudits->fetchOrdersForTagPolicy($startDate, $endDate);
+    }
+
+    /**
+     * Fetches all registered Shopify webhooks via the Admin REST API.
+     * Returns the raw webhook objects from the API.
+     *
+     * @return array{webhooks: array<int, array<string, mixed>>, error: string}
+     */
+    public function fetchWebhooks(): array
+    {
+        $url   = $this->baseUrl . '/webhooks.json?limit=250';
+        $token = $this->accessToken;
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 15,
+            CURLOPT_HTTPHEADER     => [
+                "X-Shopify-Access-Token: {$token}",
+                'Accept: application/json',
+            ],
+            CURLOPT_USERAGENT      => 'ShopifyOps/1.0',
+        ]);
+        $raw  = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err  = curl_error($ch);
+        curl_close($ch);
+
+        if ($err) {
+            return ['webhooks' => [], 'error' => "cURL error: {$err}"];
+        }
+        if ($code < 200 || $code >= 300) {
+            return ['webhooks' => [], 'error' => "Shopify returned HTTP {$code}"];
+        }
+
+        $decoded = json_decode((string)$raw, true);
+        return ['webhooks' => $decoded['webhooks'] ?? [], 'error' => ''];
     }
 
 }
