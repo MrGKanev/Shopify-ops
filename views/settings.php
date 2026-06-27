@@ -84,6 +84,29 @@
   <?php endif; ?>
 </div>
 
+<div class="table-wrap mb-6">
+  <div class="table-header"><h2>Notification channels</h2></div>
+  <div class="flex flex-col gap-3 p-4">
+    <?php foreach ([
+      ['Slack',   SlackNotifier::isConfigured(),   'SLACK_WEBHOOK_URL'],
+      ['Email',   EmailNotifier::isConfigured(),   'SMTP_HOST + ALERT_EMAIL'],
+      ['Discord', DiscordNotifier::isConfigured(), 'DISCORD_WEBHOOK_URL'],
+    ] as [$chName, $chConfigured, $chEnvHint]): ?>
+      <div class="conn-result <?= $chConfigured ? 'conn-ok' : '' ?>">
+        <div>
+          <span class="font-bold text-[.9rem]"><?= esc($chName) ?></span>
+          <?php if (!$chConfigured): ?>
+            <div class="text-xs text-muted mt-0.5">Set <code><?= esc($chEnvHint) ?></code> in <code>.env</code></div>
+          <?php endif; ?>
+        </div>
+        <span class="badge <?= $chConfigured ? 'badge-ok' : 'badge-warn' ?>">
+          <?= $chConfigured ? 'Configured' : 'Not configured' ?>
+        </span>
+      </div>
+    <?php endforeach; ?>
+  </div>
+</div>
+
 <?php if (($userRole ?? 'admin') === 'admin'): ?>
 <?php
   $usersJsonPath = __DIR__ . '/../data/users.json';
