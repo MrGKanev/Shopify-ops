@@ -55,9 +55,19 @@ class SearchLookupPageLoader
 
     private static function loadSpotCheck(string $action, array $ctx): array
     {
-        $spotResults = null;
-        $spotError   = '';
-        $spotInput   = trim($_GET['prefill'] ?? '');
+        $spotResults   = null;
+        $spotError     = '';
+        $spotInput     = trim($_GET['prefill'] ?? '');
+
+        // Load note templates if the config file exists
+        $noteTemplates     = [];
+        $noteTemplatesPath = __DIR__ . '/../data/note_templates.json';
+        if (file_exists($noteTemplatesPath)) {
+            $decoded = json_decode((string) file_get_contents($noteTemplatesPath), true);
+            if (is_array($decoded)) {
+                $noteTemplates = $decoded;
+            }
+        }
 
         if ($action === 'spotcheck') {
             $spotInput = trim($_POST['orders'] ?? '');
@@ -105,7 +115,7 @@ class SearchLookupPageLoader
             }
         }
 
-        return compact('spotResults', 'spotInput', 'spotError');
+        return compact('spotResults', 'spotInput', 'spotError', 'noteTemplates');
     }
 
     private static function loadMetafields(string $action, array $ctx): array

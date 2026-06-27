@@ -366,4 +366,30 @@ class Shopify
         return $this->orderAudits->fetchOrdersForTagPolicy($startDate, $endDate);
     }
 
+    /**
+     * Updates the internal note on a Shopify order via the Admin GraphQL API.
+     *
+     * @param  string $orderId  Numeric Shopify order ID (legacy resource ID).
+     * @param  string $note     New note text (empty string clears the note).
+     * @throws \RuntimeException on API or user errors.
+     */
+    public function updateOrderNote(string $orderId, string $note): void
+    {
+        $gid    = \Shopify\GraphQL\Ids::orderGid($orderId);
+        $result = $this->graphqlClient->graphql(
+            'mutation UpdateOrderNote($id: ID!, $note: String!) {
+               orderUpdate(input: {id: $id, note: $note}) {
+                 order { id note }
+                 userErrors { field message }
+               }
+             }',
+            ['id' => $gid, 'note' => $note]
+        );
+        $errors = $result['data']['orderUpdate']['userErrors'] ?? [];
+        if (!empty($errors)) {
+            $msg = implode('; ', array_map(fn($e) => $e['message'], $errors));
+            throw new \RuntimeException("Shopify orderUpdate error: {$msg}");
+        }
+    }
+
 }

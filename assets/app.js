@@ -439,6 +439,44 @@ on('[data-csv-btn]', 'click', function() {
   exportTableCSV(this.dataset.csvBtn, this.dataset.csvFilename || 'export.csv');
 });
 
+// ── CSV Export (selected rows only) ──────────────────────────────────────────
+function exportSelectedCSV(barId, tableSelector, filename) {
+  var table = document.querySelector(tableSelector);
+  if (!table) return;
+  var checkedRows = new Set();
+  document.querySelectorAll('[data-bar="' + barId + '"].js-row-check:checked').forEach(function(cb) {
+    var tr = cb.closest('tr');
+    if (tr) checkedRows.add(tr);
+  });
+  if (!checkedRows.size) return;
+  var rows = [];
+  // Header row
+  var headerCells = [];
+  table.querySelectorAll('thead th').forEach(function(th) {
+    if (th.classList.contains('col-check') || th.querySelector('input[type=checkbox]')) return;
+    headerCells.push('"' + th.textContent.replace(/\s+/g, ' ').trim().replace(/"/g, '""') + '"');
+  });
+  if (headerCells.length) rows.push(headerCells.join(','));
+  // Data rows
+  table.querySelectorAll('tbody tr').forEach(function(tr) {
+    if (!checkedRows.has(tr)) return;
+    var cells = [];
+    tr.querySelectorAll('td').forEach(function(td) {
+      if (td.querySelector('input[type=checkbox]')) return;
+      if (td.classList.contains('td-actions') || td.classList.contains('col-actions') || td.classList.contains('col-check')) return;
+      cells.push('"' + td.textContent.replace(/\s+/g, ' ').trim().replace(/"/g, '""') + '"');
+    });
+    if (cells.length) rows.push(cells.join(','));
+  });
+  var csv  = rows.join('\r\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = filename || 'selected.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
+}
+
 // ── Quick Copy ────────────────────────────────────────────────────────────────
 on('[data-copy]', 'click', function() {
   var btn  = this;
@@ -579,6 +617,25 @@ on('[data-copy]', 'click', function() {
     // already saved on submit
   }
 })();
+
+// ── Note template placeholder substitution ────────────────────────────────────
+document.querySelectorAll('.js-note-template-select').forEach(function(sel) {
+  sel.addEventListener('change', function() {
+    var form     = sel.closest('form');
+    if (!form) return;
+    var textarea = form.querySelector('.js-note-textarea');
+    if (!textarea) return;
+    var template = sel.value;
+    if (!template) { textarea.value = ''; return; }
+    var orderNum = form.dataset.order || '';
+    var email    = form.dataset.email  || '';
+    var today    = new Date().toISOString().slice(0, 10);
+    textarea.value = template
+      .replace(/\{\{order_number\}\}/g, orderNum)
+      .replace(/\{\{date\}\}/g,         today)
+      .replace(/\{\{email\}\}/g,        email);
+  });
+});
 
 // ── Keyboard shortcut: / focuses first search input ───────────────────────────
 (function() {

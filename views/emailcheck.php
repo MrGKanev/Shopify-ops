@@ -41,49 +41,76 @@
   <?php if (empty($emailResult['rows'])): ?>
     <?= tableWrapEmpty('All emails look valid', 'No email issues found across ' . $emailResult['scanned'] . ' orders.') ?>
   <?php else: ?>
-    <div class="table-wrap">
-      <?= tableWrapHeader($emailResult['rows'], 'tbl-emailcheck', 'Email Issues', 'email-issues', $emailResult['start']) ?>
-      <table id="tbl-emailcheck">
-        <thead>
-          <tr>
-            <th>Order</th>
-            <th>Date</th>
-            <th>Email</th>
-            <th>Issues</th>
-            <th>Severity</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($emailResult['rows'] as $row):
-            $adminUrl = $row['shopify_id'] ? $shopifyAdminBase . '/' . esc($row['shopify_id']) : null;
-          ?>
-          <tr>
-            <?= orderNumCell($row['order_number'], $adminUrl) ?>
-            <td><?= esc($row['created_at']) ?></td>
-            <td class="td-email">
-              <?= esc($row['email'] ?: '(empty)') ?>
-              <?php if ($row['email']): ?>
-                <button class="copy-btn" style="opacity:1" data-copy="<?= esc($row['email']) ?>" title="Copy email">⧉</button>
-              <?php endif; ?>
-            </td>
-            <td>
-              <div class="flex flex-col gap-1">
-                <?php foreach ($row['issues'] as $issue): ?>
-                  <span class="addr-issue addr-issue-<?= $issue['level'] ?>"><?= esc($issue['message']) ?></span>
-                <?php endforeach; ?>
-              </div>
-            </td>
-            <td>
-              <span class="refund-risk-badge <?= $row['severity'] === 'critical' ? 'refund-risk-active' : 'refund-risk-missing' ?>">
-                <?= $row['severity'] ?>
-              </span>
-            </td>
-            <?= actionLinks(['shopifyUrl' => $adminUrl, 'shopifyLabel' => 'Edit in Shopify', 'orderNum' => $row['order_number'], 'spotcheck' => true]) ?>
-          </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
+    <form method="post" id="bulk-emailcheck-form">
+      <input type="hidden" name="action" value="bulk_ignore_orders">
+      <input type="hidden" name="redirect_page" value="emailcheck">
+
+      <div class="bulk-bar" id="bar-emailcheck">
+        <span class="bulk-count" id="cnt-emailcheck">0 selected</span>
+        <input type="text" class="bulk-reason" name="reason" placeholder="Reason (optional)">
+        <button class="btn btn-sm btn-danger" type="submit">Ignore selected</button>
+        <button class="btn btn-sm btn-ghost" type="button"
+          onclick="document.querySelectorAll('#emailcheck-tbody .js-row-check').forEach(function(c){c.checked=false});updateBulkBar('emailcheck')">
+          Clear
+        </button>
+        <button class="btn btn-sm btn-ghost" type="button"
+          onclick="exportSelectedCSV('emailcheck','#tbl-emailcheck','email-issues-selected.csv')">
+          Export selected
+        </button>
+      </div>
+
+      <div class="table-wrap">
+        <?= tableWrapHeader($emailResult['rows'], 'tbl-emailcheck', 'Email Issues', 'email-issues', $emailResult['start']) ?>
+        <table id="tbl-emailcheck">
+          <thead>
+            <tr>
+              <th class="col-check">
+                <input type="checkbox" class="js-select-all" data-target="emailcheck-tbody" data-bar="emailcheck" title="Select all">
+              </th>
+              <th>Order</th>
+              <th>Date</th>
+              <th>Email</th>
+              <th>Issues</th>
+              <th>Severity</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="emailcheck-tbody">
+            <?php foreach ($emailResult['rows'] as $row):
+              $adminUrl = $row['shopify_id'] ? $shopifyAdminBase . '/' . esc($row['shopify_id']) : null;
+            ?>
+            <tr>
+              <td class="col-check">
+                <input type="checkbox" class="js-row-check" name="order_numbers[]"
+                       value="<?= esc(ltrim($row['order_number'], '#')) ?>"
+                       data-bar="emailcheck" onchange="updateBulkBar('emailcheck')">
+              </td>
+              <?= orderNumCell($row['order_number'], $adminUrl) ?>
+              <td><?= esc($row['created_at']) ?></td>
+              <td class="td-email">
+                <?= esc($row['email'] ?: '(empty)') ?>
+                <?php if ($row['email']): ?>
+                  <button class="copy-btn" style="opacity:1" data-copy="<?= esc($row['email']) ?>" title="Copy email">⧉</button>
+                <?php endif; ?>
+              </td>
+              <td>
+                <div class="flex flex-col gap-1">
+                  <?php foreach ($row['issues'] as $issue): ?>
+                    <span class="addr-issue addr-issue-<?= $issue['level'] ?>"><?= esc($issue['message']) ?></span>
+                  <?php endforeach; ?>
+                </div>
+              </td>
+              <td>
+                <span class="refund-risk-badge <?= $row['severity'] === 'critical' ? 'refund-risk-active' : 'refund-risk-missing' ?>">
+                  <?= $row['severity'] ?>
+                </span>
+              </td>
+              <?= actionLinks(['shopifyUrl' => $adminUrl, 'shopifyLabel' => 'Edit in Shopify', 'orderNum' => $row['order_number'], 'spotcheck' => true]) ?>
+            </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </form>
   <?php endif; ?>
 <?php endif; ?>

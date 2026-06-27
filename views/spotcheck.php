@@ -116,6 +116,17 @@
             <?php endif; ?>
           </div>
           <?php endif; ?>
+
+          <?php
+            // Note templates: show for each found Shopify order (first match only).
+            if (!empty($noteTemplates) && $shFound && !empty($sc['shopify_orders'])):
+              $noteShopifyId = (string) ($sc['shopify_orders'][0]['legacyResourceId'] ?? $sc['shopify_orders'][0]['id'] ?? '');
+              $noteOrderNum  = $sc['number'];
+              $noteEmail     = $sc['shopify_orders'][0]['email'] ?? '';
+              if ($noteShopifyId):
+          ?>
+            <?php include __DIR__ . '/partials/note-templates.php'; ?>
+          <?php endif; endif; ?>
         </div>
 
         <span class="spot-status-pill
