@@ -227,6 +227,47 @@ function tableWrapHeader(
     return $html;
 }
 
+/**
+ * Renders a coloured risk badge from a RiskScorer::score() result.
+ *
+ * Shows a coloured pill (badge-ok / badge-warn / badge-danger) labelled
+ * "<Level> <score>".  When signals are present the full breakdown is
+ * shown in a <details> element so the user can expand it inline.
+ *
+ * Pass $withDetails = false to render a plain badge (e.g. for CSV export).
+ *
+ * @param  array{score: int, level: string, signals: list<array{label: string, points: int}>} $risk
+ */
+function riskBadge(array $risk, bool $withDetails = true): string
+{
+    $level   = $risk['level']   ?? 'low';
+    $score   = $risk['score']   ?? 0;
+    $signals = $risk['signals'] ?? [];
+
+    $cls = match ($level) {
+        'high'   => 'badge-danger',
+        'medium' => 'badge-warn',
+        default  => 'badge-ok',
+    };
+    $label = ucfirst($level) . ' ' . $score;
+
+    if ($withDetails && !empty($signals)) {
+        $rows = array_map(
+            fn($s) => '<div class="risk-signal">'
+                . esc($s['label'])
+                . ' <span class="risk-pts">+' . (int) $s['points'] . '</span>'
+                . '</div>',
+            $signals
+        );
+        return '<details class="risk-details">'
+            . '<summary class="badge ' . $cls . '">' . esc($label) . '</summary>'
+            . '<div class="risk-signal-list">' . implode('', $rows) . '</div>'
+            . '</details>';
+    }
+
+    return '<span class="badge ' . $cls . '">' . esc($label) . '</span>';
+}
+
 function datePresets(): string
 {
     $presets = [

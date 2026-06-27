@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/RiskScorer.php';
+
 /**
  * Loads search and lookup pages with narrow request/response state.
  */
@@ -55,9 +57,10 @@ class SearchLookupPageLoader
 
     private static function loadSpotCheck(string $action, array $ctx): array
     {
-        $spotResults = null;
-        $spotError   = '';
-        $spotInput   = trim($_GET['prefill'] ?? '');
+        $spotResults         = null;
+        $spotError           = '';
+        $spotInput           = trim($_GET['prefill'] ?? '');
+        $spotcheckRiskScores = [];
 
         if ($action === 'spotcheck') {
             $spotInput = trim($_POST['orders'] ?? '');
@@ -98,6 +101,16 @@ class SearchLookupPageLoader
                                 'found'          => !empty($ssOrders),
                             ];
                         }
+
+                        // Compute composite risk scores for all Shopify orders found.
+                        foreach ($spotResults as $r) {
+                            foreach ($r['shopify_orders'] ?? [] as $o) {
+                                $id = (string) ($o['id'] ?? '');
+                                if ($id !== '') {
+                                    $spotcheckRiskScores[$id] = RiskScorer::score($o);
+                                }
+                            }
+                        }
                     } catch (Throwable $e) {
                         $spotError = 'Error: ' . $e->getMessage();
                     }
@@ -105,7 +118,7 @@ class SearchLookupPageLoader
             }
         }
 
-        return compact('spotResults', 'spotInput', 'spotError');
+        return compact('spotResults', 'spotInput', 'spotError', 'spotcheckRiskScores');
     }
 
     private static function loadMetafields(string $action, array $ctx): array
@@ -267,6 +280,16 @@ class SearchLookupPageLoader
                     $shopify        = new Shopify($ctx['shopifyStore'], $ctx['shopifyToken']);
                     $customerResult = $shopify->lookupCustomer($customerEmail);
                     $customerResult['email'] = $customerEmail;
+
+                    // Compute composite risk scores keyed by legacyResourceId.
+                    $riskScores = [];
+                    foreach ($customerResult['orders'] ?? [] as $o) {
+                        $legacyId = (string) ($o['legacyResourceId'] ?? '');
+                        if ($legacyId !== '') {
+                            $riskScores[$legacyId] = RiskScorer::score($o);
+                        }
+                    }
+                    $customerResult['riskScores'] = $riskScores;
                 } catch (Throwable $e) {
                     $customerError = $e->getMessage();
                 }

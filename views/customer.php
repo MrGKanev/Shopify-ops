@@ -132,6 +132,7 @@
       <?php if ($truncated): ?>
         <div class="hint px-4 pb-2" style="color:var(--warn)">Results truncated - showing first 250+ orders.</div>
       <?php endif; ?>
+      <?php $customerRiskScores = $customerResult['riskScores'] ?? []; ?>
       <table id="tbl-customer">
         <thead>
           <tr>
@@ -142,6 +143,7 @@
             <th>Fulfillment</th>
             <th>Total</th>
             <th>Tags</th>
+            <th>Risk</th>
             <th></th>
           </tr>
         </thead>
@@ -157,6 +159,7 @@
             $tags      = (array)($o['tags'] ?? []);
             $cancelled = !empty($o['cancelledAt']);
             $rowId     = 'od-' . $legacyId;
+            $orderRisk = $customerRiskScores[$legacyId] ?? null;
 
             $finChip = match(strtolower($fin)) {
               'paid'                      => 'chip-paid',
@@ -196,6 +199,11 @@
                 <?php endforeach; ?>
               </div>
             </td>
+            <td onclick="event.stopPropagation()">
+              <?php if ($orderRisk !== null): ?>
+                <?= riskBadge($orderRisk) ?>
+              <?php endif; ?>
+            </td>
             <td class="td-actions" onclick="event.stopPropagation()">
               <?php if ($legacyId): ?>
                 <a class="ignore-btn" href="?page=spotcheck&prefill=<?= urlencode(ltrim($o['name'], '#')) ?>">Spot-check</a>
@@ -203,7 +211,7 @@
             </td>
           </tr>
           <tr class="order-detail-row" id="<?= esc($rowId) ?>" style="display:none">
-            <td colspan="8" style="padding:0">
+            <td colspan="9" style="padding:0">
               <div class="order-detail-panel" id="panel-<?= esc($legacyId) ?>">
                 <div class="order-detail-loading">Loading…</div>
               </div>

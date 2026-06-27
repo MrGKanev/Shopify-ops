@@ -386,6 +386,29 @@ a:hover { text-decoration: underline; }
   color: var(--c-warn-fg);
   padding: .2rem .6rem;
 }
+.badge-danger {
+  @apply inline-block rounded-full text-xs font-bold;
+  background: var(--c-danger-bg);
+  color: var(--c-danger-fg);
+  padding: .2rem .6rem;
+}
+
+/* ── Risk badge / signal breakdown ── */
+.risk-details { display: inline-block; position: relative; vertical-align: middle; }
+.risk-details > summary { cursor: pointer; list-style: none; }
+.risk-details > summary::-webkit-details-marker { display: none; }
+.risk-signal-list {
+  position: absolute; top: calc(100% + .3rem); left: 0; z-index: 50;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: .5rem .75rem;
+  min-width: 14rem; box-shadow: 0 4px 12px rgba(0,0,0,.12);
+  white-space: nowrap;
+}
+.risk-signal {
+  @apply flex justify-between gap-4 text-xs;
+  padding: .2rem 0; color: var(--text);
+}
+.risk-pts { @apply font-bold; color: var(--danger); }
 
 /* ── Table ── */
 .table-wrap {

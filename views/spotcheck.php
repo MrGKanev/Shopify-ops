@@ -102,13 +102,17 @@
             <?php if ($shFound): ?>
               <div class="spot-matches">
                 <?php foreach ($sc['shopify_orders'] as $o):
-                  $shUrl = !empty($o['id']) ? $shopifyAdminBase . '/' . $o['id'] : null;
+                  $shUrl   = !empty($o['id']) ? $shopifyAdminBase . '/' . $o['id'] : null;
+                  $shRisk  = $spotcheckRiskScores[(string)($o['id'] ?? '')] ?? null;
                 ?>
                   <?php if ($shUrl): ?><a class="spot-match-tag spot-match-tag-sh" href="<?= esc($shUrl) ?>" target="_blank" rel="noopener"><?php else: ?><span class="spot-match-tag spot-match-tag-sh"><?php endif; ?>
                     <?= esc($o['name'] ?? '#' . $o['order_number'] ?? '?') ?>
                     &middot; <?= esc($o['financial_status'] ?? '?') ?>
                     <?php if (!empty($o['total_price'])): ?>&middot; $<?= number_format((float)$o['total_price'], 2) ?><?php endif; ?>
                   <?php echo $shUrl ? '</a>' : '</span>'; ?>
+                  <?php if ($shRisk !== null): ?>
+                    <?= riskBadge($shRisk) ?>
+                  <?php endif; ?>
                 <?php endforeach; ?>
               </div>
             <?php else: ?>
