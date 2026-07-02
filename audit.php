@@ -47,9 +47,13 @@ if ($idx !== false && isset($argv[$idx + 1])) {
 }
 
 // ── Banner ────────────────────────────────────────────────────────
+$sendDigest = (bool) getenv('SEND_DIGEST');
 echo "\n🔍 ShipStation ↔ Shopify Order Audit\n";
 echo "   Store  : {$shopifyStore}\n";
 echo "   Period : {$startDate} → {$endDate}\n";
+if ($sendDigest) {
+    echo "   Mode   : digest (SEND_DIGEST=1 — notifications sent regardless of thresholds)\n";
+}
 if ($spotCheckNumbers) {
     echo "   Spot-check : #" . implode(', #', $spotCheckNumbers) . "\n";
 }
@@ -152,24 +156,24 @@ try {
         'total_ss'       => count($ssOrders),
     ];
 
-    if (SlackRules::shouldNotifyAudit(count($result['missing'])) && ($notifier = SlackNotifier::fromEnvironment())) {
+    if (($sendDigest || SlackRules::shouldNotifyAudit(count($result['missing']))) && ($notifier = SlackNotifier::fromEnvironment())) {
         $sent = $notifier->notifyAuditSafely($auditSummary);
         echo $sent
-            ? "  Slack notification sent.\n"
+            ? "  Slack " . ($sendDigest ? 'digest' : 'notification') . " sent.\n"
             : "  Slack notification failed; audit result was still saved.\n";
     }
 
-    if (EmailRules::shouldNotifyAudit(count($result['missing'])) && ($emailNotifier = EmailNotifier::fromEnvironment())) {
+    if (($sendDigest || EmailRules::shouldNotifyAudit(count($result['missing']))) && ($emailNotifier = EmailNotifier::fromEnvironment())) {
         $sent = $emailNotifier->notifyAuditSafely($auditSummary);
         echo $sent
-            ? "  Email notification sent.\n"
+            ? "  Email " . ($sendDigest ? 'digest' : 'notification') . " sent.\n"
             : "  Email notification failed; audit result was still saved.\n";
     }
 
     if ($discordNotifier = DiscordNotifier::fromEnvironment()) {
         $sent = $discordNotifier->notifyAuditSafely($auditSummary);
         echo $sent
-            ? "  Discord notification sent.\n"
+            ? "  Discord " . ($sendDigest ? 'digest' : 'notification') . " sent.\n"
             : "  Discord notification failed; audit result was still saved.\n";
     }
 

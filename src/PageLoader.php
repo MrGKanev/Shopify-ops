@@ -27,6 +27,7 @@ class PageLoader
             'tagaudit'  => SimpleScanPageLoader::load($page, $action, $ctx),
             'dupes'     => OrderAnomalyPageLoader::load($page, $action, $ctx),
             'customer'  => SearchLookupPageLoader::load($page, $action, $ctx, $data),
+            'cohort'    => CustomerLTVPageLoader::load($page, $action, $ctx),
             'refunds'   => OrderAnomalyPageLoader::load($page, $action, $ctx),
             'addrcheck'  => OrderAnomalyPageLoader::load($page, $action, $ctx),
             'tracking'   => SearchLookupPageLoader::load($page, $action, $ctx, $data),
