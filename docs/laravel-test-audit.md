@@ -1,6 +1,6 @@
 # Laravel rewrite — legacy test audit
 
-Последно обновяване: **2026-09-09** след Run History slice-а.
+Последно обновяване: **2026-09-09** след Global Search slice-а.
 
 Този документ е отделният checklist за тестова parity. Feature статусът се следи
 в [Laravel rewrite плана](laravel-rewrite.md), а тук се затваря всеки legacy test
@@ -11,13 +11,13 @@ contract има Laravel тест, по-силен еквивалент или з
 
 | Статус | Файлове | Дял от 115 |
 |---|---:|---:|
-| Готови | 46 | 40.0% |
+| Готови | 49 | 42.6% |
 | Частично покрити | 26 | 22.6% |
-| Непочнати | 43 | 37.4% |
-| **Оставащи за одит** | **69** | **60.0%** |
+| Непочнати | 40 | 34.8% |
+| **Оставащи за одит** | **66** | **57.4%** |
 
 Legacy baseline: **115 файла · 1,528 теста · 3,659 assertions**. Laravel
-baseline след последния slice: **545 теста · 2,447 assertions**. Броят assertions
+baseline след последния slice: **555 теста · 2,528 assertions**. Броят assertions
 е ориентир; критерият е поведенческо покритие.
 
 За всеки checkbox проверяваме business decisions, boundary интеграцията,
@@ -42,6 +42,7 @@ malformed payloads и atomic failure. Не копираме тест, който
 | [ ] | `GraphQL/OrderEventLookupTest.php` | 3 | Event lookup, pagination и missing order | Exact normalized event mapping |
 | [ ] | `GraphQL/OrderNormalizerTest.php` | 39 | Всички основни и optional order fields | Tax, refunds, discounts, attributes, journey/source и support fields |
 | [ ] | `HttpAuthEndpointTest.php` | 1 | Endpoint auth contract | Пълна route/method/session еквивалентност |
+| [ ] | `JobQueueTest.php` | 7 | Native pending/failed visibility, retry/forget and RunAudit enqueue | Worker execution and completion lifecycle |
 | [ ] | `OrderInsightPageLoaderTest.php` | 12 | Compare, timeline и допълнителни order insights | Непренесените insight branches и failure states |
 | [ ] | `OrderTimelineTest.php` | 26 | Timeline events, ordering, labels и risk signals | Explicit mapping на всички 26 метода |
 | [ ] | `OrderPolicyPageLoaderTest.php` | 22 | Policy-report inputs, wiring, configuration и error states | Discount Abuse, Same IP, Tag Policy, Duplicate Shipping Addresses, Note Flags и Order Edit paths са покрити; останалите policy reports чакат method-level сверка |
@@ -49,7 +50,6 @@ malformed payloads и atomic failure. Не копираме тест, който
 | [ ] | `ReporterTest.php` | 19 | CSV/JSON output, summaries и filenames | Общият streamed CSV writer, filename sanitation и formula escaping са готови; JSON, summaries, attachments и всички report schemas остават |
 | [ ] | `UserActionLogTest.php` | 3 | Action history, pruning и legacy import | DB-backed admin Action Log, safe model changes, credential rotation metadata, authorization и scheduled retention са готови; legacy import остава |
 | [ ] | `RiskScorerTest.php` | 33 | Fraud risk сигнали, weights и score bands | Custom weights и explicit mapping на всички methods |
-| [ ] | `SearchLookupPageLoaderTest.php` | 19 | Lookup/compare/timeline dispatch, validation и errors | Останалите search tools и всички loader branches |
 | [ ] | `SecurityTest.php` | 5 | Proxy trust, sessions, rolling rate limit и headers | Full security checklist срещу Laravel middleware/config |
 | [ ] | `SlackNotifierTest.php` | 19 | Slack payloads, mentions, delivery и safe failure | Queue-ready webhook channel, admin-only delivery diagnostic, trusted endpoint validation и credential-free test payload са готови; audit/scan payloads, mentions и retry mapping остават |
 | [ ] | `ShipStationClientTest.php` | 23 | Auth, lookup, retries, create, active/awaiting/shipment fetch и cache | Create order, active/voided/date fetch, cache/checkpoint semantics |
@@ -63,15 +63,14 @@ malformed payloads и atomic failure. Не копираме тест, който
 |---|---|---:|---|
 | [ ] | `ActionsTest.php` | 30 | POST action parsing, user/date validation, connection checks, push preview/order note → Form Requests, controllers и services |
 | [ ] | `AtomicFileTest.php` | 8 | Atomic write/JSON/permissions/failure cleanup → класифициране като replaced или persistence equivalent |
-| [ ] | `AuditSnapshotTest.php` | 9 | Save/load/history/limits на audit snapshots → DB snapshot repository |
-| [ ] | `AuditTest.php` | 3 | Success/error execution logging → report runner failure/audit logging |
+| [x] | `AuditSnapshotTest.php` | 9 | Save/load/history/overwrite на audit snapshots → store-scoped DB snapshots and Saved Reports views |
+| [x] | `AuditTest.php` | 3 | Success/error execution logging → persisted Run Audit summaries and safe failure records |
 | [ ] | `AutoloadCoverageTest.php` | 1 | Всеки source symbol се autoload-ва → Composer/Laravel discovery gate |
 | [ ] | `CacheTest.php` | 47 | TTL, locking, corruption, pruning и namespaces → Laravel cache/lock policy и integration tests |
 | [ ] | `ConfigValidatorTest.php` | 35 | Environment, stores, order types и tag policy validation → Laravel config/admin validation |
 | [ ] | `DateRangeTest.php` | 10 | Input precedence, ISO validation и date arithmetic → shared Form Request/value object tests |
 | [ ] | `DocsGeneratorTest.php` | 1 | Registry и tools документацията не се разминават → route/feature tracker consistency check |
 | [x] | `IgnoreListTest.php` | 16 | Ignore CRUD, normalization, expiry и persistence → ignore-list model/repository |
-| [ ] | `JobQueueTest.php` | 7 | Enqueue, reserve, retry и completion → Laravel queue jobs |
 | [ ] | `JsonFileLockTest.php` | 6 | Locking, timeout и release при failure → replaced от DB/cache locks или equivalent |
 | [ ] | `LoggerTest.php` | 7 | Structured logging, redaction и rotation → Laravel logging config/tests |
 | [ ] | `MetricsEndpointTest.php` | 4 | Metrics auth/content/counters → operational metrics endpoint |
@@ -131,6 +130,7 @@ malformed payloads и atomic failure. Не копираме тест, който
 
 ## Напълно сверени
 
+- [x] `SearchLookupPageLoaderTest.php` — 19/19 global search and lookup loader contracts.
 - [x] `PackingSlipPageLoaderTest.php` — 6/6 legacy paths.
 - [x] `TrackingFeedTest.php` — 7/7 builder contracts.
 - [x] `GraphQL/OrderTagInsightsTest.php` — 8/8 tag search/statistics contracts.

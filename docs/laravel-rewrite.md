@@ -408,7 +408,7 @@ Matrix-ът е release control документ, а не само checklist. М�
 достъпен route/controller/view и покриващи тестове. Наличен domain helper без
 завършен потребителски workflow не се брои за готов feature.
 
-Последно обновяване: **2026-09-09**, след Run History slice-а.
+Последно обновяване: **2026-09-09**, след Global Search slice-а и matrix recount.
 
 Легенда: **Done** = feature parity за основния workflow; **Partial** = използваем,
 но по-тесен от legacy; **Todo** = няма завършен Laravel workflow;
@@ -418,9 +418,9 @@ Matrix-ът е release control документ, а не само checklist. М�
 
 | Статус | Страници/инструменти | Дял от 72 |
 |---|---:|---:|
-| Done | 51 | 70.8% |
+| Done | 62 | 86.1% |
 | Partial | 3 | 4.2% |
-| Todo | 16 | 22.2% |
+| Todo | 5 | 6.9% |
 | Replaced | 2 | 2.8% |
 | **Общо** | **72** | **100%** |
 
@@ -482,9 +482,9 @@ workflow от наличния framework scaffold.
 |---|---|---|---|
 | `dashboard` | Dashboard | Partial | Laravel показва store и migration status; legacy audit stats/actions липсват. |
 | `hub-audit` | Audit hub | Replaced | Заменен от постоянна sidebar навигация и директни routes. |
-| `reports` | Reports | Todo | Saved reports и downloads. |
-| `run` | Run Audit | Todo | Shopify ↔ ShipStation audit по период. |
-| `trends` | Trends | Todo | Aggregated audit report trends. |
+| `reports` | Reports | Done | Store-scoped daily DB snapshots from Run Audit, same-day overwrite, history/detail views and formula-safe CSV download. |
+| `run` | Run Audit | Done | Validated period, matching, legacy exclusions/ignore list including no-shipping/on-hold, persisted summary, safe synchronous results and queued execution. |
+| `trends` | Trends | Done | Store-scoped date filtering, chronological missing-order totals, signed daily deltas and dependency-free bar visualization from saved snapshots. |
 | `dupes` | Duplicate Detector | Done | Case-insensitive email + exact total pairs within an inclusive 600-second window, full range pagination and visible truncation. |
 | `refunds` | Refunds Tracker | Done | Refunded Shopify orders with line-item totals, optional ShipStation cross-check and active/missing risk priority. |
 | `repeatrefunds` | Repeat Refunds | Done | Refunded/partially-refunded orders grouped by normalized email, successful transaction totals and configurable threshold. |
@@ -529,14 +529,14 @@ workflow от наличния framework scaffold.
 | `sameip` | Same IP, Different Emails | Done | Paid orders grouped by exact client IP, case-insensitive distinct-email deduplication, detailed orders and deterministic risk sorting. |
 | `disputes` | Chargebacks / Disputes | Done | Open actionable disputes, evidence deadlines, urgency sorting and bounded pagination. |
 
-Audit subtotal: **Done 36 · Partial 1 · Todo 10 · Replaced 1**.
+Audit subtotal: **Done 46 · Partial 1 · Todo 0 · Replaced 1**.
 
 ### Search & Lookup — 12
 
 | ID | Legacy feature | Статус | Бележка |
 |---|---|---|---|
 | `hub-search` | Search & Lookup hub | Replaced | Заменен от sidebar links. |
-| `globalsearch` | Global Search | Todo | Reports, push log и ignored-order търсене. |
+| `globalsearch` | Global Search | Done | Normalized order-number search over bounded saved-report, push-log and ignored-order history with safe links and store isolation. |
 | `spotcheck` | Spot-check | Done | 1–50 уникални номера, three-source mode, exact batch Shopify lookup, risk badges и safe atomic errors. |
 | `compare` | Order Compare | Done | `/orders/compare`, safe errors, ambiguity и optional ShipStation status. |
 | `timeline` | Order Timeline | Done | Shopify events/refunds/fulfillments + ShipStation + risk analysis. |
@@ -548,7 +548,7 @@ Audit subtotal: **Done 36 · Partial 1 · Todo 10 · Replaced 1**.
 | `tracking` | Tracking Feed | Done | 1–30 уникални номера, real `/shipments`, unshipped fallback, carrier allowlist и atomic safe errors. |
 | `packingslip` | Packing Slip Preview | Done | Exact-match ShipStation lookup, safe view-data builder, ambiguity state и print-friendly preview. |
 
-Search subtotal: **Done 10 · Partial 0 · Todo 1 · Replaced 1**.
+Search subtotal: **Done 11 · Partial 0 · Todo 0 · Replaced 1**.
 
 ### Manage — 6
 
@@ -557,11 +557,11 @@ Search subtotal: **Done 10 · Partial 0 · Todo 1 · Replaced 1**.
 | `ignored` | Ignored Orders | Done | Store-scoped add/update, single and bulk unignore, CSV import normalization and durable DB persistence. |
 | `pushlog` | Push Log | Done | Append-only store-scoped DB history, newest-first pagination and safe Shopify/ShipStation links. |
 | `runlog` | Run History | Done | Store-scoped append-only execution records, legacy defaults, 500-row retention and newest-first pagination. |
-| `jobs` | Job Queue | Todo |
+| `jobs` | Job Queue | Done | Native pending/failed visibility, retry/forget and validated Run Audit enqueue. |
 | `actionlog` | Action Log | Done | Admin-only newest-first activity history for allowlisted user/store changes, credential rotations and store-access updates, with scheduled retention cleanup. |
 | `printqueue` | Print Queue | Todo |
 
-Manage subtotal: **Done 4 · Partial 0 · Todo 2 · Replaced 0**.
+Manage subtotal: **Done 5 · Partial 0 · Todo 1 · Replaced 0**.
 
 ### Settings — 6
 
@@ -590,7 +590,7 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 | Suite | Test files | Executed tests | Assertions |
 |---|---:|---:|---:|
 | Stable plain PHP | 115 | 1,528 | 3,659 |
-| Laravel rewrite | 157 | 522 | 2,303 |
+| Laravel rewrite | 180 | 555 | 2,528 |
 
 Текущ file-level disposition на всичките **115 legacy test файла**:
 
