@@ -1107,7 +1107,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
             query ItemMismatchCandidates($search: String!, $after: String) {
               orders(first: 250, after: $after, sortKey: CREATED_AT, reverse: true, query: $search) {
                 pageInfo { hasNextPage endCursor }
-                edges { node { legacyResourceId name createdAt cancelledAt email displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } lineItems(first: 250) { nodes { id title name sku quantity variantTitle vendor } } } }
+                edges { node { legacyResourceId name createdAt cancelledAt email displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } shippingLines(first: 1) { nodes { id } } lineItems(first: 250) { nodes { id title name sku quantity variantTitle vendor } } } }
               }
             }
             GRAPHQL;
@@ -1119,7 +1119,13 @@ class ShopifyAdminClient implements ShopifyAdminGateway
             if (! is_array($node)) {
                 throw new ShopifyGraphqlException([], 'Shopify item mismatch report returned an unexpected response shape.');
             }
-            $orders[] = $this->orderNormalizer->normalize($node);
+            $order = $this->orderNormalizer->normalize($node);
+            $shippingLines = $node['shippingLines']['nodes'] ?? null;
+            if (! is_array($shippingLines) || ! array_is_list($shippingLines) || array_filter($shippingLines, fn (mixed $line): bool => ! is_array($line)) !== []) {
+                throw new ShopifyGraphqlException([], 'Shopify item mismatch report returned invalid shipping lines.');
+            }
+            $order['shipping_lines'] = $shippingLines;
+            $orders[] = $order;
         }
 
         return ['orders' => $orders, 'pages' => $result['pages'], 'truncated' => $result['truncated']];
