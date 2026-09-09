@@ -65,6 +65,7 @@ use App\Http\Controllers\Reports\TagPolicyController;
 use App\Http\Controllers\Reports\TaxAuditController;
 use App\Http\Controllers\Reports\VoidedShipmentsController;
 use App\Http\Controllers\Reports\ZombieProductsController;
+use App\Http\Controllers\RunLogController;
 use App\Http\Controllers\StatusController;
 use Illuminate\Support\Facades\Route;
 use Spatie\Health\Http\Controllers\HealthCheckResultsController;
@@ -112,6 +113,7 @@ Route::middleware('auth')->group(function (): void {
         Route::delete('/ignored-orders', [IgnoredOrderController::class, 'bulkDestroy'])->middleware('can:run-audits')->name('ignored-orders.bulk-destroy');
         Route::delete('/ignored-orders/{ignoredOrder}', [IgnoredOrderController::class, 'destroy'])->middleware('can:run-audits')->name('ignored-orders.destroy');
         Route::get('/push-logs', PushLogController::class)->name('push-logs.index');
+        Route::get('/run-logs', RunLogController::class)->name('run-logs.index');
         Route::get('/reports/high-value-no-phone', [HighValueNoPhoneController::class, 'create'])->middleware('can:run-audits')->name('reports.high-value-no-phone');
         Route::post('/reports/high-value-no-phone', [HighValueNoPhoneController::class, 'store'])->middleware('throttle:audit-report')->name('reports.high-value-no-phone.store');
         Route::get('/reports/country-mismatch', [CountryMismatchController::class, 'create'])->middleware('can:run-audits')->name('reports.country-mismatch');

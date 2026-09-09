@@ -1,6 +1,6 @@
 # Laravel rewrite — legacy test audit
 
-Последно обновяване: **2026-09-09** след Push Log slice-а.
+Последно обновяване: **2026-09-09** след Run History slice-а.
 
 Този документ е отделният checklist за тестова parity. Feature статусът се следи
 в [Laravel rewrite плана](laravel-rewrite.md), а тук се затваря всеки legacy test
@@ -11,13 +11,13 @@ contract има Laravel тест, по-силен еквивалент или з
 
 | Статус | Файлове | Дял от 115 |
 |---|---:|---:|
-| Готови | 45 | 39.1% |
+| Готови | 46 | 40.0% |
 | Частично покрити | 26 | 22.6% |
-| Непочнати | 44 | 38.3% |
-| **Оставащи за одит** | **70** | **60.9%** |
+| Непочнати | 43 | 37.4% |
+| **Оставащи за одит** | **69** | **60.0%** |
 
 Legacy baseline: **115 файла · 1,528 теста · 3,659 assertions**. Laravel
-baseline след последния slice: **543 теста · 2,438 assertions**. Броят assertions
+baseline след последния slice: **545 теста · 2,447 assertions**. Броят assertions
 е ориентир; критерият е поведенческо покритие.
 
 За всеки checkbox проверяваме business decisions, boundary интеграцията,
@@ -78,7 +78,7 @@ malformed payloads и atomic failure. Не копираме тест, който
 | [ ] | `PrintQueueTest.php` | 7 | Queue persistence, ordering и removal → packing/print queue workflow |
 | [x] | `PushLogTest.php` | 3 | Push history append/order/limit → store-scoped DB push log |
 | [ ] | `ReportRegistryTest.php` | 7 | Report definitions, groups и defaults → Laravel report registry/navigation |
-| [ ] | `RunLogTest.php` | 3 | Run history append/order/limit → DB run records |
+| [x] | `RunLogTest.php` | 3 | Run history append/order/limit → DB run records |
 | [ ] | `ScanRunnerTest.php` | 18 | Scan orchestration, notifications, snapshots и failures → queued report orchestration |
 | [ ] | `ShopifyFlowHealthTest.php` | 7 | Per-tool run/error health aggregation → operational dashboard |
 | [ ] | `SidebarSettingsTest.php` | 4 | Sidebar visibility defaults/persistence → user UI preferences |

@@ -52,6 +52,12 @@ class Store extends Model
         return $this->hasMany(PushLog::class);
     }
 
+    /** @return HasMany<RunLog, $this> */
+    public function runLogs(): HasMany
+    {
+        return $this->hasMany(RunLog::class);
+    }
+
     /**
      * @return array<string, string>
      */
