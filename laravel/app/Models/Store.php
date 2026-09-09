@@ -64,6 +64,12 @@ class Store extends Model
         return $this->hasMany(AuditSnapshot::class);
     }
 
+    /** @return HasMany<PrintQueueItem, $this> */
+    public function printQueueItems(): HasMany
+    {
+        return $this->hasMany(PrintQueueItem::class);
+    }
+
     /**
      * @return array<string, string>
      */

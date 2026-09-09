@@ -408,7 +408,7 @@ Matrix-ът е release control документ, а не само checklist. М�
 достъпен route/controller/view и покриващи тестове. Наличен domain helper без
 завършен потребителски workflow не се брои за готов feature.
 
-Последно обновяване: **2026-09-09**, след Global Search slice-а и matrix recount.
+Последно обновяване: **2026-09-09**, след Print Queue slice-а.
 
 Легенда: **Done** = feature parity за основния workflow; **Partial** = използваем,
 но по-тесен от legacy; **Todo** = няма завършен Laravel workflow;
@@ -418,9 +418,9 @@ Matrix-ът е release control документ, а не само checklist. М�
 
 | Статус | Страници/инструменти | Дял от 72 |
 |---|---:|---:|
-| Done | 62 | 86.1% |
+| Done | 63 | 87.5% |
 | Partial | 3 | 4.2% |
-| Todo | 5 | 6.9% |
+| Todo | 4 | 5.6% |
 | Replaced | 2 | 2.8% |
 | **Общо** | **72** | **100%** |
 
@@ -559,9 +559,9 @@ Search subtotal: **Done 11 · Partial 0 · Todo 0 · Replaced 1**.
 | `runlog` | Run History | Done | Store-scoped append-only execution records, legacy defaults, 500-row retention and newest-first pagination. |
 | `jobs` | Job Queue | Done | Native pending/failed visibility, retry/forget and validated Run Audit enqueue. |
 | `actionlog` | Action Log | Done | Admin-only newest-first activity history for allowlisted user/store changes, credential rotations and store-access updates, with scheduled retention cleanup. |
-| `printqueue` | Print Queue | Todo |
+| `printqueue` | Print Queue | Done | Store-scoped persistent queue with validated add, duplicate prevention, remove/clear and Packing Slip/Spot-check links. |
 
-Manage subtotal: **Done 5 · Partial 0 · Todo 1 · Replaced 0**.
+Manage subtotal: **Done 6 · Partial 0 · Todo 0 · Replaced 0**.
 
 ### Settings — 6
 
@@ -590,7 +590,7 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 | Suite | Test files | Executed tests | Assertions |
 |---|---:|---:|---:|
 | Stable plain PHP | 115 | 1,528 | 3,659 |
-| Laravel rewrite | 180 | 555 | 2,528 |
+| Laravel rewrite | 181 | 557 | 2,545 |
 
 Текущ file-level disposition на всичките **115 legacy test файла**:
 

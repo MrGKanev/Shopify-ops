@@ -62,6 +62,7 @@
                     <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('push-logs.index') }}">Push log</a>
                     <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('run-logs.index') }}">Run history</a>
                     @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('jobs.index') }}">Job queue</a>@endcan
+                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('print-queue.index') }}">Print queue</a>@endcan
                     @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.high-value-no-phone') }}">High-value no phone</a>@endcan
                     @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.country-mismatch') }}">Country mismatch</a>@endcan
                     @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.tag-audit') }}">Tag audit</a>@endcan

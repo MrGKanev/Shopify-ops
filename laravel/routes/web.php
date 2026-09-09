@@ -20,6 +20,7 @@ use App\Http\Controllers\OrderTagSearchController;
 use App\Http\Controllers\OrderTimelineController;
 use App\Http\Controllers\OrderTrackingController;
 use App\Http\Controllers\PackingSlipController;
+use App\Http\Controllers\PrintQueueController;
 use App\Http\Controllers\PushLogController;
 use App\Http\Controllers\ReadinessController;
 use App\Http\Controllers\Reports\ActiveShipStationConflictController;
@@ -125,6 +126,10 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/saved-reports/{report}', [SavedReportController::class, 'show'])->whereNumber('report')->middleware('can:run-audits')->name('saved-reports.show');
         Route::get('/saved-reports/{report}/export', [SavedReportController::class, 'export'])->whereNumber('report')->middleware('can:run-audits')->name('saved-reports.export');
         Route::get('/jobs', [JobQueueController::class, 'index'])->middleware('can:run-audits')->name('jobs.index');
+        Route::get('/print-queue', [PrintQueueController::class, 'index'])->middleware('can:run-audits')->name('print-queue.index');
+        Route::post('/print-queue', [PrintQueueController::class, 'store'])->middleware('can:run-audits')->name('print-queue.store');
+        Route::delete('/print-queue', [PrintQueueController::class, 'clear'])->middleware('can:run-audits')->name('print-queue.clear');
+        Route::delete('/print-queue/{item}', [PrintQueueController::class, 'destroy'])->whereNumber('item')->middleware('can:run-audits')->name('print-queue.destroy');
         Route::post('/jobs/failed/{uuid}/retry', [JobQueueController::class, 'retry'])->middleware('can:run-audits')->name('jobs.retry');
         Route::delete('/jobs/failed/{uuid}', [JobQueueController::class, 'destroy'])->middleware('can:run-audits')->name('jobs.destroy');
         Route::get('/reports/run-audit', [RunAuditController::class, 'create'])->middleware('can:run-audits')->name('reports.run-audit');
