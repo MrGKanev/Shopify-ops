@@ -408,7 +408,7 @@ Matrix-ът е release control документ, а не само checklist. М�
 достъпен route/controller/view и покриващи тестове. Наличен domain helper без
 завършен потребителски workflow не се брои за готов feature.
 
-Последно обновяване: **2026-09-09**, след Customer LTV slice-а.
+Последно обновяване: **2026-09-09**, след Customer Lookup slice-а.
 
 Легенда: **Done** = feature parity за основния workflow; **Partial** = използваем,
 но по-тесен от legacy; **Todo** = няма завършен Laravel workflow;
@@ -418,9 +418,9 @@ Matrix-ът е release control документ, а не само checklist. М�
 
 | Статус | Страници/инструменти | Дял от 72 |
 |---|---:|---:|
-| Done | 46 | 63.9% |
+| Done | 47 | 65.3% |
 | Partial | 3 | 4.2% |
-| Todo | 21 | 29.2% |
+| Todo | 20 | 27.8% |
 | Replaced | 2 | 2.8% |
 | **Общо** | **72** | **100%** |
 
@@ -540,7 +540,7 @@ Audit subtotal: **Done 36 · Partial 1 · Todo 10 · Replaced 1**.
 | `spotcheck` | Spot-check | Done | 1–50 уникални номера, three-source mode, exact batch Shopify lookup, risk badges и safe atomic errors. |
 | `compare` | Order Compare | Done | `/orders/compare`, safe errors, ambiguity и optional ShipStation status. |
 | `timeline` | Order Timeline | Done | Shopify events/refunds/fulfillments + ShipStation + risk analysis. |
-| `customer` | Customer Lookup | Todo | Order history, LTV summary и CSV. |
+| `customer` | Customer Lookup | Done | Email-prefilled paginated order history, customer identity, spend/status/tag summary and visible truncation. |
 | `cohort` | Customer LTV | Done | Non-cancelled revenue by normalized email, top 100 customers and first-order monthly repeat cohorts with visible truncation. |
 | `tagsearch` | Tag Search | Done | Exact case-insensitive match, optional validated range, pagination/truncation и safe Shopify links. |
 | `tagaudit` | Tag Audit | Done | Per-order frequency, last seen/order, 90-day orphan signal, drill-down и visible truncation. |
@@ -548,7 +548,7 @@ Audit subtotal: **Done 36 · Partial 1 · Todo 10 · Replaced 1**.
 | `tracking` | Tracking Feed | Done | 1–30 уникални номера, real `/shipments`, unshipped fallback, carrier allowlist и atomic safe errors. |
 | `packingslip` | Packing Slip Preview | Done | Exact-match ShipStation lookup, safe view-data builder, ambiguity state и print-friendly preview. |
 
-Search subtotal: **Done 8 · Partial 0 · Todo 3 · Replaced 1**.
+Search subtotal: **Done 9 · Partial 0 · Todo 2 · Replaced 1**.
 
 ### Manage — 6
 
@@ -1030,7 +1030,7 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [ ] `GraphQL/AdminLookupsTest.php`
 - [x] `GraphQL/CatalogAndFulfillmentTest.php`
 - [ ] `GraphQL/CustomDataLookupsTest.php`
-- [ ] `GraphQL/CustomerOrderInsightsTest.php`
+- [x] `GraphQL/CustomerOrderInsightsTest.php`
 - [ ] `GraphQL/DisputeLookupTest.php`
 - [x] `GraphQL/DuplicateOrderInsightsTest.php`
 - [ ] `GraphQL/MetafieldNormalizerTest.php`

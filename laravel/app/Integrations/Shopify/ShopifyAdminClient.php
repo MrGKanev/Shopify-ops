@@ -718,6 +718,37 @@ class ShopifyAdminClient implements ShopifyAdminGateway
         return ['orders' => $orders, 'pages' => $result['pages'], 'truncated' => $result['truncated']];
     }
 
+    /** @return array{orders: list<array<string, mixed>>, customer: array<string, mixed>|null, pages: int, truncated: bool} */
+    public function customerOrderHistory(Store $store, string $email): array
+    {
+        $query = <<<'GRAPHQL'
+            query CustomerOrderHistory($search: String!, $after: String) {
+              orders(first: 250, after: $after, sortKey: CREATED_AT, reverse: true, query: $search) {
+                pageInfo { hasNextPage endCursor }
+                edges { node { legacyResourceId name createdAt cancelledAt email tags displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } customer { id firstName lastName createdAt verifiedEmail } } }
+              }
+            }
+            GRAPHQL;
+        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => 'email:"'.mb_strtolower(trim($email)).'"'], 20);
+        $orders = [];
+        $customer = null;
+        foreach ($result['edges'] as $edge) {
+            $node = $edge['node'] ?? null;
+            if (! is_array($node)) {
+                throw new ShopifyGraphqlException([], 'Shopify customer lookup returned an unexpected response shape.');
+            }
+            if ($customer === null && isset($node['customer'])) {
+                if (! is_array($node['customer'])) {
+                    throw new ShopifyGraphqlException([], 'Shopify customer lookup returned an invalid customer.');
+                }
+                $customer = $node['customer'];
+            }
+            $orders[] = $this->orderNormalizer->normalize($node);
+        }
+
+        return ['orders' => $orders, 'customer' => $customer, 'pages' => $result['pages'], 'truncated' => $result['truncated']];
+    }
+
     /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
     public function tagPolicyCandidates(Store $store, string $startDate, string $endDate): array
     {
