@@ -761,6 +761,196 @@ class ShopifyAdminClient implements ShopifyAdminGateway
     }
 
     /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function fulfilledItemCandidates(Store $store, string $startDate): array
+    {
+        $query = <<<'GRAPHQL'
+            query FulfilledItemCandidates($search: String!, $after: String) {
+              orders(first: 250, after: $after, sortKey: UPDATED_AT, reverse: true, query: $search) {
+                pageInfo { hasNextPage endCursor }
+                edges { node { legacyResourceId name createdAt displayFinancialStatus displayFulfillmentStatus fulfillments(first: 250) { id legacyResourceId createdAt status displayStatus fulfillmentLineItems(first: 250) { edges { node { quantity lineItem { id title name variantTitle } } } } } } }
+              }
+            }
+            GRAPHQL;
+        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any updated_at:>={$startDate}T00:00:00Z"], 100);
+        $orders = [];
+        foreach ($result['edges'] as $edge) {
+            $node = $edge['node'] ?? null;
+            if (! is_array($node)) {
+                throw new ShopifyGraphqlException([], 'Shopify fulfilled items report returned an unexpected response shape.');
+            }
+            $orders[] = $this->orderNormalizer->normalize($node);
+        }
+
+        return ['orders' => $orders, 'pages' => $result['pages'], 'truncated' => $result['truncated']];
+    }
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function shippingMarginCandidates(Store $store, string $startDate): array
+    {
+        $query = <<<'GRAPHQL'
+            query ShippingMarginCandidates($search: String!, $after: String) {
+              orders(first: 250, after: $after, sortKey: UPDATED_AT, reverse: true, query: $search) {
+                pageInfo { hasNextPage endCursor }
+                edges { node { legacyResourceId name createdAt email displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } shippingLines(first: 250) { nodes { id title code originalPriceSet { shopMoney { amount currencyCode } } } } } }
+              }
+            }
+            GRAPHQL;
+        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any (fulfillment_status:fulfilled OR fulfillment_status:partial) updated_at:>={$startDate}T00:00:00Z"], 100);
+        $orders = [];
+        foreach ($result['edges'] as $edge) {
+            $node = $edge['node'] ?? null;
+            $shippingLines = is_array($node) ? ($node['shippingLines']['nodes'] ?? null) : null;
+            if (! is_array($node) || ! is_array($shippingLines) || ! array_is_list($shippingLines) || array_filter($shippingLines, fn (mixed $line): bool => ! is_array($line)) !== []) {
+                throw new ShopifyGraphqlException([], 'Shopify shipping margin report returned an unexpected response shape.');
+            }
+            $order = $this->orderNormalizer->normalize($node);
+            $order['shipping_lines'] = array_map(fn (array $line): array => [
+                'title' => is_scalar($line['title'] ?? null) ? (string) $line['title'] : '',
+                'price' => is_numeric($line['originalPriceSet']['shopMoney']['amount'] ?? null) ? (string) $line['originalPriceSet']['shopMoney']['amount'] : '0.00',
+            ], $shippingLines);
+            $orders[] = $order;
+        }
+
+        return ['orders' => $orders, 'pages' => $result['pages'], 'truncated' => $result['truncated']];
+    }
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function fulfillmentSlaCandidates(Store $store, string $startDate, string $endDate): array
+    {
+        $query = <<<'GRAPHQL'
+            query FulfillmentSlaCandidates($search: String!, $after: String) {
+              orders(first: 250, after: $after, sortKey: CREATED_AT, reverse: true, query: $search) {
+                pageInfo { hasNextPage endCursor }
+                edges { node { legacyResourceId name createdAt cancelledAt email displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } shippingAddress { provinceCode countryCodeV2 } shippingLines(first: 20) { nodes { title } } lineItems(first: 250) { nodes { id title name sku quantity variantTitle vendor } } fulfillments(first: 250) { id legacyResourceId createdAt status displayStatus } } }
+              }
+            }
+            GRAPHQL;
+        $search = "status:any financial_status:paid created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z";
+        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => $search], 100);
+        $orders = [];
+        foreach ($result['edges'] as $edge) {
+            $node = $edge['node'] ?? null;
+            $shippingLines = is_array($node) ? ($node['shippingLines']['nodes'] ?? null) : null;
+            if (! is_array($node) || ! is_array($shippingLines) || ! array_is_list($shippingLines) || array_filter($shippingLines, fn (mixed $line): bool => ! is_array($line)) !== []) {
+                throw new ShopifyGraphqlException([], 'Shopify fulfillment SLA report returned an unexpected response shape.');
+            }
+            $order = $this->orderNormalizer->normalize($node);
+            $order['shipping_lines'] = $shippingLines;
+            $orders[] = $order;
+        }
+
+        return ['orders' => $orders, 'pages' => $result['pages'], 'truncated' => $result['truncated']];
+    }
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function partialFulfillmentCandidates(Store $store, string $startDate, string $endDate): array
+    {
+        $query = <<<'GRAPHQL'
+            query PartialFulfillmentCandidates($search: String!, $after: String) {
+              orders(first: 250, after: $after, sortKey: CREATED_AT, reverse: true, query: $search) {
+                pageInfo { hasNextPage endCursor }
+                edges { node { legacyResourceId name createdAt email displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } lineItems(first: 250) { nodes { id title name sku quantity unfulfilledQuantity variantTitle } } fulfillments(first: 250) { id legacyResourceId createdAt status displayStatus } } }
+              }
+            }
+            GRAPHQL;
+        $search = "status:open financial_status:paid fulfillment_status:partial created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z";
+        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => $search], 100);
+        $orders = [];
+        foreach ($result['edges'] as $edge) {
+            $node = $edge['node'] ?? null;
+            if (! is_array($node)) {
+                throw new ShopifyGraphqlException([], 'Shopify partial fulfillment report returned an unexpected response shape.');
+            }
+            $order = $this->orderNormalizer->normalize($node);
+            if ($order['fulfillment_status'] === 'partial') {
+                $orders[] = $order;
+            }
+        }
+
+        return ['orders' => $orders, 'pages' => $result['pages'], 'truncated' => $result['truncated']];
+    }
+
+    /** @return array{fulfillment_orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function onHoldFulfillmentCandidates(Store $store, string $startDate, string $endDate): array
+    {
+        $query = <<<'GRAPHQL'
+            query OnHoldFulfillmentCandidates($after: String) {
+              fulfillmentOrders(first: 250, after: $after, query: "status:on_hold") {
+                pageInfo { hasNextPage endCursor }
+                edges { node { id status order { id legacyResourceId name email createdAt displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } } fulfillmentHolds { reason reasonNotes } } }
+              }
+            }
+            GRAPHQL;
+        $result = $this->paginateGraphql($store, $query, 'fulfillmentOrders', [], 100);
+        $nodes = [];
+        foreach ($result['edges'] as $edge) {
+            $node = $edge['node'] ?? null;
+            $order = is_array($node) ? ($node['order'] ?? null) : null;
+            $orderDate = is_array($order) && is_scalar($order['createdAt'] ?? null) ? substr((string) $order['createdAt'], 0, 10) : '';
+            if (! is_array($node) || ! is_array($order)) {
+                throw new ShopifyGraphqlException([], 'Shopify on-hold report returned an unexpected response shape.');
+            }
+            if ($orderDate >= $startDate && $orderDate <= $endDate) {
+                $nodes[] = $node;
+            }
+        }
+
+        return ['fulfillment_orders' => $nodes, 'pages' => $result['pages'], 'truncated' => $result['truncated']];
+    }
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function noTrackingCandidates(Store $store, string $startDate): array
+    {
+        $query = <<<'GRAPHQL'
+            query NoTrackingCandidates($search: String!, $after: String) {
+              orders(first: 250, after: $after, sortKey: UPDATED_AT, reverse: true, query: $search) {
+                pageInfo { hasNextPage endCursor }
+                edges { node { legacyResourceId name createdAt email displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } fulfillments(first: 250) { id legacyResourceId createdAt status displayStatus trackingInfo(first: 10) { company number url } } } }
+              }
+            }
+            GRAPHQL;
+        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any updated_at:>={$startDate}T00:00:00Z"], 100);
+        $orders = [];
+        foreach ($result['edges'] as $edge) {
+            $node = $edge['node'] ?? null;
+            if (! is_array($node)) {
+                throw new ShopifyGraphqlException([], 'Shopify no-tracking report returned an unexpected response shape.');
+            }
+            $order = $this->orderNormalizer->normalize($node);
+            if (in_array($order['fulfillment_status'], ['fulfilled', 'partial'], true)) {
+                $orders[] = $order;
+            }
+        }
+
+        return ['orders' => $orders, 'pages' => $result['pages'], 'truncated' => $result['truncated']];
+    }
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function itemMismatchCandidates(Store $store, string $startDate, string $endDate): array
+    {
+        $query = <<<'GRAPHQL'
+            query ItemMismatchCandidates($search: String!, $after: String) {
+              orders(first: 250, after: $after, sortKey: CREATED_AT, reverse: true, query: $search) {
+                pageInfo { hasNextPage endCursor }
+                edges { node { legacyResourceId name createdAt cancelledAt email displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } lineItems(first: 250) { nodes { id title name sku quantity variantTitle vendor } } } }
+              }
+            }
+            GRAPHQL;
+        $search = "status:any created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z";
+        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => $search], 100);
+        $orders = [];
+        foreach ($result['edges'] as $edge) {
+            $node = $edge['node'] ?? null;
+            if (! is_array($node)) {
+                throw new ShopifyGraphqlException([], 'Shopify item mismatch report returned an unexpected response shape.');
+            }
+            $orders[] = $this->orderNormalizer->normalize($node);
+        }
+
+        return ['orders' => $orders, 'pages' => $result['pages'], 'truncated' => $result['truncated']];
+    }
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
     private function refundCandidates(Store $store, string $search): array
     {
         $query = <<<'GRAPHQL'
@@ -919,7 +1109,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
         }
         $orders = [];
         $ordersQuery = <<<'GRAPHQL'
-            query AddressChangedOrders($ids: [ID!]!) { nodes(ids: $ids) { ... on Order { legacyResourceId name createdAt email displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } shippingAddress { firstName lastName address1 address2 city provinceCode zip countryCodeV2 } } } }
+            query AddressChangedOrders($ids: [ID!]!) { nodes(ids: $ids) { ... on Order { legacyResourceId name createdAt email displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } shippingAddress { firstName lastName address1 address2 city provinceCode zip countryCodeV2 } fulfillments(first: 250) { id legacyResourceId createdAt status displayStatus } } } }
             GRAPHQL;
         foreach (array_chunk(array_keys($ids), 250) as $chunk) {
             $graphqlIds = array_map(fn (int|string $id): string => 'gid://shopify/Order/'.(string) $id, $chunk);

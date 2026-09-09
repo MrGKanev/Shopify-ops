@@ -112,6 +112,35 @@ class ShipStationClientTest extends TestCase
         });
     }
 
+    public function test_shipment_date_range_fetch_uses_ship_dates_and_paginates(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['https://ssapi.shipstation.com/shipments*' => Http::response(['shipments' => [['shipmentId' => 1]], 'pages' => 1])]);
+
+        $this->assertSame([['shipmentId' => 1]], $this->client()->fetchShipmentsByDate('2026-06-01', '2026-06-30'));
+        Http::assertSent(function (Request $request): bool {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+            return $query === ['shipDateStart' => '2026-06-01 00:00:00', 'shipDateEnd' => '2026-06-30 23:59:59', 'sortBy' => 'ShipDate', 'sortDir' => 'ASC', 'pageSize' => '500', 'page' => '1'];
+        });
+    }
+
+    public function test_voided_shipment_fetch_uses_void_dates_and_paginates(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['https://ssapi.shipstation.com/shipments*' => Http::sequence()
+            ->push(['shipments' => [['shipmentId' => 1]], 'pages' => 2])
+            ->push(['shipments' => [['shipmentId' => 2]], 'pages' => 2])]);
+
+        $this->assertSame([['shipmentId' => 1], ['shipmentId' => 2]], $this->client()->fetchVoidedShipments('2026-06-01', '2026-06-30'));
+        Http::assertSent(function (Request $request): bool {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+            return $query === ['voidDate_start' => '2026-06-01 00:00:00', 'voidDate_end' => '2026-06-30 23:59:59', 'pageSize' => '500', 'page' => '1'];
+        });
+        Http::assertSent(fn (Request $request): bool => str_contains($request->url(), 'page=2'));
+    }
+
     public function test_awaiting_fetch_returns_every_page_with_expected_status_filter(): void
     {
         Http::preventStrayRequests();
@@ -134,6 +163,22 @@ class ShipStationClientTest extends TestCase
                 'page' => '1',
             ];
         });
+    }
+
+    public function test_active_fetch_requests_all_three_active_statuses(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['https://ssapi.shipstation.com/orders*' => Http::sequence()->push(['orders' => [['orderId' => 1]], 'pages' => 1])->push(['orders' => [['orderId' => 2]], 'pages' => 1])->push(['orders' => [['orderId' => 3]], 'pages' => 1])]);
+
+        $this->assertSame([1, 2, 3], array_column($this->client()->fetchActiveOrders(), 'orderId'));
+        $statuses = [];
+        Http::assertSent(function (Request $request) use (&$statuses): bool {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+            $statuses[] = $query['orderStatus'] ?? '';
+
+            return true;
+        });
+        $this->assertSame(['awaiting_payment', 'awaiting_shipment', 'on_hold'], $statuses);
     }
 
     public function test_401_response_throws_without_retrying(): void

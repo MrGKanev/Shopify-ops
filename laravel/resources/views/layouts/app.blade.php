@@ -72,10 +72,25 @@
                     @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.note-flags') }}">Note flags</a>@endcan
                     @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.order-edits') }}">Order edits</a>@endcan
                     @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.address-changes') }}">Address changes</a>@endcan
+                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.post-ship-address-changes') }}">Post-ship address changes</a>@endcan
+                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.voided-shipments') }}">Voided shipments</a>@endcan
+                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.fulfillment-sla') }}">Fulfillment SLA</a>@endcan
+                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.bundle-check') }}">Bundle check</a>@endcan
+                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.partial-fulfillment') }}">Partial fulfillment stalls</a>@endcan
+                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.on-hold-stall') }}">On-hold stalls</a>@endcan
+                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.no-tracking') }}">Fulfilled without tracking</a>@endcan
+                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.shipment-aging') }}">Shipment aging</a>@endcan
+                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.item-mismatch') }}">Shipped item mismatch</a>@endcan
+                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.orphan-orders') }}">Orphan detector</a>@endcan
+                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.active-shipstation-conflicts') }}">Active SS conflicts</a>@endcan
+                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.shipped-unfulfilled') }}">SS shipped / Shopify unfulfilled</a>@endcan
                     @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.repeat-refunds') }}">Repeat refunds</a>@endcan
                     @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.refund-tracker') }}">Refunds tracker</a>@endcan
                     @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.return-rma') }}">Return / RMA</a>@endcan
                     @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.returned-items') }}">Returned items</a>@endcan
+                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.fulfilled-items') }}">Fulfilled items</a>@endcan
+                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.carrier-performance') }}">Carrier performance</a>@endcan
+                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.shipping-margin') }}">Shipping margin</a>@endcan
                     @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.product-completeness') }}">Product completeness</a>@endcan
                     @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.sku-duplicates') }}">SKU duplicates</a>@endcan
                     @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.inventory-oversell') }}">Oversell risk</a>@endcan

@@ -71,6 +71,34 @@ class ShipStationClient implements ShipStationClientContract
         ], 'orders');
     }
 
+    public function fetchActiveOrders(): array
+    {
+        $orders = [];
+        foreach (['awaiting_payment', 'awaiting_shipment', 'on_hold'] as $status) {
+            array_push($orders, ...$this->paginate('/orders', ['orderStatus' => $status, 'sortBy' => 'OrderDate', 'sortDir' => 'ASC'], 'orders'));
+        }
+
+        return $orders;
+    }
+
+    public function fetchShipmentsByDate(string $startDate, string $endDate): array
+    {
+        return $this->paginate('/shipments', [
+            'shipDateStart' => $startDate.' 00:00:00',
+            'shipDateEnd' => $endDate.' 23:59:59',
+            'sortBy' => 'ShipDate',
+            'sortDir' => 'ASC',
+        ], 'shipments');
+    }
+
+    public function fetchVoidedShipments(string $startDate, string $endDate): array
+    {
+        return $this->paginate('/shipments', [
+            'voidDate_start' => $startDate.' 00:00:00',
+            'voidDate_end' => $endDate.' 23:59:59',
+        ], 'shipments');
+    }
+
     /**
      * @param  array<string, scalar>  $query
      * @return array<string, mixed>

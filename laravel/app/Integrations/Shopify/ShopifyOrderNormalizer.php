@@ -136,7 +136,7 @@ class ShopifyOrderNormalizer
      */
     private function normalizeLineItem(array $lineItem): array
     {
-        return [
+        $normalized = [
             'id' => $this->legacyId(null, $lineItem['id'] ?? null),
             'title' => $lineItem['title'] ?? $lineItem['name'] ?? '',
             'name' => $lineItem['name'] ?? $lineItem['title'] ?? '',
@@ -146,6 +146,15 @@ class ShopifyOrderNormalizer
             'price' => $lineItem['originalUnitPriceSet']['shopMoney']['amount'] ?? '0.00',
             'admin_graphql_api_id' => $lineItem['id'] ?? '',
         ];
+
+        if (array_key_exists('vendor', $lineItem)) {
+            $normalized['vendor'] = $lineItem['vendor'];
+        }
+        if (array_key_exists('unfulfilledQuantity', $lineItem)) {
+            $normalized['fulfillable_quantity'] = (int) $lineItem['unfulfilledQuantity'];
+        }
+
+        return $normalized;
     }
 
     /**

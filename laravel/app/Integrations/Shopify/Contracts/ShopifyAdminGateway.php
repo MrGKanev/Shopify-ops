@@ -75,6 +75,27 @@ interface ShopifyAdminGateway
     /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
     public function returnedItemCandidates(Store $store, string $startDate): array;
 
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function fulfilledItemCandidates(Store $store, string $startDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function shippingMarginCandidates(Store $store, string $startDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function fulfillmentSlaCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function partialFulfillmentCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{fulfillment_orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function onHoldFulfillmentCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function noTrackingCandidates(Store $store, string $startDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function itemMismatchCandidates(Store $store, string $startDate, string $endDate): array;
+
     /** @return array{events: list<array<string, mixed>>, orders: array<string, array<string, mixed>>, pages: int, truncated: bool} */
     public function orderEditCandidates(Store $store, string $startDate, string $endDate): array;
 
