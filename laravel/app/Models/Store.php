@@ -46,6 +46,12 @@ class Store extends Model
         return $this->hasMany(IgnoredOrder::class);
     }
 
+    /** @return HasMany<PushLog, $this> */
+    public function pushLogs(): HasMany
+    {
+        return $this->hasMany(PushLog::class);
+    }
+
     /**
      * @return array<string, string>
      */
