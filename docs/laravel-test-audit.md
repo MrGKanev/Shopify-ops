@@ -1,6 +1,6 @@
 # Laravel rewrite — legacy test audit
 
-Последно обновяване: **2026-09-09** след Customer Lookup slice-а.
+Последно обновяване: **2026-09-09** след Metafields slice-а.
 
 Този документ е отделният checklist за тестова parity. Feature статусът се следи
 в [Laravel rewrite плана](laravel-rewrite.md), а тук се затваря всеки legacy test
@@ -11,13 +11,13 @@ contract има Laravel тест, по-силен еквивалент или з
 
 | Статус | Файлове | Дял от 115 |
 |---|---:|---:|
-| Готови | 41 | 35.7% |
+| Готови | 43 | 37.4% |
 | Частично покрити | 26 | 22.6% |
-| Непочнати | 48 | 41.7% |
-| **Оставащи за одит** | **74** | **64.3%** |
+| Непочнати | 46 | 40.0% |
+| **Оставащи за одит** | **72** | **62.6%** |
 
 Legacy baseline: **115 файла · 1,528 теста · 3,659 assertions**. Laravel
-baseline след последния slice: **535 теста · 2,395 assertions**. Броят assertions
+baseline след последния slice: **539 теста · 2,413 assertions**. Броят assertions
 е ориентир; критерият е поведенческо покритие.
 
 За всеки checkbox проверяваме business decisions, boundary интеграцията,
@@ -113,11 +113,11 @@ malformed payloads и atomic failure. Не копираме тест, който
 | Готово | Legacy файл | Тестове | Какво проверява / Laravel цел |
 |---|---|---:|---|
 | [ ] | `GraphQL/AdminLookupsTest.php` | 3 | Facade delegation за order, metafield и customer lookups |
-| [ ] | `GraphQL/CustomDataLookupsTest.php` | 6 | Metafield search, counts, samples, dedupe и query escaping |
+| [x] | `GraphQL/CustomDataLookupsTest.php` | 6 | Metafield search, counts, samples, dedupe и query escaping |
 | [x] | `GraphQL/CustomerOrderInsightsTest.php` | 6 | Customer spend, identity selection, email normalization and defaults |
 | [ ] | `GraphQL/DisputeLookupTest.php` | 4 | Dispute filters, normalization, pagination and missing order |
 | [x] | `GraphQL/DuplicateOrderInsightsTest.php` | 7 | Duplicate window boundary, amount/email matching and scanned count |
-| [ ] | `GraphQL/MetafieldNormalizerTest.php` | 6 | Types, JSON, references and malformed metafield values |
+| [x] | `GraphQL/MetafieldNormalizerTest.php` | 6 | Types, JSON, references and malformed metafield values |
 | [ ] | `GraphQL/OrderArchiveTest.php` | 3 | Inclusive range query, pagination, normalization and cache |
 | [ ] | `GraphQL/OrderAuditsTest.php` | 4 | Audit facade delegation към query/event fetchers |
 | [ ] | `GraphQL/OrderEventAuditsTest.php` | 8 | Edited/address-change event selection, batching and ordering |

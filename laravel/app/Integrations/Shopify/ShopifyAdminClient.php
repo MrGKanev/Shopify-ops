@@ -749,6 +749,102 @@ class ShopifyAdminClient implements ShopifyAdminGateway
         return ['orders' => $orders, 'customer' => $customer, 'pages' => $result['pages'], 'truncated' => $result['truncated']];
     }
 
+    /** @return list<array<string, mixed>> */
+    public function orderMetafieldDefinitions(Store $store): array
+    {
+        $result = $this->graphql($store, <<<'GRAPHQL'
+            query OrderMetafieldDefinitions {
+              metafieldDefinitions(first: 250, ownerType: ORDER) { edges { node { namespace key name description type { name } } } }
+            }
+            GRAPHQL);
+        $edges = $result['data']['metafieldDefinitions']['edges'] ?? null;
+        if (! is_array($edges) || ! array_is_list($edges)) {
+            throw new ShopifyGraphqlException([], 'Shopify metafield definitions returned an unexpected response shape.');
+        }
+
+        return array_map(function (mixed $edge): array {
+            if (! is_array($edge) || ! is_array($edge['node'] ?? null)) {
+                throw new ShopifyGraphqlException([], 'Shopify metafield definitions returned an invalid definition.');
+            }
+
+            return $edge['node'];
+        }, $edges);
+    }
+
+    /** @return array{orders: list<array<string, mixed>>, scanned: int, with_metafield: int, sample_values: list<string>, pages: int, truncated: bool} */
+    public function searchOrdersByMetafield(Store $store, string $namespace, string $key, string $value, ?string $startDate, ?string $endDate): array
+    {
+        $query = <<<'GRAPHQL'
+            query SearchOrdersByMetafield($search: String, $namespace: String!, $key: String!, $after: String) {
+              orders(first: 250, after: $after, sortKey: CREATED_AT, reverse: true, query: $search) {
+                pageInfo { hasNextPage endCursor }
+                edges { node { legacyResourceId name createdAt email displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } metafield(namespace: $namespace, key: $key) { value type } } }
+              }
+            }
+            GRAPHQL;
+        $filters = array_filter([$startDate ? "created_at:>={$startDate}T00:00:00Z" : null, $endDate ? "created_at:<={$endDate}T23:59:59Z" : null]);
+        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => $filters ? implode(' ', $filters) : null, 'namespace' => $namespace, 'key' => $key], 10);
+        $orders = $samples = [];
+        $withMetafield = 0;
+        foreach ($result['edges'] as $edge) {
+            $node = $edge['node'] ?? null;
+            if (! is_array($node)) {
+                throw new ShopifyGraphqlException([], 'Shopify metafield search returned an unexpected response shape.');
+            }
+            $metafield = $node['metafield'] ?? null;
+            if ($metafield !== null && ! is_array($metafield)) {
+                throw new ShopifyGraphqlException([], 'Shopify metafield search returned an invalid metafield.');
+            }
+            $metafieldValue = is_scalar($metafield['value'] ?? null) ? (string) $metafield['value'] : null;
+            if ($metafieldValue === null) {
+                continue;
+            }
+            $withMetafield++;
+            if (count($samples) < 5 && ! in_array($metafieldValue, $samples, true)) {
+                $samples[] = $metafieldValue;
+            }
+            if ($value === '' || mb_stripos($metafieldValue, $value) !== false) {
+                $order = $this->orderNormalizer->normalize($node);
+                $order['metafield'] = ['value' => $metafieldValue, 'type' => is_scalar($metafield['type'] ?? null) ? (string) $metafield['type'] : ''];
+                $orders[] = $order;
+            }
+        }
+
+        return ['orders' => $orders, 'scanned' => count($result['edges']), 'with_metafield' => $withMetafield, 'sample_values' => $samples, 'pages' => $result['pages'], 'truncated' => $result['truncated']];
+    }
+
+    /** @param list<int|string> $orderIds @return array<string, list<array<string, mixed>>> */
+    public function orderMetafields(Store $store, array $orderIds): array
+    {
+        $query = <<<'GRAPHQL'
+            query OrderMetafields($id: ID!, $after: String) {
+              order(id: $id) { metafields(first: 250, after: $after) { pageInfo { hasNextPage endCursor } nodes { id namespace key value type createdAt updatedAt } } }
+            }
+            GRAPHQL;
+        $output = [];
+        foreach (array_values(array_unique(array_map('strval', $orderIds))) as $id) {
+            $output[$id] = [];
+            $cursor = null;
+            do {
+                $result = $this->graphql($store, $query, ['id' => str_starts_with($id, 'gid://') ? $id : "gid://shopify/Order/{$id}", 'after' => $cursor]);
+                $connection = $result['data']['order']['metafields'] ?? null;
+                if (! is_array($connection) || ! is_array($connection['nodes'] ?? null)) {
+                    throw new ShopifyGraphqlException([], 'Shopify order metafields returned an unexpected response shape.');
+                }
+                foreach ($connection['nodes'] as $node) {
+                    if (! is_array($node)) {
+                        throw new ShopifyGraphqlException([], 'Shopify order metafields returned an invalid metafield.');
+                    }
+                    $metafieldId = is_scalar($node['id'] ?? null) ? (string) $node['id'] : '';
+                    $output[$id][] = ['id' => ctype_digit(basename($metafieldId)) ? (int) basename($metafieldId) : 0, 'namespace' => $node['namespace'] ?? '', 'key' => $node['key'] ?? '', 'value' => $node['value'] ?? '', 'type' => $node['type'] ?? '', 'owner_id' => ctype_digit($id) ? (int) $id : $id, 'owner_resource' => 'order', 'created_at' => $node['createdAt'] ?? '', 'updated_at' => $node['updatedAt'] ?? '', 'admin_graphql_api_id' => $metafieldId];
+                }
+                $cursor = is_scalar($connection['pageInfo']['endCursor'] ?? null) ? (string) $connection['pageInfo']['endCursor'] : null;
+            } while (($connection['pageInfo']['hasNextPage'] ?? false) && $cursor !== null);
+        }
+
+        return $output;
+    }
+
     /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
     public function tagPolicyCandidates(Store $store, string $startDate, string $endDate): array
     {

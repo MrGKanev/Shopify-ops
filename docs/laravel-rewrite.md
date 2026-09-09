@@ -408,7 +408,7 @@ Matrix-ът е release control документ, а не само checklist. М�
 достъпен route/controller/view и покриващи тестове. Наличен domain helper без
 завършен потребителски workflow не се брои за готов feature.
 
-Последно обновяване: **2026-09-09**, след Customer Lookup slice-а.
+Последно обновяване: **2026-09-09**, след Metafields slice-а.
 
 Легенда: **Done** = feature parity за основния workflow; **Partial** = използваем,
 но по-тесен от legacy; **Todo** = няма завършен Laravel workflow;
@@ -418,9 +418,9 @@ Matrix-ът е release control документ, а не само checklist. М�
 
 | Статус | Страници/инструменти | Дял от 72 |
 |---|---:|---:|
-| Done | 47 | 65.3% |
+| Done | 48 | 66.7% |
 | Partial | 3 | 4.2% |
-| Todo | 20 | 27.8% |
+| Todo | 19 | 26.4% |
 | Replaced | 2 | 2.8% |
 | **Общо** | **72** | **100%** |
 
@@ -544,11 +544,11 @@ Audit subtotal: **Done 36 · Partial 1 · Todo 10 · Replaced 1**.
 | `cohort` | Customer LTV | Done | Non-cancelled revenue by normalized email, top 100 customers and first-order monthly repeat cohorts with visible truncation. |
 | `tagsearch` | Tag Search | Done | Exact case-insensitive match, optional validated range, pagination/truncation и safe Shopify links. |
 | `tagaudit` | Tag Audit | Done | Per-order frequency, last seen/order, 90-day orphan signal, drill-down и visible truncation. |
-| `metafields` | Metafields | Todo | Definitions и order/value lookup. |
+| `metafields` | Metafields | Done | Order definitions, value/date search, sample/count metrics and filtered batch lookup for up to 20 orders. |
 | `tracking` | Tracking Feed | Done | 1–30 уникални номера, real `/shipments`, unshipped fallback, carrier allowlist и atomic safe errors. |
 | `packingslip` | Packing Slip Preview | Done | Exact-match ShipStation lookup, safe view-data builder, ambiguity state и print-friendly preview. |
 
-Search subtotal: **Done 9 · Partial 0 · Todo 2 · Replaced 1**.
+Search subtotal: **Done 10 · Partial 0 · Todo 1 · Replaced 1**.
 
 ### Manage — 6
 
@@ -1029,11 +1029,11 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [x] `FulfillmentLogisticsChecksTest.php`
 - [ ] `GraphQL/AdminLookupsTest.php`
 - [x] `GraphQL/CatalogAndFulfillmentTest.php`
-- [ ] `GraphQL/CustomDataLookupsTest.php`
+- [x] `GraphQL/CustomDataLookupsTest.php`
 - [x] `GraphQL/CustomerOrderInsightsTest.php`
 - [ ] `GraphQL/DisputeLookupTest.php`
 - [x] `GraphQL/DuplicateOrderInsightsTest.php`
-- [ ] `GraphQL/MetafieldNormalizerTest.php`
+- [x] `GraphQL/MetafieldNormalizerTest.php`
 - [ ] `GraphQL/OrderArchiveTest.php`
 - [ ] `GraphQL/OrderAuditsTest.php`
 - [ ] `GraphQL/OrderEventAuditsTest.php`

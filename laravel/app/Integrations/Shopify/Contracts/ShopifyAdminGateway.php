@@ -66,6 +66,15 @@ interface ShopifyAdminGateway
     /** @return array{orders: list<array<string, mixed>>, customer: array<string, mixed>|null, pages: int, truncated: bool} */
     public function customerOrderHistory(Store $store, string $email): array;
 
+    /** @return list<array<string, mixed>> */
+    public function orderMetafieldDefinitions(Store $store): array;
+
+    /** @return array{orders: list<array<string, mixed>>, scanned: int, with_metafield: int, sample_values: list<string>, pages: int, truncated: bool} */
+    public function searchOrdersByMetafield(Store $store, string $namespace, string $key, string $value, ?string $startDate, ?string $endDate): array;
+
+    /** @param list<int|string> $orderIds @return array<string, list<array<string, mixed>>> */
+    public function orderMetafields(Store $store, array $orderIds): array;
+
     /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
     public function tagPolicyCandidates(Store $store, string $startDate, string $endDate): array;
 

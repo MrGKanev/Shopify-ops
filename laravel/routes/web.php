@@ -9,6 +9,7 @@ use App\Http\Controllers\AuthenticatedSessionController;
 use App\Http\Controllers\CustomerLookupController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GoogleAuthenticationController;
+use App\Http\Controllers\MetafieldController;
 use App\Http\Controllers\OrderBatchLookupController;
 use App\Http\Controllers\OrderComparisonController;
 use App\Http\Controllers\OrderLookupController;
@@ -100,6 +101,9 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/orders/tag-search', [OrderTagSearchController::class, 'store'])->middleware('throttle:tag-search')->name('orders.tag-search.store');
         Route::get('/customers/lookup', [CustomerLookupController::class, 'create'])->name('customers.lookup');
         Route::post('/customers/lookup', [CustomerLookupController::class, 'store'])->middleware('throttle:audit-report')->name('customers.lookup.store');
+        Route::get('/metafields', [MetafieldController::class, 'create'])->name('metafields.index');
+        Route::post('/metafields/search', [MetafieldController::class, 'search'])->middleware('throttle:audit-report')->name('metafields.search');
+        Route::post('/metafields/lookup', [MetafieldController::class, 'lookup'])->middleware('throttle:audit-report')->name('metafields.lookup');
         Route::get('/reports/high-value-no-phone', [HighValueNoPhoneController::class, 'create'])->middleware('can:run-audits')->name('reports.high-value-no-phone');
         Route::post('/reports/high-value-no-phone', [HighValueNoPhoneController::class, 'store'])->middleware('throttle:audit-report')->name('reports.high-value-no-phone.store');
         Route::get('/reports/country-mismatch', [CountryMismatchController::class, 'create'])->middleware('can:run-audits')->name('reports.country-mismatch');
