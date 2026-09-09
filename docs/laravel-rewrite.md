@@ -408,7 +408,7 @@ Matrix-ът е release control документ, а не само checklist. М�
 достъпен route/controller/view и покриващи тестове. Наличен domain helper без
 завършен потребителски workflow не се брои за готов feature.
 
-Последно обновяване: **2026-09-09**, след Metafields slice-а.
+Последно обновяване: **2026-09-09**, след Ignored Orders slice-а.
 
 Легенда: **Done** = feature parity за основния workflow; **Partial** = използваем,
 но по-тесен от legacy; **Todo** = няма завършен Laravel workflow;
@@ -418,9 +418,9 @@ Matrix-ът е release control документ, а не само checklist. М�
 
 | Статус | Страници/инструменти | Дял от 72 |
 |---|---:|---:|
-| Done | 48 | 66.7% |
+| Done | 49 | 68.1% |
 | Partial | 3 | 4.2% |
-| Todo | 19 | 26.4% |
+| Todo | 18 | 25.0% |
 | Replaced | 2 | 2.8% |
 | **Общо** | **72** | **100%** |
 
@@ -554,14 +554,14 @@ Search subtotal: **Done 10 · Partial 0 · Todo 1 · Replaced 1**.
 
 | ID | Legacy feature | Статус |
 |---|---|---|
-| `ignored` | Ignored Orders | Todo |
+| `ignored` | Ignored Orders | Done | Store-scoped add/update, single and bulk unignore, CSV import normalization and durable DB persistence. |
 | `pushlog` | Push Log | Todo |
 | `runlog` | Run History | Todo |
 | `jobs` | Job Queue | Todo |
 | `actionlog` | Action Log | Done | Admin-only newest-first activity history for allowlisted user/store changes, credential rotations and store-access updates, with scheduled retention cleanup. |
 | `printqueue` | Print Queue | Todo |
 
-Manage subtotal: **Done 1 · Partial 0 · Todo 5 · Replaced 0**.
+Manage subtotal: **Done 2 · Partial 0 · Todo 4 · Replaced 0**.
 
 ### Settings — 6
 
@@ -1044,7 +1044,7 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [ ] `GraphQL/OrderQueryAuditsTest.php`
 - [ ] `GraphQL/ProductNormalizerTest.php`
 - [ ] `GraphQL/QueryStringsTest.php`
-- [ ] `IgnoreListTest.php`
+- [x] `IgnoreListTest.php`
 - [x] `ItemizedFulfillmentReportTest.php`
 - [ ] `JobQueueTest.php`
 - [ ] `JsonFileLockTest.php`
