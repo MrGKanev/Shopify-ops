@@ -1,6 +1,6 @@
 # Laravel rewrite — legacy test audit
 
-Последно обновяване: **2026-09-08** след Shopify API version health slice-а.
+Последно обновяване: **2026-09-09** след Shipped Item Mismatch slice-а.
 
 Този документ е отделният checklist за тестова parity. Feature статусът се следи
 в [Laravel rewrite плана](laravel-rewrite.md), а тук се затваря всеки legacy test
@@ -11,13 +11,13 @@ contract има Laravel тест, по-силен еквивалент или з
 
 | Статус | Файлове | Дял от 115 |
 |---|---:|---:|
-| Готови | 25 | 21.7% |
+| Готови | 38 | 33.0% |
 | Частично покрити | 26 | 22.6% |
-| Непочнати | 64 | 55.7% |
-| **Оставащи за одит** | **91** | **79.1%** |
+| Непочнати | 51 | 44.3% |
+| **Оставащи за одит** | **77** | **67.0%** |
 
 Legacy baseline: **115 файла · 1,528 теста · 3,659 assertions**. Laravel
-baseline след последния slice: **470 теста · 1,993 assertions**. Броят assertions
+baseline след последния slice: **522 теста · 2,303 assertions**. Броят assertions
 е ориентир; критерият е поведенческо покритие.
 
 За всеки checkbox проверяваме business decisions, boundary интеграцията,
@@ -75,7 +75,6 @@ malformed payloads и atomic failure. Не копираме тест, който
 | [ ] | `JsonFileLockTest.php` | 6 | Locking, timeout и release при failure → replaced от DB/cache locks или equivalent |
 | [ ] | `LoggerTest.php` | 7 | Structured logging, redaction и rotation → Laravel logging config/tests |
 | [ ] | `MetricsEndpointTest.php` | 4 | Metrics auth/content/counters → operational metrics endpoint |
-| [ ] | `OrphanDetectorTest.php` | 7 | Orphaned runtime files и cleanup candidates → migration/cleanup decision |
 | [ ] | `PrintQueueTest.php` | 7 | Queue persistence, ordering и removal → packing/print queue workflow |
 | [ ] | `PushLogTest.php` | 3 | Push history append/order/limit → DB action log |
 | [ ] | `ReportRegistryTest.php` | 7 | Report definitions, groups и defaults → Laravel report registry/navigation |
@@ -102,29 +101,18 @@ malformed payloads и atomic failure. Не копираме тест, който
 
 | Готово | Legacy файл | Тестове | Какво проверява / Laravel цел |
 |---|---|---:|---|
-| [ ] | `ActiveSsConflictsTest.php` | 6 | Refunded/cancelled Shopify orders still active in ShipStation, dedupe и sorting |
-| [ ] | `BundleCheckPageTest.php` | 9 | Missing bundle components и cancelled/refunded/pending/free/no-shipping exclusions |
-| [ ] | `CarrierPerfTest.php` | 8 | Delivery averages, late boundary, bad/missing dates и carrier grouping |
 | [ ] | `ComparatorTest.php` | 73 | Shopify↔ShipStation matching, exclusions, duplicates, bundles, shipped items, margin и hold behavior |
 | [ ] | `CustomerLTVPageLoaderTest.php` | 28 | Revenue/customer cohorts, cancellation, identity normalization, retention and range wiring |
 | [ ] | `FulfillmentIssuePageLoaderTest.php` | 36 | Loader contracts за fulfillment exceptions, filters, dates, credentials и failures |
-| [ ] | `FulfillmentLogisticsChecksTest.php` | 17 | Partial fulfillment, stalls, tracking, carrier и shipping logistics decisions |
-| [ ] | `ItemizedFulfillmentReportTest.php` | 21 | Fulfilled item quantities, dates, SKU/product grouping и filters |
-| [ ] | `OnHoldStallTest.php` | 5 | Hold duration threshold, exclusions и sorting |
 | [ ] | `OrderAnomalyPageLoaderTest.php` | 20 | Fraud/anomaly page dispatch, ranges, credentials, results и failures |
 | [ ] | `PageLoaderTest.php` | 18 | Главен audit loader, compare results, ignore rules и notification behavior |
-| [ ] | `PartialFulfillStallsTest.php` | 6 | Partial fulfillment age threshold, completed exclusions и sorting |
-| [ ] | `PostShipAddrChangeTest.php` | 5 | Address edits after shipment, timing and sorting |
 | [ ] | `SimpleScanPageLoaderTest.php` | 19 | Shared tag/tax/returns/email report loader, validation and notifications | Email wiring/credentials са покрити; returns и notification branches остават |
-| [ ] | `SsShippedUnfulfilledTest.php` | 6 | ShipStation shipped while Shopify unfulfilled, exclusions and sorting |
-| [ ] | `VoidedShipmentsTest.php` | 5 | Voided label rows, missing address tolerance and date sorting |
 
 ## Непочнати — Shopify GraphQL contracts
 
 | Готово | Legacy файл | Тестове | Какво проверява / Laravel цел |
 |---|---|---:|---|
 | [ ] | `GraphQL/AdminLookupsTest.php` | 3 | Facade delegation за order, metafield и customer lookups |
-| [ ] | `GraphQL/CatalogAndFulfillmentTest.php` | 5 | Inclusive date filtering на catalogue/fulfillment data |
 | [ ] | `GraphQL/CustomDataLookupsTest.php` | 6 | Metafield search, counts, samples, dedupe и query escaping |
 | [ ] | `GraphQL/CustomerOrderInsightsTest.php` | 6 | Customer spend, identity selection, email normalization and defaults |
 | [ ] | `GraphQL/DisputeLookupTest.php` | 4 | Dispute filters, normalization, pagination and missing order |
@@ -168,6 +156,18 @@ malformed payloads и atomic failure. Не копираме тест, който
 - [x] `AddressChangesTest.php` — 4/4 placement-to-change delay, negative/missing timestamp clamping and current-address output decisions.
 - [x] `GoogleAuthFlowTest.php` — OAuth redirect/callback/state handling is delegated to Socialite; cancellation, provider failure, domain policy, existing-user linking, session rotation and throttled routes are covered.
 - [x] `GoogleAuthTest.php` — the custom OIDC/PKCE HTTP client is replaced by Socialite; configuration, verified `hd` claims, domain parsing, identity binding and safe failures are covered without persisting provider tokens.
+- [x] `BundleCheckPageTest.php` — 9/9 bundle companion and exclusion decisions.
+- [x] `CarrierPerfTest.php` — 8/8 carrier grouping, delivery and late-boundary decisions.
+- [x] `FulfillmentLogisticsChecksTest.php` — 17/17 SLA and shipment-aging decisions.
+- [x] `ItemizedFulfillmentReportTest.php` — 21/21 fulfillment item/date/grouping decisions.
+- [x] `OnHoldStallTest.php` — 5/5 wait, hold detail and sorting decisions.
+- [x] `PartialFulfillStallsTest.php` — 6/6 partial stall and remaining-item decisions.
+- [x] `PostShipAddrChangeTest.php` — 5/5 post-ship timing and sorting decisions.
+- [x] `VoidedShipmentsTest.php` — 5/5 voided shipment and nullable-address decisions.
+- [x] `GraphQL/CatalogAndFulfillmentTest.php` — 5/5 inclusive on-hold date-filter decisions.
+- [x] `OrphanDetectorTest.php` — 7/7 plain, compound, addon-prefixed, empty and sorted orphan decisions.
+- [x] `ActiveSsConflictsTest.php` — 6/6 dedupe, refund/cancellation, active matching and sorting decisions.
+- [x] `SsShippedUnfulfilledTest.php` — 6/6 shipped counting, match/exclusion, partial state and sorting decisions.
 
 ## Как се обновява
 

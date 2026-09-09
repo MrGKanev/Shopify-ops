@@ -408,7 +408,7 @@ Matrix-ът е release control документ, а не само checklist. М�
 достъпен route/controller/view и покриващи тестове. Наличен domain helper без
 завършен потребителски workflow не се брои за готов feature.
 
-Последно обновяване: **2026-09-08**, след Shopify API version health slice-а.
+Последно обновяване: **2026-09-09**, след Partial Fulfillment Stalls slice-а.
 
 Легенда: **Done** = feature parity за основния workflow; **Partial** = използваем,
 но по-тесен от legacy; **Todo** = няма завършен Laravel workflow;
@@ -418,9 +418,9 @@ Matrix-ът е release control документ, а не само checklist. М�
 
 | Статус | Страници/инструменти | Дял от 72 |
 |---|---:|---:|
-| Done | 29 | 40.3% |
-| Partial | 2 | 2.8% |
-| Todo | 39 | 54.2% |
+| Done | 44 | 61.1% |
+| Partial | 3 | 4.2% |
+| Todo | 23 | 31.9% |
 | Replaced | 2 | 2.8% |
 | **Общо** | **72** | **100%** |
 
@@ -490,28 +490,28 @@ workflow от наличния framework scaffold.
 | `repeatrefunds` | Repeat Refunds | Done | Refunded/partially-refunded orders grouped by normalized email, successful transaction totals and configurable threshold. |
 | `returns` | Return / RMA Tracker | Done | One row per refund event with returned items, reason, total and aggregated SKU units/events/revenue. |
 | `returneditems` | Returned Items Report | Done | Refund-date filtered product quantities with old-order inclusion and formula-safe streamed CSV export. |
-| `orphans` | Orphan Detector | Todo | ShipStation orders без Shopify order. |
-| `activess` | Active SS Conflicts | Todo | Cancelled/refunded Shopify, но active в ShipStation. |
-| `ssshipped` | SS Shipped / Shopify Unfulfilled | Todo | Cross-platform fulfillment sync failures. |
+| `orphans` | Orphan Detector | Done | Dual-source inclusive range, compound order-number matching, newest-first rows and formula-safe CSV. |
+| `activess` | Active SS Conflicts | Done | Deduped cancelled/refunded Shopify orders matched to all three active ShipStation queues with formula-safe CSV. |
+| `ssshipped` | SS Shipped / Shopify Unfulfilled | Done | Shipped-only dual-source comparison, orphan/fulfilled exclusions, partial state and formula-safe CSV. |
 | `orderedits` | Order Edit History | Done | Paginated edit events, batch order hydration, grouped summaries and edit-delay calculation. |
 | `noteflags` | Note Flags | Done | Configurable case-insensitive note keywords over paid unfulfilled orders, with safe pagination. |
 | `addrcheck` | Address Scanner | Done | Required fields, short street, US/CA postal formats, province, express phone и PO Box/carrier checks с два legacy филтъра. |
 | `emailcheck` | Email Checker | Done | Paid date-range scan с missing/invalid/disposable critical правила, suspicious warning евристики, severity sorting и visible truncation. |
 | `hvorders` | High-Value No Phone | Done | Operator/admin report с currency-aware праг, cancelled exclusion, deterministic sorting и visible truncation. |
 | `addrchanges` | Address Changes | Done | Paginated shipping-address events, latest change per order, batch hydration, current address, placement-to-change delay and formula-safe streamed CSV export. |
-| `postshipaddr` | Post-Ship Address Change | Todo | Address edit след fulfillment. |
+| `postshipaddr` | Post-Ship Address Change | Done | Latest shipping-address event after first fulfillment, elapsed minutes and formula-safe CSV export. |
 | `addrdupes` | Duplicate Shipping Addresses | Done | Paid orders grouped by normalized address, distinct-email threshold and deterministic risk sorting. |
-| `failedship` | Voided Shipments | Todo | Voided ShipStation shipments. |
-| `slabreaches` | Fulfillment SLA Breaches | Todo | Time-to-first-fulfillment SLA. |
-| `bundlecheck` | Bundle Check | Todo | Липсващи required companion items. |
-| `partialfulfill` | Partial Fulfillment Stalls | Todo | Stalled partial fulfillments. |
-| `onholdstall` | On-Hold Stall | Todo | Fulfillment orders на hold. |
-| `notracking` | Fulfilled Without Tracking | Todo | Fulfilled orders без tracking след grace period. |
-| `shipmentaging` | Shipment Aging | Todo | Стари awaiting-shipment orders. |
-| `itemmismatch` | Shipped Item Mismatch | Todo | Shopify ordered items ↔ ShipStation shipped items. |
-| `fulfilleditems` | Fulfilled Items Report | Todo | Itemized fulfilled quantities. |
-| `carrierperf` | Carrier Performance | Todo | Delivery time и late rate по carrier. |
-| `shipmargin` | Shipping Margin Erosion | Todo | Label cost над customer shipping charge. |
+| `failedship` | Voided Shipments | Done | Void-date paginated ShipStation shipments, nullable destination handling, newest-first sorting and formula-safe CSV. |
+| `slabreaches` | Fulfillment SLA Breaches | Done | Paid-order time to first fulfillment or current age, configurable threshold, lane context and formula-safe CSV. |
+| `bundlecheck` | Bundle Check | Done | Config-native Z1/Z2 required companions, exclusions, fulfilled-order inclusion and formula-safe CSV. |
+| `partialfulfill` | Partial Fulfillment Stalls | Done | Open paid partial orders stalled since latest fulfillment, remaining quantities, configurable threshold and formula-safe CSV. |
+| `onholdstall` | On-Hold Stall | Done | On-hold fulfillment orders, inclusive order-date filtering, hold details, waiting age and formula-safe CSV. |
+| `notracking` | Fulfilled Without Tracking | Done | Fulfillment-date window, configurable inclusive grace period, missing tracking details and formula-safe CSV. |
+| `shipmentaging` | Shipment Aging | Done | Live awaiting-shipment queue, configurable inclusive age, SKU/type summaries and formula-safe CSV. |
+| `itemmismatch` | Shipped Item Mismatch | Done | Shipped-only SKU quantity diff, business exclusions, bundle gaps and formula-safe CSV. |
+| `fulfilleditems` | Fulfilled Items Report | Done | Successful fulfillment-event quantities grouped by product with old-order inclusion and formula-safe streamed CSV export. |
+| `carrierperf` | Carrier Performance | Done | ShipStation delivery averages, late-over-five-day rate and missing/bad-date handling grouped by carrier. |
+| `shipmargin` | Shipping Margin Erosion | Done | ShipStation label plus insurance cost against Shopify shipping lines, configurable strict loss threshold, carrier summary and formula-safe CSV. |
 | `productcheck` | Product Completeness | Done | True image check, meaningful description, strict complete variant scan, missing/no-variant classification и visible truncation. |
 | `skudupes` | SKU Duplicates | Done | Всички product statuses, пълна variant pagination, case-sensitive SKU grouping, blank exclusion, count sorting и visible truncation. |
 | `inventoryoversell` | Inventory Oversell Risk | Done | Active tracked deny-policy stock спрямо всички ShipStation awaiting-shipment quantities, duplicate SKU aggregation и visible catalogue truncation. |
@@ -529,7 +529,7 @@ workflow от наличния framework scaffold.
 | `sameip` | Same IP, Different Emails | Done | Paid orders grouped by exact client IP, case-insensitive distinct-email deduplication, detailed orders and deterministic risk sorting. |
 | `disputes` | Chargebacks / Disputes | Done | Open actionable disputes, evidence deadlines, urgency sorting and bounded pagination. |
 
-Audit subtotal: **Done 20 · Partial 1 · Todo 26 · Replaced 1**.
+Audit subtotal: **Done 35 · Partial 1 · Todo 11 · Replaced 1**.
 
 ### Search & Lookup — 12
 
@@ -590,15 +590,15 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 | Suite | Test files | Executed tests | Assertions |
 |---|---:|---:|---:|
 | Stable plain PHP | 115 | 1,528 | 3,659 |
-| Laravel rewrite | 121 | 470 | 1,993 |
+| Laravel rewrite | 157 | 522 | 2,303 |
 
 Текущ file-level disposition на всичките **115 legacy test файла**:
 
 | Статус | Файлове | Дял |
 |---|---:|---:|
-| Fully mapped | 25 | 21.7% |
-| Partial / parity verification | 25 | 21.7% |
-| Pending | 65 | 56.5% |
+| Fully mapped | 38 | 33.0% |
+| Partial / parity verification | 26 | 22.6% |
+| Pending | 51 | 44.3% |
 | **Общо** | **115** | **100%** |
 
 #### Fully mapped legacy test files
@@ -837,6 +837,162 @@ branches от `SimpleScanPageLoaderTest.php` → `ReturnedItemsAnalyzerTest.php`
   roles, validation, store isolation, XSS, safe failures and truncation са
   покрити.
 
+Fulfilled Items traceability (`ItemizedFulfillmentReportTest.php` →
+`FulfilledItemsAnalyzerTest.php`, `FulfilledItemsControllerTest.php` и
+`ShopifyFulfilledItemCandidatesTest.php`):
+
+- Successful fulfillment-event date filtering, orders created before the range,
+  partial-order item quantities, default variant handling, aggregation and
+  alphabetical ordering са пренесени.
+- Streamed CSV uses the shared formula-safe exporter; updated-order discovery,
+  roles, validation, store isolation, XSS, safe failures and truncation са
+  покрити.
+
+Carrier Performance traceability (`CarrierPerfTest.php` и carrier branches от
+`FulfillmentIssuePageLoaderTest.php` → `CarrierPerformanceAnalyzerTest.php`,
+`CarrierPerformanceControllerTest.php` и `ShipStationClientTest.php`):
+
+- Carrier grouping, shipment counts, delivery-day averages, strict over-five-day
+  late boundary, missing/bad date exclusion and deterministic sorting са
+  пренесени.
+- Ship-date pagination, roles, validation, active-store isolation, credentials,
+  XSS and safe upstream failures са покрити.
+
+Shipping Margin traceability (`ComparatorTest.php` и shipping-margin branches
+от `FulfillmentIssuePageLoaderTest.php` → `ShippingMarginAnalyzerTest.php`,
+`ShippingMarginControllerTest.php`, `ShopifyShippingMarginCandidatesTest.php`
+и `ShipStationClientTest.php`):
+
+- Label plus insurance cost, summed Shopify shipping lines, strict threshold,
+  voided/unmatched exclusions, loss sorting and carrier aggregation са пренесени.
+- Updated-order discovery, shipment pagination, roles, validation, both credential
+  sets, active-store isolation, XSS, safe failures and visible truncation са
+  покрити; export-ът използва общия formula-safe CSV contract.
+
+Post-Ship Address Change traceability (`PostShipAddrChangeTest.php` →
+`PostShipAddressChangeAnalyzerTest.php`, `PostShipAddressChangeControllerTest.php`
+и `ShopifyAddressChangeCandidatesTest.php`):
+
+- Latest address-change event, first-fulfillment comparison, elapsed minutes,
+  current-address rendering and newest-first sorting са пренесени.
+- Existing bounded event pagination and batch hydration now include fulfillment
+  timestamps; roles, validation, store isolation, XSS, safe failures,
+  truncation and formula-safe CSV са покрити.
+
+Voided Shipments traceability (`VoidedShipmentsTest.php` и failed-shipment
+branches от `OrderAnomalyPageLoaderTest.php` → `VoidedShipmentsAnalyzerTest.php`,
+`VoidedShipmentsControllerTest.php` и `ShipStationClientTest.php`):
+
+- Void-date filtering, complete pagination, shipment fields, nullable destination
+  handling and newest-first sorting са пренесени.
+- Roles, validation, credentials, active-store isolation, XSS, safe upstream
+  failures and formula-safe CSV са покрити.
+
+Fulfillment SLA traceability (`FulfillmentLogisticsChecksTest.php` и SLA
+branches от `FulfillmentIssuePageLoaderTest.php` →
+`FulfillmentSlaAnalyzerTest.php`, `FulfillmentSlaControllerTest.php` и
+`ShopifyFulfillmentSlaCandidatesTest.php`):
+
+- Open-order age, time to earliest fulfillment, inclusive threshold,
+  cancelled/refunded/voided exclusions, method, region and severity sorting са
+  пренесени.
+- Paid/date query, bounded pagination, roles, validation, credentials,
+  active-store isolation, XSS, safe failures, truncation and formula-safe CSV
+  са покрити; shared Laravel order-type classification now supplies real types.
+
+Bundle Check traceability (`BundleCheckPageTest.php` →
+`BundleCheckAnalyzerTest.php`, `BundleCheckControllerTest.php` и
+`ShopifyFulfillmentSlaCandidatesTest.php`):
+
+- Config-native classification, all five match types, multi-value prefixes,
+  exclusions, required companion detection, legacy skip rules, fulfilled-order
+  inclusion and newest-first sorting са пренесени.
+- Paid/date query with full line items, roles, validation, credentials,
+  active-store isolation, XSS, safe failures, truncation and formula-safe CSV
+  са покрити.
+
+Partial Fulfillment Stalls traceability (`PartialFulfillStallsTest.php` →
+`PartialFulfillmentAnalyzerTest.php`, `PartialFulfillmentControllerTest.php` и
+`ShopifyPartialFulfillmentCandidatesTest.php`):
+
+- Latest-fulfillment fallback, inclusive stall threshold, remaining-quantity
+  filtering and longest-stalled-first sorting са пренесени.
+- Exact open/paid/partial date query, bounded pagination, roles, validation,
+  credentials, active-store isolation, XSS, safe failures, truncation and
+  formula-safe CSV са покрити.
+
+On-Hold Stall traceability (`OnHoldStallTest.php` и
+`GraphQL/CatalogAndFulfillmentTest.php` → `OnHoldStallAnalyzerTest.php`,
+`OnHoldStallControllerTest.php` и `ShopifyOnHoldFulfillmentCandidatesTest.php`):
+
+- Days-since-placement, missing dates, first hold reason/notes and descending
+  wait sorting са пренесени.
+- On-hold fulfillment-order query, inclusive client-side order-date filtering,
+  bounded pagination, roles, validation, credentials, XSS, safe failures,
+  truncation and formula-safe CSV са покрити.
+
+Fulfilled Without Tracking traceability (`FulfillmentIssuePageLoaderTest.php` →
+`NoTrackingAnalyzerTest.php`, `NoTrackingControllerTest.php` и
+`ShopifyNoTrackingCandidatesTest.php`):
+
+- Fulfillment-date filtering, old-order inclusion, tracking exclusion,
+  inclusive grace threshold and oldest-first sorting са пренесени.
+- Updated-order discovery, fulfilled/partial filtering, tracking data, roles,
+  validation, credentials, XSS, safe failures, truncation and formula-safe CSV
+  са покрити.
+
+Shipment Aging traceability (`FulfillmentLogisticsChecksTest.php` и
+`FulfillmentIssuePageLoaderTest.php` → `ShipmentAgingAnalyzerTest.php`,
+`ShipmentAgingControllerTest.php` и `ShipStationClientTest.php`):
+
+- Inclusive age threshold, invalid-date exclusion, SKU quantity/distinct-order
+  aggregation, configured type grouping and oldest-first sorting са пренесени.
+- Complete awaiting-shipment pagination, roles, validation, credentials, XSS,
+  safe failures and formula-safe CSV са покрити.
+
+Shipped Item Mismatch traceability (`FulfillmentIssuePageLoaderTest.php` →
+`ItemMismatchAnalyzerTest.php`, `ItemMismatchControllerTest.php`,
+`ShopifyItemMismatchCandidatesTest.php` и `ShipStationClientTest.php`):
+
+- Exact normalized order matching, shipped-only scope, cancelled/refunded/
+  voided/free exclusions, SKU quantity differences and new bundle-required
+  shipment gaps са пренесени.
+- Inclusive dual-source range, complete pagination, credentials, roles,
+  validation, XSS, safe failures, truncation and formula-safe CSV са покрити.
+
+Orphan Detector traceability (`OrphanDetectorTest.php` и orphan branches от
+`OrderAnomalyPageLoaderTest.php` → `OrphanOrderAnalyzerTest.php`,
+`OrphanOrderControllerTest.php`, `ShopifyItemMismatchCandidatesTest.php` и
+`ShipStationClientTest.php`):
+
+- Plain, compound and addon-prefixed order numbers, empty-number exclusion,
+  genuine orphans and newest-first sorting са пренесени.
+- Inclusive dual-source range, complete pagination, both credential guards,
+  roles, validation, XSS, safe failures, truncation and formula-safe CSV са покрити.
+
+Active SS Conflicts traceability (`ActiveSsConflictsTest.php` и active-SS
+branches от `OrderPolicyPageLoaderTest.php` →
+`ActiveShipStationConflictAnalyzerTest.php`,
+`ActiveShipStationConflictControllerTest.php`, `ShopifyItemMismatchCandidatesTest.php`
+и `ShipStationClientTest.php`):
+
+- Refund/cancellation filtering, ID deduplication, compound order matching,
+  one row per active match, issue labels and newest-first sorting са пренесени.
+- All three active ShipStation queues, inclusive Shopify range, complete
+  pagination, both credential guards, roles, validation, XSS, safe failures,
+  truncation and formula-safe CSV са покрити.
+
+SS Shipped / Shopify Unfulfilled traceability (`SsShippedUnfulfilledTest.php`
+и sync branches от `FulfillmentIssuePageLoaderTest.php` →
+`ShippedUnfulfilledAnalyzerTest.php`, `ShippedUnfulfilledControllerTest.php`,
+`ShopifyItemMismatchCandidatesTest.php` и `ShipStationClientTest.php`):
+
+- Shipped-only counting, exact Shopify match, true-orphan and fulfilled
+  exclusions, unfulfilled fallback, partial status and newest-first sorting са
+  пренесени.
+- Inclusive dual-source range, complete pagination, both credential guards,
+  roles, validation, XSS, safe failures, truncation and formula-safe CSV са покрити.
+
 Tag Policy traceability (`OrderPolicyChecksTest.php` и
 `OrderPolicyPageLoaderTest.php` → `TagPolicyAnalyzerTest.php`,
 `TagPolicyControllerTest.php` и `ShopifyTagPolicyTest.php`):
@@ -852,14 +1008,14 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 #### Pending legacy test files
 
 - [ ] `ActionsTest.php`
-- [ ] `ActiveSsConflictsTest.php`
+- [x] `ActiveSsConflictsTest.php`
 - [ ] `AtomicFileTest.php`
 - [ ] `AuditSnapshotTest.php`
 - [ ] `AuditTest.php`
 - [ ] `AutoloadCoverageTest.php`
-- [ ] `BundleCheckPageTest.php`
+- [x] `BundleCheckPageTest.php`
 - [ ] `CacheTest.php`
-- [ ] `CarrierPerfTest.php`
+- [x] `CarrierPerfTest.php`
 - [ ] `ComparatorTest.php`
 - [ ] `ConfigValidatorTest.php`
 - [ ] `CustomerLTVPageLoaderTest.php`
@@ -870,9 +1026,9 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [ ] `EmailNotifierTest.php`
 - [ ] `EmailRulesTest.php`
 - [ ] `FulfillmentIssuePageLoaderTest.php`
-- [ ] `FulfillmentLogisticsChecksTest.php`
+- [x] `FulfillmentLogisticsChecksTest.php`
 - [ ] `GraphQL/AdminLookupsTest.php`
-- [ ] `GraphQL/CatalogAndFulfillmentTest.php`
+- [x] `GraphQL/CatalogAndFulfillmentTest.php`
 - [ ] `GraphQL/CustomDataLookupsTest.php`
 - [ ] `GraphQL/CustomerOrderInsightsTest.php`
 - [ ] `GraphQL/DisputeLookupTest.php`
@@ -889,18 +1045,18 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [ ] `GraphQL/ProductNormalizerTest.php`
 - [ ] `GraphQL/QueryStringsTest.php`
 - [ ] `IgnoreListTest.php`
-- [ ] `ItemizedFulfillmentReportTest.php`
+- [x] `ItemizedFulfillmentReportTest.php`
 - [ ] `JobQueueTest.php`
 - [ ] `JsonFileLockTest.php`
 - [ ] `LoggerTest.php`
 - [ ] `ManageSettingsPageLoaderTest.php`
 - [ ] `MetricsEndpointTest.php`
-- [ ] `OnHoldStallTest.php`
+- [x] `OnHoldStallTest.php`
 - [ ] `OrderAnomalyPageLoaderTest.php`
-- [ ] `OrphanDetectorTest.php`
+- [x] `OrphanDetectorTest.php`
 - [ ] `PageLoaderTest.php`
-- [ ] `PartialFulfillStallsTest.php`
-- [ ] `PostShipAddrChangeTest.php`
+- [x] `PartialFulfillStallsTest.php`
+- [x] `PostShipAddrChangeTest.php`
 - [ ] `PrintQueueTest.php`
 - [ ] `PushLogTest.php`
 - [ ] `ReportRegistryTest.php`
@@ -910,10 +1066,10 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [ ] `SidebarSettingsTest.php`
 - [ ] `SimpleScanPageLoaderTest.php`
 - [ ] `SlackRulesTest.php`
-- [ ] `SsShippedUnfulfilledTest.php`
+- [x] `SsShippedUnfulfilledTest.php`
 - [ ] `ToolRegistryTest.php`
 - [ ] `ViewHelpersTest.php`
-- [ ] `VoidedShipmentsTest.php`
+- [x] `VoidedShipmentsTest.php`
 - [ ] `WorkerTest.php`
 
 При приключване на feature неговите legacy test файлове не се маркират
