@@ -50,6 +50,41 @@ class AddressChangeAnalyzer
         return $rows;
     }
 
+    /** @param array<string, array<string, mixed>> $orders @param array<string, string> $changes @return list<array<string, mixed>> */
+    public function postShipRows(array $orders, array $changes): array
+    {
+        $rows = [];
+        foreach ($orders as $id => $order) {
+            $changedAt = $changes[$id] ?? '';
+            $fulfillments = is_array($order['fulfillments'] ?? null) ? $order['fulfillments'] : [];
+            $fulfillmentAt = '';
+            foreach ($fulfillments as $fulfillment) {
+                $createdAt = is_array($fulfillment) ? $this->text($fulfillment['created_at'] ?? '') : '';
+                if ($createdAt !== '' && ($fulfillmentAt === '' || $createdAt < $fulfillmentAt)) {
+                    $fulfillmentAt = $createdAt;
+                }
+            }
+            if ($fulfillmentAt === '' || $changedAt <= $fulfillmentAt) {
+                continue;
+            }
+            $address = is_array($order['shipping_address'] ?? null) ? $order['shipping_address'] : [];
+            $changedTimestamp = strtotime($changedAt);
+            $fulfillmentTimestamp = strtotime($fulfillmentAt);
+            $rows[] = [
+                'shopify_id' => ctype_digit((string) $id) ? (string) $id : '', 'order_number' => $this->text($order['name'] ?? ''),
+                'created_at' => substr($this->text($order['created_at'] ?? ''), 0, 10), 'fulfillment_at' => substr($fulfillmentAt, 0, 10), 'changed_at' => substr($changedAt, 0, 16),
+                'mins_after_ship' => $changedTimestamp !== false && $fulfillmentTimestamp !== false ? max(0, (int) (($changedTimestamp - $fulfillmentTimestamp) / 60)) : 0,
+                'email' => $this->text($order['email'] ?? ''), 'total' => is_numeric($order['total_price'] ?? null) ? (float) $order['total_price'] : 0.0,
+                'financial' => $this->text($order['financial_status'] ?? ''), 'fulfillment' => $this->text($order['fulfillment_status'] ?? ''),
+                'addr_name' => trim($this->text($address['first_name'] ?? '').' '.$this->text($address['last_name'] ?? '')),
+                'addr_line' => implode(', ', array_filter([$this->text($address['address1'] ?? ''), $this->text($address['city'] ?? ''), $this->text($address['province_code'] ?? ''), $this->text($address['zip'] ?? ''), $this->text($address['country_code'] ?? '')])),
+            ];
+        }
+        usort($rows, fn (array $left, array $right): int => strcmp($right['changed_at'], $left['changed_at']));
+
+        return $rows;
+    }
+
     /** @param array<string, mixed> $event */
     private function isAddressChange(array $event): bool
     {
