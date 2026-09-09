@@ -58,6 +58,12 @@ class Store extends Model
         return $this->hasMany(RunLog::class);
     }
 
+    /** @return HasMany<AuditSnapshot, $this> */
+    public function auditSnapshots(): HasMany
+    {
+        return $this->hasMany(AuditSnapshot::class);
+    }
+
     /**
      * @return array<string, string>
      */
