@@ -47,7 +47,7 @@ class ActiveShipStationConflictAnalyzer
             }
         }
 
-return array_unique($keys);
+        return array_unique($keys);
     }
 
     private function normalize(mixed $value): string

@@ -37,7 +37,7 @@ class ShippedUnfulfilledController extends Controller
             }
         }
 
-return view('reports.shipped-unfulfilled', $this->viewData($start, $end, $result, $reportFailed, $configurationError));
+        return view('reports.shipped-unfulfilled', $this->viewData($start, $end, $result, $reportFailed, $configurationError));
     }
 
     public function export(ShippedUnfulfilledRequest $request, RunShippedUnfulfilledReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse

@@ -37,7 +37,7 @@ class ActiveShipStationConflictController extends Controller
             }
         }
 
-return view('reports.active-shipstation-conflicts', $this->viewData($start, $end, $result, $reportFailed, $configurationError));
+        return view('reports.active-shipstation-conflicts', $this->viewData($start, $end, $result, $reportFailed, $configurationError));
     }
 
     public function export(ActiveShipStationConflictRequest $request, RunActiveShipStationConflictReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse

@@ -78,6 +78,6 @@ class ShipmentAgingController extends Controller
     /** @return array<string,mixed> */
     private function viewData(int $threshold = 3, ?ShipmentAgingResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
     {
-        return compact('threshold','result','reportFailed','configurationError');
+        return compact('threshold', 'result', 'reportFailed', 'configurationError');
     }
 }
