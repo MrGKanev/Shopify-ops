@@ -27,6 +27,7 @@ use App\Http\Controllers\Reports\CountryMismatchController;
 use App\Http\Controllers\Reports\DiscountAbuseController;
 use App\Http\Controllers\Reports\DisputeController;
 use App\Http\Controllers\Reports\DuplicateAddressController;
+use App\Http\Controllers\Reports\DuplicateOrderController;
 use App\Http\Controllers\Reports\EmailCheckController;
 use App\Http\Controllers\Reports\FraudRiskController;
 use App\Http\Controllers\Reports\FulfilledItemsController;
@@ -111,6 +112,8 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/reports/discount-abuse', [DiscountAbuseController::class, 'store'])->middleware('throttle:audit-report')->name('reports.discount-abuse.store');
         Route::get('/reports/same-ip', [SameIpController::class, 'create'])->middleware('can:run-audits')->name('reports.same-ip');
         Route::post('/reports/same-ip', [SameIpController::class, 'store'])->middleware('throttle:audit-report')->name('reports.same-ip.store');
+        Route::get('/reports/duplicate-orders', [DuplicateOrderController::class, 'create'])->middleware('can:run-audits')->name('reports.duplicate-orders');
+        Route::post('/reports/duplicate-orders', [DuplicateOrderController::class, 'store'])->middleware('throttle:audit-report')->name('reports.duplicate-orders.store');
         Route::get('/reports/tag-policy', [TagPolicyController::class, 'create'])->middleware('can:run-audits')->name('reports.tag-policy');
         Route::post('/reports/tag-policy', [TagPolicyController::class, 'store'])->middleware('throttle:audit-report')->name('reports.tag-policy.store');
         Route::get('/reports/disputes', [DisputeController::class, 'create'])->middleware('can:run-audits')->name('reports.disputes');

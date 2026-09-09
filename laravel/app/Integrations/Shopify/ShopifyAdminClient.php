@@ -671,6 +671,30 @@ class ShopifyAdminClient implements ShopifyAdminGateway
     }
 
     /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function duplicateOrderCandidates(Store $store, string $startDate, string $endDate): array
+    {
+        $query = <<<'GRAPHQL'
+            query DuplicateOrderCandidates($search: String!, $after: String) {
+              orders(first: 250, after: $after, sortKey: CREATED_AT, reverse: false, query: $search) {
+                pageInfo { hasNextPage endCursor }
+                edges { node { legacyResourceId name createdAt email displayFinancialStatus totalPriceSet { shopMoney { amount currencyCode } } } }
+              }
+            }
+            GRAPHQL;
+        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z"], 40);
+        $orders = [];
+        foreach ($result['edges'] as $edge) {
+            $node = $edge['node'] ?? null;
+            if (! is_array($node)) {
+                throw new ShopifyGraphqlException([], 'Shopify duplicate order report returned an unexpected response shape.');
+            }
+            $orders[] = $this->orderNormalizer->normalize($node);
+        }
+
+        return ['orders' => $orders, 'pages' => $result['pages'], 'truncated' => $result['truncated']];
+    }
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
     public function tagPolicyCandidates(Store $store, string $startDate, string $endDate): array
     {
         $query = <<<'GRAPHQL'

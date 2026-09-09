@@ -408,7 +408,7 @@ Matrix-ът е release control документ, а не само checklist. М�
 достъпен route/controller/view и покриващи тестове. Наличен domain helper без
 завършен потребителски workflow не се брои за готов feature.
 
-Последно обновяване: **2026-09-09**, след Partial Fulfillment Stalls slice-а.
+Последно обновяване: **2026-09-09**, след Duplicate Detector slice-а.
 
 Легенда: **Done** = feature parity за основния workflow; **Partial** = използваем,
 но по-тесен от legacy; **Todo** = няма завършен Laravel workflow;
@@ -418,9 +418,9 @@ Matrix-ът е release control документ, а не само checklist. М�
 
 | Статус | Страници/инструменти | Дял от 72 |
 |---|---:|---:|
-| Done | 44 | 61.1% |
+| Done | 45 | 62.5% |
 | Partial | 3 | 4.2% |
-| Todo | 23 | 31.9% |
+| Todo | 22 | 30.6% |
 | Replaced | 2 | 2.8% |
 | **Общо** | **72** | **100%** |
 
@@ -485,7 +485,7 @@ workflow от наличния framework scaffold.
 | `reports` | Reports | Todo | Saved reports и downloads. |
 | `run` | Run Audit | Todo | Shopify ↔ ShipStation audit по период. |
 | `trends` | Trends | Todo | Aggregated audit report trends. |
-| `dupes` | Duplicate Detector | Todo | Близки duplicate orders. |
+| `dupes` | Duplicate Detector | Done | Case-insensitive email + exact total pairs within an inclusive 600-second window, full range pagination and visible truncation. |
 | `refunds` | Refunds Tracker | Done | Refunded Shopify orders with line-item totals, optional ShipStation cross-check and active/missing risk priority. |
 | `repeatrefunds` | Repeat Refunds | Done | Refunded/partially-refunded orders grouped by normalized email, successful transaction totals and configurable threshold. |
 | `returns` | Return / RMA Tracker | Done | One row per refund event with returned items, reason, total and aggregated SKU units/events/revenue. |
@@ -529,7 +529,7 @@ workflow от наличния framework scaffold.
 | `sameip` | Same IP, Different Emails | Done | Paid orders grouped by exact client IP, case-insensitive distinct-email deduplication, detailed orders and deterministic risk sorting. |
 | `disputes` | Chargebacks / Disputes | Done | Open actionable disputes, evidence deadlines, urgency sorting and bounded pagination. |
 
-Audit subtotal: **Done 35 · Partial 1 · Todo 11 · Replaced 1**.
+Audit subtotal: **Done 36 · Partial 1 · Todo 10 · Replaced 1**.
 
 ### Search & Lookup — 12
 
@@ -1032,7 +1032,7 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [ ] `GraphQL/CustomDataLookupsTest.php`
 - [ ] `GraphQL/CustomerOrderInsightsTest.php`
 - [ ] `GraphQL/DisputeLookupTest.php`
-- [ ] `GraphQL/DuplicateOrderInsightsTest.php`
+- [x] `GraphQL/DuplicateOrderInsightsTest.php`
 - [ ] `GraphQL/MetafieldNormalizerTest.php`
 - [ ] `GraphQL/OrderArchiveTest.php`
 - [ ] `GraphQL/OrderAuditsTest.php`
