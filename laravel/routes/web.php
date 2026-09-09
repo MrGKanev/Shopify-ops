@@ -24,6 +24,7 @@ use App\Http\Controllers\Reports\CarrierPerformanceController;
 use App\Http\Controllers\Reports\CatalogQualityController;
 use App\Http\Controllers\Reports\ConsentAuditController;
 use App\Http\Controllers\Reports\CountryMismatchController;
+use App\Http\Controllers\Reports\CustomerLtvController;
 use App\Http\Controllers\Reports\DiscountAbuseController;
 use App\Http\Controllers\Reports\DisputeController;
 use App\Http\Controllers\Reports\DuplicateAddressController;
@@ -114,6 +115,8 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/reports/same-ip', [SameIpController::class, 'store'])->middleware('throttle:audit-report')->name('reports.same-ip.store');
         Route::get('/reports/duplicate-orders', [DuplicateOrderController::class, 'create'])->middleware('can:run-audits')->name('reports.duplicate-orders');
         Route::post('/reports/duplicate-orders', [DuplicateOrderController::class, 'store'])->middleware('throttle:audit-report')->name('reports.duplicate-orders.store');
+        Route::get('/reports/customer-ltv', [CustomerLtvController::class, 'create'])->middleware('can:run-audits')->name('reports.customer-ltv');
+        Route::post('/reports/customer-ltv', [CustomerLtvController::class, 'store'])->middleware('throttle:audit-report')->name('reports.customer-ltv.store');
         Route::get('/reports/tag-policy', [TagPolicyController::class, 'create'])->middleware('can:run-audits')->name('reports.tag-policy');
         Route::post('/reports/tag-policy', [TagPolicyController::class, 'store'])->middleware('throttle:audit-report')->name('reports.tag-policy.store');
         Route::get('/reports/disputes', [DisputeController::class, 'create'])->middleware('can:run-audits')->name('reports.disputes');

@@ -1,6 +1,6 @@
 # Laravel rewrite — legacy test audit
 
-Последно обновяване: **2026-09-09** след Duplicate Detector slice-а.
+Последно обновяване: **2026-09-09** след Customer LTV slice-а.
 
 Този документ е отделният checklist за тестова parity. Feature статусът се следи
 в [Laravel rewrite плана](laravel-rewrite.md), а тук се затваря всеки legacy test
@@ -11,13 +11,13 @@ contract има Laravel тест, по-силен еквивалент или з
 
 | Статус | Файлове | Дял от 115 |
 |---|---:|---:|
-| Готови | 39 | 33.9% |
+| Готови | 40 | 34.8% |
 | Частично покрити | 26 | 22.6% |
-| Непочнати | 50 | 43.5% |
-| **Оставащи за одит** | **76** | **66.1%** |
+| Непочнати | 49 | 42.6% |
+| **Оставащи за одит** | **75** | **65.2%** |
 
 Legacy baseline: **115 файла · 1,528 теста · 3,659 assertions**. Laravel
-baseline след последния slice: **529 теста · 2,347 assertions**. Броят assertions
+baseline след последния slice: **532 теста · 2,373 assertions**. Броят assertions
 е ориентир; критерият е поведенческо покритие.
 
 За всеки checkbox проверяваме business decisions, boundary интеграцията,
@@ -102,7 +102,7 @@ malformed payloads и atomic failure. Не копираме тест, който
 | Готово | Legacy файл | Тестове | Какво проверява / Laravel цел |
 |---|---|---:|---|
 | [ ] | `ComparatorTest.php` | 73 | Shopify↔ShipStation matching, exclusions, duplicates, bundles, shipped items, margin и hold behavior |
-| [ ] | `CustomerLTVPageLoaderTest.php` | 28 | Revenue/customer cohorts, cancellation, identity normalization, retention and range wiring |
+| [x] | `CustomerLTVPageLoaderTest.php` | 28 | Revenue/customer cohorts, cancellation, identity normalization, retention and range wiring |
 | [ ] | `FulfillmentIssuePageLoaderTest.php` | 36 | Loader contracts за fulfillment exceptions, filters, dates, credentials и failures |
 | [ ] | `OrderAnomalyPageLoaderTest.php` | 20 | Fraud/anomaly page dispatch, ranges, credentials, results и failures |
 | [ ] | `PageLoaderTest.php` | 18 | Главен audit loader, compare results, ignore rules и notification behavior |
