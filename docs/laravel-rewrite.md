@@ -639,7 +639,7 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 - [ ] `GraphQL/OrderComponentNormalizerTest.php` — address/items/fulfillment subset е пренесен
 - [ ] `OrderPolicyPageLoaderTest.php` — Discount Abuse, Same IP, Tag Policy, Duplicate Shipping Addresses и Note Flags paths са пренесени; останалите policy report branches чакат method-level сверка
 - [ ] `GraphQL/OrderDirectLookupTest.php` — direct order lookup работи, но legacy full field set остава
-- [ ] `FraudComplianceChecksTest.php` — High-Value No Phone, Country Mismatch и Email Checker матриците са пренесени; останалите fraud/compliance checks остават
+- [x] `FraudComplianceChecksTest.php` — всичките 22 country mismatch, high-value/no-phone и email checker решения са нанесени; non-ISO country names умишлено се броят като липсващи вместо като false-positive mismatch
 - [ ] `GraphQL/OrderEventLookupTest.php` — pagination contract е пренесен; method-level mapping остава
 - [ ] `GraphQL/OrderNormalizerTest.php` — timeline/risk/order subset е пренесен; всички останали fields остават
 - [x] `HttpAuthEndpointTest.php` — login/logout, Google boundary failures, session rotation, throttling и CSP са покрити с HTTP feature tests
@@ -1019,7 +1019,7 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [ ] `ComparatorTest.php`
 - [x] `ConfigValidatorTest.php` — legacy JSON/environment validation е заменена с runtime Laravel config, DB store и admin authorization contracts.
 - [x] `CustomerLTVPageLoaderTest.php`
-- [ ] `DateRangeTest.php`
+- [x] `DateRangeTest.php` — GET/POST input precedence отпада при отделни routes; строгият ISO формат, start/end редът и Carbon date arithmetic са покрити
 - [ ] `DiscordNotifierTest.php`
 - [x] `DocsGeneratorTest.php` — executable 72-feature total and route registry consistency
 - [ ] `EmailDigestTest.php`

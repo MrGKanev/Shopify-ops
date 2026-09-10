@@ -1,6 +1,6 @@
 # Laravel rewrite — legacy test audit
 
-Последно обновяване: **2026-09-10** след autoload, registry/docs и persistence replacement audit-а.
+Последно обновяване: **2026-09-10** след DateRange и Fraud/Compliance method-level audit-а.
 
 Този документ е отделният checklist за тестова parity. Feature статусът се следи
 в [Laravel rewrite плана](laravel-rewrite.md), а тук се затваря всеки legacy test
@@ -11,10 +11,10 @@ contract има Laravel тест, по-силен еквивалент или з
 
 | Статус | Файлове | Дял от 115 |
 |---|---:|---:|
-| Готови | 62 | 53.9% |
-| Частично покрити | 21 | 18.3% |
-| Непочнати | 32 | 27.8% |
-| **Оставащи за одит** | **53** | **46.1%** |
+| Готови | 64 | 55.7% |
+| Частично покрити | 20 | 17.4% |
+| Непочнати | 31 | 27.0% |
+| **Оставащи за одит** | **51** | **44.3%** |
 
 Legacy baseline: **115 файла · 1,528 теста · 3,659 assertions**. Laravel
 baseline след последния slice: **578 теста · 2,626 assertions**. Броят assertions
@@ -38,7 +38,7 @@ malformed payloads и atomic failure. Не копираме тест, който
 | [ ] | `GraphQL/IdsTest.php` | 17 | Numeric/GID преобразуване и невалидни ID стойности | Общ reusable Laravel ID contract извън текущите order paths |
 | [ ] | `GraphQL/OrderComponentNormalizerTest.php` | 27 | Address, item, shipping, fulfillment, refund и discount нормализация | Shipping/refund/discount полета и edge cases |
 | [ ] | `GraphQL/OrderDirectLookupTest.php` | 8 | Single/batch lookup, cleaning, misses и cache | Full returned field set и cache-equivalent contract |
-| [ ] | `FraudComplianceChecksTest.php` | 22 | Country mismatch, high value/no phone и email checker rules | Остава method-level финална сверка на общия файл след трите готови отчета |
+| [x] | `FraudComplianceChecksTest.php` | 22 | Country mismatch, high value/no phone и email checker rules са покрити с analyzer unit и HTTP feature тестове; non-ISO country names умишлено се третират като липсващи вместо да създават false positives |
 | [ ] | `GraphQL/OrderEventLookupTest.php` | 3 | Event lookup, pagination и missing order | Exact normalized event mapping |
 | [ ] | `GraphQL/OrderNormalizerTest.php` | 39 | Всички основни и optional order fields | Tax, refunds, discounts, attributes, journey/source и support fields |
 | [x] | `HttpAuthEndpointTest.php` | 1 | Laravel HTTP feature tests cover login/logout, Google redirect/callback failures, session regeneration, throttling, CSP and authenticated route boundaries |
@@ -68,7 +68,7 @@ malformed payloads и atomic failure. Не копираме тест, който
 | [x] | `AutoloadCoverageTest.php` | 1 | Automatic PSR-4 check loads every PHP symbol under `app/` through Composer |
 | [ ] | `CacheTest.php` | 47 | TTL, locking, corruption, pruning и namespaces → Laravel cache/lock policy и integration tests |
 | [x] | `ConfigValidatorTest.php` | 35 | Replaced by runtime Laravel application/security, DB store credentials, order-type/tag-policy contracts and admin-only rendering |
-| [ ] | `DateRangeTest.php` | 10 | Input precedence, ISO validation и date arithmetic → shared Form Request/value object tests |
+| [x] | `DateRangeTest.php` | 10 | Отделните GET/POST routes премахват input precedence двусмислието; Form Requests покриват строг ISO формат и ред на датите, а Carbon покрива calendar arithmetic и седемдневното ShipStation разширение |
 | [x] | `DocsGeneratorTest.php` | 1 | Feature tracker count is executable and must remain exactly 72; routes are the Laravel source of truth instead of generated legacy tool docs |
 | [x] | `IgnoreListTest.php` | 16 | Ignore CRUD, normalization, expiry и persistence → ignore-list model/repository |
 | [x] | `JsonFileLockTest.php` | 6 | Replaced by database transactions/unique constraints and native Laravel cache locks; no shared JSON state remains in Laravel workflows |
