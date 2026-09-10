@@ -590,7 +590,7 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 | Suite | Test files | Executed tests | Assertions |
 |---|---:|---:|---:|
 | Stable plain PHP | 115 | 1,528 | 3,659 |
-| Laravel rewrite | 190 | 575 | 2,622 |
+| Laravel rewrite | 192 | 578 | 2,626 |
 
 Текущ file-level disposition на всичките **115 legacy test файла**:
 
@@ -1009,10 +1009,10 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 
 - [ ] `ActionsTest.php`
 - [x] `ActiveSsConflictsTest.php`
-- [ ] `AtomicFileTest.php`
+- [x] `AtomicFileTest.php` — replaced by DB transactions/casts and Laravel storage primitives
 - [ ] `AuditSnapshotTest.php`
 - [ ] `AuditTest.php`
-- [ ] `AutoloadCoverageTest.php`
+- [x] `AutoloadCoverageTest.php` — every `app/` PHP symbol is verified through Composer PSR-4 autoload
 - [x] `BundleCheckPageTest.php`
 - [ ] `CacheTest.php`
 - [x] `CarrierPerfTest.php`
@@ -1021,7 +1021,7 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [x] `CustomerLTVPageLoaderTest.php`
 - [ ] `DateRangeTest.php`
 - [ ] `DiscordNotifierTest.php`
-- [ ] `DocsGeneratorTest.php`
+- [x] `DocsGeneratorTest.php` — executable 72-feature total and route registry consistency
 - [ ] `EmailDigestTest.php`
 - [ ] `EmailNotifierTest.php`
 - [ ] `EmailRulesTest.php`
@@ -1047,7 +1047,7 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [x] `IgnoreListTest.php`
 - [x] `ItemizedFulfillmentReportTest.php`
 - [ ] `JobQueueTest.php`
-- [ ] `JsonFileLockTest.php`
+- [x] `JsonFileLockTest.php` — replaced by DB constraints/transactions and Laravel cache locks
 - [ ] `LoggerTest.php`
 - [ ] `ManageSettingsPageLoaderTest.php`
 - [ ] `MetricsEndpointTest.php`
@@ -1059,7 +1059,7 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [x] `PostShipAddrChangeTest.php`
 - [ ] `PrintQueueTest.php`
 - [x] `PushLogTest.php`
-- [ ] `ReportRegistryTest.php`
+- [x] `ReportRegistryTest.php` — named routes are unique and every report screen has a submit route
 - [x] `RunLogTest.php`
 - [ ] `ScanRunnerTest.php`
 - [ ] `ShopifyFlowHealthTest.php`
