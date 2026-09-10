@@ -20,6 +20,7 @@ use Spatie\Activitylog\Support\LogOptions;
     'shipstation_api_key',
     'shipstation_api_secret',
     'store_number',
+    'slack_rules',
 ])]
 #[Hidden(['shopify_access_token', 'shipstation_api_key', 'shipstation_api_secret'])]
 class Store extends Model
@@ -70,6 +71,14 @@ class Store extends Model
         return $this->hasMany(PrintQueueItem::class);
     }
 
+    /** @return array{audit_enabled:bool,audit_min_missing:int,include_zero_audit:bool,scan_enabled:bool,scan_min_rows:int,mentions:string} */
+    public function resolvedSlackRules(): array
+    {
+        $rules = array_replace(['audit_enabled' => true, 'audit_min_missing' => 0, 'include_zero_audit' => true, 'scan_enabled' => false, 'scan_min_rows' => 1, 'mentions' => ''], $this->slack_rules ?? []);
+
+        return ['audit_enabled' => (bool) $rules['audit_enabled'], 'audit_min_missing' => max(0, (int) $rules['audit_min_missing']), 'include_zero_audit' => (bool) $rules['include_zero_audit'], 'scan_enabled' => (bool) $rules['scan_enabled'], 'scan_min_rows' => max(1, (int) $rules['scan_min_rows']), 'mentions' => (string) $rules['mentions']];
+    }
+
     /**
      * @return array<string, string>
      */
@@ -79,6 +88,7 @@ class Store extends Model
             'shopify_access_token' => 'encrypted',
             'shipstation_api_key' => 'encrypted',
             'shipstation_api_secret' => 'encrypted',
+            'slack_rules' => 'array',
         ];
     }
 }

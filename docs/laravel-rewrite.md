@@ -408,7 +408,7 @@ Matrix-ът е release control документ, а не само checklist. М�
 достъпен route/controller/view и покриващи тестове. Наличен domain helper без
 завършен потребителски workflow не се брои за готов feature.
 
-Последно обновяване: **2026-09-09**, след Print Queue slice-а.
+Последно обновяване: **2026-09-10**, след Slack Rules scan delivery slice-а.
 
 Легенда: **Done** = feature parity за основния workflow; **Partial** = използваем,
 но по-тесен от legacy; **Todo** = няма завършен Laravel workflow;
@@ -418,9 +418,9 @@ Matrix-ът е release control документ, а не само checklist. М�
 
 | Статус | Страници/инструменти | Дял от 72 |
 |---|---:|---:|
-| Done | 63 | 87.5% |
+| Done | 64 | 88.9% |
 | Partial | 3 | 4.2% |
-| Todo | 4 | 5.6% |
+| Todo | 3 | 4.2% |
 | Replaced | 2 | 2.8% |
 | **Общо** | **72** | **100%** |
 
@@ -568,13 +568,13 @@ Manage subtotal: **Done 6 · Partial 0 · Todo 0 · Replaced 0**.
 | ID | Legacy feature | Статус | Бележка |
 |---|---|---|---|
 | `settings` | Settings | Partial | Users/stores/credentials са готови; connection tests, banned IP и notification overview липсват. |
-| `slackrules` | Slack Rules | Todo | Per-tool notification thresholds и recipients. |
+| `slackrules` | Slack Rules | Done | Store-scoped audit/scan enable and thresholds, all-clear behavior, normalized mentions and queueable delivery through the shared run recorder. |
 | `emailrules` | Email Rules | Todo | Per-tool email rules и digest settings. |
 | `apihealth` | API Health | Partial | Admin-only Shopify shop/scopes, requested/returned API version mismatch и ShipStation auth checks са готови; flow history остава. |
 | `configcheck` | Config Check | Todo | Policy/config validation трябва да бъде заменено с Laravel config contracts. |
 | `webhookhealth` | Webhook Health | Todo | Webhook delivery/recency diagnostics. |
 
-Settings subtotal: **Done 0 · Partial 2 · Todo 4 · Replaced 0**.
+Settings subtotal: **Done 1 · Partial 2 · Todo 3 · Replaced 0**.
 
 ### Test migration tracker
 
@@ -590,7 +590,7 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 | Suite | Test files | Executed tests | Assertions |
 |---|---:|---:|---:|
 | Stable plain PHP | 115 | 1,528 | 3,659 |
-| Laravel rewrite | 181 | 557 | 2,545 |
+| Laravel rewrite | 183 | 560 | 2,560 |
 
 Текущ file-level disposition на всичките **115 legacy test файла**:
 

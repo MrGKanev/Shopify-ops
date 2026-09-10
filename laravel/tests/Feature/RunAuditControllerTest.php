@@ -8,7 +8,9 @@ use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Jobs\RunAuditJob;
 use App\Models\Store;
 use App\Models\User;
+use App\Notifications\AuditSlackNotification;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Mockery;
 use RuntimeException;
@@ -31,6 +33,8 @@ class RunAuditControllerTest extends TestCase
 
     public function test_it_runs_records_and_renders_a_safe_summary(): void
     {
+        Notification::fake();
+        config()->set('services.slack.notifications.webhook_url', 'https://hooks.slack.com/services/T/B/test');
         [$operator, $store] = $this->userWithStore(true);
         $client = Mockery::mock(ShipStationClientContract::class);
         $client->shouldReceive('fetchAllOrders')->twice()->with('2026-06-01', '2026-07-07')->andReturn([['orderNumber' => '1001']]);
@@ -50,6 +54,7 @@ class RunAuditControllerTest extends TestCase
         $this->assertTrue($store->auditSnapshots()->where('tool', 'run_audit')->whereDate('report_date', now()->toDateString())->where('rows_found', 1)->exists());
         $this->actingAs($operator)->post('/reports/run-audit', $this->input())->assertOk();
         $this->assertSame(1, $store->auditSnapshots()->count());
+        Notification::assertSentOnDemand(AuditSlackNotification::class);
     }
 
     public function test_it_queues_the_same_audit_and_hides_failures(): void

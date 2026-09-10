@@ -21,7 +21,7 @@
                         <nav class="hidden items-center gap-3 text-sm sm:flex" aria-label="Administration">
                             <a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ route('admin.stores.index') }}">Stores</a>
                             <a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ route('admin.users.index') }}">Users</a>
-                            <a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ route('admin.api-health') }}">API Health</a>
+                            <a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ route('admin.api-health') }}">API Health</a><a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ route('admin.slack-rules.edit') }}">Slack Rules</a>
                             <a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ route('admin.action-log') }}">Action Log</a>
                             <a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ route('admin.health') }}">Health</a>
                             @if(config('pulse.enabled'))<a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ url(config('pulse.path')) }}">Pulse</a>@endif
@@ -111,7 +111,7 @@
                     @can('manage-administration')
                         <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ route('admin.stores.index') }}">Manage stores</a>
                         <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ route('admin.users.index') }}">Manage users</a>
-                        <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ route('admin.api-health') }}">API Health</a>
+                        <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ route('admin.api-health') }}">API Health</a><a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ route('admin.slack-rules.edit') }}">Slack Rules</a>
                         <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ route('admin.action-log') }}">Action Log</a>
                         <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ route('admin.health') }}">Health</a>
                         @if(config('pulse.enabled'))<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ url(config('pulse.path')) }}">Pulse</a>@endif

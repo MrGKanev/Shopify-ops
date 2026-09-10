@@ -6,7 +6,9 @@ use App\Domain\Reports\AuditOrderAnalyzer;
 use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
+use App\Notifications\AuditSlackNotification;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Notification;
 use LogicException;
 use Throwable;
 
@@ -37,6 +39,11 @@ class RunAudit
             $result = $this->analyzer->analyze($shopify['orders'], $shipstation, $ignored, $onHoldIds);
             $store->auditSnapshots()->updateOrCreate(['tool' => 'run_audit', 'report_date' => today()->toDateString()], ['start_date' => $start, 'end_date' => $end, 'rows_found' => count($result['missing']), 'result' => ['missing' => $result['missing'], 'found' => count($result['found']), 'skipped' => count($result['skipped']), 'ignored' => count($result['ignored']), 'shopify_total' => count($shopify['orders']), 'shipstation_total' => count($shipstation), 'truncated' => $shopify['truncated'] || $onHold['truncated']]]);
             $this->runs->handle($store, ['tool' => 'run_audit', 'status' => $result['missing'] ? 'issues_found' : 'ok', 'start_date' => $start, 'end_date' => $end, 'duration_seconds' => round(microtime(true) - $started, 3), 'scanned' => count($shopify['orders']), 'rows_found' => count($result['missing']), 'meta' => ['shipstation_total' => count($shipstation), 'found' => count($result['found']), 'skipped' => count($result['skipped']), 'ignored' => count($result['ignored'])]]);
+            $rules = $store->resolvedSlackRules();
+            $missing = count($result['missing']);
+            if ($rules['audit_enabled'] && $missing >= $rules['audit_min_missing'] && ($missing > 0 || $rules['include_zero_audit']) && trim((string) config('services.slack.notifications.webhook_url')) !== '') {
+                Notification::route('slack', config('services.slack.notifications.webhook_url'))->notify(new AuditSlackNotification($store->label, $missing, "{$start} → {$end}", $rules['mentions']));
+            }
 
             return new AuditResult($start, $end, $result['missing'], count($result['found']), count($result['skipped']), count($result['ignored']), count($shopify['orders']), count($shipstation), $shopify['truncated'] || $onHold['truncated']);
         } catch (Throwable $exception) {

@@ -1,6 +1,6 @@
 # Laravel rewrite — legacy test audit
 
-Последно обновяване: **2026-09-09** след Print Queue slice-а.
+Последно обновяване: **2026-09-10** след Slack Rules scan delivery slice-а.
 
 Този документ е отделният checklist за тестова parity. Feature статусът се следи
 в [Laravel rewrite плана](laravel-rewrite.md), а тук се затваря всеки legacy test
@@ -11,13 +11,13 @@ contract има Laravel тест, по-силен еквивалент или з
 
 | Статус | Файлове | Дял от 115 |
 |---|---:|---:|
-| Готови | 50 | 43.5% |
+| Готови | 51 | 44.3% |
 | Частично покрити | 26 | 22.6% |
-| Непочнати | 39 | 33.9% |
-| **Оставащи за одит** | **65** | **56.5%** |
+| Непочнати | 38 | 33.0% |
+| **Оставащи за одит** | **64** | **55.7%** |
 
 Legacy baseline: **115 файла · 1,528 теста · 3,659 assertions**. Laravel
-baseline след последния slice: **557 теста · 2,545 assertions**. Броят assertions
+baseline след последния slice: **560 теста · 2,560 assertions**. Броят assertions
 е ориентир; критерият е поведенческо покритие.
 
 За всеки checkbox проверяваме business decisions, boundary интеграцията,
@@ -94,7 +94,6 @@ malformed payloads и atomic failure. Не копираме тест, който
 | [ ] | `EmailNotifierTest.php` | 30 | SMTP config, audit/scan/digest messages, escaping и attachments → Laravel mailables |
 | [ ] | `EmailRulesTest.php` | 25 | Per-tool modes, thresholds, recipients и persistence → notification preference model |
 | [ ] | `ManageSettingsPageLoaderTest.php` | 14 | Settings load/save, validation и authorization → admin settings workflow |
-| [ ] | `SlackRulesTest.php` | 19 | Audit/scan thresholds, mentions, defaults и persistence → Slack preferences |
 
 ## Непочнати — order, fulfillment и logistics workflows
 
@@ -130,6 +129,7 @@ malformed payloads и atomic failure. Не копираме тест, който
 
 ## Напълно сверени
 
+- [x] `SlackRulesTest.php` — audit/scan thresholds, defaults, mention normalization, DB persistence and shared delivery wiring.
 - [x] `SearchLookupPageLoaderTest.php` — 19/19 global search and lookup loader contracts.
 - [x] `PackingSlipPageLoaderTest.php` — 6/6 legacy paths.
 - [x] `TrackingFeedTest.php` — 7/7 builder contracts.

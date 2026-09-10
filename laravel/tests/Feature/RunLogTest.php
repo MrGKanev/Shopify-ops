@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Application\Reports\RecordRun;
 use App\Models\Store;
 use App\Models\User;
+use App\Notifications\ScanSlackNotification;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class RunLogTest extends TestCase
@@ -34,5 +36,18 @@ class RunLogTest extends TestCase
     public function test_page_requires_authentication(): void
     {
         $this->get('/run-logs')->assertRedirect(route('login'));
+    }
+
+    public function test_scan_rules_dispatch_only_at_threshold(): void
+    {
+        Notification::fake();
+        config()->set('services.slack.notifications.webhook_url', 'https://hooks.slack.com/services/T/B/test');
+        $store = Store::factory()->create(['slack_rules' => ['audit_enabled' => true, 'audit_min_missing' => 0, 'include_zero_audit' => true, 'scan_enabled' => true, 'scan_min_rows' => 2, 'mentions' => 'U012ABC3DE']]);
+        $recorder = app(RecordRun::class);
+        $recorder->handle($store, ['tool' => 'scan_test', 'rows_found' => 1]);
+        $recorder->handle($store, ['tool' => 'scan_test', 'rows_found' => 2]);
+        $recorder->handle($store, ['tool' => 'scan_test', 'rows_found' => 3, 'status' => 'error']);
+
+        Notification::assertSentOnDemandTimes(ScanSlackNotification::class, 1);
     }
 }
