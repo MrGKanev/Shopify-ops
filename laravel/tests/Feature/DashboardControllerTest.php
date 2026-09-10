@@ -64,4 +64,19 @@ class DashboardControllerTest extends TestCase
             ->assertSee($store->label)
             ->assertDontSee($store->label, false);
     }
+
+    public function test_dashboard_renders_store_scoped_operational_stats_and_action_queue(): void
+    {
+        $user = User::factory()->operator()->create();
+        $store = Store::factory()->create();
+        $foreign = Store::factory()->create();
+        $user->stores()->attach($store);
+        $store->auditSnapshots()->create(['tool' => 'run_audit', 'report_date' => '2026-09-09', 'start_date' => '2026-09-01', 'end_date' => '2026-09-09', 'rows_found' => 3, 'result' => ['missing' => []]]);
+        $store->auditSnapshots()->create(['tool' => 'run_audit', 'report_date' => '2026-09-10', 'start_date' => '2026-09-01', 'end_date' => '2026-09-10', 'rows_found' => 1, 'result' => ['missing' => [['name' => '<script>#1001', 'created_at' => '2026-09-08', 'email' => 'buyer@example.com', 'total_price' => 42.5]]]]);
+        $store->ignoredOrders()->create(['order_number' => '1002', 'ignored_at' => today()]);
+        $store->pushLogs()->create(['order_number' => '1003', 'shopify_id' => '1', 'pushed_at' => now()]);
+        $foreign->auditSnapshots()->create(['tool' => 'run_audit', 'report_date' => '2026-09-10', 'start_date' => '2026-09-01', 'end_date' => '2026-09-10', 'rows_found' => 99, 'result' => ['missing' => [['name' => 'secret-order']]]]);
+
+        $this->actingAs($user)->get(route('dashboard'))->assertOk()->assertSeeText('missing · 2026-09-10')->assertSeeText('was 3')->assertSeeText('4 total missing')->assertSeeText('buyer@example.com')->assertSeeText('42.50')->assertSeeText('Run Audit')->assertDontSee('<script>', false)->assertDontSeeText('secret-order');
+    }
 }

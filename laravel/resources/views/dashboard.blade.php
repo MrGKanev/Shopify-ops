@@ -1,28 +1,4 @@
 @extends('layouts.app')
-
 @section('content')
-    <div class="flex flex-col gap-6">
-        <section>
-            <p class="text-sm font-medium text-indigo-600 dark:text-indigo-400">Active store</p>
-            <h1 class="mt-1 text-3xl font-bold">{{ $activeStore->label }}</h1>
-            <p class="mt-2 text-slate-500 dark:text-slate-400">{{ $activeStore->shopify_store }}.myshopify.com</p>
-        </section>
-
-        <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <article class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-sm text-slate-500 dark:text-slate-400">Application</p>
-                <p class="mt-2 text-lg font-semibold">Laravel foundation active</p>
-            </article>
-
-            <article class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-sm text-slate-500 dark:text-slate-400">Shopify connection</p>
-                <p class="mt-2 text-lg font-semibold">Integration client active</p>
-            </article>
-
-            <article class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-                <p class="text-sm text-slate-500 dark:text-slate-400">Migrated tools</p>
-                <p class="mt-2 text-lg font-semibold">11 · Seven order tools and four audit reports</p>
-            </article>
-        </section>
-    </div>
+<div class="flex flex-col gap-6"><section class="flex flex-wrap items-end justify-between gap-4"><div><p class="text-sm font-medium text-indigo-600">Active store</p><h1 class="mt-1 text-3xl font-bold">{{ $activeStore->label }}</h1><p class="mt-2 text-slate-500">{{ $activeStore->shopify_store }}.myshopify.com</p></div>@can('run-audits')<a class="rounded-lg bg-indigo-600 px-5 py-2.5 font-semibold text-white" href="{{ route('reports.run-audit') }}">Run Audit</a>@endcan</section><section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><article class="rounded-xl border p-5"><p class="text-sm text-slate-500">Latest audit</p><p class="mt-2 text-3xl font-bold">{{ $latest?->rows_found ?? '—' }}</p><p class="text-sm text-slate-500">@if($latest)missing · {{ $latest->report_date->toDateString() }}@if($previousMissing!==null) · was {{ $previousMissing }}@endif @else No audits yet @endif</p></article><article class="rounded-xl border p-5"><p class="text-sm text-slate-500">All-time audits</p><p class="mt-2 text-3xl font-bold">{{ $totalReports }}</p><p class="text-sm text-slate-500">{{ $totalMissing }} total missing</p></article><article class="rounded-xl border p-5"><p class="text-sm text-slate-500">Pushes</p><p class="mt-2 text-3xl font-bold">{{ $pushesToday }}</p><p class="text-sm text-slate-500">today · {{ $pushesMonth }} in 30 days</p></article><article class="rounded-xl border p-5"><p class="text-sm text-slate-500">Ignored orders</p><p class="mt-2 text-3xl font-bold">{{ $ignoredCount }}</p><a class="text-sm font-semibold text-indigo-600" href="{{ route('ignored-orders.index') }}">Manage ignored orders</a></article></section><section class="rounded-xl border"><div class="flex items-center justify-between border-b p-5"><div><h2 class="text-xl font-bold">Action queue</h2><p class="text-sm text-slate-500">Missing orders from the latest audit.</p></div>@if($latest)<a class="text-sm font-semibold text-indigo-600" href="{{ route('saved-reports.show',$latest) }}">Full snapshot</a>@endif</div>@if(!$latest)<p class="p-6 text-center text-slate-500">Run the first audit to build the queue.</p>@elseif($missingOrders===[])<p class="p-6 text-center text-emerald-700">All clear — no missing orders.</p>@else<div class="overflow-x-auto"><table class="min-w-full text-left text-sm"><thead><tr><th class="p-3">Order</th><th>Date</th><th>Email</th><th>Total</th></tr></thead><tbody>@foreach($missingOrders as $order)<tr><td class="p-3 font-semibold">{{ $order['name'] ?? $order['order_number'] ?? '—' }}</td><td>{{ $order['created_at'] ?? '—' }}</td><td>{{ $order['email'] ?? '—' }}</td><td>{{ number_format((float)($order['total_price'] ?? 0),2) }}</td></tr>@endforeach</tbody></table></div>@endif</section>@can('run-audits')<section><h2 class="text-xl font-bold">Quick actions</h2><div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">@foreach([['Run Audit','reports.run-audit'],['Address Check','reports.address-check'],['Email Check','reports.email-check'],['Bundle Check','reports.bundle-check'],['Partial Stalls','reports.partial-fulfillment'],['Orphan Orders','reports.orphan-orders']] as [$label,$route])<a class="rounded-xl border p-4 font-semibold hover:border-indigo-500 hover:text-indigo-600" href="{{ route($route) }}">{{ $label }}</a>@endforeach</div></section>@endcan</div>
 @endsection
