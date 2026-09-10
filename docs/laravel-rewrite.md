@@ -640,7 +640,7 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 - [ ] `OrderPolicyPageLoaderTest.php` — Discount Abuse, Same IP, Tag Policy, Duplicate Shipping Addresses и Note Flags paths са пренесени; останалите policy report branches чакат method-level сверка
 - [ ] `GraphQL/OrderDirectLookupTest.php` — direct order lookup работи, но legacy full field set остава
 - [x] `FraudComplianceChecksTest.php` — всичките 22 country mismatch, high-value/no-phone и email checker решения са нанесени; non-ISO country names умишлено се броят като липсващи вместо като false-positive mismatch
-- [ ] `GraphQL/OrderEventLookupTest.php` — pagination contract е пренесен; method-level mapping остава
+- [x] `GraphQL/OrderEventLookupTest.php` — lookup, cursor pagination, newest-first order и missing order са покрити, включително malformed payload/cursor guards
 - [ ] `GraphQL/OrderNormalizerTest.php` — timeline/risk/order subset е пренесен; всички останали fields остават
 - [x] `HttpAuthEndpointTest.php` — login/logout, Google boundary failures, session rotation, throttling и CSP са покрити с HTTP feature tests
 - [ ] `OrderInsightPageLoaderTest.php` — compare/timeline subset е пренесен; останалите insights остават
@@ -1027,7 +1027,7 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [ ] `EmailRulesTest.php`
 - [ ] `FulfillmentIssuePageLoaderTest.php`
 - [x] `FulfillmentLogisticsChecksTest.php`
-- [ ] `GraphQL/AdminLookupsTest.php`
+- [x] `GraphQL/AdminLookupsTest.php` — facade delegation е заменена с директен Shopify gateway contract; order, metafield и customer lookup paths са покрити end-to-end
 - [x] `GraphQL/CatalogAndFulfillmentTest.php`
 - [x] `GraphQL/CustomDataLookupsTest.php`
 - [x] `GraphQL/CustomerOrderInsightsTest.php`
@@ -1039,7 +1039,7 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [ ] `GraphQL/OrderEventAuditsTest.php`
 - [ ] `GraphQL/OrderFetcherTest.php`
 - [ ] `GraphQL/OrderHoldLookupTest.php`
-- [ ] `GraphQL/OrderInsightsTest.php`
+- [x] `GraphQL/OrderInsightsTest.php` — tag search и duplicate-order facade wiring е заменено с директни gateway, analyzer и controller contracts
 - [ ] `GraphQL/OrderLookupTest.php`
 - [ ] `GraphQL/OrderQueryAuditsTest.php`
 - [ ] `GraphQL/ProductNormalizerTest.php`

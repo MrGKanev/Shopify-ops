@@ -1,6 +1,6 @@
 # Laravel rewrite — legacy test audit
 
-Последно обновяване: **2026-09-10** след DateRange и Fraud/Compliance method-level audit-а.
+Последно обновяване: **2026-09-10** след Admin Lookups, Order Insights и Order Event Lookup method-level audit-а.
 
 Този документ е отделният checklist за тестова parity. Feature статусът се следи
 в [Laravel rewrite плана](laravel-rewrite.md), а тук се затваря всеки legacy test
@@ -11,10 +11,10 @@ contract има Laravel тест, по-силен еквивалент или з
 
 | Статус | Файлове | Дял от 115 |
 |---|---:|---:|
-| Готови | 64 | 55.7% |
-| Частично покрити | 20 | 17.4% |
-| Непочнати | 31 | 27.0% |
-| **Оставащи за одит** | **51** | **44.3%** |
+| Готови | 67 | 58.3% |
+| Частично покрити | 19 | 16.5% |
+| Непочнати | 29 | 25.2% |
+| **Оставащи за одит** | **48** | **41.7%** |
 
 Legacy baseline: **115 файла · 1,528 теста · 3,659 assertions**. Laravel
 baseline след последния slice: **578 теста · 2,626 assertions**. Броят assertions
@@ -39,7 +39,7 @@ malformed payloads и atomic failure. Не копираме тест, който
 | [ ] | `GraphQL/OrderComponentNormalizerTest.php` | 27 | Address, item, shipping, fulfillment, refund и discount нормализация | Shipping/refund/discount полета и edge cases |
 | [ ] | `GraphQL/OrderDirectLookupTest.php` | 8 | Single/batch lookup, cleaning, misses и cache | Full returned field set и cache-equivalent contract |
 | [x] | `FraudComplianceChecksTest.php` | 22 | Country mismatch, high value/no phone и email checker rules са покрити с analyzer unit и HTTP feature тестове; non-ISO country names умишлено се третират като липсващи вместо да създават false positives |
-| [ ] | `GraphQL/OrderEventLookupTest.php` | 3 | Event lookup, pagination и missing order | Exact normalized event mapping |
+| [x] | `GraphQL/OrderEventLookupTest.php` | 3 | Shopify client integration tests покриват normalized event lookup, cursor pagination/newest-first order и missing order; добавени са malformed shape, cursor и invalid-ID guards |
 | [ ] | `GraphQL/OrderNormalizerTest.php` | 39 | Всички основни и optional order fields | Tax, refunds, discounts, attributes, journey/source и support fields |
 | [x] | `HttpAuthEndpointTest.php` | 1 | Laravel HTTP feature tests cover login/logout, Google redirect/callback failures, session regeneration, throttling, CSP and authenticated route boundaries |
 | [ ] | `JobQueueTest.php` | 7 | Native pending/failed visibility, retry/forget and RunAudit enqueue | Worker execution and completion lifecycle |
@@ -110,7 +110,7 @@ malformed payloads и atomic failure. Не копираме тест, който
 
 | Готово | Legacy файл | Тестове | Какво проверява / Laravel цел |
 |---|---|---:|---|
-| [ ] | `GraphQL/AdminLookupsTest.php` | 3 | Facade delegation за order, metafield и customer lookups |
+| [x] | `GraphQL/AdminLookupsTest.php` | 3 | Legacy facade е заменен с директен Shopify gateway contract; order, metafield и customer lookups са покрити на client и HTTP controller границите |
 | [x] | `GraphQL/CustomDataLookupsTest.php` | 6 | Metafield search, counts, samples, dedupe и query escaping |
 | [x] | `GraphQL/CustomerOrderInsightsTest.php` | 6 | Customer spend, identity selection, email normalization and defaults |
 | [ ] | `GraphQL/DisputeLookupTest.php` | 4 | Dispute filters, normalization, pagination and missing order |
@@ -121,7 +121,7 @@ malformed payloads и atomic failure. Не копираме тест, който
 | [ ] | `GraphQL/OrderEventAuditsTest.php` | 8 | Edited/address-change event selection, batching and ordering |
 | [ ] | `GraphQL/OrderFetcherTest.php` | 6 | Generic pagination, normalization, cache and malformed responses |
 | [ ] | `GraphQL/OrderHoldLookupTest.php` | 10 | Fulfillment hold detection, batching, pagination, IDs and cache |
-| [ ] | `GraphQL/OrderInsightsTest.php` | 2 | Insight facade delegation for tags and duplicates |
+| [x] | `GraphQL/OrderInsightsTest.php` | 2 | Legacy facade е премахнат; tag search и duplicate-order insights се изпълняват директно през Shopify gateway и са покрити с integration, analyzer и controller тестове |
 | [ ] | `GraphQL/OrderLookupTest.php` | 4 | Lookup facade delegation for direct order, hold and events |
 | [ ] | `GraphQL/OrderQueryAuditsTest.php` | 10 | Exact filters/fields за address, refund, fulfillment, fraud and cancellation fetches |
 | [ ] | `GraphQL/ProductNormalizerTest.php` | 9 | Product/variant/image normalization and missing-field defaults |
