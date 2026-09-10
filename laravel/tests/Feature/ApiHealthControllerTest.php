@@ -36,6 +36,18 @@ class ApiHealthControllerTest extends TestCase
         $this->actingAs($admin)->get(route('admin.api-health'))->assertOk()->assertSeeText('Run health check')->assertDontSeeText('Checked at');
     }
 
+    public function test_page_summarizes_store_scoped_persisted_flow_history(): void
+    {
+        [$admin, $store] = $this->userWithStore();
+        $foreign = Store::factory()->create();
+        $store->runLogs()->create(['tool' => 'run_audit', 'status' => 'error', 'error' => 'Old failure']);
+        $store->runLogs()->create(['tool' => 'run_audit', 'status' => 'ok']);
+        $store->runLogs()->create(['tool' => 'scan_test', 'status' => 'error', 'error' => '<script>failure']);
+        $foreign->runLogs()->create(['tool' => 'secret_foreign', 'status' => 'error']);
+
+        $this->actingAs($admin)->get(route('admin.api-health'))->assertOk()->assertSeeText('1 healthy')->assertSeeText('1 need attention')->assertSeeText('run_audit')->assertSeeText('Old failure')->assertSeeText('scan_test')->assertDontSee('<script>', false)->assertDontSeeText('secret_foreign');
+    }
+
     public function test_health_check_reports_scopes_and_selected_store_results(): void
     {
         [$admin, $store] = $this->userWithStore();

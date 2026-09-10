@@ -418,9 +418,9 @@ Matrix-ът е release control документ, а не само checklist. М�
 
 | Статус | Страници/инструменти | Дял от 72 |
 |---|---:|---:|
-| Done | 65 | 90.3% |
-| Partial | 3 | 4.2% |
-| Todo | 3 | 4.2% |
+| Done | 68 | 94.4% |
+| Partial | 2 | 2.8% |
+| Todo | 0 | 0.0% |
 | Replaced | 2 | 2.8% |
 | **Общо** | **72** | **100%** |
 
@@ -443,7 +443,7 @@ feature страниците. Те се следят отделно:
 - [x] Shopify GraphQL client, normalization и pagination foundation
 - [x] ShipStation client, normalization, retries и store credentials
 - [x] Basic `/up` liveness и `/ready` database/queue configuration checks
-- [ ] API Health е partial: Shopify scopes, requested/returned API version и ShipStation auth са готови; flow history остава
+- [x] API Health със Shopify scopes/version, ShipStation auth и store-scoped persisted report flow history
 - [x] Един дългосрочен Draft PR за целия rewrite
 - [ ] Production observability, metrics и operational runbooks
 - [ ] Background jobs, idempotency, retry и recovery foundation
@@ -570,11 +570,11 @@ Manage subtotal: **Done 6 · Partial 0 · Todo 0 · Replaced 0**.
 | `settings` | Settings | Partial | Users/stores/credentials са готови; connection tests, banned IP и notification overview липсват. |
 | `slackrules` | Slack Rules | Done | Store-scoped audit/scan enable and thresholds, all-clear behavior, normalized mentions and queueable delivery through the shared run recorder. |
 | `emailrules` | Email Rules | Done | Store-scoped per-tool off/immediate/digest modes, thresholds, zero-result control, validated recipients, queueable delivery and scheduled daily digest. |
-| `apihealth` | API Health | Partial | Admin-only Shopify shop/scopes, requested/returned API version mismatch и ShipStation auth checks са готови; flow history остава. |
-| `configcheck` | Config Check | Todo | Policy/config validation трябва да бъде заменено с Laravel config contracts. |
-| `webhookhealth` | Webhook Health | Todo | Webhook delivery/recency diagnostics. |
+| `apihealth` | API Health | Done | Admin-only Shopify shop/scopes, requested/returned API version mismatch, ShipStation auth и store-scoped persisted report flow history. |
+| `configcheck` | Config Check | Done | Admin-only runtime contracts за application/security, active-store credentials, order types и tag policy без показване на secrets. |
+| `webhookhealth` | Webhook Health | Done | Admin-only live Shopify registration inventory, safe credential/transport failures, HTTPS/API-version diagnostics and registration dates; Shopify remains source of truth for delivery logs. |
 
-Settings subtotal: **Done 2 · Partial 2 · Todo 2 · Replaced 0**.
+Settings subtotal: **Done 5 · Partial 1 · Todo 0 · Replaced 0**.
 
 ### Test migration tracker
 
@@ -590,7 +590,7 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 | Suite | Test files | Executed tests | Assertions |
 |---|---:|---:|---:|
 | Stable plain PHP | 115 | 1,528 | 3,659 |
-| Laravel rewrite | 185 | 563 | 2,570 |
+| Laravel rewrite | 187 | 569 | 2,601 |
 
 Текущ file-level disposition на всичките **115 legacy test файла**:
 
@@ -1017,7 +1017,7 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [ ] `CacheTest.php`
 - [x] `CarrierPerfTest.php`
 - [ ] `ComparatorTest.php`
-- [ ] `ConfigValidatorTest.php`
+- [x] `ConfigValidatorTest.php` — legacy JSON/environment validation е заменена с runtime Laravel config, DB store и admin authorization contracts.
 - [x] `CustomerLTVPageLoaderTest.php`
 - [ ] `DateRangeTest.php`
 - [ ] `DiscordNotifierTest.php`

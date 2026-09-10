@@ -81,5 +81,10 @@
                 @endforeach
             </div>
         @endif
+
+        <section class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+            <div class="flex flex-wrap items-center justify-between gap-4"><div><h2 class="text-xl font-bold">Report flow history</h2><p class="mt-1 text-sm text-slate-500">Latest status from the active store's persisted run history.</p></div><p class="text-sm"><span class="text-emerald-700">{{ $flowHealth['summary']['healthy'] }} healthy</span> · <span class="text-red-700">{{ $flowHealth['summary']['attention'] }} need attention</span></p></div>
+            @if($flowHealth['flows']===[])<p class="mt-4 text-sm text-slate-500">No report runs recorded yet.</p>@else<div class="mt-4 overflow-x-auto"><table class="min-w-full text-left text-sm"><thead><tr><th class="py-2 pr-4">Tool</th><th>Status</th><th>Runs</th><th>Errors</th><th>Last run</th><th>Last error</th></tr></thead><tbody>@foreach($flowHealth['flows'] as $flow)<tr><td class="py-2 pr-4">{{ $flow['tool'] }}</td><td>{{ $flow['status'] }}</td><td>{{ $flow['runs'] }}</td><td>{{ $flow['errors'] }}</td><td>{{ $flow['last_run_at'] }}</td><td>{{ $flow['last_error'] ?: '—' }}</td></tr>@endforeach</tbody></table></div>@endif
+        </section>
     </div>
 @endsection

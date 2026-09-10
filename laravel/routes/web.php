@@ -3,10 +3,12 @@
 use App\Http\Controllers\ActiveStoreController;
 use App\Http\Controllers\Admin\ActionLogController;
 use App\Http\Controllers\Admin\ApiHealthController;
+use App\Http\Controllers\Admin\ConfigCheckController;
 use App\Http\Controllers\Admin\EmailRulesController;
 use App\Http\Controllers\Admin\SlackRulesController;
 use App\Http\Controllers\Admin\StoreController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\WebhookHealthController;
 use App\Http\Controllers\AuthenticatedSessionController;
 use App\Http\Controllers\CustomerLookupController;
 use App\Http\Controllers\DashboardController;
@@ -250,6 +252,8 @@ Route::middleware('auth')->group(function (): void {
             ->middleware('can:manage-administration')
             ->group(function (): void {
                 Route::get('/api-health', [ApiHealthController::class, 'show'])->name('api-health');
+                Route::get('/config-check', ConfigCheckController::class)->name('config-check');
+                Route::get('/webhook-health', WebhookHealthController::class)->name('webhook-health');
                 Route::get('/slack-rules', [SlackRulesController::class, 'edit'])->name('slack-rules.edit');
                 Route::put('/slack-rules', [SlackRulesController::class, 'update'])->name('slack-rules.update');
                 Route::get('/email-rules', [EmailRulesController::class, 'edit'])->name('email-rules.edit');
