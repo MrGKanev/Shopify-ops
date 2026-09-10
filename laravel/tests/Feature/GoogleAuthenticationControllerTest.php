@@ -47,17 +47,17 @@ class GoogleAuthenticationControllerTest extends TestCase
     public function test_callback_rejects_unknown_user_disallowed_domain_and_google_id_conflict(): void
     {
         Socialite::fake('google', $this->identity());
-        $this->get(route('auth.google.callback'))->assertRedirect(route('login'))->assertSessionHasErrors('google');
+        $this->get(route('auth.google.callback'))->assertRedirect(route('login'))->assertSessionHasErrors(['google' => 'Your account has not been granted access.']);
         $this->assertDatabaseCount('users', 0);
 
         AppUser::factory()->create(['email' => 'person@example.com']);
         Socialite::fake('google', $this->identity(['hd' => 'outsider.example']));
-        $this->get(route('auth.google.callback'))->assertRedirect(route('login'))->assertSessionHasErrors('google');
+        $this->followingRedirects()->get(route('auth.google.callback'))->assertOk()->assertSeeText('This Google Workspace account is not allowed.');
         $this->assertGuest();
 
         AppUser::query()->where('email', 'person@example.com')->update(['google_id' => 'another-google-id']);
         Socialite::fake('google', $this->identity());
-        $this->get(route('auth.google.callback'))->assertRedirect(route('login'))->assertSessionHasErrors('google');
+        $this->get(route('auth.google.callback'))->assertRedirect(route('login'))->assertSessionHasErrors(['google' => 'Your account has not been granted access.']);
         $this->assertGuest();
     }
 
@@ -73,6 +73,17 @@ class GoogleAuthenticationControllerTest extends TestCase
         Socialite::swap($factory);
         $this->get(route('auth.google.callback'))->assertRedirect(route('login'))->assertSessionHasErrors(['google' => 'Google sign-in could not be completed. Please try again.']);
         $this->assertGuest();
+    }
+
+    public function test_oauth_routes_are_rate_limited_by_ip(): void
+    {
+        Socialite::fake('google');
+
+        for ($attempt = 0; $attempt < 10; $attempt++) {
+            $this->get(route('auth.google.redirect'))->assertRedirect('https://socialite.fake/google/authorize');
+        }
+
+        $this->get(route('auth.google.redirect'))->assertTooManyRequests();
     }
 
     public function test_google_only_mode_hides_and_rejects_password_login(): void

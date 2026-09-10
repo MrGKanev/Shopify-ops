@@ -32,6 +32,16 @@ class WebhookHealthControllerTest extends TestCase
         $this->actingAs($admin)->get('/admin/webhook-health')->assertOk()->assertSeeText('Shopify credentials are incomplete');
     }
 
+    public function test_an_unexpected_response_shape_is_safe(): void
+    {
+        [$admin] = $this->userWithStore(true);
+        $gateway = Mockery::mock(ShopifyAdminGateway::class);
+        $gateway->shouldReceive('get')->once()->andReturn(['unexpected' => true]);
+        $this->app->instance(ShopifyAdminGateway::class, $gateway);
+
+        $this->actingAs($admin)->get('/admin/webhook-health')->assertOk()->assertSeeText('unexpected webhook response');
+    }
+
     public function test_transport_failures_are_safe(): void
     {
         [$admin] = $this->userWithStore(true);

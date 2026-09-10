@@ -37,6 +37,19 @@ class ShopifyMetafieldsTest extends TestCase
         Http::assertSent(fn (Request $request): bool => $request['variables']['id'] === 'gid://shopify/Order/42');
     }
 
+    public function test_order_metafields_follow_the_cursor_across_pages(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['*' => Http::sequence()
+            ->push(['data' => ['order' => ['metafields' => ['pageInfo' => ['hasNextPage' => true, 'endCursor' => 'next'], 'nodes' => [['id' => 'gid://shopify/Metafield/1', 'namespace' => 'custom', 'key' => 'a', 'value' => 'first', 'type' => 'text']]]]]])
+            ->push(['data' => ['order' => ['metafields' => ['pageInfo' => ['hasNextPage' => false, 'endCursor' => null], 'nodes' => [['id' => 'gid://shopify/Metafield/2', 'namespace' => 'custom', 'key' => 'b', 'value' => 'second', 'type' => 'text']]]]]])]);
+
+        $result = $this->client()->orderMetafields($this->store(), [42]);
+
+        $this->assertSame(['first', 'second'], array_column($result['42'], 'value'));
+        Http::assertSent(fn (Request $request): bool => $request['variables']['after'] === 'next');
+    }
+
     private function order(?string $value): array
     {
         return ['legacyResourceId' => '42', 'name' => '#1', 'createdAt' => '2026-01-01', 'email' => 'a@x.com', 'displayFinancialStatus' => 'PAID', 'displayFulfillmentStatus' => 'UNFULFILLED', 'totalPriceSet' => ['shopMoney' => ['amount' => '10', 'currencyCode' => 'USD']], 'metafield' => $value === null ? null : ['value' => $value, 'type' => 'text']];

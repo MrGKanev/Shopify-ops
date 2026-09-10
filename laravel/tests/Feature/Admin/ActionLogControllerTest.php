@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Models\Store;
 use App\Models\User;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Spatie\Activitylog\Models\Activity;
 use Tests\TestCase;
@@ -49,5 +50,12 @@ class ActionLogControllerTest extends TestCase
         activity('administration')->causedBy($admin)->performedOn($store)->event('second')->log('<script>Newest</script>');
 
         $this->actingAs($admin)->get(route('admin.action-log'))->assertOk()->assertSeeText('Action Log')->assertSeeInOrder(['&lt;script&gt;Newest&lt;/script&gt;', 'First action'], false)->assertDontSee('<script>', false);
+    }
+
+    public function test_action_log_retention_is_scheduled(): void
+    {
+        $commands = collect(app(Schedule::class)->events())->pluck('command')->filter()->implode("\n");
+
+        $this->assertStringContainsString('activitylog:clean', $commands);
     }
 }

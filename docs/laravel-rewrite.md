@@ -590,15 +590,15 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 | Suite | Test files | Executed tests | Assertions |
 |---|---:|---:|---:|
 | Stable plain PHP | 115 | 1,528 | 3,659 |
-| Laravel rewrite | 192 | 578 | 2,626 |
+| Laravel rewrite | 192 | 588 | 2,675 |
 
 Текущ file-level disposition на всичките **115 legacy test файла**:
 
 | Статус | Файлове | Дял |
 |---|---:|---:|
-| Fully mapped | 38 | 33.0% |
-| Partial / parity verification | 26 | 22.6% |
-| Pending | 51 | 44.3% |
+| Fully mapped | 47 | 40.9% |
+| Partial / parity verification | 18 | 15.7% |
+| Pending | 50 | 43.5% |
 | **Общо** | **115** | **100%** |
 
 #### Fully mapped legacy test files
@@ -627,18 +627,22 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 - [x] `AddressChangesTest.php` — всичките 4 delay, missing/negative timestamp clamping и current-address output решения са нанесени и разширени с event pagination/filtering, batch hydration, authorization, validation, XSS, safe failure и truncation
 - [x] `GoogleAuthFlowTest.php` — custom flow е заменен със Socialite stateful OAuth; redirect/callback, cancellation, provider failure, verified Workspace domain, existing-user binding, session rotation и Google-only режим са покрити
 - [x] `GoogleAuthTest.php` — custom OIDC/PKCE клиента е заменен със Socialite; config guard, domain parsing, verified `hd` claim, stable Google subject binding и safe errors са покрити, а provider token-и не се пазят
+- [x] `GraphQL/OrderDirectLookupTest.php` — `#`-stripping, normalization, empty-result и batch dedup/keying-with-misses са нанесени; legacy `getOrder`-by-GID е консолидиран в same-query `findByOrderNumber` (по име), а 60s cache pass-through умишлено отпада за fresh reads
+- [x] `JobQueueTest.php` — native `jobs`/`failed_jobs` visibility и retry/forget са пренесени в `JobQueueController`; `RunAuditJob::handle()` store resolution и delegation към `RunAudit` (успех и missing-store failure) са покрити директно, worker execution/failure lifecycle отвъд това остава framework responsibility на Laravel queue
+- [x] `UserActionLogTest.php` — newest-first history, store-change и credential-rotation logging са покрити от DB-backed admin Action Log (Spatie Activitylog); scheduled retention (`activitylog:clean`) вече се проверява директно; legacy JSON→SQLite storage-driver import няма Laravel еквивалент (Action Log-ът е DB-native от началото)
+- [x] `AuthViewsTest.php` — login режими, incomplete-config грешка и escaping са покрити с login feature тестове; dedicated access-denied страницата е заменена от inline session-flashed грешка на login формата, а всяка от трите denial причини вече проверява точния показан текст; per-deployment branding и localhost dev-login bypass умишлено отпадат в rewrite-а
+- [x] `ReporterTest.php` — CLI-era `saveReports`/`printSummary` (local файлове, terminal echo) нямат Laravel еквивалент; `run_audit` резултатът се пази в `audit_snapshots`/`run_logs` и се рендва в Admin UI (`RunAuditControllerTest.php`); spot-check секцията мапва към отделния вече затворен `SearchLookupPageLoaderTest.php`; добавен е липсващият zero-missing "OK" success case
+- [x] `RiskScorerTest.php` — всичките 8 default тегла съвпадат точно с legacy, покрити чрез `OrderRiskScorerTest.php` data provider за всеки сигнал, четирите threshold граници и multi-signal accumulation; `data/risk_weights.json` custom-weight override умишлено не е пренесен (никога не е shipped с `.example` файл, няма management UI)
+- [x] `GraphQL/IdsTest.php` — няма отделен reusable ID клас в Laravel; `orderGid`/`legacyId` са малки private helper-и на `ShopifyAdminClient`/`ShopifyOrderNormalizer`; numeric→GID, GID passthrough (реалният path на `LoadOrderTimeline`), invalid-ID rejection и GID-fallback extraction (line items, transactions без `legacyResourceId`) са покрити чрез реалните order/event normalization тестове
 
 #### Partial или чакащи method-level parity проверка
 
 - [x] `AllViewsSmokeTest.php` — automatic authenticated traversal на всеки parameterless application GET screen
 - [x] `AuthPermissionSnapshotTest.php` — automatic report/admin route-gate completeness и runtime viewer denial
 - [ ] `AuthTest.php` — session/Google auth и login throttling са пренесени; persistent banned-IP files са заменени, а пълната permission method mapping остава
-- [ ] `AuthViewsTest.php` — login е покрит; всички auth view contracts остават
 - [ ] `GraphQL/EventNormalizerTest.php` — event normalization работи; всички 28 legacy test methods чакат mapping
-- [ ] `GraphQL/IdsTest.php` — order/event ID paths са покрити; общият legacy ID contract остава
 - [ ] `GraphQL/OrderComponentNormalizerTest.php` — address/items/fulfillment subset е пренесен
 - [ ] `OrderPolicyPageLoaderTest.php` — Discount Abuse, Same IP, Tag Policy, Duplicate Shipping Addresses и Note Flags paths са пренесени; останалите policy report branches чакат method-level сверка
-- [ ] `GraphQL/OrderDirectLookupTest.php` — direct order lookup работи, но legacy full field set остава
 - [x] `FraudComplianceChecksTest.php` — всичките 22 country mismatch, high-value/no-phone и email checker решения са нанесени; non-ISO country names умишлено се броят като липсващи вместо като false-positive mismatch
 - [x] `GraphQL/OrderEventLookupTest.php` — lookup, cursor pagination, newest-first order и missing order са покрити, включително malformed payload/cursor guards
 - [ ] `GraphQL/OrderNormalizerTest.php` — timeline/risk/order subset е пренесен; всички останали fields остават
@@ -646,14 +650,11 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 - [ ] `OrderInsightPageLoaderTest.php` — compare/timeline subset е пренесен; останалите insights остават
 - [ ] `OrderTimelineTest.php` — workflow е пренесен и разширен; 26 legacy methods чакат explicit mapping
 - [ ] `ProductInventoryPageLoaderTest.php` — Product Completeness, Inventory Oversell, Inventory Aging, Inventory Forecast, Zombie Products и Catalog Quality wiring/error/success paths са пренесени; останалите catalogue workflows остават
-- [ ] `ReporterTest.php` — общият League CSV streaming contract, safe filenames и formula escaping са готови и Address Changes го използва; JSON, summaries, attachments и останалите report schemas остават
-- [ ] `UserActionLogTest.php` — DB-backed admin Action Log, safe allowlisted changes, credential rotation metadata, store-access updates, authorization и scheduled retention са готови; legacy JSON import остава
-- [ ] `RiskScorerTest.php` — осемте сигнала са пренесени; custom weights и 33-method mapping остават
 - [ ] `SearchLookupPageLoaderTest.php` — single lookup/compare/timeline subset е пренесен
-- [ ] `SecurityTest.php` — escaping, validation и tenant isolation са разширени; целият checklist остава
+- [ ] `SecurityTest.php` — escaping, validation, tenant isolation, CSP headers и `oauth` rate limiter (10/min по IP) са покрити; trusted-proxy CIDR trust и HSTS чакат реалния production proxy/TLS setup, session absolute-timeout няма Laravel еквивалент отвъд native `session.lifetime`
 - [ ] `SlackNotifierTest.php` — queue-ready webhook delivery, trusted endpoint validation, safe admin diagnostic и credential-free payload са готови; audit/scan payloads, mentions и retry mapping остават
 - [ ] `ShipStationClientTest.php` — lookup/shipments/pagination/retries subset е пренесен
-- [ ] `ShopifyClientTest.php` — GraphQL HTTP boundary subset е пренесен
+- [ ] `ShopifyClientTest.php` — всички 57 read метода са мапнати (report fetchers през вече затворени редове, generic infra директно тествана, GraphQL no-retry е умишлено tested решение); `updateOrderNote` mutation остава, обвързан с непочнатия push-note action в `ActionsTest.php`
 - [x] `StoresTest.php` — file stores са заменени от DB/pivot/active-store middleware с fallback, switch и isolation tests
 - [x] `ViewSmokeTest.php` — Fraud Risk, Same IP и Disputes empty/populated rendering е покрито от route smoke + feature tests
 
@@ -1031,10 +1032,10 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [x] `GraphQL/CatalogAndFulfillmentTest.php`
 - [x] `GraphQL/CustomDataLookupsTest.php`
 - [x] `GraphQL/CustomerOrderInsightsTest.php`
-- [ ] `GraphQL/DisputeLookupTest.php`
+- [x] `GraphQL/DisputeLookupTest.php` — open-status filter, normalization, cursor pagination and missing-order behavior are covered by the Shopify gateway test.
 - [x] `GraphQL/DuplicateOrderInsightsTest.php`
 - [x] `GraphQL/MetafieldNormalizerTest.php`
-- [ ] `GraphQL/OrderArchiveTest.php`
+- [x] `GraphQL/OrderArchiveTest.php` — inclusive all-status date range, normalized cursor pagination and fresh report reads are covered by the customer LTV gateway.
 - [ ] `GraphQL/OrderAuditsTest.php`
 - [ ] `GraphQL/OrderEventAuditsTest.php`
 - [ ] `GraphQL/OrderFetcherTest.php`
@@ -1046,7 +1047,6 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [ ] `GraphQL/QueryStringsTest.php`
 - [x] `IgnoreListTest.php`
 - [x] `ItemizedFulfillmentReportTest.php`
-- [ ] `JobQueueTest.php`
 - [x] `JsonFileLockTest.php` — replaced by DB constraints/transactions and Laravel cache locks
 - [ ] `LoggerTest.php`
 - [ ] `ManageSettingsPageLoaderTest.php`

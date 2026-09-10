@@ -115,6 +115,16 @@ class ShopifyAdminClientTest extends TestCase
             && str_contains((string) $request['query'], 'transactions(first: 250)'));
     }
 
+    public function test_finds_no_order_returns_an_empty_array(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['*' => Http::response(['data' => ['orders' => ['edges' => []]]])]);
+
+        $orders = $this->client()->findByOrderNumber($this->store(), '99999999');
+
+        $this->assertSame([], $orders);
+    }
+
     public function test_empty_batch_returns_without_an_external_request(): void
     {
         Http::preventStrayRequests();
@@ -440,6 +450,19 @@ class ShopifyAdminClientTest extends TestCase
             && $request['variables'] === ['id' => 'gid://shopify/Order/123', 'after' => null]
             && str_contains((string) $request['query'], 'events(first: 250, sortKey: CREATED_AT, reverse: true, after: $after)')
             && str_contains((string) $request['query'], '... on BasicEvent'));
+    }
+
+    public function test_accepts_an_already_full_graphql_order_id_unchanged(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['*' => Http::response(['data' => ['order' => ['events' => [
+            'pageInfo' => ['hasNextPage' => false, 'endCursor' => null],
+            'edges' => [],
+        ]]]])]);
+
+        $this->client()->getOrderEvents($this->store(), 'gid://shopify/Order/123');
+
+        Http::assertSent(fn (Request $request): bool => $request['variables']['id'] === 'gid://shopify/Order/123');
     }
 
     public function test_paginates_order_events_and_preserves_newest_first_api_order(): void
