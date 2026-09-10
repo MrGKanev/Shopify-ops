@@ -1,6 +1,6 @@
 # Laravel rewrite — legacy test audit
 
-Последно обновяване: **2026-09-10** след Settings overview slice-а.
+Последно обновяване: **2026-09-10** след route authorization, HTTP auth и multi-store parity audit-а.
 
 Този документ е отделният checklist за тестова parity. Feature статусът се следи
 в [Laravel rewrite плана](laravel-rewrite.md), а тук се затваря всеки legacy test
@@ -11,13 +11,13 @@ contract има Laravel тест, по-силен еквивалент или з
 
 | Статус | Файлове | Дял от 115 |
 |---|---:|---:|
-| Готови | 52 | 45.2% |
-| Частично покрити | 26 | 22.6% |
+| Готови | 57 | 49.6% |
+| Частично покрити | 21 | 18.3% |
 | Непочнати | 37 | 32.2% |
-| **Оставащи за одит** | **63** | **54.8%** |
+| **Оставащи за одит** | **58** | **50.4%** |
 
 Legacy baseline: **115 файла · 1,528 теста · 3,659 assertions**. Laravel
-baseline след последния slice: **571 теста · 2,609 assertions**. Броят assertions
+baseline след последния slice: **575 теста · 2,622 assertions**. Броят assertions
 е ориентир; критерият е поведенческо покритие.
 
 За всеки checkbox проверяваме business decisions, boundary интеграцията,
@@ -30,8 +30,8 @@ malformed payloads и atomic failure. Не копираме тест, който
 
 | Готово | Legacy файл | Тестове | Какво проверява | Какво остава |
 |---|---|---:|---|---|
-| [ ] | `AllViewsSmokeTest.php` | 1 | Всеки регистриран legacy екран се отваря | Добавяне на всеки оставащ Laravel екран към route/render smoke покритието |
-| [ ] | `AuthPermissionSnapshotTest.php` | 2 | Точната action → permission матрица и пълнотата ѝ | Сверка на всички actions срещу Laravel policies/routes |
+| [x] | `AllViewsSmokeTest.php` | 1 | Replaced by automatic traversal of every parameterless GET screen backed by an application controller, with authenticated admin/store context and safe webhook boundary |
+| [x] | `AuthPermissionSnapshotTest.php` | 2 | Replaced by automatic completeness checks for every report/admin route plus a runtime viewer-denial assertion; this also closed missing POST/export report gates |
 | [ ] | `AuthTest.php` | 40 | Пароли, lockout/IP ban, users, CSRF и роли | Lockout/banned-IP и пълната permission матрица |
 | [ ] | `AuthViewsTest.php` | 8 | Login режими, конфигурационни грешки, escaping и access denied | Branding и dedicated access-denied cases |
 | [ ] | `GraphQL/EventNormalizerTest.php` | 28 | Нормализация на всички Shopify order event типове | Поле-по-поле сверка на останалите event variants |
@@ -41,7 +41,7 @@ malformed payloads и atomic failure. Не копираме тест, който
 | [ ] | `FraudComplianceChecksTest.php` | 22 | Country mismatch, high value/no phone и email checker rules | Остава method-level финална сверка на общия файл след трите готови отчета |
 | [ ] | `GraphQL/OrderEventLookupTest.php` | 3 | Event lookup, pagination и missing order | Exact normalized event mapping |
 | [ ] | `GraphQL/OrderNormalizerTest.php` | 39 | Всички основни и optional order fields | Tax, refunds, discounts, attributes, journey/source и support fields |
-| [ ] | `HttpAuthEndpointTest.php` | 1 | Endpoint auth contract | Пълна route/method/session еквивалентност |
+| [x] | `HttpAuthEndpointTest.php` | 1 | Laravel HTTP feature tests cover login/logout, Google redirect/callback failures, session regeneration, throttling, CSP and authenticated route boundaries |
 | [ ] | `JobQueueTest.php` | 7 | Native pending/failed visibility, retry/forget and RunAudit enqueue | Worker execution and completion lifecycle |
 | [ ] | `OrderInsightPageLoaderTest.php` | 12 | Compare, timeline и допълнителни order insights | Непренесените insight branches и failure states |
 | [ ] | `OrderTimelineTest.php` | 26 | Timeline events, ordering, labels и risk signals | Explicit mapping на всички 26 метода |
@@ -54,8 +54,8 @@ malformed payloads и atomic failure. Не копираме тест, който
 | [ ] | `SlackNotifierTest.php` | 19 | Slack payloads, mentions, delivery и safe failure | Queue-ready webhook channel, admin-only delivery diagnostic, trusted endpoint validation и credential-free test payload са готови; audit/scan payloads, mentions и retry mapping остават |
 | [ ] | `ShipStationClientTest.php` | 23 | Auth, lookup, retries, create, active/awaiting/shipment fetch и cache | Create order, active/voided/date fetch, cache/checkpoint semantics |
 | [ ] | `ShopifyClientTest.php` | 58 | Shopify queries, mutations, retries, cache и всички report fetchers | Method-level mapping за непреместените APIs и update mutation |
-| [ ] | `StoresTest.php` | 7 | Multi-store file config и session selection | Accepted replacement mapping към DB stores и active-store middleware |
-| [ ] | `ViewSmokeTest.php` | 6 | Populated/empty report view states | Оставащите risk, same-IP и disputes views |
+| [x] | `StoresTest.php` | 7 | File-backed stores are replaced by DB stores, user pivots and active-store middleware; first-store fallback, switching, inaccessible-store rejection and session persistence are covered |
+| [x] | `ViewSmokeTest.php` | 6 | Fraud Risk, Same IP and Disputes empty/populated rendering is covered by the automatic GET smoke test plus their feature success, escaping and safe-failure tests |
 
 ## Непочнати — application и infrastructure
 

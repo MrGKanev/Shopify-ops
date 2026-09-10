@@ -418,8 +418,8 @@ Matrix-ът е release control документ, а не само checklist. М�
 
 | Статус | Страници/инструменти | Дял от 72 |
 |---|---:|---:|
-| Done | 69 | 95.8% |
-| Partial | 1 | 1.4% |
+| Done | 70 | 97.2% |
+| Partial | 0 | 0.0% |
 | Todo | 0 | 0.0% |
 | Replaced | 2 | 2.8% |
 | **Общо** | **72** | **100%** |
@@ -480,7 +480,7 @@ workflow от наличния framework scaffold.
 
 | ID | Legacy feature | Статус | Бележка |
 |---|---|---|---|
-| `dashboard` | Dashboard | Partial | Laravel показва store и migration status; legacy audit stats/actions липсват. |
+| `dashboard` | Dashboard | Done | Store-scoped latest/previous audit trend, all-time missing totals, push/ignored stats, latest missing-order action queue and quick report actions. |
 | `hub-audit` | Audit hub | Replaced | Заменен от постоянна sidebar навигация и директни routes. |
 | `reports` | Reports | Done | Store-scoped daily DB snapshots from Run Audit, same-day overwrite, history/detail views and formula-safe CSV download. |
 | `run` | Run Audit | Done | Validated period, matching, legacy exclusions/ignore list including no-shipping/on-hold, persisted summary, safe synchronous results and queued execution. |
@@ -529,7 +529,7 @@ workflow от наличния framework scaffold.
 | `sameip` | Same IP, Different Emails | Done | Paid orders grouped by exact client IP, case-insensitive distinct-email deduplication, detailed orders and deterministic risk sorting. |
 | `disputes` | Chargebacks / Disputes | Done | Open actionable disputes, evidence deadlines, urgency sorting and bounded pagination. |
 
-Audit subtotal: **Done 46 · Partial 1 · Todo 0 · Replaced 1**.
+Audit subtotal: **Done 47 · Partial 0 · Todo 0 · Replaced 1**.
 
 ### Search & Lookup — 12
 
@@ -590,7 +590,7 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 | Suite | Test files | Executed tests | Assertions |
 |---|---:|---:|---:|
 | Stable plain PHP | 115 | 1,528 | 3,659 |
-| Laravel rewrite | 188 | 571 | 2,609 |
+| Laravel rewrite | 190 | 575 | 2,622 |
 
 Текущ file-level disposition на всичките **115 legacy test файла**:
 
@@ -630,8 +630,8 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 
 #### Partial или чакащи method-level parity проверка
 
-- [ ] `AllViewsSmokeTest.php` — новите views имат feature rendering tests, но всички legacy views не са пренесени
-- [ ] `AuthPermissionSnapshotTest.php` — Laravel roles/policies са покрити; пълната legacy permission matrix остава
+- [x] `AllViewsSmokeTest.php` — automatic authenticated traversal на всеки parameterless application GET screen
+- [x] `AuthPermissionSnapshotTest.php` — automatic report/admin route-gate completeness и runtime viewer denial
 - [ ] `AuthTest.php` — session/Google auth и login throttling са пренесени; persistent banned-IP files са заменени, а пълната permission method mapping остава
 - [ ] `AuthViewsTest.php` — login е покрит; всички auth view contracts остават
 - [ ] `GraphQL/EventNormalizerTest.php` — event normalization работи; всички 28 legacy test methods чакат mapping
@@ -642,7 +642,7 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 - [ ] `FraudComplianceChecksTest.php` — High-Value No Phone, Country Mismatch и Email Checker матриците са пренесени; останалите fraud/compliance checks остават
 - [ ] `GraphQL/OrderEventLookupTest.php` — pagination contract е пренесен; method-level mapping остава
 - [ ] `GraphQL/OrderNormalizerTest.php` — timeline/risk/order subset е пренесен; всички останали fields остават
-- [ ] `HttpAuthEndpointTest.php` — login/logout са покрити; целият legacy endpoint contract остава
+- [x] `HttpAuthEndpointTest.php` — login/logout, Google boundary failures, session rotation, throttling и CSP са покрити с HTTP feature tests
 - [ ] `OrderInsightPageLoaderTest.php` — compare/timeline subset е пренесен; останалите insights остават
 - [ ] `OrderTimelineTest.php` — workflow е пренесен и разширен; 26 legacy methods чакат explicit mapping
 - [ ] `ProductInventoryPageLoaderTest.php` — Product Completeness, Inventory Oversell, Inventory Aging, Inventory Forecast, Zombie Products и Catalog Quality wiring/error/success paths са пренесени; останалите catalogue workflows остават
@@ -654,8 +654,8 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 - [ ] `SlackNotifierTest.php` — queue-ready webhook delivery, trusted endpoint validation, safe admin diagnostic и credential-free payload са готови; audit/scan payloads, mentions и retry mapping остават
 - [ ] `ShipStationClientTest.php` — lookup/shipments/pagination/retries subset е пренесен
 - [ ] `ShopifyClientTest.php` — GraphQL HTTP boundary subset е пренесен
-- [ ] `StoresTest.php` — Laravel stores са нов DB модел; legacy multi-store behavior се сверява
-- [ ] `ViewSmokeTest.php` — мигрираните screens се render-ват; останалите screens липсват
+- [x] `StoresTest.php` — file stores са заменени от DB/pivot/active-store middleware с fallback, switch и isolation tests
+- [x] `ViewSmokeTest.php` — Fraud Risk, Same IP и Disputes empty/populated rendering е покрито от route smoke + feature tests
 
 SKU Duplicates traceability (`ProductCatalogueChecksTest.php` →
 `laravel/tests/Unit/Domain/Reports/SkuDuplicatesAnalyzerTest.php`):
