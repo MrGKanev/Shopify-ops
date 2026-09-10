@@ -418,7 +418,7 @@ Matrix-ът е release control документ, а не само checklist. М�
 
 | Статус | Страници/инструменти | Дял от 72 |
 |---|---:|---:|
-| Done | 64 | 88.9% |
+| Done | 65 | 90.3% |
 | Partial | 3 | 4.2% |
 | Todo | 3 | 4.2% |
 | Replaced | 2 | 2.8% |
@@ -569,12 +569,12 @@ Manage subtotal: **Done 6 · Partial 0 · Todo 0 · Replaced 0**.
 |---|---|---|---|
 | `settings` | Settings | Partial | Users/stores/credentials са готови; connection tests, banned IP и notification overview липсват. |
 | `slackrules` | Slack Rules | Done | Store-scoped audit/scan enable and thresholds, all-clear behavior, normalized mentions and queueable delivery through the shared run recorder. |
-| `emailrules` | Email Rules | Todo | Per-tool email rules и digest settings. |
+| `emailrules` | Email Rules | Done | Store-scoped per-tool off/immediate/digest modes, thresholds, zero-result control, validated recipients, queueable delivery and scheduled daily digest. |
 | `apihealth` | API Health | Partial | Admin-only Shopify shop/scopes, requested/returned API version mismatch и ShipStation auth checks са готови; flow history остава. |
 | `configcheck` | Config Check | Todo | Policy/config validation трябва да бъде заменено с Laravel config contracts. |
 | `webhookhealth` | Webhook Health | Todo | Webhook delivery/recency diagnostics. |
 
-Settings subtotal: **Done 1 · Partial 2 · Todo 3 · Replaced 0**.
+Settings subtotal: **Done 2 · Partial 2 · Todo 2 · Replaced 0**.
 
 ### Test migration tracker
 
@@ -590,7 +590,7 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 | Suite | Test files | Executed tests | Assertions |
 |---|---:|---:|---:|
 | Stable plain PHP | 115 | 1,528 | 3,659 |
-| Laravel rewrite | 183 | 560 | 2,560 |
+| Laravel rewrite | 185 | 563 | 2,570 |
 
 Текущ file-level disposition на всичките **115 legacy test файла**:
 

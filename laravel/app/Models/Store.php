@@ -21,6 +21,7 @@ use Spatie\Activitylog\Support\LogOptions;
     'shipstation_api_secret',
     'store_number',
     'slack_rules',
+    'email_rules',
 ])]
 #[Hidden(['shopify_access_token', 'shipstation_api_key', 'shipstation_api_secret'])]
 class Store extends Model
@@ -79,6 +80,20 @@ class Store extends Model
         return ['audit_enabled' => (bool) $rules['audit_enabled'], 'audit_min_missing' => max(0, (int) $rules['audit_min_missing']), 'include_zero_audit' => (bool) $rules['include_zero_audit'], 'scan_enabled' => (bool) $rules['scan_enabled'], 'scan_min_rows' => max(1, (int) $rules['scan_min_rows']), 'mentions' => (string) $rules['mentions']];
     }
 
+    /** @return array<string, array{mode:string,threshold:int,include_zero:bool,email:string}> */
+    public function resolvedEmailRules(): array
+    {
+        $resolved = [];
+        foreach ($this->email_rules ?? [] as $tool => $rule) {
+            if (! is_string($tool) || ! is_array($rule) || ! in_array($rule['mode'] ?? null, ['off', 'immediate', 'digest'], true)) {
+                continue;
+            }
+            $resolved[$tool] = ['mode' => $rule['mode'], 'threshold' => max($tool === 'run_audit' ? 0 : 1, (int) ($rule['threshold'] ?? 1)), 'include_zero' => (bool) ($rule['include_zero'] ?? false), 'email' => (string) ($rule['email'] ?? '')];
+        }
+
+        return $resolved;
+    }
+
     /**
      * @return array<string, string>
      */
@@ -89,6 +104,7 @@ class Store extends Model
             'shipstation_api_key' => 'encrypted',
             'shipstation_api_secret' => 'encrypted',
             'slack_rules' => 'array',
+            'email_rules' => 'array',
         ];
     }
 }

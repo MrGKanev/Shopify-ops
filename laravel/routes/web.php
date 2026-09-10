@@ -3,6 +3,7 @@
 use App\Http\Controllers\ActiveStoreController;
 use App\Http\Controllers\Admin\ActionLogController;
 use App\Http\Controllers\Admin\ApiHealthController;
+use App\Http\Controllers\Admin\EmailRulesController;
 use App\Http\Controllers\Admin\SlackRulesController;
 use App\Http\Controllers\Admin\StoreController;
 use App\Http\Controllers\Admin\UserController;
@@ -251,6 +252,8 @@ Route::middleware('auth')->group(function (): void {
                 Route::get('/api-health', [ApiHealthController::class, 'show'])->name('api-health');
                 Route::get('/slack-rules', [SlackRulesController::class, 'edit'])->name('slack-rules.edit');
                 Route::put('/slack-rules', [SlackRulesController::class, 'update'])->name('slack-rules.update');
+                Route::get('/email-rules', [EmailRulesController::class, 'edit'])->name('email-rules.edit');
+                Route::put('/email-rules', [EmailRulesController::class, 'update'])->name('email-rules.update');
                 Route::get('/action-log', ActionLogController::class)->name('action-log');
                 Route::get('/health', HealthCheckResultsController::class)->name('health');
                 Route::post('/api-health', [ApiHealthController::class, 'check'])->middleware('throttle:api-health')->name('api-health.check');
