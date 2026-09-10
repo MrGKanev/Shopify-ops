@@ -418,8 +418,8 @@ Matrix-ът е release control документ, а не само checklist. М�
 
 | Статус | Страници/инструменти | Дял от 72 |
 |---|---:|---:|
-| Done | 68 | 94.4% |
-| Partial | 2 | 2.8% |
+| Done | 69 | 95.8% |
+| Partial | 1 | 1.4% |
 | Todo | 0 | 0.0% |
 | Replaced | 2 | 2.8% |
 | **Общо** | **72** | **100%** |
@@ -567,14 +567,14 @@ Manage subtotal: **Done 6 · Partial 0 · Todo 0 · Replaced 0**.
 
 | ID | Legacy feature | Статус | Бележка |
 |---|---|---|---|
-| `settings` | Settings | Partial | Users/stores/credentials са готови; connection tests, banned IP и notification overview липсват. |
+| `settings` | Settings | Done | Admin overview за active-store connections, credential management и notification channels; API Health покрива connection tests, а Laravel throttling заменя persistent IP bans. |
 | `slackrules` | Slack Rules | Done | Store-scoped audit/scan enable and thresholds, all-clear behavior, normalized mentions and queueable delivery through the shared run recorder. |
 | `emailrules` | Email Rules | Done | Store-scoped per-tool off/immediate/digest modes, thresholds, zero-result control, validated recipients, queueable delivery and scheduled daily digest. |
 | `apihealth` | API Health | Done | Admin-only Shopify shop/scopes, requested/returned API version mismatch, ShipStation auth и store-scoped persisted report flow history. |
 | `configcheck` | Config Check | Done | Admin-only runtime contracts за application/security, active-store credentials, order types и tag policy без показване на secrets. |
 | `webhookhealth` | Webhook Health | Done | Admin-only live Shopify registration inventory, safe credential/transport failures, HTTPS/API-version diagnostics and registration dates; Shopify remains source of truth for delivery logs. |
 
-Settings subtotal: **Done 5 · Partial 1 · Todo 0 · Replaced 0**.
+Settings subtotal: **Done 6 · Partial 0 · Todo 0 · Replaced 0**.
 
 ### Test migration tracker
 
@@ -590,7 +590,7 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 | Suite | Test files | Executed tests | Assertions |
 |---|---:|---:|---:|
 | Stable plain PHP | 115 | 1,528 | 3,659 |
-| Laravel rewrite | 187 | 569 | 2,601 |
+| Laravel rewrite | 188 | 571 | 2,609 |
 
 Текущ file-level disposition на всичките **115 legacy test файла**:
 
@@ -632,7 +632,7 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 
 - [ ] `AllViewsSmokeTest.php` — новите views имат feature rendering tests, но всички legacy views не са пренесени
 - [ ] `AuthPermissionSnapshotTest.php` — Laravel roles/policies са покрити; пълната legacy permission matrix остава
-- [ ] `AuthTest.php` — session auth е пренесен; legacy Google/banned-IP/permission branches остават
+- [ ] `AuthTest.php` — session/Google auth и login throttling са пренесени; persistent banned-IP files са заменени, а пълната permission method mapping остава
 - [ ] `AuthViewsTest.php` — login е покрит; всички auth view contracts остават
 - [ ] `GraphQL/EventNormalizerTest.php` — event normalization работи; всички 28 legacy test methods чакат mapping
 - [ ] `GraphQL/IdsTest.php` — order/event ID paths са покрити; общият legacy ID contract остава

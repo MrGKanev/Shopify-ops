@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\ActionLogController;
 use App\Http\Controllers\Admin\ApiHealthController;
 use App\Http\Controllers\Admin\ConfigCheckController;
 use App\Http\Controllers\Admin\EmailRulesController;
+use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SlackRulesController;
 use App\Http\Controllers\Admin\StoreController;
 use App\Http\Controllers\Admin\UserController;
@@ -252,6 +253,7 @@ Route::middleware('auth')->group(function (): void {
             ->middleware('can:manage-administration')
             ->group(function (): void {
                 Route::get('/api-health', [ApiHealthController::class, 'show'])->name('api-health');
+                Route::get('/settings', SettingsController::class)->name('settings');
                 Route::get('/config-check', ConfigCheckController::class)->name('config-check');
                 Route::get('/webhook-health', WebhookHealthController::class)->name('webhook-health');
                 Route::get('/slack-rules', [SlackRulesController::class, 'edit'])->name('slack-rules.edit');

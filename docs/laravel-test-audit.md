@@ -1,6 +1,6 @@
 # Laravel rewrite — legacy test audit
 
-Последно обновяване: **2026-09-10** след API Health flow-history slice-а.
+Последно обновяване: **2026-09-10** след Settings overview slice-а.
 
 Този документ е отделният checklist за тестова parity. Feature статусът се следи
 в [Laravel rewrite плана](laravel-rewrite.md), а тук се затваря всеки legacy test
@@ -17,7 +17,7 @@ contract има Laravel тест, по-силен еквивалент или з
 | **Оставащи за одит** | **63** | **54.8%** |
 
 Legacy baseline: **115 файла · 1,528 теста · 3,659 assertions**. Laravel
-baseline след последния slice: **569 теста · 2,601 assertions**. Броят assertions
+baseline след последния slice: **571 теста · 2,609 assertions**. Броят assertions
 е ориентир; критерият е поведенческо покритие.
 
 За всеки checkbox проверяваме business decisions, boundary интеграцията,
