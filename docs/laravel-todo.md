@@ -40,6 +40,15 @@
       ([`docs/laravel-uat-cutover-checklist.md`](laravel-uat-cutover-checklist.md)),
       но двете реални production-like репетиции не са насрочени/изпълнени.
 
+## Ново от redis/Horizon решението
+
+- [ ] **`/jobs` "Pending" таблицата чете грешен източник за redis** —
+      `JobQueueController::index()` пита `DB::table('jobs')`, което е
+      празно при `QUEUE_CONNECTION=redis` (Horizon пази pending jobs в
+      Redis, не в тази таблица). Нужно е решение: линк към
+      `/admin/horizon` вместо тази таблица, или Horizon-aware pending
+      count през `Horizon`-ските contracts — продуктов/UX избор, не мой.
+
 ## Doc cleanup
 
 - [ ] **`docs/laravel-rewrite.md` reconciliation** — горният summary чеклист
