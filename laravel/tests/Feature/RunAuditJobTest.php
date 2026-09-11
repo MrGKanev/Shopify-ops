@@ -70,4 +70,13 @@ class RunAuditJobTest extends TestCase
 
         Queue::assertPushed(RunAuditJob::class, 2);
     }
+
+    public function test_it_declares_an_explicit_timeout_retry_count_and_backoff(): void
+    {
+        $job = new RunAuditJob(1, '2026-06-01', '2026-06-30');
+
+        $this->assertSame(300, $job->timeout);
+        $this->assertSame(3, $job->tries);
+        $this->assertSame(30, $job->backoff);
+    }
 }

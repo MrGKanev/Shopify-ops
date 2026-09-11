@@ -12,6 +12,12 @@ class RunAuditJob implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
+    public int $tries = 3;
+
+    public int $timeout = 300;
+
+    public int $backoff = 30;
+
     public function __construct(public int $storeId, public string $startDate, public string $endDate) {}
 
     public function handle(RunAudit $audit): void
