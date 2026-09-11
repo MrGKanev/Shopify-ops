@@ -121,8 +121,11 @@ commit-а, не като отделна ръчна операция извън g
 
 ## Все още отворено
 
-- Production observability стек (log destination/retention, dashboards,
-  alert ownership) — `/metrics` вече съществува, но scrape/dashboard
-  infrastructure-ът (Prometheus/Grafana или еквивалент) не е избран.
-- UAT и cutover repetition — виж release gate-а в
-  [platform audit](laravel-platform-audit.md).
+- Production observability активиране — Sentry, Pulse, Horizon dashboards и
+  `/metrics` вече са инсталирани и wired (виж [platform
+  audit](laravel-platform-audit.md) → "Production observability"), но
+  `SENTRY_LARAVEL_DSN`, изборът дали `QUEUE_CONNECTION=redis` за Horizon, и
+  кой получава `/metrics` scrape/alerting остават съзнателно отложени
+  production решения.
+- UAT и cutover repetition — виж [UAT и cutover checklist](laravel-uat-cutover-checklist.md)
+  и release gate-а в [platform audit](laravel-platform-audit.md).
