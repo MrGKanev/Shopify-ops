@@ -93,6 +93,36 @@ class ShopifyAdminClient implements ShopifyAdminGateway
                       recommendation
                       assessments { riskLevel }
                     }
+                    customAttributes { key value }
+                    discountApplications(first: 250) {
+                      nodes {
+                        __typename
+                        allocationMethod
+                        targetSelection
+                        targetType
+                        value {
+                          __typename
+                          ... on MoneyV2 { amount currencyCode }
+                          ... on PricingPercentageValue { percentage }
+                        }
+                        ... on DiscountCodeApplication { code }
+                      }
+                    }
+                    test
+                    sourceName
+                    app { name }
+                    currentTotalPriceSet { shopMoney { amount currencyCode } }
+                    edited
+                    paymentGatewayNames
+                    poNumber
+                    confirmationNumber
+                    statusPageUrl
+                    customerLocale
+                    customerJourneySummary {
+                      daysToConversion
+                      firstVisit { landingPage referrerUrl source utmParameters { source medium campaign } }
+                      lastVisit { landingPage referrerUrl source }
+                    }
                     shippingAddress {
                       firstName
                       lastName

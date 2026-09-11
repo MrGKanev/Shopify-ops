@@ -52,6 +52,42 @@
                                 <span>Total: {{ $order['total_price'] ?? '0.00' }}</span>
                                 <span>Fulfillment: {{ $order['fulfillment_status'] ?? 'unfulfilled' }}</span>
                             </div>
+
+                            @if (array_filter([$order['source_name'] ?? null, $order['app_name'] ?? null, $order['discount_codes'] ?? [], $order['note_attributes'] ?? [], $order['po_number'] ?? null, $order['confirmation_number'] ?? null, $order['customer_journey'] ?? null]) !== [])
+                                <details class="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-800">
+                                    <summary class="cursor-pointer font-medium text-slate-600 dark:text-slate-300">Details</summary>
+                                    <dl class="mt-3 grid gap-2 sm:grid-cols-2">
+                                        @if (($order['source_name'] ?? '') !== '')
+                                            <div><dt class="text-slate-500 dark:text-slate-400">Channel</dt><dd>{{ $order['source_name'] }}@if(($order['app_name'] ?? '') !== '') via {{ $order['app_name'] }}@endif</dd></div>
+                                        @endif
+                                        @if (($order['customer_journey']['first_visit']['source'] ?? '') !== '')
+                                            <div><dt class="text-slate-500 dark:text-slate-400">Attribution</dt><dd>{{ $order['customer_journey']['first_visit']['source'] }}@if(($order['customer_journey']['first_visit']['utm']['campaign'] ?? '') !== '') · {{ $order['customer_journey']['first_visit']['utm']['campaign'] }}@endif</dd></div>
+                                        @endif
+                                        @if (($order['po_number'] ?? '') !== '')
+                                            <div><dt class="text-slate-500 dark:text-slate-400">PO number</dt><dd>{{ $order['po_number'] }}</dd></div>
+                                        @endif
+                                        @if (($order['confirmation_number'] ?? '') !== '')
+                                            <div><dt class="text-slate-500 dark:text-slate-400">Confirmation number</dt><dd>{{ $order['confirmation_number'] }}</dd></div>
+                                        @endif
+                                    </dl>
+                                    @if (($order['discount_codes'] ?? []) !== [])
+                                        <div class="mt-3">
+                                            <p class="font-medium text-slate-600 dark:text-slate-300">Discount codes</p>
+                                            @foreach ($order['discount_codes'] as $discount)
+                                                <p class="text-slate-600 dark:text-slate-300">{{ $discount['code'] }} — {{ $discount['type'] === 'percentage' ? $discount['amount'].'%' : '$'.$discount['amount'] }}</p>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                    @if (($order['note_attributes'] ?? []) !== [])
+                                        <div class="mt-3">
+                                            <p class="font-medium text-slate-600 dark:text-slate-300">Custom attributes</p>
+                                            @foreach ($order['note_attributes'] as $attribute)
+                                                <p class="text-slate-600 dark:text-slate-300">{{ $attribute['key'] }}: {{ $attribute['value'] }}</p>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </details>
+                            @endif
                         </article>
                     @empty
                         <div class="rounded-xl border border-slate-200 bg-white p-5 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">No Shopify order found.</div>

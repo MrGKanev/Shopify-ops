@@ -1,6 +1,6 @@
 # Laravel rewrite — legacy test audit
 
-Последно обновяване: **2026-09-11**. Пълната история е в git log-а на `docs/`. **114/115 файла затворени (99%)** — единственият оставащ ред е `GraphQL/OrderNormalizerTest.php`, и той не е test gap, а флагнат product-decision: легаси-полета (customer journey/attribution, discount codes, custom attributes, PO number и др.) от `Actions::orderDetail()` — самò untested в легасито — нямат Laravel consumer, защото Order Lookup страницата умишлено показва по-малко поле. Виж реда му за пълния context.
+Последно обновяване: **2026-09-11**. **115/115 файла затворени (100%)**. Последният ред, `GraphQL/OrderNormalizerTest.php`, беше флагнат product-decision (легаси order-detail полета без Laravel consumer); потребителят избра да ги построи — виж реда му за пълния context. Пълната история на одита е в git log-а на `docs/`.
 
 Този документ е отделният checklist за тестова parity. Feature статусът се следи
 в [Laravel rewrite плана](laravel-rewrite.md), а тук се затваря всеки legacy test
@@ -11,13 +11,13 @@ contract има Laravel тест, по-силен еквивалент или з
 
 | Статус | Файлове | Дял от 115 |
 |---|---:|---:|
-| Готови | 114 | 99.1% |
-| Частично покрити | 1 | 0.9% |
+| Готови | 115 | 100.0% |
+| Частично покрити | 0 | 0.0% |
 | Непочнати | 0 | 0.0% |
-| **Оставащи за одит** | **1** | **0.9%** |
+| **Оставащи за одит** | **0** | **0.0%** |
 
 Legacy baseline: **115 файла · 1,528 теста · 3,659 assertions**. Laravel
-baseline след последния slice: **675 теста · 2,867 assertions**. Броят assertions
+baseline след последния slice: **686 теста · 2,908 assertions**. Броят assertions
 е ориентир; критерият е поведенческо покритие.
 
 За всеки checkbox проверяваме business decisions, boundary интеграцията,
@@ -34,7 +34,6 @@ malformed payloads и atomic failure. Не копираме тест, който
 | [x] | `AuthPermissionSnapshotTest.php` | 2 | Replaced by automatic completeness checks for every report/admin route plus a runtime viewer-denial assertion; this also closed missing POST/export report gates |
 | [x] | `FraudComplianceChecksTest.php` | 22 | Country mismatch, high value/no phone и email checker rules са покрити с analyzer unit и HTTP feature тестове; non-ISO country names умишлено се третират като липсващи вместо да създават false positives |
 | [x] | `GraphQL/OrderEventLookupTest.php` | 3 | Shopify client integration tests покриват normalized event lookup, cursor pagination/newest-first order и missing order; добавени са malformed shape, cursor и invalid-ID guards |
-| [ ] | `GraphQL/OrderNormalizerTest.php` | 39 | Core order fields (id, dates, financial/fulfillment status, price) are covered 1:1 in `ShopifyOrderNormalizer`; `OrderInsightPageLoaderTest.php`/`OrderTimelineTest.php` closed below — read the full legacy source, neither actually consumes any of the fields listed as remaining | **Corrected a wrong guess from an earlier pass**: these fields don't tie to compare/timeline at all. Confirmed absent from the shared normalizer and unused anywhere in the Laravel app (`grep`-verified): `total_tax`, `customer_tax_exempt`/`customer_email_consent`/`customer_sms_consent`, `discount_codes`, `note_attributes`, `client_ip`, `test`, `customer_journey`, `source_name`, `app_name`, `current_total_price`, `edited`, `payment_gateway_names`, `po_number`, `confirmation_number`, `status_page_url`, `customer_locale`. Tax/consent/discount/client_ip are legitimately handled inline by their own report-specific candidate methods (no-shared-normalizer pattern). The remaining attribution/journey/PO/support fields trace to legacy's `Actions::orderDetail()` — a raw order-JSON AJAX dump action that was itself **never covered by a legacy test** (no extracted pure function, still uses `exit()`, explicitly excluded by `ActionsTest.php`'s own docblock) — and to `GraphQL/OrderDirectLookupTest.php`, already closed. Laravel's Order Lookup page shows a deliberately smaller field set by design. Building the richer fields needs a product decision on scope (which fields, what UI) — flagged for the user, not built silently |
 | [x] | `HttpAuthEndpointTest.php` | 1 | Laravel HTTP feature tests cover login/logout, Google redirect/callback failures, session regeneration, throttling, CSP and authenticated route boundaries |
 | [x] | `StoresTest.php` | 7 | File-backed stores are replaced by DB stores, user pivots and active-store middleware; first-store fallback, switching, inaccessible-store rejection and session persistence are covered |
 | [x] | `ViewSmokeTest.php` | 6 | Fraud Risk, Same IP and Disputes empty/populated rendering is covered by the automatic GET smoke test plus their feature success, escaping and safe-failure tests |
@@ -125,6 +124,7 @@ malformed payloads и atomic failure. Не копираме тест, който
 - [x] `FulfillmentIssuePageLoaderTest.php` — all 9 dispatch branches (On-Hold Stall, No Tracking, Post-Ship Address Change, SS Shipped/Unfulfilled, Item Mismatch, SLA Breaches, Shipment Aging, Carrier Performance, Shipping Margin) map to already-closed rows or their own tested controller (`NoTrackingControllerTest.php`, `ShipmentAgingControllerTest.php`, verified present).
 - [x] `OrderAnomalyPageLoaderTest.php` — all 7 dispatch branches (Address Scanner, Refunds Tracker, Duplicate Detector, Orphan Detector, Repeat Refunds, Voided Shipments, Address Changes) map to already-closed rows.
 - [x] `SimpleScanPageLoaderTest.php` — all 8 dispatch branches (Tag Audit, Email Checker, High-Value No Phone, Country Mismatch, Partial Fulfillment, Return/RMA Tracker, Returned Items, Tax Audit) map to already-closed rows, including the previously-flagged "returns" branch (`ReturnRmaTrackerTest.php`, closed) and email wiring (`EmailCheckControllerTest.php`, verified present).
+- [x] `GraphQL/OrderNormalizerTest.php` — the last audit row. User chose to build the richer field set rather than accept the leaner default. Added `discount_codes` (mirrors legacy's `normalizeDiscountCode()` — `DiscountCodeApplication` typename filter, `MoneyV2`/`PricingPercentageValue` value-type mapping), `note_attributes`, `customer_journey` (`days_to_conversion`/`first_visit`/`last_visit` with UTM, including legacy's asymmetry of only querying `utmParameters` on `firstVisit`), `source_name`, `app_name`, `current_total_price`, `edited`, `test`, `payment_gateway_names`, `po_number`, `confirmation_number`, `status_page_url`, `customer_locale` to `ShopifyOrderNormalizer` — all conditional on `array_key_exists`, matching every other optional field already in the class. Extended `findByOrderNumber`'s GraphQL query to request them (verified via the full test suite that no other consumer of that query broke — every new field is additive and optional). Added a collapsible "Details" section to the Order Lookup page showing channel/attribution/PO-confirmation-number/discount-codes/custom-attributes, escaped by Blade's default `{{ }}` output. `client_ip`/`total_tax`/`customer_tax_exempt`/consent fields remain deliberately out of the shared normalizer — those are fraud/tax/consent-audit-specific and already handled inline by their own report candidate methods, not "order detail" fields the user asked for.
 - [x] `SearchLookupPageLoaderTest.php` — 19/19 global search and lookup loader contracts.
 - [x] `PackingSlipPageLoaderTest.php` — 6/6 legacy paths.
 - [x] `TrackingFeedTest.php` — 7/7 builder contracts.

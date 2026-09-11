@@ -127,6 +127,49 @@ class OrderLookupControllerTest extends TestCase
         ));
     }
 
+    public function test_order_detail_section_shows_attribution_discounts_and_custom_attributes(): void
+    {
+        Http::preventStrayRequests();
+        [$user, $store] = $this->userWithStore();
+        Http::fake([
+            'https://acme.myshopify.com/admin/api/2026-07/graphql.json' => Http::response([
+                'data' => ['orders' => ['edges' => [['node' => [
+                    'id' => 'gid://shopify/Order/1',
+                    'legacyResourceId' => '1',
+                    'name' => '#65075',
+                    'createdAt' => '2026-08-30T10:15:00Z',
+                    'cancelledAt' => null,
+                    'email' => 'buyer@example.com',
+                    'displayFinancialStatus' => 'PAID',
+                    'displayFulfillmentStatus' => 'UNFULFILLED',
+                    'totalPriceSet' => ['shopMoney' => ['amount' => '129.90', 'currencyCode' => 'EUR']],
+                    'sourceName' => 'web',
+                    'app' => ['name' => 'Online Store'],
+                    'poNumber' => 'PO-<script>alert(1)</script>',
+                    'discountApplications' => ['nodes' => [[
+                        '__typename' => 'DiscountCodeApplication',
+                        'code' => 'DEAL10',
+                        'value' => ['__typename' => 'MoneyV2', 'amount' => '10.00'],
+                    ]]],
+                    'customAttributes' => [['key' => 'gift_message', 'value' => '<script>alert(2)</script>']],
+                    'customerJourneySummary' => ['firstVisit' => ['source' => 'google', 'utmParameters' => ['campaign' => 'summer-sale']]],
+                ]]]]],
+            ]),
+            'https://ssapi.shipstation.com/*' => Http::response([]),
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['active_store_id' => $store->getKey()])
+            ->get(route('orders.lookup', ['order_number' => '65075']))
+            ->assertOk()
+            ->assertSeeText('web via Online Store')
+            ->assertSeeText('google · summer-sale')
+            ->assertSeeText('DEAL10')
+            ->assertSeeText('gift_message: <script>alert(2)</script>')
+            ->assertSee('PO-<script>alert(1)</script>')
+            ->assertDontSee('PO-<script>alert(1)</script>', false);
+    }
+
     public function test_lookup_uses_the_selected_store_instead_of_another_accessible_store(): void
     {
         Http::preventStrayRequests();

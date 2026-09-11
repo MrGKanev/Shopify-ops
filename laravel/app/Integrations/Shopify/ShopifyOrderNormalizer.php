@@ -100,7 +100,127 @@ class ShopifyOrderNormalizer
             $order['refunds'] = $this->normalizeRefunds($node['refunds']);
         }
 
+        if (isset($node['discountApplications']['nodes']) && is_array($node['discountApplications']['nodes'])) {
+            $order['discount_codes'] = array_values(array_filter(array_map(
+                fn (mixed $discount): ?array => is_array($discount) ? $this->normalizeDiscountCode($discount) : null,
+                $node['discountApplications']['nodes'],
+            )));
+        }
+
+        if (array_key_exists('customAttributes', $node) && is_array($node['customAttributes'])) {
+            $order['note_attributes'] = array_values(array_map(
+                fn (mixed $attribute): array => is_array($attribute) ? ['key' => (string) ($attribute['key'] ?? ''), 'value' => (string) ($attribute['value'] ?? '')] : ['key' => '', 'value' => ''],
+                $node['customAttributes'],
+            ));
+        }
+
+        if (array_key_exists('customerJourneySummary', $node)) {
+            $order['customer_journey'] = $this->normalizeCustomerJourney(is_array($node['customerJourneySummary'] ?? null) ? $node['customerJourneySummary'] : []);
+        }
+
+        if (array_key_exists('sourceName', $node)) {
+            $order['source_name'] = $this->nullableString($node['sourceName'], 'sourceName') ?? '';
+        }
+
+        if (array_key_exists('app', $node)) {
+            $order['app_name'] = is_array($node['app'] ?? null) ? (string) ($node['app']['name'] ?? '') : '';
+        }
+
+        if (isset($node['currentTotalPriceSet']['shopMoney']['amount'])) {
+            $order['current_total_price'] = $node['currentTotalPriceSet']['shopMoney']['amount'];
+        }
+
+        if (array_key_exists('edited', $node)) {
+            $order['edited'] = (bool) ($node['edited'] ?? false);
+        }
+
+        if (array_key_exists('test', $node)) {
+            $order['test'] = (bool) ($node['test'] ?? false);
+        }
+
+        if (array_key_exists('paymentGatewayNames', $node) && is_array($node['paymentGatewayNames'])) {
+            $order['payment_gateway_names'] = array_values($node['paymentGatewayNames']);
+        }
+
+        if (array_key_exists('poNumber', $node)) {
+            $order['po_number'] = $this->nullableString($node['poNumber'], 'poNumber') ?? '';
+        }
+
+        if (array_key_exists('confirmationNumber', $node)) {
+            $order['confirmation_number'] = $this->nullableString($node['confirmationNumber'], 'confirmationNumber') ?? '';
+        }
+
+        if (array_key_exists('statusPageUrl', $node)) {
+            $order['status_page_url'] = $this->nullableString($node['statusPageUrl'], 'statusPageUrl') ?? '';
+        }
+
+        if (array_key_exists('customerLocale', $node)) {
+            $order['customer_locale'] = $this->nullableString($node['customerLocale'], 'customerLocale') ?? '';
+        }
+
         return $order;
+    }
+
+    /** @param array<string, mixed> $discount */
+    private function normalizeDiscountCode(array $discount): ?array
+    {
+        if (($discount['__typename'] ?? '') !== 'DiscountCodeApplication') {
+            return null;
+        }
+
+        $code = trim((string) ($discount['code'] ?? ''));
+
+        if ($code === '') {
+            return null;
+        }
+
+        $value = is_array($discount['value'] ?? null) ? $discount['value'] : [];
+        $valueTypename = (string) ($value['__typename'] ?? '');
+        $type = match ($valueTypename) {
+            'MoneyV2' => 'fixed_amount',
+            'PricingPercentageValue' => 'percentage',
+            default => mb_strtolower($valueTypename),
+        };
+
+        return [
+            'code' => $code,
+            'amount' => $value['amount'] ?? (isset($value['percentage']) ? (string) $value['percentage'] : ''),
+            'type' => $type,
+            'allocation_method' => mb_strtolower((string) ($discount['allocationMethod'] ?? '')),
+            'target_selection' => mb_strtolower((string) ($discount['targetSelection'] ?? '')),
+            'target_type' => mb_strtolower((string) ($discount['targetType'] ?? '')),
+        ];
+    }
+
+    /** @param array<string, mixed> $journey @return array{days_to_conversion: mixed, first_visit: array<string, mixed>|null, last_visit: array<string, mixed>|null} */
+    private function normalizeCustomerJourney(array $journey): array
+    {
+        return [
+            'days_to_conversion' => $journey['daysToConversion'] ?? null,
+            'first_visit' => $this->normalizeVisit($journey['firstVisit'] ?? null),
+            'last_visit' => $this->normalizeVisit($journey['lastVisit'] ?? null),
+        ];
+    }
+
+    /** @return array<string, mixed>|null */
+    private function normalizeVisit(mixed $visit): ?array
+    {
+        if (! is_array($visit)) {
+            return null;
+        }
+
+        $utm = is_array($visit['utmParameters'] ?? null) ? $visit['utmParameters'] : [];
+
+        return [
+            'landing_page' => (string) ($visit['landingPage'] ?? ''),
+            'referrer_url' => (string) ($visit['referrerUrl'] ?? ''),
+            'source' => (string) ($visit['source'] ?? ''),
+            'utm' => [
+                'source' => (string) ($utm['source'] ?? ''),
+                'medium' => (string) ($utm['medium'] ?? ''),
+                'campaign' => (string) ($utm['campaign'] ?? ''),
+            ],
+        ];
     }
 
     /**

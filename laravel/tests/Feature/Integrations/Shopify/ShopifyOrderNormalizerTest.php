@@ -270,4 +270,119 @@ class ShopifyOrderNormalizerTest extends TestCase
             'risk' => ['assessments' => ['HIGH']],
         ]);
     }
+
+    public function test_includes_discount_codes_when_present(): void
+    {
+        $order = (new ShopifyOrderNormalizer)->normalize([
+            'discountApplications' => ['nodes' => [[
+                '__typename' => 'DiscountCodeApplication',
+                'code' => 'DEAL10',
+                'allocationMethod' => 'ACROSS',
+                'targetSelection' => 'ALL',
+                'targetType' => 'LINE_ITEM',
+                'value' => ['__typename' => 'MoneyV2', 'amount' => '10.00'],
+            ]]],
+        ]);
+
+        $this->assertCount(1, $order['discount_codes']);
+        $this->assertSame(['code' => 'DEAL10', 'amount' => '10.00', 'type' => 'fixed_amount', 'allocation_method' => 'across', 'target_selection' => 'all', 'target_type' => 'line_item'], $order['discount_codes'][0]);
+    }
+
+    public function test_filters_out_non_discount_code_applications(): void
+    {
+        $order = (new ShopifyOrderNormalizer)->normalize([
+            'discountApplications' => ['nodes' => [['__typename' => 'AutomaticDiscountApplication', 'code' => 'AUTO']]],
+        ]);
+
+        $this->assertSame([], $order['discount_codes']);
+    }
+
+    public function test_includes_note_attributes_when_present(): void
+    {
+        $order = (new ShopifyOrderNormalizer)->normalize([
+            'customAttributes' => [
+                ['key' => 'checkout_session_id', 'value' => '87823702-7746-4191'],
+                ['key' => 'bsure-attribute', 'value' => 'Plug Type: Type B (US)'],
+            ],
+        ]);
+
+        $this->assertCount(2, $order['note_attributes']);
+        $this->assertSame(['key' => 'checkout_session_id', 'value' => '87823702-7746-4191'], $order['note_attributes'][0]);
+    }
+
+    public function test_note_attributes_is_an_empty_array_when_no_custom_attributes(): void
+    {
+        $order = (new ShopifyOrderNormalizer)->normalize(['customAttributes' => []]);
+
+        $this->assertSame([], $order['note_attributes']);
+    }
+
+    public function test_includes_customer_journey_when_present(): void
+    {
+        $order = (new ShopifyOrderNormalizer)->normalize([
+            'customerJourneySummary' => [
+                'daysToConversion' => 3,
+                'firstVisit' => ['landingPage' => '/products/widget', 'referrerUrl' => 'https://google.com', 'source' => 'google', 'utmParameters' => ['source' => 'google', 'medium' => 'cpc', 'campaign' => 'summer']],
+                'lastVisit' => ['landingPage' => '/cart', 'referrerUrl' => null, 'source' => 'direct'],
+            ],
+        ]);
+
+        $this->assertSame(3, $order['customer_journey']['days_to_conversion']);
+        $this->assertSame('/products/widget', $order['customer_journey']['first_visit']['landing_page']);
+        $this->assertSame('google', $order['customer_journey']['first_visit']['utm']['source']);
+        $this->assertSame('direct', $order['customer_journey']['last_visit']['source']);
+        $this->assertSame('', $order['customer_journey']['last_visit']['utm']['source']);
+    }
+
+    public function test_includes_source_name_and_app_when_present(): void
+    {
+        $order = (new ShopifyOrderNormalizer)->normalize(['sourceName' => 'web', 'app' => ['name' => 'Online Store']]);
+
+        $this->assertSame('web', $order['source_name']);
+        $this->assertSame('Online Store', $order['app_name']);
+    }
+
+    public function test_includes_finance_fields_when_present(): void
+    {
+        $order = (new ShopifyOrderNormalizer)->normalize([
+            'currentTotalPriceSet' => ['shopMoney' => ['amount' => '89.00']],
+            'edited' => true,
+            'paymentGatewayNames' => ['shopify_payments', 'manual'],
+            'poNumber' => 'PO-42',
+        ]);
+
+        $this->assertSame('89.00', $order['current_total_price']);
+        $this->assertTrue($order['edited']);
+        $this->assertSame(['shopify_payments', 'manual'], $order['payment_gateway_names']);
+        $this->assertSame('PO-42', $order['po_number']);
+    }
+
+    public function test_includes_support_fields_when_present(): void
+    {
+        $order = (new ShopifyOrderNormalizer)->normalize([
+            'confirmationNumber' => 'ABC123XYZ',
+            'statusPageUrl' => 'https://shop.example/orders/abc/status',
+            'customerLocale' => 'en-US',
+        ]);
+
+        $this->assertSame('ABC123XYZ', $order['confirmation_number']);
+        $this->assertSame('https://shop.example/orders/abc/status', $order['status_page_url']);
+        $this->assertSame('en-US', $order['customer_locale']);
+    }
+
+    public function test_includes_test_flag_when_present(): void
+    {
+        $order = (new ShopifyOrderNormalizer)->normalize(['test' => true]);
+
+        $this->assertTrue($order['test']);
+    }
+
+    public function test_attribution_fields_are_absent_when_not_requested(): void
+    {
+        $order = (new ShopifyOrderNormalizer)->normalize(['id' => 'gid://shopify/Order/1']);
+
+        foreach (['discount_codes', 'note_attributes', 'customer_journey', 'source_name', 'app_name', 'current_total_price', 'edited', 'test', 'payment_gateway_names', 'po_number', 'confirmation_number', 'status_page_url', 'customer_locale'] as $field) {
+            $this->assertArrayNotHasKey($field, $order);
+        }
+    }
 }
