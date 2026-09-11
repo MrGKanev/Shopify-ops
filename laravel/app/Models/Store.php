@@ -22,6 +22,7 @@ use Spatie\Activitylog\Support\LogOptions;
     'store_number',
     'slack_rules',
     'email_rules',
+    'discord_rules',
 ])]
 #[Hidden(['shopify_access_token', 'shipstation_api_key', 'shipstation_api_secret'])]
 class Store extends Model
@@ -80,6 +81,14 @@ class Store extends Model
         return ['audit_enabled' => (bool) $rules['audit_enabled'], 'audit_min_missing' => max(0, (int) $rules['audit_min_missing']), 'include_zero_audit' => (bool) $rules['include_zero_audit'], 'scan_enabled' => (bool) $rules['scan_enabled'], 'scan_min_rows' => max(1, (int) $rules['scan_min_rows']), 'mentions' => (string) $rules['mentions']];
     }
 
+    /** @return array{audit_enabled:bool,audit_min_missing:int,include_zero_audit:bool,scan_enabled:bool,scan_min_rows:int} */
+    public function resolvedDiscordRules(): array
+    {
+        $rules = array_replace(['audit_enabled' => true, 'audit_min_missing' => 0, 'include_zero_audit' => true, 'scan_enabled' => false, 'scan_min_rows' => 1], $this->discord_rules ?? []);
+
+        return ['audit_enabled' => (bool) $rules['audit_enabled'], 'audit_min_missing' => max(0, (int) $rules['audit_min_missing']), 'include_zero_audit' => (bool) $rules['include_zero_audit'], 'scan_enabled' => (bool) $rules['scan_enabled'], 'scan_min_rows' => max(1, (int) $rules['scan_min_rows'])];
+    }
+
     /** @return array<string, array{mode:string,threshold:int,include_zero:bool,email:string}> */
     public function resolvedEmailRules(): array
     {
@@ -105,6 +114,7 @@ class Store extends Model
             'shipstation_api_secret' => 'encrypted',
             'slack_rules' => 'array',
             'email_rules' => 'array',
+            'discord_rules' => 'array',
         ];
     }
 }

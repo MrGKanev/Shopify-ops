@@ -5,6 +5,7 @@ namespace App\Application\Reports;
 use App\Models\RunLog;
 use App\Models\Store;
 use App\Notifications\ReportEmailNotification;
+use App\Notifications\ScanDiscordNotification;
 use App\Notifications\ScanSlackNotification;
 use Illuminate\Support\Facades\Notification;
 
@@ -22,6 +23,10 @@ class RecordRun
         $rows = (int) ($attributes['rows_found'] ?? 0);
         if (($attributes['tool'] ?? '') !== 'run_audit' && ($attributes['status'] ?? '') !== 'error' && $rules['scan_enabled'] && $rows >= $rules['scan_min_rows'] && trim((string) config('services.slack.notifications.webhook_url')) !== '') {
             Notification::route('slack', config('services.slack.notifications.webhook_url'))->notify(new ScanSlackNotification($store->label, (string) ($attributes['tool'] ?? 'scan'), $rows, $rules['mentions']));
+        }
+        $discordRules = $store->resolvedDiscordRules();
+        if (($attributes['tool'] ?? '') !== 'run_audit' && ($attributes['status'] ?? '') !== 'error' && $discordRules['scan_enabled'] && $rows >= $discordRules['scan_min_rows'] && trim((string) config('services.discord.notifications.webhook_url')) !== '') {
+            Notification::route('discord', config('services.discord.notifications.webhook_url'))->notify(new ScanDiscordNotification($store->label, (string) ($attributes['tool'] ?? 'scan'), $rows));
         }
         $tool = (string) ($attributes['tool'] ?? '');
         $emailRule = $store->resolvedEmailRules()[$tool] ?? null;

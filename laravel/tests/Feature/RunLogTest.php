@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Application\Reports\RecordRun;
 use App\Models\Store;
 use App\Models\User;
+use App\Notifications\ScanDiscordNotification;
 use App\Notifications\ScanSlackNotification;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -42,12 +43,14 @@ class RunLogTest extends TestCase
     {
         Notification::fake();
         config()->set('services.slack.notifications.webhook_url', 'https://hooks.slack.com/services/T/B/test');
-        $store = Store::factory()->create(['slack_rules' => ['audit_enabled' => true, 'audit_min_missing' => 0, 'include_zero_audit' => true, 'scan_enabled' => true, 'scan_min_rows' => 2, 'mentions' => 'U012ABC3DE']]);
+        config()->set('services.discord.notifications.webhook_url', 'https://discord.com/api/webhooks/1/test');
+        $store = Store::factory()->create(['slack_rules' => ['audit_enabled' => true, 'audit_min_missing' => 0, 'include_zero_audit' => true, 'scan_enabled' => true, 'scan_min_rows' => 2, 'mentions' => 'U012ABC3DE'], 'discord_rules' => ['audit_enabled' => true, 'audit_min_missing' => 0, 'include_zero_audit' => true, 'scan_enabled' => true, 'scan_min_rows' => 2]]);
         $recorder = app(RecordRun::class);
         $recorder->handle($store, ['tool' => 'scan_test', 'rows_found' => 1]);
         $recorder->handle($store, ['tool' => 'scan_test', 'rows_found' => 2]);
         $recorder->handle($store, ['tool' => 'scan_test', 'rows_found' => 3, 'status' => 'error']);
 
         Notification::assertSentOnDemandTimes(ScanSlackNotification::class, 1);
+        Notification::assertSentOnDemandTimes(ScanDiscordNotification::class, 1);
     }
 }

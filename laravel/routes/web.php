@@ -4,6 +4,7 @@ use App\Http\Controllers\ActiveStoreController;
 use App\Http\Controllers\Admin\ActionLogController;
 use App\Http\Controllers\Admin\ApiHealthController;
 use App\Http\Controllers\Admin\ConfigCheckController;
+use App\Http\Controllers\Admin\DiscordRulesController;
 use App\Http\Controllers\Admin\EmailRulesController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SlackRulesController;
@@ -260,6 +261,8 @@ Route::middleware('auth')->group(function (): void {
                 Route::get('/webhook-health', WebhookHealthController::class)->name('webhook-health');
                 Route::get('/slack-rules', [SlackRulesController::class, 'edit'])->name('slack-rules.edit');
                 Route::put('/slack-rules', [SlackRulesController::class, 'update'])->name('slack-rules.update');
+                Route::get('/discord-rules', [DiscordRulesController::class, 'edit'])->name('discord-rules.edit');
+                Route::put('/discord-rules', [DiscordRulesController::class, 'update'])->name('discord-rules.update');
                 Route::get('/email-rules', [EmailRulesController::class, 'edit'])->name('email-rules.edit');
                 Route::put('/email-rules', [EmailRulesController::class, 'update'])->name('email-rules.update');
                 Route::get('/action-log', ActionLogController::class)->name('action-log');
@@ -267,6 +270,7 @@ Route::middleware('auth')->group(function (): void {
                 Route::post('/api-health', [ApiHealthController::class, 'check'])->middleware('throttle:api-health')->name('api-health.check');
                 Route::post('/api-health/test-email', [ApiHealthController::class, 'sendTestEmail'])->middleware('throttle:api-health')->name('api-health.test-email');
                 Route::post('/api-health/test-slack', [ApiHealthController::class, 'sendTestSlack'])->middleware('throttle:api-health')->name('api-health.test-slack');
+                Route::post('/api-health/test-discord', [ApiHealthController::class, 'sendTestDiscord'])->middleware('throttle:api-health')->name('api-health.test-discord');
                 Route::resource('stores', StoreController::class)->except(['show', 'destroy']);
                 Route::resource('users', UserController::class)->except(['show', 'destroy']);
             });

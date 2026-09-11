@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Application\Health\CheckApiHealth;
+use App\Application\Health\SendTestDiscord;
 use App\Application\Health\SendTestEmail;
 use App\Application\Health\SendTestSlack;
 use App\Http\Controllers\Controller;
@@ -15,19 +16,19 @@ use Throwable;
 
 class ApiHealthController extends Controller
 {
-    public function show(Request $request, SendTestEmail $sendTestEmail, SendTestSlack $sendTestSlack): View
+    public function show(Request $request, SendTestEmail $sendTestEmail, SendTestSlack $sendTestSlack, SendTestDiscord $sendTestDiscord): View
     {
-        return $this->view($this->store($request), null, $sendTestEmail, $sendTestSlack);
+        return $this->view($this->store($request), null, $sendTestEmail, $sendTestSlack, $sendTestDiscord);
     }
 
-    public function check(Request $request, CheckApiHealth $checkApiHealth, SendTestEmail $sendTestEmail, SendTestSlack $sendTestSlack): View
+    public function check(Request $request, CheckApiHealth $checkApiHealth, SendTestEmail $sendTestEmail, SendTestSlack $sendTestSlack, SendTestDiscord $sendTestDiscord): View
     {
         $store = $this->store($request);
 
-        return $this->view($store, $checkApiHealth->handle($store), $sendTestEmail, $sendTestSlack);
+        return $this->view($store, $checkApiHealth->handle($store), $sendTestEmail, $sendTestSlack, $sendTestDiscord);
     }
 
-    public function sendTestEmail(SendTestEmailRequest $request, SendTestEmail $sendTestEmail, SendTestSlack $sendTestSlack): View
+    public function sendTestEmail(SendTestEmailRequest $request, SendTestEmail $sendTestEmail, SendTestSlack $sendTestSlack, SendTestDiscord $sendTestDiscord): View
     {
         $sent = false;
 
@@ -38,10 +39,10 @@ class ApiHealthController extends Controller
             Log::warning('Test email delivery failed.', ['exception_type' => $exception::class]);
         }
 
-        return $this->view($this->store($request), null, $sendTestEmail, $sendTestSlack, $sent ? 'sent' : 'failed');
+        return $this->view($this->store($request), null, $sendTestEmail, $sendTestSlack, $sendTestDiscord, $sent ? 'sent' : 'failed');
     }
 
-    public function sendTestSlack(Request $request, SendTestEmail $sendTestEmail, SendTestSlack $sendTestSlack): View
+    public function sendTestSlack(Request $request, SendTestEmail $sendTestEmail, SendTestSlack $sendTestSlack, SendTestDiscord $sendTestDiscord): View
     {
         $sent = false;
 
@@ -52,11 +53,25 @@ class ApiHealthController extends Controller
             Log::warning('Test Slack delivery failed.', ['exception_type' => $exception::class]);
         }
 
-        return $this->view($this->store($request), null, $sendTestEmail, $sendTestSlack, slackResult: $sent ? 'sent' : 'failed');
+        return $this->view($this->store($request), null, $sendTestEmail, $sendTestSlack, $sendTestDiscord, slackResult: $sent ? 'sent' : 'failed');
+    }
+
+    public function sendTestDiscord(Request $request, SendTestEmail $sendTestEmail, SendTestSlack $sendTestSlack, SendTestDiscord $sendTestDiscord): View
+    {
+        $sent = false;
+
+        try {
+            $sendTestDiscord->handle();
+            $sent = true;
+        } catch (Throwable $exception) {
+            Log::warning('Test Discord delivery failed.', ['exception_type' => $exception::class]);
+        }
+
+        return $this->view($this->store($request), null, $sendTestEmail, $sendTestSlack, $sendTestDiscord, discordResult: $sent ? 'sent' : 'failed');
     }
 
     /** @param array<string, mixed>|null $health */
-    private function view(Store $store, ?array $health, SendTestEmail $sendTestEmail, SendTestSlack $sendTestSlack, ?string $mailResult = null, ?string $slackResult = null): View
+    private function view(Store $store, ?array $health, SendTestEmail $sendTestEmail, SendTestSlack $sendTestSlack, SendTestDiscord $sendTestDiscord, ?string $mailResult = null, ?string $slackResult = null, ?string $discordResult = null): View
     {
         return view('admin.api-health', [
             'health' => $health,
@@ -65,6 +80,8 @@ class ApiHealthController extends Controller
             'mailResult' => $mailResult,
             'slackConfiguration' => $sendTestSlack->configuration(),
             'slackResult' => $slackResult,
+            'discordConfiguration' => $sendTestDiscord->configuration(),
+            'discordResult' => $discordResult,
         ]);
     }
 

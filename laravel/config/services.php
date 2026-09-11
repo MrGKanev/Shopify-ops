@@ -36,6 +36,12 @@ return [
         ],
     ],
 
+    'discord' => [
+        'notifications' => [
+            'webhook_url' => env('DISCORD_NOTIFICATION_WEBHOOK_URL'),
+        ],
+    ],
+
     'shopify' => [
         'store' => env('SHOPIFY_STORE'),
         'access_token' => env('SHOPIFY_ACCESS_TOKEN'),

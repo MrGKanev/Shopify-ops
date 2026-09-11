@@ -23,6 +23,6 @@ class ShopifyPartialFulfillmentCandidatesTest extends TestCase
         $this->assertCount(1, $result['orders']);
         $this->assertSame(1, $result['orders'][0]['line_items'][0]['fulfillable_quantity']);
         $this->assertSame('2026-06-05', $result['orders'][0]['fulfillments'][0]['created_at']);
-        Http::assertSent(fn (Request $request): bool => $request['variables']['search'] === 'status:open financial_status:paid fulfillment_status:partial created_at:>=2026-06-01T00:00:00Z created_at:<=2026-06-30T23:59:59Z' && str_contains((string) $request['query'], 'unfulfilledQuantity'));
+        Http::assertSent(fn (Request $request): bool => $request['variables']['search'] === 'status:open -financial_status:refunded fulfillment_status:partial created_at:>=2026-06-01T00:00:00Z created_at:<=2026-06-30T23:59:59Z' && str_contains((string) $request['query'], 'unfulfilledQuantity'));
     }
 }

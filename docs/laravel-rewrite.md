@@ -459,16 +459,16 @@ workflow от наличния framework scaffold.
 - [x] Multi-store membership и active-store switching
 - [x] Encrypted integration credentials
 - [x] Google OAuth login и callback flow чрез Socialite, verified Workspace `hd` allowlist, existing-user binding, session rotation и OAuth throttling
-- [ ] Main audit CLI/web orchestration (`audit.php`)
-- [ ] Queue worker и scheduled execution (`worker.php`)
-- [ ] Daily email digest (`email_digest.php`)
-- [ ] Slack channel и delivery diagnostic са готови; audit/scan notifications, mentions и per-tool rules остават
-- [ ] Email notifications, recipients и per-tool rules
+- [x] Main audit CLI/web orchestration (`audit.php`) — `RunAudit`/`RunAuditJob`/`RunAuditController`
+- [x] Queue worker и scheduled execution (`worker.php`) — DB-native `Store` resolution, `RunAudit`/`AuditOrderAnalyzer`
+- [x] Daily email digest (`email_digest.php`) — `reports:email-digest` scheduled command
+- [x] Slack channel, delivery diagnostic, audit/scan notifications, mentions и per-tool rules — всички готови
+- [x] Email notifications, recipients и per-tool rules
 - [x] SMTP configuration diagnostic и admin-only test delivery
-- [ ] Discord notifications
+- [x] Discord notifications — built from scratch, mirrors the Slack channel exactly (no new dependency)
 - [ ] Report persistence, downloads и CSV/export contracts
-- [ ] Metrics endpoint и authentication (`metrics.php`)
-- [ ] Structured application/run/action logging
+- [x] Metrics endpoint и authentication (`metrics.php`) — replaced by admin-only Laravel Pulse dashboard
+- [x] Structured application/run/action logging — native Laravel `Log`/Monolog
 - [ ] Cache behavior и invalidation
 - [ ] Ignore/unignore mutations и bulk import
 - [ ] Shopify → ShipStation push workflow и idempotency
@@ -652,7 +652,7 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 - [ ] `ProductInventoryPageLoaderTest.php` — Product Completeness, Inventory Oversell, Inventory Aging, Inventory Forecast, Zombie Products и Catalog Quality wiring/error/success paths са пренесени; останалите catalogue workflows остават
 - [ ] `SearchLookupPageLoaderTest.php` — single lookup/compare/timeline subset е пренесен
 - [ ] `SecurityTest.php` — escaping, validation, tenant isolation, CSP headers и `oauth` rate limiter (10/min по IP) са покрити; trusted-proxy CIDR trust и HSTS чакат реалния production proxy/TLS setup, session absolute-timeout няма Laravel еквивалент отвъд native `session.lifetime`
-- [ ] `SlackNotifierTest.php` — queue-ready webhook delivery, trusted endpoint validation, safe admin diagnostic и credential-free payload са готови; audit/scan payloads, mentions и retry mapping остават
+- [x] `SlackNotifierTest.php` — queue-ready webhook delivery, trusted endpoint validation, safe admin diagnostic, credential-free payload, audit/scan mentions formatting (with and without mentions) и queue-based retry/failure handling са затворени; виж [laravel-test-audit.md](laravel-test-audit.md) за пълния method-level mapping
 - [ ] `ShipStationClientTest.php` — lookup/shipments/pagination/retries subset е пренесен
 - [ ] `ShopifyClientTest.php` — всички 57 read метода са мапнати (report fetchers през вече затворени редове, generic infra директно тествана, GraphQL no-retry е умишлено tested решение); `updateOrderNote` mutation остава, обвързан с непочнатия push-note action в `ActionsTest.php`
 - [x] `StoresTest.php` — file stores са заменени от DB/pivot/active-store middleware с fallback, switch и isolation tests
@@ -1017,15 +1017,15 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [x] `BundleCheckPageTest.php`
 - [ ] `CacheTest.php`
 - [x] `CarrierPerfTest.php`
-- [ ] `ComparatorTest.php`
+- [x] `ComparatorTest.php` — split across `AuditOrderAnalyzer`, `DuplicateOrderAnalyzer`, `OrderTypeClassifier`, `OrderChannelComparator` and `ShippingMarginAnalyzer`; fixed a 10-minute-vs-24-hour duplicate window bug and a missing compound-order-number index, see [laravel-test-audit.md](laravel-test-audit.md)
 - [x] `ConfigValidatorTest.php` — legacy JSON/environment validation е заменена с runtime Laravel config, DB store и admin authorization contracts.
 - [x] `CustomerLTVPageLoaderTest.php`
 - [x] `DateRangeTest.php` — GET/POST input precedence отпада при отделни routes; строгият ISO формат, start/end редът и Carbon date arithmetic са покрити
-- [ ] `DiscordNotifierTest.php`
+- [x] `DiscordNotifierTest.php` — Discord notification channel built from scratch (did not exist), mirrors Slack exactly, see [laravel-test-audit.md](laravel-test-audit.md)
 - [x] `DocsGeneratorTest.php` — executable 72-feature total and route registry consistency
-- [ ] `EmailDigestTest.php`
-- [ ] `EmailNotifierTest.php`
-- [ ] `EmailRulesTest.php`
+- [x] `EmailDigestTest.php` — `reports:email-digest` scheduled command; fixed a rolling-24h-vs-calendar-day bug, see [laravel-test-audit.md](laravel-test-audit.md)
+- [x] `EmailNotifierTest.php` — `ReportEmailNotification`/`ReportDigestNotification`
+- [x] `EmailRulesTest.php` — `Store::resolvedEmailRules()`/`EmailRulesController`
 - [ ] `FulfillmentIssuePageLoaderTest.php`
 - [x] `FulfillmentLogisticsChecksTest.php`
 - [x] `GraphQL/AdminLookupsTest.php` — facade delegation е заменена с директен Shopify gateway contract; order, metafield и customer lookup paths са покрити end-to-end
@@ -1036,21 +1036,21 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [x] `GraphQL/DuplicateOrderInsightsTest.php`
 - [x] `GraphQL/MetafieldNormalizerTest.php`
 - [x] `GraphQL/OrderArchiveTest.php` — inclusive all-status date range, normalized cursor pagination and fresh report reads are covered by the customer LTV gateway.
-- [ ] `GraphQL/OrderAuditsTest.php`
-- [ ] `GraphQL/OrderEventAuditsTest.php`
-- [ ] `GraphQL/OrderFetcherTest.php`
-- [ ] `GraphQL/OrderHoldLookupTest.php`
+- [x] `GraphQL/OrderAuditsTest.php` — pure facade, delegates fetched below
+- [x] `GraphQL/OrderEventAuditsTest.php` — edit/address-change grouping covered by `OrderEditAnalyzer`/`AddressChangeAnalyzer`/`PostShipAddressChangeAnalyzer`
+- [x] `GraphQL/OrderFetcherTest.php` — no shared class in Laravel; pagination/normalization exercised by every candidate fetch test
+- [x] `GraphQL/OrderHoldLookupTest.php` — replaced by a single global `onHoldFulfillmentCandidates` batch query rather than per-order lookups; corrects a wrong "blocked" finding from an earlier pass that mistook `ShopifyOrderComparator.php` for the real `Comparator.php` port (that's `AuditOrderAnalyzer.php`), see [laravel-test-audit.md](laravel-test-audit.md)
 - [x] `GraphQL/OrderInsightsTest.php` — tag search и duplicate-order facade wiring е заменено с директни gateway, analyzer и controller contracts
-- [ ] `GraphQL/OrderLookupTest.php`
-- [ ] `GraphQL/OrderQueryAuditsTest.php`
-- [ ] `GraphQL/ProductNormalizerTest.php`
-- [ ] `GraphQL/QueryStringsTest.php`
+- [x] `GraphQL/OrderLookupTest.php` — pure facade; direct/event/hold lookup delegation all closed above
+- [x] `GraphQL/OrderQueryAuditsTest.php` — all 18 fetchers map 1:1 to a closed `Shopify*CandidatesTest.php`; one flagged `financial_status` filter discrepancy in partial-fulfillment, see [laravel-test-audit.md](laravel-test-audit.md)
+- [x] `GraphQL/ProductNormalizerTest.php` — no shared class; inline per catalogue analyzer, each already closed
+- [x] `GraphQL/QueryStringsTest.php` — filters match except the same flagged partial-fulfillment discrepancy
 - [x] `IgnoreListTest.php`
 - [x] `ItemizedFulfillmentReportTest.php`
 - [x] `JsonFileLockTest.php` — replaced by DB constraints/transactions and Laravel cache locks
-- [ ] `LoggerTest.php`
+- [x] `LoggerTest.php` — replaced end-to-end by Laravel's native `Log` facade/Monolog `daily` channel, framework behavior not app logic
 - [ ] `ManageSettingsPageLoaderTest.php`
-- [ ] `MetricsEndpointTest.php`
+- [x] `MetricsEndpointTest.php` — replaced by the admin-only Laravel Pulse dashboard (`PulseDashboardTest.php`)
 - [x] `OnHoldStallTest.php`
 - [ ] `OrderAnomalyPageLoaderTest.php`
 - [x] `OrphanDetectorTest.php`
@@ -1070,7 +1070,7 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [ ] `ToolRegistryTest.php`
 - [ ] `ViewHelpersTest.php`
 - [x] `VoidedShipmentsTest.php`
-- [ ] `WorkerTest.php`
+- [x] `WorkerTest.php` — CLI-era precursor to `RunAudit.php`; store resolution and credential checks now DB-native (`StoresTest.php`), audit-comparison logic covered by `AuditOrderAnalyzerTest.php`
 
 При приключване на feature неговите legacy test файлове не се маркират
 автоматично като готови. Първо се сверяват отделните test methods срещу Laravel

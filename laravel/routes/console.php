@@ -19,7 +19,7 @@ Artisan::command('reports:email-digest', function (): void {
             if ($rule['mode'] !== 'digest' || $rule['email'] === '') {
                 continue;
             }
-            $run = $store->runLogs()->where('tool', $tool)->where('status', '!=', 'error')->where('created_at', '>=', now()->subDay())->latest()->first();
+            $run = $store->runLogs()->where('tool', $tool)->where('status', '!=', 'error')->where('created_at', '>=', today())->latest()->first();
             $rows = (int) ($run?->rows_found ?? 0);
             if ($run && $rows >= $rule['threshold'] && ($rows > 0 || $rule['include_zero'])) {
                 $byRecipient[$rule['email']][] = ['tool' => $tool, 'rows' => $rows];

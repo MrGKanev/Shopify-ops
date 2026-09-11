@@ -6,6 +6,7 @@ use App\Domain\Reports\AuditOrderAnalyzer;
 use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
+use App\Notifications\AuditDiscordNotification;
 use App\Notifications\AuditSlackNotification;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Notification;
@@ -43,6 +44,10 @@ class RunAudit
             $missing = count($result['missing']);
             if ($rules['audit_enabled'] && $missing >= $rules['audit_min_missing'] && ($missing > 0 || $rules['include_zero_audit']) && trim((string) config('services.slack.notifications.webhook_url')) !== '') {
                 Notification::route('slack', config('services.slack.notifications.webhook_url'))->notify(new AuditSlackNotification($store->label, $missing, "{$start} → {$end}", $rules['mentions']));
+            }
+            $discordRules = $store->resolvedDiscordRules();
+            if ($discordRules['audit_enabled'] && $missing >= $discordRules['audit_min_missing'] && ($missing > 0 || $discordRules['include_zero_audit']) && trim((string) config('services.discord.notifications.webhook_url')) !== '') {
+                Notification::route('discord', config('services.discord.notifications.webhook_url'))->notify(new AuditDiscordNotification($store->label, $missing, "{$start} → {$end}"));
             }
 
             return new AuditResult($start, $end, $result['missing'], count($result['found']), count($result['skipped']), count($result['ignored']), count($shopify['orders']), count($shipstation), $shopify['truncated'] || $onHold['truncated']);

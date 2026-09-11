@@ -1028,7 +1028,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $search = "status:open financial_status:paid fulfillment_status:partial created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z";
+        $search = "status:open -financial_status:refunded fulfillment_status:partial created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z";
         $result = $this->paginateGraphql($store, $query, 'orders', ['search' => $search], 100);
         $orders = [];
         foreach ($result['edges'] as $edge) {

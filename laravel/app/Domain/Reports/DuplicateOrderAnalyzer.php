@@ -24,7 +24,7 @@ class DuplicateOrderAnalyzer
             for ($first = 0, $count = count($group); $first < $count; $first++) {
                 for ($second = $first + 1; $second < $count; $second++) {
                     $gap = $this->gap($group[$first]['created_at'] ?? null, $group[$second]['created_at'] ?? null);
-                    if ($gap !== null && $gap <= 600) {
+                    if ($gap !== null && $gap <= 86400) {
                         $pairs[] = ['first' => $group[$first], 'second' => $group[$second], 'gap_seconds' => $gap];
                     }
                 }

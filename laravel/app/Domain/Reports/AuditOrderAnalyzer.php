@@ -4,14 +4,16 @@ namespace App\Domain\Reports;
 
 class AuditOrderAnalyzer
 {
+    /** Shopify's order-number sequence is 4+ digits; shorter digit runs inside a compound ShipStation number (e.g. the "2" in "100042-B2") are box/addon suffixes, not real order numbers on their own. */
+    private const int MIN_FRAGMENT_LENGTH = 4;
+
     /** @param list<array<string,mixed>> $shopify @param list<array<string,mixed>> $shipstation @param array<string,array<string,mixed>> $ignored @return array{missing:list<array<string,mixed>>,found:list<array<string,mixed>>,skipped:list<array<string,mixed>>,ignored:list<array<string,mixed>>} */
     public function analyze(array $shopify, array $shipstation, array $ignored, array $onHoldOrderIds = []): array
     {
         $byNumber = $byEmail = [];
         foreach ($shipstation as $order) {
-            $number = $this->number($order['orderNumber'] ?? '');
-            if ($number !== '') {
-                $byNumber[$number][] = $order;
+            foreach ($this->numberKeys((string) ($order['orderNumber'] ?? '')) as $key) {
+                $byNumber[$key][] = $order;
             }
             $email = mb_strtolower(trim((string) ($order['customerEmail'] ?? '')));
             if ($email !== '') {
@@ -90,5 +92,23 @@ class AuditOrderAnalyzer
     private function number(mixed $value): string
     {
         return preg_replace('/\D+/', '', is_scalar($value) ? (string) $value : '') ?? '';
+    }
+
+    /** All lookup keys a raw ShipStation order number resolves to: the full digits-only form, plus each individual digit run long enough to plausibly be a standalone order number. @return list<string> */
+    private function numberKeys(string $raw): array
+    {
+        $keys = [];
+        $full = $this->number($raw);
+        if ($full !== '') {
+            $keys[] = $full;
+        }
+        preg_match_all('/\d+/', $raw, $matches);
+        foreach ($matches[0] as $segment) {
+            if ($segment !== $full && strlen($segment) >= self::MIN_FRAGMENT_LENGTH) {
+                $keys[] = $segment;
+            }
+        }
+
+        return $keys;
     }
 }

@@ -8,6 +8,7 @@ use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Jobs\RunAuditJob;
 use App\Models\Store;
 use App\Models\User;
+use App\Notifications\AuditDiscordNotification;
 use App\Notifications\AuditSlackNotification;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -35,6 +36,7 @@ class RunAuditControllerTest extends TestCase
     {
         Notification::fake();
         config()->set('services.slack.notifications.webhook_url', 'https://hooks.slack.com/services/T/B/test');
+        config()->set('services.discord.notifications.webhook_url', 'https://discord.com/api/webhooks/1/test');
         [$operator, $store] = $this->userWithStore(true);
         $client = Mockery::mock(ShipStationClientContract::class);
         $client->shouldReceive('fetchAllOrders')->twice()->with('2026-06-01', '2026-07-07')->andReturn([['orderNumber' => '1001']]);
@@ -55,6 +57,7 @@ class RunAuditControllerTest extends TestCase
         $this->actingAs($operator)->post('/reports/run-audit', $this->input())->assertOk();
         $this->assertSame(1, $store->auditSnapshots()->count());
         Notification::assertSentOnDemand(AuditSlackNotification::class);
+        Notification::assertSentOnDemand(AuditDiscordNotification::class);
     }
 
     public function test_it_shows_the_ok_state_when_nothing_is_missing(): void
