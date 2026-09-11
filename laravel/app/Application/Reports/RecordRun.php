@@ -7,14 +7,20 @@ use App\Models\Store;
 use App\Notifications\ReportEmailNotification;
 use App\Notifications\ScanDiscordNotification;
 use App\Notifications\ScanSlackNotification;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Notification;
 
 class RecordRun
 {
-    /** @param array<string, mixed> $attributes */
+    /**
+     * @param  array<string, mixed>  $attributes  may include an 'attachment' key shaped
+     *                                            array{headers: list<string>, rows: list<list<bool|float|int|string|null>>}
+     *                                            for the immediate-mode email CSV attachment
+     */
     public function handle(Store $store, array $attributes): RunLog
     {
-        $run = $store->runLogs()->create($attributes);
+        $attachment = $attributes['attachment'] ?? null;
+        $run = $store->runLogs()->create(Arr::except($attributes, ['attachment']));
         $oldIds = $store->runLogs()->latest('id')->skip(500)->take(500)->pluck('id');
         if ($oldIds->isNotEmpty()) {
             RunLog::whereKey($oldIds)->delete();
@@ -31,7 +37,7 @@ class RecordRun
         $tool = (string) ($attributes['tool'] ?? '');
         $emailRule = $store->resolvedEmailRules()[$tool] ?? null;
         if (($attributes['status'] ?? '') !== 'error' && $emailRule && $emailRule['mode'] === 'immediate' && $emailRule['email'] !== '' && $rows >= $emailRule['threshold'] && ($rows > 0 || $emailRule['include_zero'])) {
-            Notification::route('mail', $emailRule['email'])->notify(new ReportEmailNotification($store->label, $tool, $rows, isset($attributes['start_date']) ? (string) $attributes['start_date'] : null, isset($attributes['end_date']) ? (string) $attributes['end_date'] : null));
+            Notification::route('mail', $emailRule['email'])->notify(new ReportEmailNotification($store->label, $tool, $rows, isset($attributes['start_date']) ? (string) $attributes['start_date'] : null, isset($attributes['end_date']) ? (string) $attributes['end_date'] : null, $attachment['headers'] ?? null, $attachment['rows'] ?? null));
         }
 
         return $run;

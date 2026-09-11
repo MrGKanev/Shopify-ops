@@ -26,6 +26,19 @@ class EmailRulesDeliveryTest extends TestCase
         Notification::assertSentOnDemandTimes(ReportEmailNotification::class, 1);
     }
 
+    public function test_immediate_delivery_carries_the_csv_attachment_rows_through_to_the_notification(): void
+    {
+        Notification::fake();
+        $store = Store::factory()->create(['email_rules' => ['run_audit' => ['mode' => 'immediate', 'threshold' => 0, 'include_zero' => true, 'email' => 'ops@example.com']]]);
+
+        app(RecordRun::class)->handle($store, ['tool' => 'run_audit', 'rows_found' => 1, 'attachment' => ['headers' => ['Order', 'Total'], 'rows' => [['#1001', '19.99']]]]);
+
+        Notification::assertSentOnDemand(
+            ReportEmailNotification::class,
+            fn (ReportEmailNotification $notification): bool => $notification->attachmentHeaders === ['Order', 'Total'] && $notification->attachmentRows === [['#1001', '19.99']],
+        );
+    }
+
     public function test_digest_queues_latest_qualifying_runs_grouped_by_recipient(): void
     {
         Notification::fake();

@@ -21,4 +21,13 @@ class CsvExporterTest extends TestCase
         $this->assertStringContainsString("'+cmd", $content);
         $this->assertStringContainsString('"safe, value"', $content);
     }
+
+    public function test_content_returns_the_same_escaped_csv_as_a_string(): void
+    {
+        $content = (new CsvExporter)->content(['Order', 'Value'], [['#1', '=2+5'], ['#2', 'safe, value']]);
+
+        $this->assertStringContainsString("Order,Value\r\n", $content);
+        $this->assertStringContainsString("#1,'=2+5\r\n", $content);
+        $this->assertStringContainsString('"safe, value"', $content);
+    }
 }

@@ -30,7 +30,7 @@ capability-то готово.
 |---|---|---|---|
 | SMTP transport | Partial | Admin diagnostic показва mailer/from status и изпраща валидирано test писмо през SMTP; 10-second timeout, rate limit, safe failure log и fake tests | Production secrets/deployment configuration и реален staging delivery smoke test |
 | Audit email notifications | Done | `ReportEmailNotification` mailable, изпратено през `RecordRun` за immediate-mode правила (покрива и `run_audit`), subject/count wording | Dedicated HTML/text template design и duplicate-delivery hardening се преценяват отделно |
-| CSV email attachments | Todo | Няма export attachment flow | Safe filename, CSV injection protection, encoding, MIME/size limits и memory-safe generation |
+| CSV email attachments | Done | `CsvExporter::content()` (reuses safe-filename/formula-escaping от download), `ReportEmailNotification` attach-when-present, `RecordRun`/`RunAudit` подават missing-orders CSV на immediate-mode audit email; 5,000-row cap | Проширяване към останалите tools извън `run_audit` се прави при реална нужда |
 | Per-tool email rules | Done | `EmailRulesController`/`EmailRulesRequest`, per-store `email_rules` JSON (mode off/immediate/digest, threshold, include-zero, recipient), `resolvedEmailRules()` validation | — |
 | Daily email digest | Done | `reports:email-digest` Artisan command, groupира по recipient през `resolvedEmailRules()`, `ReportDigestNotification`, `Schedule::command(...)->dailyAt('08:00')->withoutOverlapping()` | Timezone/day-boundary edge cases и idempotency tests се разширяват при нужда |
 | Slack notifications | Done | Per-store `slack_rules` JSON, webhook channel adapter, audit/scan notifications, @mention rules, admin test-send endpoint и tests | — |
@@ -68,7 +68,7 @@ capability-то готово.
 |---|---|---|---|
 | Users/stores/credentials | Done | DB models/migrations, encrypted integration credentials и admin CRUD | Backup/restore и production secret rotation instructions |
 | Notification settings | Done | Per-store `slack_rules`/`discord_rules`/`email_rules` JSON с per-tool mode, mentions, threshold/recipient override и validation | — |
-| Sidebar preferences | Todo | Няма schema/UI | Per-user/store visibility defaults and persistence |
+| Sidebar preferences | Done decision | `laravel-test-audit.md` вече реши това при `SidebarSettingsTest.php` — Laravel навигацията е плосък top-nav без sidebar-section концепция, за която да се закачи тази настройка | — |
 | Ignore/unignore orders | Done | `IgnoredOrder` модел, `IgnoredOrderController`/requests (single, bulk, import), normalization и authorization | — |
 | Audit snapshots | Done | `AuditSnapshot` модел, `updateOrCreate` per store/tool/date в `RunAudit::handle()`, Saved Reports view | — |
 | Report persistence | Done | `SavedReportController` и tests | — |
