@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
+use App\Application\Reports\RecordRun;
 use App\Application\Reports\ReturnedItemsResult;
 use App\Application\Reports\RunReturnedItemsReport;
+use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ReturnedItemsRequest;
 use App\Models\Store;
@@ -17,12 +19,14 @@ use Throwable;
 
 class ReturnedItemsController extends Controller
 {
+    use RecordsReportRun;
+
     public function create(): View
     {
         return view('reports.returned-items', $this->viewData());
     }
 
-    public function store(ReturnedItemsRequest $request, RunReturnedItemsReport $report): View
+    public function store(ReturnedItemsRequest $request, RunReturnedItemsReport $report, RecordRun $runs): View
     {
         [$store, $startDate, $endDate] = $this->context($request);
         $configurationError = $this->configurationError($store);
@@ -30,12 +34,14 @@ class ReturnedItemsController extends Controller
         $reportFailed = false;
 
         if (! $configurationError) {
+            $started = microtime(true);
             try {
                 $result = $report->handle($store, $startDate, $endDate);
             } catch (Throwable $exception) {
                 $reportFailed = true;
                 $this->logFailure('Returned items report failed.', $exception, $store);
             }
+            $this->recordReportRun($runs, $store, 'returned_items', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
         return view('reports.returned-items', $this->viewData($startDate, $endDate, $result, $reportFailed, $configurationError));

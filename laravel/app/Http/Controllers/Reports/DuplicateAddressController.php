@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\DuplicateAddressResult;
+use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunDuplicateAddressReport;
+use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DuplicateAddressRequest;
 use App\Models\Store;
@@ -14,12 +16,14 @@ use Throwable;
 
 class DuplicateAddressController extends Controller
 {
+    use RecordsReportRun;
+
     public function create(): View
     {
         return view('reports.duplicate-addresses', ['startDate' => now()->subDays(30)->toDateString(), 'endDate' => now()->toDateString(), 'result' => null, 'reportFailed' => false, 'configurationError' => false]);
     }
 
-    public function store(DuplicateAddressRequest $request, RunDuplicateAddressReport $report): View
+    public function store(DuplicateAddressRequest $request, RunDuplicateAddressReport $report, RecordRun $runs): View
     {
         /** @var Store $activeStore */
         $activeStore = $request->attributes->get('activeStore');
@@ -30,12 +34,14 @@ class DuplicateAddressController extends Controller
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
+            $started = microtime(true);
             try {
                 $result = $report->handle($store, $startDate, $endDate);
             } catch (Throwable $exception) {
                 $reportFailed = true;
                 Log::warning('Duplicate address report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
             }
+            $this->recordReportRun($runs, $store, 'duplicate_addresses', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
         return view('reports.duplicate-addresses', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof DuplicateAddressResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);

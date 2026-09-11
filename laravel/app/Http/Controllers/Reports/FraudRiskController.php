@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\FraudRiskResult;
+use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunFraudRiskReport;
+use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\FraudRiskRequest;
 use App\Models\Store;
@@ -14,12 +16,14 @@ use Throwable;
 
 class FraudRiskController extends Controller
 {
+    use RecordsReportRun;
+
     public function create(): View
     {
         return view('reports.fraud-risk', ['startDate' => now()->subDays(30)->toDateString(), 'endDate' => now()->toDateString(), 'result' => null, 'reportFailed' => false, 'configurationError' => false]);
     }
 
-    public function store(FraudRiskRequest $request, RunFraudRiskReport $report): View
+    public function store(FraudRiskRequest $request, RunFraudRiskReport $report, RecordRun $runs): View
     {
         /** @var Store $activeStore */
         $activeStore = $request->attributes->get('activeStore');
@@ -31,12 +35,14 @@ class FraudRiskController extends Controller
         $reportFailed = false;
 
         if (! $configurationError) {
+            $started = microtime(true);
             try {
                 $result = $report->handle($store, $startDate, $endDate);
             } catch (Throwable $exception) {
                 $reportFailed = true;
                 Log::warning('Fraud risk report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
             }
+            $this->recordReportRun($runs, $store, 'fraud_risk', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
         return view('reports.fraud-risk', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof FraudRiskResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);

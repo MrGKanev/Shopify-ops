@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Reports;
 
+use App\Application\Reports\RecordRun;
 use App\Application\Reports\ReturnRmaResult;
 use App\Application\Reports\RunReturnRmaReport;
+use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ReturnRmaRequest;
 use App\Models\Store;
@@ -14,12 +16,14 @@ use Throwable;
 
 class ReturnRmaController extends Controller
 {
+    use RecordsReportRun;
+
     public function create(): View
     {
         return view('reports.return-rma', $this->viewData());
     }
 
-    public function store(ReturnRmaRequest $request, RunReturnRmaReport $report): View
+    public function store(ReturnRmaRequest $request, RunReturnRmaReport $report, RecordRun $runs): View
     {
         /** @var Store $activeStore */
         $activeStore = $request->attributes->get('activeStore');
@@ -31,12 +35,14 @@ class ReturnRmaController extends Controller
         $reportFailed = false;
 
         if (! $configurationError) {
+            $started = microtime(true);
             try {
                 $result = $report->handle($store, $startDate, $endDate);
             } catch (Throwable $exception) {
                 $reportFailed = true;
                 Log::warning('Return RMA report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
             }
+            $this->recordReportRun($runs, $store, 'return_rma', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
         return view('reports.return-rma', $this->viewData($startDate, $endDate, $result, $reportFailed, $configurationError));

@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\PartialFulfillmentResult;
+use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunPartialFulfillmentReport;
+use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PartialFulfillmentRequest;
 use App\Models\Store;
@@ -17,24 +19,28 @@ use Throwable;
 
 class PartialFulfillmentController extends Controller
 {
+    use RecordsReportRun;
+
     public function create(): View
     {
         return view('reports.partial-fulfillment', $this->viewData());
     }
 
-    public function store(PartialFulfillmentRequest $request, RunPartialFulfillmentReport $report): View
+    public function store(PartialFulfillmentRequest $request, RunPartialFulfillmentReport $report, RecordRun $runs): View
     {
         [$store, $startDate, $endDate, $threshold] = $this->context($request);
         $configurationError = $this->configurationError($store);
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
+            $started = microtime(true);
             try {
                 $result = $report->handle($store, $startDate, $endDate, $threshold);
             } catch (Throwable $exception) {
                 $reportFailed = true;
                 $this->logFailure('Partial fulfillment report failed.', $exception, $store);
             }
+            $this->recordReportRun($runs, $store, 'partial_fulfillment', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
         return view('reports.partial-fulfillment', $this->viewData($startDate, $endDate, $threshold, $result, $reportFailed, $configurationError));

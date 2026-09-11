@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\DisputeResult;
+use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunDisputeReport;
+use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Models\Store;
 use Illuminate\Http\Client\RequestException;
@@ -14,12 +16,14 @@ use Throwable;
 
 class DisputeController extends Controller
 {
+    use RecordsReportRun;
+
     public function create(): View
     {
         return view('reports.disputes', ['result' => null, 'reportFailed' => false, 'configurationError' => false]);
     }
 
-    public function store(Request $request, RunDisputeReport $report): View
+    public function store(Request $request, RunDisputeReport $report, RecordRun $runs): View
     {
         abort_unless($request->user()?->can('run-audits'), 403);
         /** @var Store $activeStore */
@@ -29,12 +33,14 @@ class DisputeController extends Controller
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
+            $started = microtime(true);
             try {
                 $result = $report->handle($store, now()->getTimestamp());
             } catch (Throwable $exception) {
                 $reportFailed = true;
                 Log::warning('Dispute report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
             }
+            $this->recordReportRun($runs, $store, 'disputes', $started, null, null, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
         return view('reports.disputes', ['result' => $result instanceof DisputeResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);

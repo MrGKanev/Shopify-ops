@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
+use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunVoidedShipmentsReport;
 use App\Application\Reports\VoidedShipmentsResult;
+use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CarrierPerformanceRequest;
 use App\Models\Store;
@@ -17,24 +19,28 @@ use Throwable;
 
 class VoidedShipmentsController extends Controller
 {
+    use RecordsReportRun;
+
     public function create(): View
     {
         return view('reports.voided-shipments', $this->viewData());
     }
 
-    public function store(CarrierPerformanceRequest $request, RunVoidedShipmentsReport $report): View
+    public function store(CarrierPerformanceRequest $request, RunVoidedShipmentsReport $report, RecordRun $runs): View
     {
         [$store, $startDate, $endDate] = $this->context($request);
         $configurationError = $this->configurationError($store);
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
+            $started = microtime(true);
             try {
                 $result = $report->handle($store, $startDate, $endDate);
             } catch (Throwable $exception) {
                 $reportFailed = true;
                 $this->logFailure('Voided shipments report failed.', $exception, $store);
             }
+            $this->recordReportRun($runs, $store, 'voided_shipments', $started, $startDate, $endDate, count($result->rows ?? []), count($result->rows ?? []), $reportFailed);
         }
 
         return view('reports.voided-shipments', $this->viewData($startDate, $endDate, $result, $reportFailed, $configurationError));

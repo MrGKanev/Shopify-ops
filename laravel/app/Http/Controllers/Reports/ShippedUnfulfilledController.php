@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
+use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunShippedUnfulfilledReport;
 use App\Application\Reports\ShippedUnfulfilledResult;
+use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ShippedUnfulfilledRequest;
 use App\Models\Store;
@@ -17,24 +19,28 @@ use Throwable;
 
 class ShippedUnfulfilledController extends Controller
 {
+    use RecordsReportRun;
+
     public function create(): View
     {
         return view('reports.shipped-unfulfilled', $this->viewData());
     }
 
-    public function store(ShippedUnfulfilledRequest $request, RunShippedUnfulfilledReport $report): View
+    public function store(ShippedUnfulfilledRequest $request, RunShippedUnfulfilledReport $report, RecordRun $runs): View
     {
         [$store,$start,$end] = $this->context($request);
         $configurationError = $this->configurationError($store);
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
+            $started = microtime(true);
             try {
                 $result = $report->handle($store, $start, $end);
             } catch (Throwable $exception) {
                 $reportFailed = true;
                 $this->logFailure('Shipped/unfulfilled report failed.', $exception, $store);
             }
+            $this->recordReportRun($runs, $store, 'shipped_unfulfilled', $started, $start, $end, $result->shippedTotal ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
         return view('reports.shipped-unfulfilled', $this->viewData($start, $end, $result, $reportFailed, $configurationError));

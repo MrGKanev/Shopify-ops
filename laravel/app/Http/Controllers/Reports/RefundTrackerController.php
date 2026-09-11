@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Reports;
 
+use App\Application\Reports\RecordRun;
 use App\Application\Reports\RefundTrackerResult;
 use App\Application\Reports\RunRefundTrackerReport;
+use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RefundTrackerRequest;
 use App\Models\Store;
@@ -14,12 +16,14 @@ use Throwable;
 
 class RefundTrackerController extends Controller
 {
+    use RecordsReportRun;
+
     public function create(): View
     {
         return view('reports.refund-tracker', $this->viewData());
     }
 
-    public function store(RefundTrackerRequest $request, RunRefundTrackerReport $report): View
+    public function store(RefundTrackerRequest $request, RunRefundTrackerReport $report, RecordRun $runs): View
     {
         /** @var Store $activeStore */
         $activeStore = $request->attributes->get('activeStore');
@@ -32,12 +36,14 @@ class RefundTrackerController extends Controller
         $reportFailed = false;
 
         if (! $shopifyConfigurationError && ! $shipStationConfigurationWarning) {
+            $started = microtime(true);
             try {
                 $result = $report->handle($store, $startDate, $endDate);
             } catch (Throwable $exception) {
                 $reportFailed = true;
                 Log::warning('Refund tracker report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
             }
+            $this->recordReportRun($runs, $store, 'refund_tracker', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
         return view('reports.refund-tracker', $this->viewData($startDate, $endDate, $result, $reportFailed, $shopifyConfigurationError, $shipStationConfigurationWarning));

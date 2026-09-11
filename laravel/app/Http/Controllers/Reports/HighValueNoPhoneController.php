@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\HighValueNoPhoneResult;
+use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunHighValueNoPhoneReport;
+use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\HighValueNoPhoneRequest;
 use App\Models\Store;
@@ -14,12 +16,14 @@ use Throwable;
 
 class HighValueNoPhoneController extends Controller
 {
+    use RecordsReportRun;
+
     public function create(): View
     {
         return view('reports.high-value-no-phone', ['startDate' => now()->subDays(30)->toDateString(), 'endDate' => now()->toDateString(), 'minimum' => 200, 'currency' => 'USD', 'result' => null, 'reportFailed' => false]);
     }
 
-    public function store(HighValueNoPhoneRequest $request, RunHighValueNoPhoneReport $report): View
+    public function store(HighValueNoPhoneRequest $request, RunHighValueNoPhoneReport $report, RecordRun $runs): View
     {
         /** @var Store $activeStore */
         $activeStore = $request->attributes->get('activeStore');
@@ -31,12 +35,14 @@ class HighValueNoPhoneController extends Controller
         $result = null;
         $reportFailed = false;
 
+        $started = microtime(true);
         try {
             $result = $report->handle($store, $startDate, $endDate, $minimum, $currency);
         } catch (Throwable $exception) {
             $reportFailed = true;
             Log::warning('High-value no-phone report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
         }
+        $this->recordReportRun($runs, $store, 'high_value_no_phone', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
 
         return view('reports.high-value-no-phone', ['startDate' => $startDate, 'endDate' => $endDate, 'minimum' => $minimum, 'currency' => $currency, 'result' => $result instanceof HighValueNoPhoneResult ? $result : null, 'reportFailed' => $reportFailed]);
     }

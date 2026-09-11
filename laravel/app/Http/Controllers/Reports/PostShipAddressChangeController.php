@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\PostShipAddressChangeResult;
+use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunPostShipAddressChangeReport;
+use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AddressChangeRequest;
 use App\Models\Store;
@@ -17,24 +19,28 @@ use Throwable;
 
 class PostShipAddressChangeController extends Controller
 {
+    use RecordsReportRun;
+
     public function create(): View
     {
         return view('reports.post-ship-address-changes', $this->viewData());
     }
 
-    public function store(AddressChangeRequest $request, RunPostShipAddressChangeReport $report): View
+    public function store(AddressChangeRequest $request, RunPostShipAddressChangeReport $report, RecordRun $runs): View
     {
         [$store, $startDate, $endDate] = $this->context($request);
         $configurationError = $this->configurationError($store);
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
+            $started = microtime(true);
             try {
                 $result = $report->handle($store, $startDate, $endDate);
             } catch (Throwable $exception) {
                 $reportFailed = true;
                 $this->logFailure('Post-ship address change report failed.', $exception, $store);
             }
+            $this->recordReportRun($runs, $store, 'post_ship_address_changes', $started, $startDate, $endDate, count($result->rows ?? []), count($result->rows ?? []), $reportFailed);
         }
 
         return view('reports.post-ship-address-changes', $this->viewData($startDate, $endDate, $result, $reportFailed, $configurationError));

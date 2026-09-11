@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\OrderEditResult;
+use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunOrderEditReport;
+use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\OrderEditRequest;
 use App\Models\Store;
@@ -14,12 +16,14 @@ use Throwable;
 
 class OrderEditController extends Controller
 {
+    use RecordsReportRun;
+
     public function create(): View
     {
         return view('reports.order-edits', ['startDate' => now()->subDays(30)->toDateString(), 'endDate' => now()->toDateString(), 'result' => null, 'configurationError' => false, 'reportFailed' => false]);
     }
 
-    public function store(OrderEditRequest $request, RunOrderEditReport $report): View
+    public function store(OrderEditRequest $request, RunOrderEditReport $report, RecordRun $runs): View
     {
         /** @var Store $activeStore */ $activeStore = $request->attributes->get('activeStore');
         $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
@@ -29,12 +33,14 @@ class OrderEditController extends Controller
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
+            $started = microtime(true);
             try {
                 $result = $report->handle($store, $start, $end);
             } catch (Throwable $exception) {
                 $reportFailed = true;
                 Log::warning('Order edit report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
             }
+            $this->recordReportRun($runs, $store, 'order_edits', $started, $start, $end, count($result->rows ?? []), count($result->rows ?? []), $reportFailed);
         }
 
         return view('reports.order-edits', ['startDate' => $start, 'endDate' => $end, 'result' => $result instanceof OrderEditResult ? $result : null, 'configurationError' => $configurationError, 'reportFailed' => $reportFailed]);

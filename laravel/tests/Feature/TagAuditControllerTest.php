@@ -77,6 +77,7 @@ class TagAuditControllerTest extends TestCase
             ->assertSee(route('orders.tag-search', ['tag' => 'VIP<img src=x>']), false)
             ->assertDontSee('<script>', false)
             ->assertDontSee('<img', false);
+        $this->assertDatabaseHas('run_logs', ['store_id' => $store->id, 'tool' => 'tag_audit', 'status' => 'ok', 'scanned' => 2, 'rows_found' => 2]);
     }
 
     public function test_upstream_error_is_atomic_and_does_not_expose_details(): void
@@ -91,6 +92,7 @@ class TagAuditControllerTest extends TestCase
             ->assertSeeText('could not be completed')
             ->assertDontSeeText('private-token')
             ->assertDontSeeText('unique tags');
+        $this->assertDatabaseHas('run_logs', ['tool' => 'tag_audit', 'status' => 'error']);
     }
 
     /** @param array<string, mixed> $storeAttributes @return array{User, Store} */

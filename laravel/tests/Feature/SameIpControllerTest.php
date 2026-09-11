@@ -34,11 +34,13 @@ class SameIpControllerTest extends TestCase
         $shopify->shouldReceive('sameIpCandidates')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '2026-09-01', '2026-09-07')->andReturn(['orders' => [['id' => '42', 'name' => '#<script>', 'email' => 'a@x.com', 'client_ip' => '203.0.113.5', 'total_price' => 10], ['id' => '43', 'name' => '#2', 'email' => '<img>@x.com', 'client_ip' => '203.0.113.5', 'total_price' => 20]], 'pages' => 100, 'truncated' => true]);
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
         $this->actingAs($operator)->post('/reports/same-ip', ['start_date' => '2026-09-01', 'end_date' => '2026-09-07'])->assertOk()->assertSeeText('2 scanned · 1 shared IPs')->assertSeeText('truncated after 100 pages')->assertDontSee('<script>', false)->assertDontSee('<img>', false);
+        $this->assertDatabaseHas('run_logs', ['store_id' => $store->id, 'tool' => 'same_ip', 'status' => 'ok', 'scanned' => 2, 'rows_found' => 1]);
 
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
         $shopify->shouldReceive('sameIpCandidates')->andThrow(new RuntimeException('secret'));
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
         $this->actingAs($operator)->post('/reports/same-ip', ['start_date' => '2026-09-01', 'end_date' => '2026-09-07'])->assertOk()->assertSeeText('could not be completed')->assertDontSeeText('secret');
+        $this->assertDatabaseHas('run_logs', ['store_id' => $store->id, 'tool' => 'same_ip', 'status' => 'error']);
     }
 
     private function userWithStore(bool $operator = false, array $attributes = []): array

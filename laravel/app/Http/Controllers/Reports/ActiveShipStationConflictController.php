@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\ActiveShipStationConflictResult;
+use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunActiveShipStationConflictReport;
+use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ActiveShipStationConflictRequest;
 use App\Models\Store;
@@ -17,24 +19,28 @@ use Throwable;
 
 class ActiveShipStationConflictController extends Controller
 {
+    use RecordsReportRun;
+
     public function create(): View
     {
         return view('reports.active-shipstation-conflicts', $this->viewData());
     }
 
-    public function store(ActiveShipStationConflictRequest $request, RunActiveShipStationConflictReport $report): View
+    public function store(ActiveShipStationConflictRequest $request, RunActiveShipStationConflictReport $report, RecordRun $runs): View
     {
         [$store,$start,$end] = $this->context($request);
         $configurationError = $this->configurationError($store);
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
+            $started = microtime(true);
             try {
                 $result = $report->handle($store, $start, $end);
             } catch (Throwable $exception) {
                 $reportFailed = true;
                 $this->logFailure('Active ShipStation conflicts report failed.', $exception, $store);
             }
+            $this->recordReportRun($runs, $store, 'active_shipstation_conflicts', $started, $start, $end, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
         return view('reports.active-shipstation-conflicts', $this->viewData($start, $end, $result, $reportFailed, $configurationError));

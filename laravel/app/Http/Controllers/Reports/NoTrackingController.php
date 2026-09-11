@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\NoTrackingResult;
+use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunNoTrackingReport;
+use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\NoTrackingRequest;
 use App\Models\Store;
@@ -17,24 +19,28 @@ use Throwable;
 
 class NoTrackingController extends Controller
 {
+    use RecordsReportRun;
+
     public function create(): View
     {
         return view('reports.no-tracking', $this->viewData());
     }
 
-    public function store(NoTrackingRequest $request, RunNoTrackingReport $report): View
+    public function store(NoTrackingRequest $request, RunNoTrackingReport $report, RecordRun $runs): View
     {
         [$store, $start, $end, $threshold] = $this->context($request);
         $configurationError = $this->configurationError($store);
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
+            $started = microtime(true);
             try {
                 $result = $report->handle($store, $start, $end, $threshold);
             } catch (Throwable $exception) {
                 $reportFailed = true;
                 $this->logFailure('No-tracking report failed.', $exception, $store);
             }
+            $this->recordReportRun($runs, $store, 'no_tracking', $started, $start, $end, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
         return view('reports.no-tracking', $this->viewData($start, $end, $threshold, $result, $reportFailed, $configurationError));

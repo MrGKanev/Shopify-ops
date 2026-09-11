@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\OrphanOrderResult;
+use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunOrphanOrderReport;
+use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\OrphanOrderRequest;
 use App\Models\Store;
@@ -17,24 +19,28 @@ use Throwable;
 
 class OrphanOrderController extends Controller
 {
+    use RecordsReportRun;
+
     public function create(): View
     {
         return view('reports.orphan-orders', $this->viewData());
     }
 
-    public function store(OrphanOrderRequest $request, RunOrphanOrderReport $report): View
+    public function store(OrphanOrderRequest $request, RunOrphanOrderReport $report, RecordRun $runs): View
     {
         [$store,$start,$end] = $this->context($request);
         $configurationError = $this->configurationError($store);
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
+            $started = microtime(true);
             try {
                 $result = $report->handle($store, $start, $end);
             } catch (Throwable $exception) {
                 $reportFailed = true;
                 $this->logFailure('Orphan order report failed.', $exception, $store);
             }
+            $this->recordReportRun($runs, $store, 'orphan_orders', $started, $start, $end, $result->shopifyTotal ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
         return view('reports.orphan-orders', $this->viewData($start, $end, $result, $reportFailed, $configurationError));

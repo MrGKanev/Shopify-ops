@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\ItemMismatchResult;
+use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunItemMismatchReport;
+use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ItemMismatchRequest;
 use App\Models\Store;
@@ -17,24 +19,28 @@ use Throwable;
 
 class ItemMismatchController extends Controller
 {
+    use RecordsReportRun;
+
     public function create(): View
     {
         return view('reports.item-mismatch', $this->viewData());
     }
 
-    public function store(ItemMismatchRequest $request, RunItemMismatchReport $report): View
+    public function store(ItemMismatchRequest $request, RunItemMismatchReport $report, RecordRun $runs): View
     {
         [$store,$start,$end] = $this->context($request);
         $configurationError = $this->configurationError($store);
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
+            $started = microtime(true);
             try {
                 $result = $report->handle($store, $start, $end);
             } catch (Throwable $exception) {
                 $reportFailed = true;
                 $this->logFailure('Item mismatch report failed.', $exception, $store);
             }
+            $this->recordReportRun($runs, $store, 'item_mismatch', $started, $start, $end, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
         return view('reports.item-mismatch', $this->viewData($start, $end, $result, $reportFailed, $configurationError));

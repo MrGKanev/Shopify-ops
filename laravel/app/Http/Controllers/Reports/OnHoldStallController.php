@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\OnHoldStallResult;
+use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunOnHoldStallReport;
+use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\OnHoldStallRequest;
 use App\Models\Store;
@@ -17,24 +19,28 @@ use Throwable;
 
 class OnHoldStallController extends Controller
 {
+    use RecordsReportRun;
+
     public function create(): View
     {
         return view('reports.on-hold-stall', $this->viewData());
     }
 
-    public function store(OnHoldStallRequest $request, RunOnHoldStallReport $report): View
+    public function store(OnHoldStallRequest $request, RunOnHoldStallReport $report, RecordRun $runs): View
     {
         [$store, $startDate, $endDate] = $this->context($request);
         $configurationError = $this->configurationError($store);
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
+            $started = microtime(true);
             try {
                 $result = $report->handle($store, $startDate, $endDate);
             } catch (Throwable $exception) {
                 $reportFailed = true;
                 $this->logFailure('On-hold stall report failed.', $exception, $store);
             }
+            $this->recordReportRun($runs, $store, 'on_hold_stall', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
         return view('reports.on-hold-stall', $this->viewData($startDate, $endDate, $result, $reportFailed, $configurationError));

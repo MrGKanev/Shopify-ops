@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\FulfilledItemsResult;
+use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunFulfilledItemsReport;
+use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\FulfilledItemsRequest;
 use App\Models\Store;
@@ -17,24 +19,28 @@ use Throwable;
 
 class FulfilledItemsController extends Controller
 {
+    use RecordsReportRun;
+
     public function create(): View
     {
         return view('reports.fulfilled-items', $this->viewData());
     }
 
-    public function store(FulfilledItemsRequest $request, RunFulfilledItemsReport $report): View
+    public function store(FulfilledItemsRequest $request, RunFulfilledItemsReport $report, RecordRun $runs): View
     {
         [$store, $startDate, $endDate] = $this->context($request);
         $configurationError = $this->configurationError($store);
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
+            $started = microtime(true);
             try {
                 $result = $report->handle($store, $startDate, $endDate);
             } catch (Throwable $exception) {
                 $reportFailed = true;
                 $this->logFailure('Fulfilled items report failed.', $exception, $store);
             }
+            $this->recordReportRun($runs, $store, 'fulfilled_items', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
         return view('reports.fulfilled-items', $this->viewData($startDate, $endDate, $result, $reportFailed, $configurationError));

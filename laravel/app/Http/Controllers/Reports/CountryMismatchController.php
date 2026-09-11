@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\CountryMismatchResult;
+use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunCountryMismatchReport;
+use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CountryMismatchRequest;
 use App\Models\Store;
@@ -14,12 +16,14 @@ use Throwable;
 
 class CountryMismatchController extends Controller
 {
+    use RecordsReportRun;
+
     public function create(): View
     {
         return view('reports.country-mismatch', ['startDate' => now()->subDays(30)->toDateString(), 'endDate' => now()->toDateString(), 'result' => null, 'reportFailed' => false]);
     }
 
-    public function store(CountryMismatchRequest $request, RunCountryMismatchReport $report): View
+    public function store(CountryMismatchRequest $request, RunCountryMismatchReport $report, RecordRun $runs): View
     {
         /** @var Store $activeStore */
         $activeStore = $request->attributes->get('activeStore');
@@ -28,12 +32,14 @@ class CountryMismatchController extends Controller
         $endDate = (string) $request->validated('end_date');
         $result = null;
         $reportFailed = false;
+        $started = microtime(true);
         try {
             $result = $report->handle($store, $startDate, $endDate);
         } catch (Throwable $exception) {
             $reportFailed = true;
             Log::warning('Country mismatch report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
         }
+        $this->recordReportRun($runs, $store, 'country_mismatch', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
 
         return view('reports.country-mismatch', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof CountryMismatchResult ? $result : null, 'reportFailed' => $reportFailed]);
     }

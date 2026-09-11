@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\FulfillmentSlaResult;
+use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunFulfillmentSlaReport;
+use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\FulfillmentSlaRequest;
 use App\Models\Store;
@@ -17,24 +19,28 @@ use Throwable;
 
 class FulfillmentSlaController extends Controller
 {
+    use RecordsReportRun;
+
     public function create(): View
     {
         return view('reports.fulfillment-sla', $this->viewData());
     }
 
-    public function store(FulfillmentSlaRequest $request, RunFulfillmentSlaReport $report): View
+    public function store(FulfillmentSlaRequest $request, RunFulfillmentSlaReport $report, RecordRun $runs): View
     {
         [$store, $startDate, $endDate, $threshold] = $this->context($request);
         $configurationError = $this->configurationError($store);
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
+            $started = microtime(true);
             try {
                 $result = $report->handle($store, $startDate, $endDate, $threshold);
             } catch (Throwable $exception) {
                 $reportFailed = true;
                 $this->logFailure('Fulfillment SLA report failed.', $exception, $store);
             }
+            $this->recordReportRun($runs, $store, 'fulfillment_sla', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
         return view('reports.fulfillment-sla', $this->viewData($startDate, $endDate, $threshold, $result, $reportFailed, $configurationError));

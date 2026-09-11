@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
+use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunShippingMarginReport;
 use App\Application\Reports\ShippingMarginResult;
+use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ShippingMarginRequest;
 use App\Models\Store;
@@ -17,12 +19,14 @@ use Throwable;
 
 class ShippingMarginController extends Controller
 {
+    use RecordsReportRun;
+
     public function create(): View
     {
         return view('reports.shipping-margin', $this->viewData());
     }
 
-    public function store(ShippingMarginRequest $request, RunShippingMarginReport $report): View
+    public function store(ShippingMarginRequest $request, RunShippingMarginReport $report, RecordRun $runs): View
     {
         /** @var Store $activeStore */
         $activeStore = $request->attributes->get('activeStore');
@@ -34,12 +38,14 @@ class ShippingMarginController extends Controller
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
+            $started = microtime(true);
             try {
                 $result = $report->handle($store, $startDate, $endDate, $threshold);
             } catch (Throwable $exception) {
                 $reportFailed = true;
                 Log::warning('Shipping margin report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
             }
+            $this->recordReportRun($runs, $store, 'shipping_margin', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
         return view('reports.shipping-margin', $this->viewData($startDate, $endDate, $threshold, $result, $reportFailed, $configurationError));
