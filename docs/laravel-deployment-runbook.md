@@ -39,19 +39,22 @@ application-ниво настройката и routine deploy процедура
 | `SLACK_NOTIFICATION_WEBHOOK_URL` / `DISCORD_NOTIFICATION_WEBHOOK_URL` | Slack/Discord notifications мълчаливо се пропускат |
 | `METRICS_SCRAPE_TOKEN` | `/metrics` връща 404 (изключен endpoint) |
 | Google OAuth ключове (виж `config/services.php`) | Google sign-in бутонът остава скрит/неконфигуриран |
-| `QUEUE_CONNECTION` | По подразбиране `database`; смени на `redis` само ако Horizon е управляван отделно |
+| `QUEUE_CONNECTION` | Production решение: **`redis`**, управляван от Horizon (виж по-долу). Изисква работещ Redis и попълнени `REDIS_*`/`HORIZON_*` ключове |
 | Mail (`MAIL_*`) | Email notifications/digest не могат да се доставят |
 | `BACKUP_MAX_AGE_DAYS` и `spatie/laravel-backup` destination конфигурация | Backup health check не може да оцени свежест |
+| `LOG_CHANNEL`/`LOG_DAILY_DAYS` | Production решение: **file logging** (`daily` channel), 180 дни retention (`LOG_DAILY_DAYS=180`, вече по подразбиране в `.env.example`) |
 
-## Queue worker (supervisor)
+## Queue worker (Horizon)
 
-По подразбиране `QUEUE_CONNECTION=database` — не изисква Redis. Supervisor
-процес пази `queue:work` вдигнат и го рестартира при срив:
+Production решение: `QUEUE_CONNECTION=redis`, worker-ите се управляват от
+Horizon (вече инсталиран и конфигуриран — `config/horizon.php`,
+admin-only dashboard на `/admin/horizon`, `Schedule::command('horizon:snapshot')`
+на всеки 5 мин). Supervisor пази `horizon` вдигнат:
 
 ```ini
-[program:shipstation-checker-worker]
-process_name=%(program_name)s_%(process_num)02d
-command=php /path/to/laravel/artisan queue:work --queue=default,notifications --sleep=3 --tries=3 --backoff=10 --max-time=3600
+[program:shipstation-checker-horizon]
+process_name=%(program_name)s
+command=php /path/to/laravel/artisan horizon
 directory=/path/to/laravel
 autostart=true
 autorestart=true
@@ -60,20 +63,17 @@ killasgroup=true
 user=www-data
 numprocs=1
 redirect_stderr=true
-stdout_logfile=/path/to/laravel/storage/logs/worker.log
+stdout_logfile=/path/to/laravel/storage/logs/horizon.log
 stopwaitsecs=3600
 ```
 
-`--max-time=3600` кара worker процеса да се самоприключи на час, а
-`autorestart=true` го вдига веднага — това е graceful restart без ръчна
-намеса и без загуба на in-flight job (worker довършва текущия job преди
-изход). При deploy: `php artisan queue:restart` праща сигнал на всички
-активни worker-и да приключат след текущия job; supervisor ги вдига наново
-с новия код.
+При deploy: `php artisan horizon:terminate` праща сигнал на Horizon да
+приключи текущите jobs и излезе gracefully; supervisor го вдига наново
+с новия код (аналог на `queue:restart` за non-Horizon setup).
 
-Ако по-късно преминете към `QUEUE_CONNECTION=redis` с Horizon, заменете
-`command`-а с `php artisan horizon` (Horizon управлява собствените си
-worker процеси и вече е добавен в health checks-а и `Schedule::command('horizon:snapshot')`).
+Изисква работещ Redis сървър и попълнени `REDIS_HOST`/`REDIS_PORT`/
+`REDIS_PASSWORD` (и `HORIZON_REDIS_CONNECTION`, ако различен от `default`)
+в production `.env`-а.
 
 ## Scheduler (cron)
 
@@ -94,8 +94,8 @@ pruning, health heartbeats, backup run/monitor/clean:
 4. `npm ci && npm run build`
 5. `php artisan migrate --force`
 6. `php artisan config:cache && php artisan route:cache && php artisan view:cache`
-7. `php artisan queue:restart`
-8. `supervisorctl restart shipstation-checker-worker:*` (ако supervisor не
+7. `php artisan horizon:terminate`
+8. `supervisorctl restart shipstation-checker-horizon:*` (ако supervisor не
    е уловил рестарта автоматично)
 9. `php artisan up` (ако е бил спрян в стъпка 1)
 10. Smoke checks (виж по-долу).
@@ -125,8 +125,8 @@ commit-а, не като отделна ръчна операция извън g
 - Production observability активиране — Sentry, Pulse, Horizon dashboards и
   `/metrics` вече са инсталирани и wired (виж [platform
   audit](laravel-platform-audit.md) → "Production observability"), но
-  `SENTRY_LARAVEL_DSN`, изборът дали `QUEUE_CONNECTION=redis` за Horizon, и
-  кой получава `/metrics` scrape/alerting остават съзнателно отложени
-  production решения.
+  `SENTRY_LARAVEL_DSN` и кой получава `/metrics` scrape/alerting остават
+  съзнателно отложени production решения. `QUEUE_CONNECTION=redis`+Horizon
+  вече е решено (виж "Queue worker (Horizon)" по-горе).
 - UAT и cutover repetition — виж [UAT и cutover checklist](laravel-uat-cutover-checklist.md)
   и release gate-а в [platform audit](laravel-platform-audit.md).
