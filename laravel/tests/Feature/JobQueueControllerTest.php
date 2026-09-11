@@ -24,6 +24,32 @@ class JobQueueControllerTest extends TestCase
         $this->actingAs($operator)->get('/jobs')->assertOk()->assertSeeText('Pending · 1')->assertSeeText('Failed · 1')->assertDontSee('<script>', false)->assertDontSee('<img>', false)->assertDontSeeText('secret-token');
     }
 
+    public function test_admin_sees_a_horizon_link_instead_of_the_pending_table_when_queue_is_redis(): void
+    {
+        config(['queue.default' => 'redis']);
+        $admin = User::factory()->admin()->create();
+        $store = Store::factory()->create();
+        $admin->stores()->attach($store);
+        DB::table('jobs')->insert(['queue' => 'default', 'payload' => json_encode(['displayName' => 'Ignored']), 'attempts' => 1, 'available_at' => time(), 'created_at' => time()]);
+
+        $this->actingAs($admin)->get('/jobs')
+            ->assertOk()
+            ->assertDontSeeText('Pending · 1')
+            ->assertSee(url(config('horizon.path')));
+    }
+
+    public function test_non_admin_sees_an_admin_only_notice_instead_of_the_pending_table_when_queue_is_redis(): void
+    {
+        config(['queue.default' => 'redis']);
+        [$operator] = $this->userWithStore(true);
+
+        $this->actingAs($operator)->get('/jobs')
+            ->assertOk()
+            ->assertDontSeeText('Pending · 0')
+            ->assertDontSee(url(config('horizon.path')))
+            ->assertSeeText('Pending job details are only visible to administrators in the Horizon dashboard.');
+    }
+
     public function test_retry_and_forget_only_existing_failed_jobs(): void
     {
         [$operator] = $this->userWithStore(true);

@@ -5,16 +5,23 @@ namespace App\Http\Controllers;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 class JobQueueController extends Controller
 {
     public function index(): View
     {
-        $jobs = DB::table('jobs')->latest('id')->paginate(100, ['*'], 'jobs');
+        $usingRedis = config('queue.default') === 'redis';
+        $jobs = $usingRedis ? null : DB::table('jobs')->latest('id')->paginate(100, ['*'], 'jobs');
         $failed = DB::table('failed_jobs')->latest('id')->paginate(100, ['*'], 'failed');
 
-        return view('jobs.index', compact('jobs', 'failed'));
+        return view('jobs.index', [
+            'jobs' => $jobs,
+            'failed' => $failed,
+            'usingRedis' => $usingRedis,
+            'canViewHorizon' => Gate::allows('viewHorizon'),
+        ]);
     }
 
     public function retry(string $uuid): RedirectResponse
