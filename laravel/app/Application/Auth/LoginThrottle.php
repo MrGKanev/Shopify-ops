@@ -74,7 +74,7 @@ class LoginThrottle
         LoginAttempt::where('ip', $ip)->delete();
     }
 
-    private function formatBanMessage(Carbon $bannedUntil): string
+    private function formatBanMessage(\Carbon\Carbon $bannedUntil): string
     {
         $seconds = max(0, Carbon::now()->startOfSecond()->diffInSeconds($bannedUntil, false));
         $days = intdiv($seconds, 86400);
