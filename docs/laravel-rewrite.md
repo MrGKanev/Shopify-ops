@@ -642,14 +642,14 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 - [x] `AuthTest.php` — persistent IP lockout built (`LoginThrottle`, `login_attempts` table, admin Banned IPs page), matching legacy's 3-attempts/1-week-ban policy; permission matrix confirmed via `RouteAuthorizationTest.php`, see [laravel-test-audit.md](laravel-test-audit.md)
 - [x] `GraphQL/EventNormalizerTest.php` — fixed a real double-counting bug (`isOrderEditEvent`/`isAddressChangeEvent` had no Laravel port), see [laravel-test-audit.md](laravel-test-audit.md)
 - [x] `GraphQL/OrderComponentNormalizerTest.php` — address/item/fulfillment verified field-for-field; shippingLine/discountCode have no shared class by design
-- [ ] `OrderPolicyPageLoaderTest.php` — Discount Abuse, Same IP, Tag Policy, Duplicate Shipping Addresses и Note Flags paths са пренесени; останалите policy report branches чакат method-level сверка
+- [x] `OrderPolicyPageLoaderTest.php` — all 9 dispatch branches verified, each already closed under its own report row
 - [x] `FraudComplianceChecksTest.php` — всичките 22 country mismatch, high-value/no-phone и email checker решения са нанесени; non-ISO country names умишлено се броят като липсващи вместо като false-positive mismatch
 - [x] `GraphQL/OrderEventLookupTest.php` — lookup, cursor pagination, newest-first order и missing order са покрити, включително malformed payload/cursor guards
-- [ ] `GraphQL/OrderNormalizerTest.php` — core fields verified; tax/consent/discount/client_ip are handled inline per-report by design, but attribution/journey/source/support fields have no consumer yet — tied to `OrderInsightPageLoaderTest.php`/`OrderTimelineTest.php`, see [laravel-test-audit.md](laravel-test-audit.md)
+- [ ] `GraphQL/OrderNormalizerTest.php` — the only remaining audit row (114/115 closed). Core fields verified; tax/consent/discount/client_ip handled inline per-report by design. Remaining attribution/journey/PO/support fields trace to legacy's untested `Actions::orderDetail()`, not to compare/timeline (both now closed) — a product-decision flag, not a test gap, see [laravel-test-audit.md](laravel-test-audit.md)
 - [x] `HttpAuthEndpointTest.php` — login/logout, Google boundary failures, session rotation, throttling и CSP са покрити с HTTP feature tests
-- [ ] `OrderInsightPageLoaderTest.php` — compare/timeline subset е пренесен; останалите insights остават
-- [ ] `OrderTimelineTest.php` — workflow е пренесен и разширен; 26 legacy methods чакат explicit mapping
-- [ ] `ProductInventoryPageLoaderTest.php` — Product Completeness, Inventory Oversell, Inventory Aging, Inventory Forecast, Zombie Products и Catalog Quality wiring/error/success paths са пренесени; останалите catalogue workflows остават
+- [x] `OrderInsightPageLoaderTest.php` — compare/timeline are its only two branches (verified from source); both closed
+- [x] `OrderTimelineTest.php` — ported field-for-field (and improved in places: earliest-fulfillment time-to-ship, URL scheme allowlisting) by `OrderTimelineBuilder`/`OrderTimelineRiskAnalyzer`
+- [x] `ProductInventoryPageLoaderTest.php` — all 8 dispatch branches verified, each already closed under its own report row
 - [ ] `SearchLookupPageLoaderTest.php` — single lookup/compare/timeline subset е пренесен
 - [x] `SecurityTest.php` — everything testable in this environment is covered; trusted-proxy CIDR trust and HSTS are deferred to the production rollout (untestable without a real load balancer/TLS termination), not a code gap
 - [x] `SlackNotifierTest.php` — queue-ready webhook delivery, trusted endpoint validation, safe admin diagnostic, credential-free payload, audit/scan mentions formatting (with and without mentions) и queue-based retry/failure handling са затворени; виж [laravel-test-audit.md](laravel-test-audit.md) за пълния method-level mapping
@@ -1026,7 +1026,7 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [x] `EmailDigestTest.php` — `reports:email-digest` scheduled command; fixed a rolling-24h-vs-calendar-day bug, see [laravel-test-audit.md](laravel-test-audit.md)
 - [x] `EmailNotifierTest.php` — `ReportEmailNotification`/`ReportDigestNotification`
 - [x] `EmailRulesTest.php` — `Store::resolvedEmailRules()`/`EmailRulesController`
-- [ ] `FulfillmentIssuePageLoaderTest.php`
+- [x] `FulfillmentIssuePageLoaderTest.php` — all 9 dispatch branches verified, each already closed or with its own tested controller
 - [x] `FulfillmentLogisticsChecksTest.php`
 - [x] `GraphQL/AdminLookupsTest.php` — facade delegation е заменена с директен Shopify gateway contract; order, metafield и customer lookup paths са покрити end-to-end
 - [x] `GraphQL/CatalogAndFulfillmentTest.php`
@@ -1052,7 +1052,7 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [ ] `ManageSettingsPageLoaderTest.php`
 - [x] `MetricsEndpointTest.php` — replaced by the admin-only Laravel Pulse dashboard (`PulseDashboardTest.php`)
 - [x] `OnHoldStallTest.php`
-- [ ] `OrderAnomalyPageLoaderTest.php`
+- [x] `OrderAnomalyPageLoaderTest.php` — all 7 dispatch branches verified, each already closed under its own report row
 - [x] `OrphanDetectorTest.php`
 - [x] `PageLoaderTest.php` — the `run_audit` page loader, covered by `RunAuditControllerTest.php`/`DashboardControllerTest.php`
 - [x] `PartialFulfillStallsTest.php`
@@ -1064,7 +1064,7 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [x] `ScanRunnerTest.php` — scaffold replicated per-report across `RunXxxReport`/`RecordRun`, see [laravel-test-audit.md](laravel-test-audit.md)
 - [ ] `ShopifyFlowHealthTest.php`
 - [ ] `SidebarSettingsTest.php`
-- [ ] `SimpleScanPageLoaderTest.php`
+- [x] `SimpleScanPageLoaderTest.php` — all 8 dispatch branches verified, each already closed under its own report row
 - [ ] `SlackRulesTest.php`
 - [x] `SsShippedUnfulfilledTest.php`
 - [ ] `ToolRegistryTest.php`
