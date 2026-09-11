@@ -19,7 +19,7 @@ capability-то готово.
 | Password login/logout | Done | Session auth, credential validation, session regeneration и login throttle | Финална production proxy/TLS проверка се следи в hardening |
 | Roles и authorization | Done | Viewer/operator/admin gates, route protection и admin authorization tests | Пълната legacy action-permission method mapping остава в test audit-а |
 | Multi-store access | Done | Membership, active-store middleware и store-scoped credentials | Всички бъдещи routes/jobs задължително получават isolation тест |
-| First administrator | Done | Fresh-install Artisan command с atomic validation | Deployment runbook трябва да включи изпълнението му |
+| First administrator | Done | Fresh-install Artisan command с atomic validation, включена в [deployment runbook](laravel-deployment-runbook.md) | — |
 | Google OAuth | Done | Socialite redirect/callback, `GoogleIdentityPolicy` allowed-domain policy, existing/new-user policy, disabled-config UX, session regeneration, `throttle:oauth` rate limit, safe error messages и tests без реална мрежа | — |
 | Lockout и banned IP management | Done | `LoginAttempt` модел, `LoginThrottle` service (persistent IP lockout след 3 неуспешни опита), `BannedIpController` admin UX и tests | Trusted-proxy IP resolution и audit log за unban се преценяват отделно при нужда |
 | Security headers/cookies/proxy | Partial | Laravel session/CSRF defaults и application middleware | CSP/frame/referrer/HSTS policy, secure cookie settings и trusted proxies, проверени зад production TLS proxy |
@@ -60,7 +60,7 @@ capability-то готово.
 | Idempotency/concurrency | Todo | Няма persisted unique keys на job ниво (schedule-level `withoutOverlapping` е налично за cron задачите) | Unique key по store/tool/range, overlap protection, atomic claim и safe retry tests за queued jobs |
 | Failed-job recovery | Todo | Framework таблица и вградени `queue:retry`/`queue:failed` команди налични | Custom retry/cancel UX или CLI policy, failure classification, no duplicate side effects и runbook |
 | Scheduler | Done | `routes/console.php` — `reports:email-digest`, `activitylog:clean`, `health:*-heartbeat`, `health:check`, `model:prune`, `backup:run`/`monitor`/`clean`, `horizon:snapshot`; всички cron-критични с `withoutOverlapping()` | Timezone policy documentation и single-server решение (locking driver) се потвърждават в deployment runbook-а |
-| Worker deployment | Todo | Няма production service definition | Start/restart/stop, deploy restart, graceful timeout, process supervision и rollback-independent fix-forward runbook |
+| Worker deployment | Done | Supervisor config template (`queue:work`/Horizon вариант), `--max-time`/`autorestart` graceful cycling, `queue:restart` deploy hook — виж [deployment runbook](laravel-deployment-runbook.md) | — |
 
 ## Persistence, settings и state
 
@@ -92,7 +92,7 @@ capability-то готово.
 | Configuration validation | Partial | Laravel config и request-level credential guards | Startup/deploy validation за app URL/key, DB, queue, mail, OAuth, proxy и notification settings |
 | CI checks | Done | Laravel CI изпълнява PHPUnit, Larastan level 5, Pint, Composer audit и frontend build/audit; Larastan scope покрива Application, Domain и Integrations без baseline | Разширяване към HTTP/Models и по-високо analysis ниво се прави постепенно без отслабване на gate-а |
 | Backup and restore | Partial | `spatie/laravel-backup` инсталиран, scheduled `backup:run`/`backup:monitor`/`backup:clean` | Restore rehearsal, retention policy documentation и storage-destination ownership остават Todo |
-| Deployment runbook | Todo | Няма production procedure | Maintenance/write freeze, migrate, build, cache config/routes, worker restart, scheduler, smoke checks и fix-forward |
+| Deployment runbook | Done | [`docs/laravel-deployment-runbook.md`](laravel-deployment-runbook.md) — write freeze, .env decision table, supervisor/cron, routine deploy стъпки, smoke checks, fix-forward policy | Изпълнение на реален fresh-install + deploy repetition остава в UAT реда |
 | Production observability | Todo | Няма готов operational stack | Log destination/retention, metrics scrape, dashboards, alert ownership и escalation |
 | UAT и cutover rehearsal | Todo | Планът изисква две репетиции | Golden fixtures, production-sized run, sign-off evidence и irreversible cutover checklist |
 
