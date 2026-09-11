@@ -55,7 +55,7 @@ class AuthenticatedSessionControllerTest extends TestCase
         $response
             ->assertRedirect(route('login'))
             ->assertSessionHasErrors([
-                'email' => 'The provided credentials do not match our records.',
+                'email' => 'Incorrect email or password. 2 attempts remaining.',
             ]);
         $this->assertGuest();
     }
@@ -93,6 +93,24 @@ class AuthenticatedSessionControllerTest extends TestCase
             'email' => 'operator@example.com',
             'password' => 'wrong-password',
         ])->assertTooManyRequests();
+    }
+
+    public function test_third_failed_attempt_bans_the_ip_and_blocks_further_attempts_even_with_the_right_password(): void
+    {
+        $this->travelTo(now());
+        User::factory()->create(['email' => 'operator@example.com', 'password' => 'correct-password']);
+
+        $this->from(route('login'))->post(route('login.store'), ['email' => 'operator@example.com', 'password' => 'wrong'])
+            ->assertSessionHasErrors(['email' => 'Incorrect email or password. 2 attempts remaining.']);
+        $this->from(route('login'))->post(route('login.store'), ['email' => 'operator@example.com', 'password' => 'wrong'])
+            ->assertSessionHasErrors(['email' => 'Incorrect email or password. 1 attempt remaining.']);
+        $this->from(route('login'))->post(route('login.store'), ['email' => 'operator@example.com', 'password' => 'wrong'])
+            ->assertSessionHasErrors(['email' => 'Too many failed attempts. Account locked for 1 week. Contact your administrator.']);
+
+        $response = $this->from(route('login'))->post(route('login.store'), ['email' => 'operator@example.com', 'password' => 'correct-password']);
+
+        $response->assertSessionHasErrors(['email' => 'Too many failed attempts. Try again in 7 days.']);
+        $this->assertGuest();
     }
 
     public function test_authenticated_user_is_redirected_away_from_the_login_form(): void

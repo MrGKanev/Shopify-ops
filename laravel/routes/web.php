@@ -3,6 +3,7 @@
 use App\Http\Controllers\ActiveStoreController;
 use App\Http\Controllers\Admin\ActionLogController;
 use App\Http\Controllers\Admin\ApiHealthController;
+use App\Http\Controllers\Admin\BannedIpController;
 use App\Http\Controllers\Admin\ConfigCheckController;
 use App\Http\Controllers\Admin\DiscordRulesController;
 use App\Http\Controllers\Admin\EmailRulesController;
@@ -272,6 +273,8 @@ Route::middleware('auth')->group(function (): void {
                 Route::get('/email-rules', [EmailRulesController::class, 'edit'])->name('email-rules.edit');
                 Route::put('/email-rules', [EmailRulesController::class, 'update'])->name('email-rules.update');
                 Route::get('/action-log', ActionLogController::class)->name('action-log');
+                Route::get('/banned-ips', [BannedIpController::class, 'index'])->name('banned-ips.index');
+                Route::delete('/banned-ips', [BannedIpController::class, 'destroy'])->name('banned-ips.destroy');
                 Route::get('/health', HealthCheckResultsController::class)->name('health');
                 Route::post('/api-health', [ApiHealthController::class, 'check'])->middleware('throttle:api-health')->name('api-health.check');
                 Route::post('/api-health/test-email', [ApiHealthController::class, 'sendTestEmail'])->middleware('throttle:api-health')->name('api-health.test-email');

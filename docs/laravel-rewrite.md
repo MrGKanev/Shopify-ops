@@ -639,7 +639,7 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 
 - [x] `AllViewsSmokeTest.php` — automatic authenticated traversal на всеки parameterless application GET screen
 - [x] `AuthPermissionSnapshotTest.php` — automatic report/admin route-gate completeness и runtime viewer denial
-- [ ] `AuthTest.php` — session/Google auth и login throttling са пренесени; persistent banned-IP files са заменени, а пълната permission method mapping остава
+- [x] `AuthTest.php` — persistent IP lockout built (`LoginThrottle`, `login_attempts` table, admin Banned IPs page), matching legacy's 3-attempts/1-week-ban policy; permission matrix confirmed via `RouteAuthorizationTest.php`, see [laravel-test-audit.md](laravel-test-audit.md)
 - [x] `GraphQL/EventNormalizerTest.php` — fixed a real double-counting bug (`isOrderEditEvent`/`isAddressChangeEvent` had no Laravel port), see [laravel-test-audit.md](laravel-test-audit.md)
 - [x] `GraphQL/OrderComponentNormalizerTest.php` — address/item/fulfillment verified field-for-field; shippingLine/discountCode have no shared class by design
 - [ ] `OrderPolicyPageLoaderTest.php` — Discount Abuse, Same IP, Tag Policy, Duplicate Shipping Addresses и Note Flags paths са пренесени; останалите policy report branches чакат method-level сверка

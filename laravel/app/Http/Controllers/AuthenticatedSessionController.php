@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Application\Auth\LoginThrottle;
 use App\Http\Requests\LoginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,17 +16,25 @@ class AuthenticatedSessionController extends Controller
         return view('auth.login', ['googleConfigured' => $this->googleConfigured(), 'googleLoginOnly' => (bool) config('services.google.login_only')]);
     }
 
-    public function store(LoginRequest $request): RedirectResponse
+    public function store(LoginRequest $request, LoginThrottle $throttle): RedirectResponse
     {
         if ((bool) config('services.google.login_only')) {
             return back()->withErrors(['email' => 'Password sign-in is disabled. Continue with Google.'])->onlyInput('email');
         }
+
+        $ip = (string) $request->ip();
+
+        if ($message = $throttle->bannedMessage($ip)) {
+            return back()->withErrors(['email' => $message])->onlyInput('email');
+        }
+
         if (! Auth::attempt($request->validated())) {
             return back()
-                ->withErrors(['email' => 'The provided credentials do not match our records.'])
+                ->withErrors(['email' => $throttle->recordFailureMessage($ip)])
                 ->onlyInput('email');
         }
 
+        $throttle->recordSuccess($ip);
         $request->session()->regenerate();
 
         return redirect()->intended(route('dashboard'));
