@@ -1,6 +1,6 @@
 # Laravel rewrite — platform and extras audit
 
-Последно обновяване: **2026-09-07**.
+Последно обновяване: **2026-09-11**.
 
 Този checklist покрива всичко извън 72-та видими tools: authentication,
 notifications, health, persistence, jobs, exports, observability, deployment и
@@ -20,8 +20,8 @@ capability-то готово.
 | Roles и authorization | Done | Viewer/operator/admin gates, route protection и admin authorization tests | Пълната legacy action-permission method mapping остава в test audit-а |
 | Multi-store access | Done | Membership, active-store middleware и store-scoped credentials | Всички бъдещи routes/jobs задължително получават isolation тест |
 | First administrator | Done | Fresh-install Artisan command с atomic validation | Deployment runbook трябва да включи изпълнението му |
-| Google OAuth | Todo | Няма provider, routes или callback | Socialite/provider setup; redirect и callback; state validation; allowed-domain policy; existing/new-user policy; disabled/incomplete config UX; session rotation; rate limit; safe OAuth errors; feature tests без реална мрежа |
-| Lockout и banned IP management | Todo | Laravel login throttle покрива краткото ограничаване | Решение дали persistent ban/unban parity е нужна; admin UX, trusted-proxy rules, audit log и tests при запазване |
+| Google OAuth | Done | Socialite redirect/callback, `GoogleIdentityPolicy` allowed-domain policy, existing/new-user policy, disabled-config UX, session regeneration, `throttle:oauth` rate limit, safe error messages и tests без реална мрежа | — |
+| Lockout и banned IP management | Done | `LoginAttempt` модел, `LoginThrottle` service (persistent IP lockout след 3 неуспешни опита), `BannedIpController` admin UX и tests | Trusted-proxy IP resolution и audit log за unban се преценяват отделно при нужда |
 | Security headers/cookies/proxy | Partial | Laravel session/CSRF defaults и application middleware | CSP/frame/referrer/HSTS policy, secure cookie settings и trusted proxies, проверени зад production TLS proxy |
 
 ## Email, SMTP и notifications
@@ -29,12 +29,12 @@ capability-то готово.
 | Capability | Статус | Налично | Нужно за Done |
 |---|---|---|---|
 | SMTP transport | Partial | Admin diagnostic показва mailer/from status и изпраща валидирано test писмо през SMTP; 10-second timeout, rate limit, safe failure log и fake tests | Production secrets/deployment configuration и реален staging delivery smoke test |
-| Audit email notifications | Todo | Няма mailables/notifications | HTML + text templates, recipients, subject/count wording, escaping, retry policy и duplicate-delivery protection |
+| Audit email notifications | Done | `ReportEmailNotification` mailable, изпратено през `RecordRun` за immediate-mode правила (покрива и `run_audit`), subject/count wording | Dedicated HTML/text template design и duplicate-delivery hardening се преценяват отделно |
 | CSV email attachments | Todo | Няма export attachment flow | Safe filename, CSV injection protection, encoding, MIME/size limits и memory-safe generation |
-| Per-tool email rules | Todo | Няма schema/UX | Mode off/immediate/digest, threshold, include-zero, recipient override, defaults, authorization и persistence |
-| Daily email digest | Todo | Няма scheduled digest job | Latest-run selection, grouping by recipient, threshold rules, timezone/day boundary, idempotency и scheduler test |
-| Slack notifications | Todo | Няма channel adapter | Webhook config, per-tool rules, mentions, payload limits/escaping, retry/safe failure и duplicate protection |
-| Discord notifications | Todo | Няма channel adapter | Webhook config, embeds/payload limits, escaping, retry/safe failure и duplicate protection |
+| Per-tool email rules | Done | `EmailRulesController`/`EmailRulesRequest`, per-store `email_rules` JSON (mode off/immediate/digest, threshold, include-zero, recipient), `resolvedEmailRules()` validation | — |
+| Daily email digest | Done | `reports:email-digest` Artisan command, groupира по recipient през `resolvedEmailRules()`, `ReportDigestNotification`, `Schedule::command(...)->dailyAt('08:00')->withoutOverlapping()` | Timezone/day-boundary edge cases и idempotency tests се разширяват при нужда |
+| Slack notifications | Done | Per-store `slack_rules` JSON, webhook channel adapter, audit/scan notifications, @mention rules, admin test-send endpoint и tests | — |
+| Discord notifications | Done | Per-store `discord_rules` JSON, webhook channel adapter, audit/scan notifications, admin test-send endpoint и tests | — |
 | Notification delivery log | Todo | Няма persistence | Provider, recipient, report/run ID, attempt/status/error category; без secrets или чувствителен payload |
 
 ## Health, metrics и observability
@@ -43,12 +43,12 @@ capability-то готово.
 |---|---|---|---|
 | Liveness endpoint | Done | Laravel `/up` и feature test | Да остане евтин, без външни API calls |
 | Readiness endpoint | Partial | `/ready` проверява database connection и queue configuration и връща 200/503 без secrets | Worker freshness и cache readiness след изграждането на worker/production cache foundation |
-| API Health page | Partial | Admin-only live checks за Shopify shop/scopes, requested/returned API version mismatch и ShipStation auth, per-store isolation, latency, safe errors и rate limit | Flow monitor върху persisted run history |
-| Webhook Health page | Todo | Няма webhook adapter/state | Shopify webhook discovery, required topics, target URL, delivery/recency state, per-store results и remediation text |
+| API Health page | Partial | Admin-only live checks за Shopify shop/scopes, requested/returned API version mismatch и ShipStation auth, per-store isolation, latency, safe errors и rate limit | Flow monitor върху persisted run history (run history вече е налична) |
+| Webhook Health page | Done | `CheckWebhookHealth` use case, `WebhookHealthController` admin view, per-store results и tests | — |
 | Metrics endpoint | Todo | Няма endpoint | Authentication, stable metric names, request/job/API/error/notification counters, no PII и scrape test |
 | Structured application logs | Partial | Laravel logging и безопасни warnings в текущите reports | Общ context contract: request/run/store/tool IDs, error category/status, redaction tests и production channel/retention |
-| Run history | Todo | Няма DB модел/екран | Status, counts, duration, range, store/tool, error category, newest-first retention и authorization |
-| Action audit log | Todo | Няма DB workflow | Actor, store, action, target, timestamp, outcome; mutation coverage и admin view |
+| Run history | Done | `run_logs` DB модел, `RecordRun` persist action (retention до 500 записа/store), `RunLogController` екран; свързан към **всичките 46** report/audit controllers чрез споделен `RecordsReportRun` trait — status, counts, duration, range, store/tool, newest-first, authorization | Typed error category (в момента free-text `error` поле) се преценява отделно |
+| Action audit log | Done | Spatie activity log (`create_activity_log_table` migration, `activitylog:clean` scheduled pruning), `ActionLogController` admin view и tests | — |
 | Operational alerts | Todo | Няма правила | Failed jobs, queue latency, repeated API failures, scheduler absence и notification-delivery failures |
 
 ## Jobs, scheduler и recovery
@@ -56,10 +56,10 @@ capability-то готово.
 | Capability | Статус | Налично | Нужно за Done |
 |---|---|---|---|
 | Queue storage | Foundation | Laravel jobs/failed_jobs migrations и queue config | Избран production connection, worker config и health visibility |
-| Audit jobs | Todo | Reports се изпълняват синхронно | `RunAudit` use case, store/tool/range payload, timeouts, backoff, progress и terminal states |
-| Idempotency/concurrency | Todo | Няма persisted keys | Unique key по store/tool/range, overlap protection, atomic claim и safe retry tests |
-| Failed-job recovery | Todo | Framework таблица е налична | Retry/cancel UX или CLI policy, failure classification, no duplicate side effects и runbook |
-| Scheduler | Todo | Няма application schedules | Scheduled audits, digest, pruning/housekeeping, timezone policy и `withoutOverlapping`/single-server решение |
+| Audit jobs | Partial | `RunAuditJob` (ShouldQueue), dispatch от `RunAuditController::queue()`, store/range payload, tests (`RunAuditJobTest`) | Explicit timeouts/backoff и progress/terminal-state UI отделно от run history |
+| Idempotency/concurrency | Todo | Няма persisted unique keys на job ниво (schedule-level `withoutOverlapping` е налично за cron задачите) | Unique key по store/tool/range, overlap protection, atomic claim и safe retry tests за queued jobs |
+| Failed-job recovery | Todo | Framework таблица и вградени `queue:retry`/`queue:failed` команди налични | Custom retry/cancel UX или CLI policy, failure classification, no duplicate side effects и runbook |
+| Scheduler | Done | `routes/console.php` — `reports:email-digest`, `activitylog:clean`, `health:*-heartbeat`, `health:check`, `model:prune`, `backup:run`/`monitor`/`clean`, `horizon:snapshot`; всички cron-критични с `withoutOverlapping()` | Timezone policy documentation и single-server решение (locking driver) се потвърждават в deployment runbook-а |
 | Worker deployment | Todo | Няма production service definition | Start/restart/stop, deploy restart, graceful timeout, process supervision и rollback-independent fix-forward runbook |
 
 ## Persistence, settings и state
@@ -67,11 +67,11 @@ capability-то готово.
 | Capability | Статус | Налично | Нужно за Done |
 |---|---|---|---|
 | Users/stores/credentials | Done | DB models/migrations, encrypted integration credentials и admin CRUD | Backup/restore и production secret rotation instructions |
-| Notification settings | Todo | Няма schema | Email/Slack rules, recipients, defaults и validation migrations |
+| Notification settings | Done | Per-store `slack_rules`/`discord_rules`/`email_rules` JSON с per-tool mode, mentions, threshold/recipient override и validation | — |
 | Sidebar preferences | Todo | Няма schema/UI | Per-user/store visibility defaults and persistence |
-| Ignore/unignore orders | Todo | Няма schema/UI | Normalization, single/bulk mutation, optional expiry, authorization и audit trail |
-| Audit snapshots | Todo | Няма schema/repository | Per-store/tool/date uniqueness, history ordering, retention и result metadata |
-| Report persistence | Todo | Няма persisted artifacts | Ownership/store scope, immutable metadata, retention, cleanup и failed-write behavior |
+| Ignore/unignore orders | Done | `IgnoredOrder` модел, `IgnoredOrderController`/requests (single, bulk, import), normalization и authorization | — |
+| Audit snapshots | Done | `AuditSnapshot` модел, `updateOrCreate` per store/tool/date в `RunAudit::handle()`, Saved Reports view | — |
+| Report persistence | Done | `SavedReportController` и tests | — |
 | Cache policy | Foundation | Laravel cache config | Key namespacing by store/query, TTL matrix, locks, invalidation, corruption/failure strategy и tests |
 | Legacy runtime state | Done decision | Изрично няма import на legacy users/jobs/logs/cache/reports/settings | Cutover checklist да потвърди чиста база и липса на runtime dependency |
 
@@ -79,10 +79,10 @@ capability-то готово.
 
 | Capability | Статус | Налично | Нужно за Done |
 |---|---|---|---|
-| CSV/report downloads | Todo | Няма общ export service | Authorization/store ownership, formula injection protection, UTF-8, safe names/headers, large dataset streaming и expiry |
-| Shopify → ShipStation push | Todo | Няма create-order workflow | Preview, exact Shopify match, payload mapping, idempotency key, duplicate prevention, partial failure и action log |
-| Shopify order note update | Todo | Няма mutation workflow | Valid order ID/store, GraphQL user errors, CSRF/authorization, audit log и safe retry decision |
-| Print queue | Todo | Само packing-slip preview е готов | Persisted enqueue/order/remove, duplicate policy, recovery, authorization и printable artifact linkage |
+| CSV/report downloads | Done | Общ `CsvExporter` service, ползван от export() методите на report controllers (store-scoped, safe headers) | Формален security review за formula-injection escaping и large-dataset streaming се препоръчва отделно |
+| Shopify → ShipStation push | Done | `PushOrderToShipStation` action, request validation, controller и tests | Idempotency key/duplicate-prevention hardening се преценява при реален production traffic |
+| Shopify order note update | Done | `SaveOrderNote` action, request validation, controller и tests | — |
+| Print queue | Done | `PrintQueueItem` модел, `PrintQueueController`/requests — persisted enqueue/order/remove, authorization | — |
 
 ## Configuration, CI и deployment
 
@@ -91,7 +91,7 @@ capability-то готово.
 | Application install | Done | Composer/NPM Laravel app и install command | Production runbook с migrations, assets, storage link и initial admin/store setup |
 | Configuration validation | Partial | Laravel config и request-level credential guards | Startup/deploy validation за app URL/key, DB, queue, mail, OAuth, proxy и notification settings |
 | CI checks | Done | Laravel CI изпълнява PHPUnit, Larastan level 5, Pint, Composer audit и frontend build/audit; Larastan scope покрива Application, Domain и Integrations без baseline | Разширяване към HTTP/Models и по-високо analysis ниво се прави постепенно без отслабване на gate-а |
-| Backup and restore | Todo | Няма runbook | DB/artifact backup, restore rehearsal, retention and ownership |
+| Backup and restore | Partial | `spatie/laravel-backup` инсталиран, scheduled `backup:run`/`backup:monitor`/`backup:clean` | Restore rehearsal, retention policy documentation и storage-destination ownership остават Todo |
 | Deployment runbook | Todo | Няма production procedure | Maintenance/write freeze, migrate, build, cache config/routes, worker restart, scheduler, smoke checks и fix-forward |
 | Production observability | Todo | Няма готов operational stack | Log destination/retention, metrics scrape, dashboards, alert ownership и escalation |
 | UAT и cutover rehearsal | Todo | Планът изисква две репетиции | Golden fixtures, production-sized run, sign-off evidence и irreversible cutover checklist |
