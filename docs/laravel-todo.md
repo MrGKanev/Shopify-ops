@@ -28,9 +28,10 @@
       екрана (timeouts/backoff вече са зададени за `RunAuditJob`).
 - [ ] **Cache policy** — key namespacing по store/query, TTL matrix, locks,
       invalidation и corruption/failure strategy + tests.
-- [ ] **Configuration validation при startup/deploy** — проверка на app
-      URL/key, DB, queue, mail, OAuth, proxy и notification settings преди
-      да приеме трафик.
+- [ ] **Configuration validation — trusted proxy** — `CheckConfiguration`
+      вече покрива app/store/order-types/tag-policy/mail/notifications;
+      остава само trusted proxy настройка (виж Security headers/cookies/proxy
+      реда по-долу — DB connectivity вече е в `/ready`).
 - [ ] **Backup and restore rehearsal** — restore repetition, retention policy
       документация и избор на storage-destination owner (download вече е
       лесен през `Admin\BackupController`).
