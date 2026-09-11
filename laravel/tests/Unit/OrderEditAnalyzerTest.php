@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Domain\Reports\OrderEditAnalyzer;
+use App\Integrations\Shopify\ShopifyOrderEventNormalizer;
 use Tests\TestCase;
 
 class OrderEditAnalyzerTest extends TestCase
@@ -17,14 +18,27 @@ class OrderEditAnalyzerTest extends TestCase
             $events[] = ['subject_id' => '1', 'verb' => 'edit_complete', 'created_at' => "2026-01-0{$number}", 'message' => "message {$number}"];
         }
         $events[] = ['subject_id' => '1', 'verb' => 'edit_complete', 'created_at' => '2026-01-06', 'message' => 'message 1'];
-        $group = (new OrderEditAnalyzer)->group($events);
+        $group = (new OrderEditAnalyzer(new ShopifyOrderEventNormalizer))->group($events);
         $this->assertSame('2026-01-06', $group['1']['latest_at']);
         $this->assertCount(4, $group['1']['summary']);
     }
 
+    public function test_it_excludes_address_change_events_and_includes_message_fallback_variants(): void
+    {
+        $events = [
+            ['subject_id' => '1', 'verb' => 'edit_complete', 'action' => 'edit_complete', 'created_at' => '2026-01-01', 'message' => 'Shipping address was updated to 1 Main St.'],
+            ['subject_id' => '2', 'verb' => 'comment', 'created_at' => '2026-01-02', 'message' => 'An item was added to the order.'],
+        ];
+
+        $group = (new OrderEditAnalyzer(new ShopifyOrderEventNormalizer))->group($events);
+
+        $this->assertArrayNotHasKey('1', $group, 'an address-change event must not also count as an order edit');
+        $this->assertArrayHasKey('2', $group, 'a non-edit_complete verb whose message matches an edit fallback phrase must still count');
+    }
+
     public function test_builds_rows_with_clamped_gap_and_newest_edit_first(): void
     {
-        $analyzer = new OrderEditAnalyzer;
+        $analyzer = new OrderEditAnalyzer(new ShopifyOrderEventNormalizer);
         $groups = ['1' => ['latest_at' => '2026-01-01T11:30:00Z', 'summary' => ['Changed']], '2' => ['latest_at' => '2026-01-03T09:00:00Z', 'summary' => []]];
         $orders = ['1' => ['name' => '#1', 'created_at' => '2026-01-01T10:00:00Z'], '2' => ['name' => '#2', 'created_at' => '2026-01-04T10:00:00Z']];
         $rows = $analyzer->rows($orders, $groups);

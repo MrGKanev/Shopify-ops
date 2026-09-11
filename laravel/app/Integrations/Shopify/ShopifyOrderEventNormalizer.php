@@ -32,6 +32,43 @@ class ShopifyOrderEventNormalizer
         ];
     }
 
+    /** @param array<string, mixed> $event */
+    public function isAddressChangeEvent(array $event): bool
+    {
+        $haystack = mb_strtolower(trim(($event['verb'] ?? '').' '.($event['action'] ?? '').' '.($event['message'] ?? '')));
+
+        return str_contains($haystack, 'shipping address') || str_contains($haystack, 'address was') || str_contains($haystack, 'shipping_address');
+    }
+
+    /**
+     * Address changes are tracked separately (isAddressChangeEvent()), so an
+     * event that looks like both (e.g. an edit_complete event whose message
+     * mentions the shipping address) must not also count here - otherwise it
+     * would double-count into both Address Changes and Order Edit History
+     * for the same underlying event.
+     *
+     * @param  array<string, mixed>  $event
+     */
+    public function isOrderEditEvent(array $event): bool
+    {
+        if ($this->isAddressChangeEvent($event)) {
+            return false;
+        }
+
+        $verb = mb_strtolower((string) ($event['verb'] ?? $event['action'] ?? ''));
+        $message = mb_strtolower((string) ($event['message'] ?? ''));
+
+        return $verb === 'edit_complete'
+            || str_contains($message, 'was edited')
+            || str_contains($message, 'were edited')
+            || str_contains($message, 'item was added')
+            || str_contains($message, 'item was removed')
+            || str_contains($message, 'discount was added')
+            || str_contains($message, 'discount was removed')
+            || str_contains($message, 'note was updated')
+            || str_contains($message, 'custom attributes');
+    }
+
     private function legacyId(mixed $graphqlId): int|string
     {
         $id = '';

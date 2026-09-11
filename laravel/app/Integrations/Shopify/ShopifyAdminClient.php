@@ -1226,7 +1226,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
             $event = $this->orderEventNormalizer->normalize($node, '');
             $event['verb'] = mb_strtolower(is_scalar($node['action'] ?? null) ? (string) $node['action'] : '');
             $events[] = $event;
-            if ($event['verb'] === 'edit_complete' && is_int($event['subject_id']) && $event['subject_id'] > 0) {
+            if ($this->orderEventNormalizer->isOrderEditEvent($event) && is_int($event['subject_id']) && $event['subject_id'] > 0) {
                 $ids[(string) $event['subject_id']] = true;
             }
         }

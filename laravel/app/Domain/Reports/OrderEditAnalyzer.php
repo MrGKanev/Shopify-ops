@@ -2,14 +2,18 @@
 
 namespace App\Domain\Reports;
 
+use App\Integrations\Shopify\ShopifyOrderEventNormalizer;
+
 class OrderEditAnalyzer
 {
+    public function __construct(private readonly ShopifyOrderEventNormalizer $eventNormalizer) {}
+
     /** @param list<array<string, mixed>> $events @return array<string, array{latest_at: string, summary: list<string>}> */
     public function group(array $events): array
     {
         $groups = [];
         foreach ($events as $event) {
-            if (($event['verb'] ?? '') !== 'edit_complete') {
+            if (! $this->eventNormalizer->isOrderEditEvent($event)) {
                 continue;
             }
             $id = $this->text($event['subject_id'] ?? '');

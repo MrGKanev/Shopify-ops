@@ -640,12 +640,12 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 - [x] `AllViewsSmokeTest.php` — automatic authenticated traversal на всеки parameterless application GET screen
 - [x] `AuthPermissionSnapshotTest.php` — automatic report/admin route-gate completeness и runtime viewer denial
 - [ ] `AuthTest.php` — session/Google auth и login throttling са пренесени; persistent banned-IP files са заменени, а пълната permission method mapping остава
-- [ ] `GraphQL/EventNormalizerTest.php` — event normalization работи; всички 28 legacy test methods чакат mapping
-- [ ] `GraphQL/OrderComponentNormalizerTest.php` — address/items/fulfillment subset е пренесен
+- [x] `GraphQL/EventNormalizerTest.php` — fixed a real double-counting bug (`isOrderEditEvent`/`isAddressChangeEvent` had no Laravel port), see [laravel-test-audit.md](laravel-test-audit.md)
+- [x] `GraphQL/OrderComponentNormalizerTest.php` — address/item/fulfillment verified field-for-field; shippingLine/discountCode have no shared class by design
 - [ ] `OrderPolicyPageLoaderTest.php` — Discount Abuse, Same IP, Tag Policy, Duplicate Shipping Addresses и Note Flags paths са пренесени; останалите policy report branches чакат method-level сверка
 - [x] `FraudComplianceChecksTest.php` — всичките 22 country mismatch, high-value/no-phone и email checker решения са нанесени; non-ISO country names умишлено се броят като липсващи вместо като false-positive mismatch
 - [x] `GraphQL/OrderEventLookupTest.php` — lookup, cursor pagination, newest-first order и missing order са покрити, включително malformed payload/cursor guards
-- [ ] `GraphQL/OrderNormalizerTest.php` — timeline/risk/order subset е пренесен; всички останали fields остават
+- [ ] `GraphQL/OrderNormalizerTest.php` — core fields verified; tax/consent/discount/client_ip are handled inline per-report by design, but attribution/journey/source/support fields have no consumer yet — tied to `OrderInsightPageLoaderTest.php`/`OrderTimelineTest.php`, see [laravel-test-audit.md](laravel-test-audit.md)
 - [x] `HttpAuthEndpointTest.php` — login/logout, Google boundary failures, session rotation, throttling и CSP са покрити с HTTP feature tests
 - [ ] `OrderInsightPageLoaderTest.php` — compare/timeline subset е пренесен; останалите insights остават
 - [ ] `OrderTimelineTest.php` — workflow е пренесен и разширен; 26 legacy methods чакат explicit mapping
