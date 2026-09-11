@@ -51,6 +51,7 @@
                     <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('dashboard') }}">Dashboard</a>
                     <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('orders.lookup') }}">Order lookup</a>
                     <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('orders.spot-check') }}">Spot-check</a>
+                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('orders.push.create') }}">Push order / fix note</a>@endcan
                     <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('orders.compare') }}">Order compare</a>
                     <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('orders.timeline') }}">Order timeline</a>
                     <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('orders.tracking') }}">Tracking feed</a>

@@ -2,6 +2,7 @@
 
 namespace App\Integrations\Shopify\Contracts;
 
+use App\Integrations\Shopify\Exceptions\ShopifyGraphqlException;
 use App\Models\Store;
 
 interface ShopifyAdminGateway
@@ -24,6 +25,9 @@ interface ShopifyAdminGateway
      * @return list<array<string, mixed>>
      */
     public function getOrderEvents(Store $store, string $orderId): array;
+
+    /** @throws ShopifyGraphqlException on an invalid order id or Shopify-reported user error */
+    public function updateOrderNote(Store $store, string $orderId, string $note): void;
 
     /**
      * @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool}

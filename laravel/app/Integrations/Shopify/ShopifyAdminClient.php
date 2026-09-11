@@ -382,6 +382,33 @@ class ShopifyAdminClient implements ShopifyAdminGateway
         return $events;
     }
 
+    public function updateOrderNote(Store $store, string $orderId, string $note): void
+    {
+        $query = <<<'GRAPHQL'
+            mutation UpdateOrderNote($id: ID!, $note: String!) {
+              orderUpdate(input: {id: $id, note: $note}) {
+                order { id note }
+                userErrors { field message }
+              }
+            }
+            GRAPHQL;
+
+        $result = $this->graphql($store, $query, ['id' => $this->orderGid($orderId), 'note' => $note]);
+        $userErrors = $result['data']['orderUpdate']['userErrors'] ?? null;
+
+        if (! is_array($userErrors)) {
+            throw new ShopifyGraphqlException([], 'Shopify orderUpdate returned an unexpected response shape.');
+        }
+
+        if ($userErrors !== []) {
+            $messages = array_map(
+                fn (mixed $error): string => is_array($error) && is_scalar($error['message'] ?? null) ? (string) $error['message'] : 'Unknown error',
+                $userErrors,
+            );
+            throw new ShopifyGraphqlException([], 'Shopify orderUpdate error: '.implode('; ', $messages));
+        }
+    }
+
     /**
      * @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool}
      */

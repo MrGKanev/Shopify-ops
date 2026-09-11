@@ -363,6 +363,85 @@ class ShipStationClientTest extends TestCase
         Http::assertSentCount(1);
     }
 
+    public function test_build_order_payload_maps_shopify_fields_to_the_shipstation_shape(): void
+    {
+        $payload = $this->client()->buildOrderPayload([
+            'order_number' => '65075',
+            'created_at' => '2026-06-01T10:00:00Z',
+            'email' => 'jane@example.com',
+            'total_price' => '49.95',
+            'total_tax' => '3.20',
+            'billing_address' => ['first_name' => 'Jane', 'last_name' => 'Doe', 'address1' => '1 Main St', 'city' => 'Boston', 'province_code' => 'MA', 'zip' => '02101', 'country_code' => 'US', 'phone' => '555-1000'],
+            'shipping_address' => ['first_name' => 'Jane', 'last_name' => 'Doe', 'address1' => '2 Side St', 'city' => 'Boston', 'province_code' => 'MA', 'zip' => '02101', 'country_code' => 'US'],
+            'line_items' => [['id' => 111, 'title' => 'Widget', 'sku' => 'WID-1', 'quantity' => 2, 'price' => '10.00']],
+            'shipping_lines' => [['price' => '5.00'], ['price' => '2.00']],
+        ]);
+
+        $this->assertSame('65075', $payload['orderNumber']);
+        $this->assertSame('awaiting_shipment', $payload['orderStatus']);
+        $this->assertSame('jane@example.com', $payload['customerEmail']);
+        $this->assertSame(49.95, $payload['amountPaid']);
+        $this->assertSame(3.20, $payload['taxAmount']);
+        $this->assertSame(7.0, $payload['shippingAmount']);
+        $this->assertSame('Jane Doe', $payload['shipTo']['name']);
+        $this->assertSame('2 Side St', $payload['shipTo']['street1']);
+        $this->assertSame('MA', $payload['shipTo']['state']);
+        $this->assertSame([['lineItemKey' => '111', 'name' => 'Widget', 'sku' => 'WID-1', 'quantity' => 2, 'unitPrice' => 10.0]], $payload['items']);
+    }
+
+    public function test_build_order_payload_falls_back_to_billing_address_when_shipping_address_is_missing(): void
+    {
+        $payload = $this->client()->buildOrderPayload([
+            'order_number' => '65075',
+            'billing_address' => ['first_name' => 'Jane', 'last_name' => 'Doe', 'city' => 'Boston'],
+        ]);
+
+        $this->assertSame('Jane Doe', $payload['shipTo']['name']);
+        $this->assertSame('Boston', $payload['shipTo']['city']);
+    }
+
+    public function test_build_order_payload_defaults_missing_fields_to_zero_and_empty(): void
+    {
+        $payload = $this->client()->buildOrderPayload(['name' => '#65075']);
+
+        $this->assertSame('65075', ltrim($payload['orderNumber'], '#'));
+        $this->assertSame(0.0, $payload['amountPaid']);
+        $this->assertSame(0.0, $payload['taxAmount']);
+        $this->assertSame(0.0, $payload['shippingAmount']);
+        $this->assertSame([], $payload['items']);
+    }
+
+    public function test_create_order_posts_the_built_payload_to_createorder(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['https://ssapi.shipstation.com/orders/createorder' => Http::response(['orderId' => 555, 'orderNumber' => '65075'])]);
+
+        $created = $this->client()->createOrder(['order_number' => '65075', 'total_price' => '10.00']);
+
+        $this->assertSame(555, $created['orderId']);
+        Http::assertSent(function (Request $request): bool {
+            return $request->method() === 'POST'
+                && parse_url($request->url(), PHP_URL_PATH) === '/orders/createorder'
+                && $request['orderNumber'] === '65075'
+                && $request->hasHeader('Authorization', 'Basic '.base64_encode('api-key:api-secret'));
+        });
+    }
+
+    public function test_create_order_does_not_retry_on_a_transient_failure(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['https://ssapi.shipstation.com/orders/createorder' => Http::response('unavailable', 503)]);
+
+        try {
+            $this->client()->createOrder(['order_number' => '65075']);
+            $this->fail('Expected a RequestException.');
+        } catch (RequestException) {
+            // expected
+        }
+
+        Http::assertSentCount(1);
+    }
+
     private function client(): ShipStationClient
     {
         return new ShipStationClient('api-key', 'api-secret');

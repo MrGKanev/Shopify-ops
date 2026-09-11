@@ -22,12 +22,14 @@ use App\Http\Controllers\MetafieldController;
 use App\Http\Controllers\OrderBatchLookupController;
 use App\Http\Controllers\OrderComparisonController;
 use App\Http\Controllers\OrderLookupController;
+use App\Http\Controllers\OrderNoteController;
 use App\Http\Controllers\OrderTagSearchController;
 use App\Http\Controllers\OrderTimelineController;
 use App\Http\Controllers\OrderTrackingController;
 use App\Http\Controllers\PackingSlipController;
 use App\Http\Controllers\PrintQueueController;
 use App\Http\Controllers\PushLogController;
+use App\Http\Controllers\PushToShipStationController;
 use App\Http\Controllers\ReadinessController;
 use App\Http\Controllers\Reports\ActiveShipStationConflictController;
 use App\Http\Controllers\Reports\AddressChangeController;
@@ -102,6 +104,10 @@ Route::middleware('auth')->group(function (): void {
     Route::middleware('active.store')->group(function (): void {
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
         Route::get('/orders/lookup', OrderLookupController::class)->name('orders.lookup');
+        Route::get('/orders/push', [PushToShipStationController::class, 'create'])->middleware('can:run-audits')->name('orders.push.create');
+        Route::post('/orders/push', [PushToShipStationController::class, 'preview'])->middleware(['can:run-audits', 'throttle:push-order'])->name('orders.push.preview');
+        Route::post('/orders/push/confirm', [PushToShipStationController::class, 'store'])->middleware(['can:run-audits', 'throttle:push-order'])->name('orders.push.store');
+        Route::post('/orders/note', [OrderNoteController::class, 'update'])->middleware(['can:run-audits', 'throttle:push-order'])->name('orders.note.update');
         Route::get('/orders/spot-check', [OrderBatchLookupController::class, 'create'])->name('orders.spot-check');
         Route::post('/orders/spot-check', [OrderBatchLookupController::class, 'store'])
             ->middleware('throttle:spot-check')

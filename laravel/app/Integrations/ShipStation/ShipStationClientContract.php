@@ -32,4 +32,18 @@ interface ShipStationClientContract
 
     /** @return list<array<string, mixed>> */
     public function fetchVoidedShipments(string $startDate, string $endDate): array;
+
+    /**
+     * @param  array<string, mixed>  $shopifyOrder
+     * @return array<string, mixed>
+     */
+    public function buildOrderPayload(array $shopifyOrder): array;
+
+    /**
+     * Creates the order in ShipStation from a normalized Shopify order.
+     *
+     * @param  array<string, mixed>  $shopifyOrder
+     * @return array<string, mixed> the created ShipStation order
+     */
+    public function createOrder(array $shopifyOrder): array;
 }

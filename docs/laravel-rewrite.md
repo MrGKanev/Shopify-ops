@@ -653,8 +653,8 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 - [ ] `SearchLookupPageLoaderTest.php` — single lookup/compare/timeline subset е пренесен
 - [ ] `SecurityTest.php` — escaping, validation, tenant isolation, CSP headers и `oauth` rate limiter (10/min по IP) са покрити; trusted-proxy CIDR trust и HSTS чакат реалния production proxy/TLS setup, session absolute-timeout няма Laravel еквивалент отвъд native `session.lifetime`
 - [x] `SlackNotifierTest.php` — queue-ready webhook delivery, trusted endpoint validation, safe admin diagnostic, credential-free payload, audit/scan mentions formatting (with and without mentions) и queue-based retry/failure handling са затворени; виж [laravel-test-audit.md](laravel-test-audit.md) за пълния method-level mapping
-- [ ] `ShipStationClientTest.php` — lookup/shipments/pagination/retries subset е пренесен
-- [ ] `ShopifyClientTest.php` — всички 57 read метода са мапнати (report fetchers през вече затворени редове, generic infra директно тествана, GraphQL no-retry е умишлено tested решение); `updateOrderNote` mutation остава, обвързан с непочнатия push-note action в `ActionsTest.php`
+- [x] `ShipStationClientTest.php` — lookup/shipments/pagination/retries covered; `createOrder`/`buildOrderPayload` built for the push-order feature; cache/checkpoint has zero Laravel usage
+- [x] `ShopifyClientTest.php` — all 57 read methods mapped; `updateOrderNote` mutation built for the order-note feature, see [laravel-test-audit.md](laravel-test-audit.md)
 - [x] `StoresTest.php` — file stores са заменени от DB/pivot/active-store middleware с fallback, switch и isolation tests
 - [x] `ViewSmokeTest.php` — Fraud Risk, Same IP и Disputes empty/populated rendering е покрито от route smoke + feature tests
 
@@ -1008,7 +1008,7 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 
 #### Pending legacy test files
 
-- [ ] `ActionsTest.php`
+- [x] `ActionsTest.php` — push-to-ShipStation and order-note actions built from scratch (did not exist), see [laravel-test-audit.md](laravel-test-audit.md)
 - [x] `ActiveSsConflictsTest.php`
 - [x] `AtomicFileTest.php` — replaced by DB transactions/casts and Laravel storage primitives
 - [ ] `AuditSnapshotTest.php`

@@ -99,6 +99,67 @@ class ShipStationClient implements ShipStationClientContract
         ], 'shipments');
     }
 
+    public function buildOrderPayload(array $shopifyOrder): array
+    {
+        $address = function (mixed $address): array {
+            $address = is_array($address) ? $address : [];
+            $name = trim(($address['first_name'] ?? '').' '.($address['last_name'] ?? ''));
+
+            return [
+                'name' => $name !== '' ? $name : (is_scalar($address['name'] ?? null) ? (string) $address['name'] : ''),
+                'company' => $address['company'] ?? null,
+                'street1' => $address['address1'] ?? null,
+                'street2' => $address['address2'] ?? null,
+                'city' => $address['city'] ?? null,
+                'state' => $address['province_code'] ?? $address['province'] ?? null,
+                'postalCode' => $address['zip'] ?? null,
+                'country' => $address['country_code'] ?? $address['country'] ?? null,
+                'phone' => $address['phone'] ?? null,
+            ];
+        };
+
+        $items = [];
+
+        foreach (is_array($shopifyOrder['line_items'] ?? null) ? $shopifyOrder['line_items'] : [] as $lineItem) {
+            if (! is_array($lineItem)) {
+                continue;
+            }
+
+            $items[] = [
+                'lineItemKey' => (string) ($lineItem['id'] ?? ''),
+                'name' => $lineItem['title'] ?? '',
+                'sku' => $lineItem['sku'] ?? null,
+                'quantity' => (int) ($lineItem['quantity'] ?? 1),
+                'unitPrice' => (float) ($lineItem['price'] ?? 0),
+            ];
+        }
+
+        $shippingAmount = 0.0;
+
+        foreach (is_array($shopifyOrder['shipping_lines'] ?? null) ? $shopifyOrder['shipping_lines'] : [] as $shippingLine) {
+            $shippingAmount += is_array($shippingLine) ? (float) ($shippingLine['price'] ?? 0) : 0.0;
+        }
+
+        return [
+            'orderNumber' => (string) ($shopifyOrder['order_number'] ?? $shopifyOrder['name'] ?? ''),
+            'orderDate' => $shopifyOrder['created_at'] ?? now()->toIso8601String(),
+            'orderStatus' => 'awaiting_shipment',
+            'customerEmail' => $shopifyOrder['email'] ?? null,
+            'customerUsername' => $shopifyOrder['email'] ?? null,
+            'billTo' => $address($shopifyOrder['billing_address'] ?? null),
+            'shipTo' => $address($shopifyOrder['shipping_address'] ?? $shopifyOrder['billing_address'] ?? null),
+            'items' => $items,
+            'amountPaid' => (float) ($shopifyOrder['total_price'] ?? 0),
+            'taxAmount' => (float) ($shopifyOrder['total_tax'] ?? 0),
+            'shippingAmount' => $shippingAmount,
+        ];
+    }
+
+    public function createOrder(array $shopifyOrder): array
+    {
+        return $this->post('/orders/createorder', $this->buildOrderPayload($shopifyOrder));
+    }
+
     /**
      * @param  array<string, scalar>  $query
      * @return array<string, mixed>
@@ -112,6 +173,20 @@ class ShipStationClient implements ShipStationClientContract
             )
             ->get($path, $query)
             ->throw();
+
+        return $this->decode($response);
+    }
+
+    /**
+     * @param  array<string, mixed>  $body
+     * @return array<string, mixed>
+     */
+    private function post(string $path, array $body): array
+    {
+        // ponytail: no retry on POST — a retried createorder after a transient
+        // failure risks creating the order twice; a failed push should surface
+        // to the operator to retry manually, not double-create silently.
+        $response = $this->request()->post($path, $body)->throw();
 
         return $this->decode($response);
     }
