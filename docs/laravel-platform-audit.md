@@ -35,7 +35,7 @@ capability-то готово.
 | Daily email digest | Done | `reports:email-digest` Artisan command, groupира по recipient през `resolvedEmailRules()`, `ReportDigestNotification`, `Schedule::command(...)->dailyAt('08:00')->withoutOverlapping()` | Timezone/day-boundary edge cases и idempotency tests се разширяват при нужда |
 | Slack notifications | Done | Per-store `slack_rules` JSON, webhook channel adapter, audit/scan notifications, @mention rules, admin test-send endpoint и tests | — |
 | Discord notifications | Done | Per-store `discord_rules` JSON, webhook channel adapter, audit/scan notifications, admin test-send endpoint и tests | — |
-| Notification delivery log | Todo | Няма persistence | Provider, recipient, report/run ID, attempt/status/error category; без secrets или чувствителен payload |
+| Notification delivery log | Done | `notification_deliveries` DB модел, `LogNotificationDelivery` listener на `NotificationSent`/`NotificationFailed` (единна точка за mail/Slack/Discord), channel/recipient (само за mail)/status/error category; webhook URLs никога не се пишат | Admin преглед на историята се преценява отделно, ако стане нужен |
 
 ## Health, metrics и observability
 

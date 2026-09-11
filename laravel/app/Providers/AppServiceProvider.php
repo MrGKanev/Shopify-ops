@@ -4,10 +4,14 @@ namespace App\Providers;
 
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Integrations\Shopify\ShopifyAdminClient;
+use App\Listeners\LogNotificationDelivery;
 use App\Models\User;
 use App\UserRole;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Events\NotificationFailed;
+use Illuminate\Notifications\Events\NotificationSent;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -53,6 +57,8 @@ class AppServiceProvider extends ServiceProvider
         }
 
         Health::checks($healthChecks);
+
+        Event::listen([NotificationSent::class, NotificationFailed::class], LogNotificationDelivery::class);
 
         Gate::define(
             'manage-administration',
