@@ -20,6 +20,7 @@ use App\Http\Controllers\GoogleAuthenticationController;
 use App\Http\Controllers\IgnoredOrderController;
 use App\Http\Controllers\JobQueueController;
 use App\Http\Controllers\MetafieldController;
+use App\Http\Controllers\MetricsController;
 use App\Http\Controllers\OrderBatchLookupController;
 use App\Http\Controllers\OrderComparisonController;
 use App\Http\Controllers\OrderLookupController;
@@ -88,6 +89,7 @@ use Spatie\Health\Http\Controllers\HealthCheckResultsController;
 Route::redirect('/', '/dashboard');
 Route::get('/ready', ReadinessController::class)->name('ready');
 Route::get('/status', StatusController::class)->name('status');
+Route::get('/metrics', MetricsController::class)->name('metrics');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');

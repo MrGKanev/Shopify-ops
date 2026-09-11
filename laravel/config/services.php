@@ -42,6 +42,10 @@ return [
         ],
     ],
 
+    'metrics' => [
+        'token' => env('METRICS_SCRAPE_TOKEN'),
+    ],
+
     'shopify' => [
         'store' => env('SHOPIFY_STORE'),
         'access_token' => env('SHOPIFY_ACCESS_TOKEN'),
