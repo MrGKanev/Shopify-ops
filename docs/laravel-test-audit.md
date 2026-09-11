@@ -1,6 +1,6 @@
 # Laravel rewrite — legacy test audit
 
-Последно обновяване: **2026-09-11** след затваряне на `ComparatorTest.php` + on-hold facade редовете (два production bug-а поправени: `partialFulfillmentCandidates`' грешен `financial_status:paid` филтър, `DuplicateOrderAnalyzer`'s 10-минутен вместо 24-часов duplicate window, плюс липсващо compound ShipStation order-number matching в `AuditOrderAnalyzer`), затваряне на `LoggerTest.php` (→ native Laravel logging), `MetricsEndpointTest.php` (→ Laravel Pulse) и `WorkerTest.php` (→ `RunAudit`/`AuditOrderAnalyzer`/DB `Store`), затваряне на целия notification-rules клъстер: `EmailRulesTest.php`, `EmailNotifierTest.php`, `EmailDigestTest.php` (трети production bug поправен — digest-ът гледаше rolling 24ч вместо календарния ден) и `DiscordNotifierTest.php` (Discord каналът не съществуваше в Laravel изобщо — построен от нулата, огледално на Slack), затваряне на Cache/ToolRegistry/FlowHealth/SidebarSettings/ManageSettingsPageLoader клъстера, и затваряне на `GraphQL/EventNormalizerTest.php` + `GraphQL/OrderComponentNormalizerTest.php` (четвърти production bug поправен — `isOrderEditEvent()` нямаше Laravel еквивалент, така че адрес-промени през `edit_complete` събития се дублираха и в Order Edit History, и в Address Changes).
+Последно обновяване: **2026-09-11** след затваряне на `ComparatorTest.php` + on-hold facade редовете (два production bug-а поправени: `partialFulfillmentCandidates`' грешен `financial_status:paid` филтър, `DuplicateOrderAnalyzer`'s 10-минутен вместо 24-часов duplicate window, плюс липсващо compound ShipStation order-number matching в `AuditOrderAnalyzer`), затваряне на `LoggerTest.php` (→ native Laravel logging), `MetricsEndpointTest.php` (→ Laravel Pulse) и `WorkerTest.php` (→ `RunAudit`/`AuditOrderAnalyzer`/DB `Store`), затваряне на целия notification-rules клъстер: `EmailRulesTest.php`, `EmailNotifierTest.php`, `EmailDigestTest.php` (трети production bug поправен — digest-ът гледаше rolling 24ч вместо календарния ден) и `DiscordNotifierTest.php` (Discord каналът не съществуваше в Laravel изобщо — построен от нулата, огледално на Slack), затваряне на Cache/ToolRegistry/FlowHealth/SidebarSettings/ManageSettingsPageLoader клъстера, и затваряне на `GraphQL/EventNormalizerTest.php` + `GraphQL/OrderComponentNormalizerTest.php` (четвърти production bug поправен — `isOrderEditEvent()` нямаше Laravel еквивалент, така че адрес-промени през `edit_complete` събития се дублираха и в Order Edit History, и в Address Changes). `ActionsTest.php` частично проверен (21/28); push-to-ShipStation и order-note-update остават реален missing feature, флагнат за потребителя вместо мълчаливо построен.
 
 Този документ е отделният checklist за тестова parity. Feature статусът се следи
 в [Laravel rewrite плана](laravel-rewrite.md), а тук се затваря всеки legacy test
@@ -12,8 +12,8 @@ contract има Laravel тест, по-силен еквивалент или з
 | Статус | Файлове | Дял от 115 |
 |---|---:|---:|
 | Готови | 99 | 86.1% |
-| Частично покрити | 9 | 7.8% |
-| Непочнати | 7 | 6.1% |
+| Частично покрити | 10 | 8.7% |
+| Непочнати | 6 | 5.2% |
 | **Оставащи за одит** | **16** | **13.9%** |
 
 Legacy baseline: **115 файла · 1,528 теста · 3,659 assertions**. Laravel
@@ -32,6 +32,7 @@ malformed payloads и atomic failure. Не копираме тест, който
 |---|---|---:|---|---|
 | [x] | `AllViewsSmokeTest.php` | 1 | Replaced by automatic traversal of every parameterless GET screen backed by an application controller, with authenticated admin/store context and safe webhook boundary |
 | [x] | `AuthPermissionSnapshotTest.php` | 2 | Replaced by automatic completeness checks for every report/admin route plus a runtime viewer-denial assertion; this also closed missing POST/export report gates |
+| [ ] | `ActionsTest.php` | 30 | 21/28 legacy methods verified against a closed Laravel equivalent: bulk-ignore/normalize → `IgnoreListTest.php`'s CSV import; per-tool email rules parsing → `EmailRulesTest.php`; new-user role/duplicate/password validation → `UserControllerTest.php`'s `UserStoreRequest` (Laravel's `unique:users,email`/`Rule::enum` are a superset); report-date path-traversal guard → dates are never used as file paths in the DB-backed rewrite, and Form Request date validation is already covered by `DateRangeTest.php`; missing-credentials messages → `ApiHealthControllerTest.php`; `?page=X` redirect building → no equivalent needed, real routes replace it (same reasoning as `ToolRegistryTest.php`) | `performPush`/`buildPushPreview` (push a Shopify order into ShipStation, with a no-side-effect preview mode) and `validateSaveOrderNoteRequest`/the `updateOrderNote` mutation have **no Laravel port at all** — this is a real missing write-action feature (creates a real ShipStation order / mutates a real Shopify order), not just a test gap. Flagged for the user rather than built silently given the external side effects; also blocks `ShopifyClientTest.php` (`updateOrderNote`) and part of `ShipStationClientTest.php` (`createOrder`) |
 | [ ] | `AuthTest.php` | 40 | Пароли, lockout/IP ban, users, CSRF и роли | Lockout/banned-IP и пълната permission матрица |
 | [x] | `FraudComplianceChecksTest.php` | 22 | Country mismatch, high value/no phone и email checker rules са покрити с analyzer unit и HTTP feature тестове; non-ISO country names умишлено се третират като липсващи вместо да създават false positives |
 | [x] | `GraphQL/OrderEventLookupTest.php` | 3 | Shopify client integration tests покриват normalized event lookup, cursor pagination/newest-first order и missing order; добавени са malformed shape, cursor и invalid-ID guards |
@@ -51,7 +52,6 @@ malformed payloads и atomic failure. Не копираме тест, който
 
 | Готово | Legacy файл | Тестове | Какво проверява / Laravel цел |
 |---|---|---:|---|
-| [ ] | `ActionsTest.php` | 30 | POST action parsing, user/date validation, connection checks, push preview/order note → Form Requests, controllers и services |
 | [x] | `AtomicFileTest.php` | 8 | Replaced: operational state uses database writes/transactions and validated JSON casts; Laravel storage owns atomic filesystem writes where files remain |
 | [x] | `AuditSnapshotTest.php` | 9 | Save/load/history/overwrite на audit snapshots → store-scoped DB snapshots and Saved Reports views |
 | [x] | `AuditTest.php` | 3 | Success/error execution logging → persisted Run Audit summaries and safe failure records |
