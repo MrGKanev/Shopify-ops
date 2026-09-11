@@ -3,6 +3,7 @@
 namespace App\Application\Health;
 
 use App\Models\Store;
+use Illuminate\Support\Str;
 
 class CheckConfiguration
 {
@@ -16,6 +17,8 @@ class CheckConfiguration
             $this->store($store),
             $this->orderTypes((array) config('order-types', [])),
             $this->tagPolicy((array) config('tag-policy', [])),
+            $this->mail(),
+            $this->notifications(),
         ];
     }
 
@@ -34,6 +37,9 @@ class CheckConfiguration
         }
         if (! in_array(config('queue.default'), array_keys((array) config('queue.connections')), true)) {
             $issues[] = 'The default queue connection is not defined.';
+        }
+        if (config('app.env') === 'production' && Str::contains((string) config('app.url'), 'localhost')) {
+            $issues[] = 'APP_URL must not be the localhost default in production.';
         }
         $google = array_filter([(string) config('services.google.client_id'), (string) config('services.google.client_secret'), (string) config('services.google.allowed_domains')]);
         if ($google !== [] && count($google) !== 3) {
@@ -114,6 +120,33 @@ class CheckConfiguration
         $count = count(is_array($config['required'] ?? null) ? $config['required'] : []) + count(is_array($config['forbidden'] ?? null) ? $config['forbidden'] : []);
 
         return $this->result('Tag policy', $issues, [$count === 0 ? 'No tag policies configured.' : "{$count} policies configured."]);
+    }
+
+    /** @return array{name:string,ok:bool,issues:list<string>,notes:list<string>} */
+    private function mail(): array
+    {
+        $issues = [];
+        $mailer = (string) config('mail.default');
+        if (! in_array($mailer, array_keys((array) config('mail.mailers')), true)) {
+            $issues[] = 'The default mailer is not defined.';
+        }
+        if (trim((string) config('mail.from.address')) === '') {
+            $issues[] = 'MAIL_FROM_ADDRESS is missing.';
+        }
+
+        return $this->result('Mail', $issues, ["Mailer: {$mailer}"]);
+    }
+
+    /** @return array{name:string,ok:bool,issues:list<string>,notes:list<string>} */
+    private function notifications(): array
+    {
+        $slack = trim((string) config('services.slack.notifications.webhook_url')) !== '';
+        $discord = trim((string) config('services.discord.notifications.webhook_url')) !== '';
+
+        return $this->result('Notifications', [], [
+            'Slack webhook: '.($slack ? 'configured.' : 'not configured.'),
+            'Discord webhook: '.($discord ? 'configured.' : 'not configured.'),
+        ]);
     }
 
     /** @param list<string> $issues
