@@ -49,7 +49,7 @@ capability-то готово.
 | Structured application logs | Partial | Laravel logging и безопасни warnings в текущите reports | Общ context contract: request/run/store/tool IDs, error category/status, redaction tests и production channel/retention |
 | Run history | Done | `run_logs` DB модел, `RecordRun` persist action (retention до 500 записа/store), `RunLogController` екран; свързан към **всичките 46** report/audit controllers чрез споделен `RecordsReportRun` trait — status, counts, duration, range, store/tool, newest-first, authorization | Typed error category (в момента free-text `error` поле) се преценява отделно |
 | Action audit log | Done | Spatie activity log (`create_activity_log_table` migration, `activitylog:clean` scheduled pruning), `ActionLogController` admin view и tests | — |
-| Operational alerts | Todo | Няма правила | Failed jobs, queue latency, repeated API failures, scheduler absence и notification-delivery failures |
+| Operational alerts | Partial | `AlertOnOperationalFailure` listener на `JobFailed`/`NotificationFailed` (единна точка), Slack/Discord алармa с job/notification клас + exception category, self-alert loop guard; product решение съзнателно ограничи обхвата до failed jobs + notification failures | Queue latency, repeated API failures и scheduler-absence тригери се преценяват отделно ако станат нужни |
 
 ## Jobs, scheduler и recovery
 
