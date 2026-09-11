@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\BannedIpController;
 use App\Http\Controllers\Admin\ConfigCheckController;
 use App\Http\Controllers\Admin\DiscordRulesController;
 use App\Http\Controllers\Admin\EmailRulesController;
+use App\Http\Controllers\Admin\FailedJobController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SlackRulesController;
 use App\Http\Controllers\Admin\StoreController;
@@ -277,6 +278,9 @@ Route::middleware('auth')->group(function (): void {
                 Route::get('/action-log', ActionLogController::class)->name('action-log');
                 Route::get('/banned-ips', [BannedIpController::class, 'index'])->name('banned-ips.index');
                 Route::delete('/banned-ips', [BannedIpController::class, 'destroy'])->name('banned-ips.destroy');
+                Route::get('/failed-jobs', [FailedJobController::class, 'index'])->name('failed-jobs.index');
+                Route::post('/failed-jobs/{id}/retry', [FailedJobController::class, 'retry'])->name('failed-jobs.retry');
+                Route::delete('/failed-jobs/{id}', [FailedJobController::class, 'destroy'])->name('failed-jobs.destroy');
                 Route::get('/health', HealthCheckResultsController::class)->name('health');
                 Route::post('/api-health', [ApiHealthController::class, 'check'])->middleware('throttle:api-health')->name('api-health.check');
                 Route::post('/api-health/test-email', [ApiHealthController::class, 'sendTestEmail'])->middleware('throttle:api-health')->name('api-health.test-email');
