@@ -4,10 +4,11 @@ namespace App\Jobs;
 
 use App\Application\Reports\RunAudit;
 use App\Models\Store;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
-class RunAuditJob implements ShouldQueue
+class RunAuditJob implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
@@ -16,5 +17,16 @@ class RunAuditJob implements ShouldQueue
     public function handle(RunAudit $audit): void
     {
         $audit->handle(Store::findOrFail($this->storeId), $this->startDate, $this->endDate);
+    }
+
+    public function uniqueId(): string
+    {
+        return "{$this->storeId}:{$this->startDate}:{$this->endDate}";
+    }
+
+    /** Safety-net lock TTL in case a worker crashes without releasing it. */
+    public function uniqueFor(): int
+    {
+        return 3600;
     }
 }
