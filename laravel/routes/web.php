@@ -3,6 +3,7 @@
 use App\Http\Controllers\ActiveStoreController;
 use App\Http\Controllers\Admin\ActionLogController;
 use App\Http\Controllers\Admin\ApiHealthController;
+use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\BannedIpController;
 use App\Http\Controllers\Admin\ConfigCheckController;
 use App\Http\Controllers\Admin\DiscordRulesController;
@@ -281,6 +282,8 @@ Route::middleware('auth')->group(function (): void {
                 Route::get('/failed-jobs', [FailedJobController::class, 'index'])->name('failed-jobs.index');
                 Route::post('/failed-jobs/{id}/retry', [FailedJobController::class, 'retry'])->name('failed-jobs.retry');
                 Route::delete('/failed-jobs/{id}', [FailedJobController::class, 'destroy'])->name('failed-jobs.destroy');
+                Route::get('/backups', [BackupController::class, 'index'])->name('backups.index');
+                Route::get('/backups/download/{path}', [BackupController::class, 'download'])->where('path', '.*')->name('backups.download');
                 Route::get('/health', HealthCheckResultsController::class)->name('health');
                 Route::post('/api-health', [ApiHealthController::class, 'check'])->middleware('throttle:api-health')->name('api-health.check');
                 Route::post('/api-health/test-email', [ApiHealthController::class, 'sendTestEmail'])->middleware('throttle:api-health')->name('api-health.test-email');
