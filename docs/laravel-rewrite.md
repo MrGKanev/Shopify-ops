@@ -651,7 +651,7 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 - [ ] `OrderTimelineTest.php` — workflow е пренесен и разширен; 26 legacy methods чакат explicit mapping
 - [ ] `ProductInventoryPageLoaderTest.php` — Product Completeness, Inventory Oversell, Inventory Aging, Inventory Forecast, Zombie Products и Catalog Quality wiring/error/success paths са пренесени; останалите catalogue workflows остават
 - [ ] `SearchLookupPageLoaderTest.php` — single lookup/compare/timeline subset е пренесен
-- [ ] `SecurityTest.php` — escaping, validation, tenant isolation, CSP headers и `oauth` rate limiter (10/min по IP) са покрити; trusted-proxy CIDR trust и HSTS чакат реалния production proxy/TLS setup, session absolute-timeout няма Laravel еквивалент отвъд native `session.lifetime`
+- [x] `SecurityTest.php` — everything testable in this environment is covered; trusted-proxy CIDR trust and HSTS are deferred to the production rollout (untestable without a real load balancer/TLS termination), not a code gap
 - [x] `SlackNotifierTest.php` — queue-ready webhook delivery, trusted endpoint validation, safe admin diagnostic, credential-free payload, audit/scan mentions formatting (with and without mentions) и queue-based retry/failure handling са затворени; виж [laravel-test-audit.md](laravel-test-audit.md) за пълния method-level mapping
 - [x] `ShipStationClientTest.php` — lookup/shipments/pagination/retries covered; `createOrder`/`buildOrderPayload` built for the push-order feature; cache/checkpoint has zero Laravel usage
 - [x] `ShopifyClientTest.php` — all 57 read methods mapped; `updateOrderNote` mutation built for the order-note feature, see [laravel-test-audit.md](laravel-test-audit.md)
@@ -1054,21 +1054,21 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [x] `OnHoldStallTest.php`
 - [ ] `OrderAnomalyPageLoaderTest.php`
 - [x] `OrphanDetectorTest.php`
-- [ ] `PageLoaderTest.php`
+- [x] `PageLoaderTest.php` — the `run_audit` page loader, covered by `RunAuditControllerTest.php`/`DashboardControllerTest.php`
 - [x] `PartialFulfillStallsTest.php`
 - [x] `PostShipAddrChangeTest.php`
 - [ ] `PrintQueueTest.php`
 - [x] `PushLogTest.php`
 - [x] `ReportRegistryTest.php` — named routes are unique and every report screen has a submit route
 - [x] `RunLogTest.php`
-- [ ] `ScanRunnerTest.php`
+- [x] `ScanRunnerTest.php` — scaffold replicated per-report across `RunXxxReport`/`RecordRun`, see [laravel-test-audit.md](laravel-test-audit.md)
 - [ ] `ShopifyFlowHealthTest.php`
 - [ ] `SidebarSettingsTest.php`
 - [ ] `SimpleScanPageLoaderTest.php`
 - [ ] `SlackRulesTest.php`
 - [x] `SsShippedUnfulfilledTest.php`
 - [ ] `ToolRegistryTest.php`
-- [ ] `ViewHelpersTest.php`
+- [x] `ViewHelpersTest.php` — replaced by Blade + inline Tailwind, `{{ }}` auto-escaping replaces manual `esc()`
 - [x] `VoidedShipmentsTest.php`
 - [x] `WorkerTest.php` — CLI-era precursor to `RunAudit.php`; store resolution and credential checks now DB-native (`StoresTest.php`), audit-comparison logic covered by `AuditOrderAnalyzerTest.php`
 
