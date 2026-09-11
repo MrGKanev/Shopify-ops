@@ -94,7 +94,7 @@ capability-то готово.
 | Backup and restore | Partial | `spatie/laravel-backup` инсталиран, scheduled `backup:run`/`backup:monitor`/`backup:clean` | Restore rehearsal, retention policy documentation и storage-destination ownership остават Todo |
 | Deployment runbook | Done | [`docs/laravel-deployment-runbook.md`](laravel-deployment-runbook.md) — write freeze, .env decision table, supervisor/cron, routine deploy стъпки, smoke checks, fix-forward policy | Изпълнение на реален fresh-install + deploy repetition остава в UAT реда |
 | Production observability | Foundation | Sentry SDK (`config/sentry.php`, admin-scrubbed `SentryEventSanitizer`, disabled без `SENTRY_LARAVEL_DSN`), Laravel Pulse (`/admin/pulse`, admin-only), Laravel Horizon (`/admin/horizon`, admin-only `viewHorizon` gate, `horizon:snapshot` на всеки 5 мин) и Prometheus `/metrics` вече са инсталирани и wired | Production решение: `SENTRY_LARAVEL_DSN` стойност, дали `QUEUE_CONNECTION` минава на `redis` за да активира Horizon (в момента `database` по подразбиране), избор на кой stack получава scrape/alerting за `/metrics` — потребителят реши да отложи тази конфигурация до по-късно |
-| UAT и cutover rehearsal | Todo | Планът изисква две репетиции | Golden fixtures, production-sized run, sign-off evidence и irreversible cutover checklist |
+| UAT и cutover rehearsal | Foundation | [`docs/laravel-uat-cutover-checklist.md`](laravel-uat-cutover-checklist.md) — golden fixtures план, rehearsal процедура, sign-off evidence и irreversible cutover checklist документирани | Действителното изпълнение на двете production-like репетиции — дата не е насрочена |
 
 ## Общ release gate за extras
 

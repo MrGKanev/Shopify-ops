@@ -9,8 +9,9 @@ Node.js 24+/pnpm, nginx или друг reverse proxy, php-fpm, supervisor, git,
 application-ниво настройката и routine deploy процедурата.
 
 Свързани документи: [Laravel rewrite план](laravel-rewrite.md) (git/release
-стратегия, one-way cutover) и [platform audit](laravel-platform-audit.md)
-(release gate checklist).
+стратегия, one-way cutover), [platform audit](laravel-platform-audit.md)
+(release gate checklist) и [UAT и cutover checklist](laravel-uat-cutover-checklist.md)
+(golden fixtures, rehearsal процедура, sign-off evidence).
 
 ## Първоначална инсталация
 
