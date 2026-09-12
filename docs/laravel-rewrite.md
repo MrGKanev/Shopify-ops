@@ -1,0 +1,1117 @@
+# План за пренаписване към Laravel
+
+## Решение
+
+Текущото plain-PHP приложение остава последната стабилна версия на тази
+архитектура. Новата версия се разработва като отделно Laravel приложение и не
+заменя стабилната версия, докато не покрие договорения функционален обхват и
+operational изискванията.
+
+Смяната е еднопосочна. Laravel версията започва с нова база и чисто operational
+състояние. Не се импортират legacy JSON/SQLite данни, jobs, logs, cache, reports
+или потребителски настройки. След production cutover не се поддържа връщане към
+plain-PHP системата.
+
+Това е пренаписване с контролирано пренасяне на доказаните алгоритми, а не
+механично преместване на текущите класове в controllers. Laravel поема HTTP
+слоя, authentication, authorization, validation, persistence, queues,
+scheduling, notifications и configuration. Shopify/ShipStation правилата,
+сравненията и анализите остават отделени от framework кода.
+
+## Цели
+
+- Единен и предвидим application lifecycle вместо bootstrap логика в
+  `index.php`.
+- Ясни граници между HTTP, application, domain и infrastructure код.
+- Typed request/response DTO обекти вместо споделени `$ctx` и неструктурирани
+  масиви между слоевете.
+- Dependency injection вместо static state и директно създаване на API clients.
+- Database-backed operational state с Laravel migrations.
+- Надеждни background jobs с retries, timeouts, failed-job tracking и
+  idempotency.
+- Feature parity със стабилната версия преди production cutover.
+- Еднократно и окончателно преминаване към Laravel версията.
+
+## Извън обхвата
+
+- Редизайн на продукта по време на пренаписването.
+- Добавяне на нови audit инструменти преди достигане на feature parity.
+- Промяна на установените audit правила без отделно продуктово решение.
+- Задължително преминаване към MySQL/PostgreSQL. Първата Laravel версия трябва
+  да може да работи със SQLite; друга база се оценява отделно.
+- Миграция на каквито и да е runtime данни от plain-PHP версията.
+- Rollback или паралелна работа на двете системи след cutover.
+
+## Git и release стратегия
+
+Преди началото на rewrite-а:
+
+1. Избираме final plain-PHP version номер след успешно release тестване.
+2. Създаваме immutable Git tag за release-а.
+3. Създаваме read-only `legacy/plain-php` branch от същия commit.
+4. Plain-PHP линията не приема нови features. До cutover се допускат само
+   критични поправки, които се включват и във feature-parity matrix-а.
+5. Rewrite-ът се разработва в `rewrite/laravel` до първия release candidate.
+6. При cutover Laravel кодът става единствената активна development и
+   production линия. Legacy tag/branch се запазват само като архив.
+
+Версиите трябва да имат различими application headers, логове и deployment
+артефакти, за да не може legacy и Laravel инсталация да бъдат объркани.
+
+## Целева архитектура
+
+```text
+app/
+├── Domain/
+│   ├── Audit/
+│   ├── Orders/
+│   ├── Inventory/
+│   ├── Fulfillment/
+│   └── Risk/
+├── Application/
+│   ├── Commands/
+│   ├── Queries/
+│   ├── DTO/
+│   └── Services/
+├── Infrastructure/
+│   ├── Shopify/
+│   ├── ShipStation/
+│   ├── Persistence/
+│   └── Notifications/
+├── Http/
+│   ├── Controllers/
+│   ├── Middleware/
+│   └── Requests/
+├── Jobs/
+├── Models/
+└── Policies/
+```
+
+Зависимостите сочат навътре:
+
+```text
+HTTP / CLI / Jobs -> Application -> Domain
+Infrastructure --------^          ^
+```
+
+Domain кодът не трябва да използва Laravel facades, Eloquent models, HTTP
+requests, sessions или globals. Controllers валидират входа, извикват един
+application use case и връщат response/view. API clients се достъпват през
+interfaces, инжектирани в use case-ите.
+
+## Технологични решения за първата версия
+
+- Laravel с Blade и съществуващата Tailwind визуална посока.
+- Laravel HTTP routing, Form Requests, middleware, policies и gates.
+- Eloquent/query builder за operational данните и migrations за schema.
+- Laravel queue с database driver като минимална deployment конфигурация.
+- Laravel scheduler за audit, digest и housekeeping задачи.
+- Laravel cache contracts с file/database-compatible default driver.
+- Laravel notifications/mail, плюс отделни Slack и Discord adapters.
+- Структурирано логване с correlation ID за web request и background job.
+- Google authentication чрез поддържан package само ако dependency stack-ът е
+  съвместим; иначе чрез малък изолиран adapter със същите security свойства.
+
+Точните Laravel и package версии се заключват след compatibility spike с
+използваната PHP версия, Guzzle stack-а и deployment средата.
+
+## Фаза 0: Freeze и спецификация на стабилната версия
+
+### Работа
+
+- Спиране на feature development в plain-PHP линията.
+- Пълен inventory на routes, POST actions, CLI commands, scheduled tasks,
+  permissions, configuration keys и mutable data.
+- Feature-parity matrix за всеки инструмент от `ToolRegistry`.
+- Описване на вход, изход, validation, permission и side effects за всеки use
+  case.
+- Golden-master fixtures за ключови Shopify и ShipStation payload-и.
+- Snapshot очаквания за audit резултати, CSV exports и notification decisions.
+- Baseline измервания за време, memory и брой API заявки на тежките операции.
+- Документиране кои данни умишлено няма да съществуват в новата система.
+
+### Exit criteria
+
+- Стабилният release минава PHPUnit, PHPStan, frontend build и dependency
+  audits.
+- Всеки вид persistent data е описан като legacy-only и изключен от rewrite-а.
+- Feature-parity matrix-ът покрива всички видими страници и background задачи.
+- Release tag и legacy branch са създадени.
+
+## Test-parity и разширено покритие
+
+Laravel suite-ът трябва да е по-силен от legacy suite-а, а не само да достигне
+същия брой тестове. Всеки legacy тест и всеки доказан production behavior се
+записва в traceability matrix с едно от следните състояния:
+
+- мигриран към еквивалентен Laravel unit, feature, integration или browser test;
+- заменен от по-широк тест, който доказва същия contract и допълнителни случаи;
+- умишлено отпаднал заедно с feature-а и подкрепен с одобрено отклонение.
+
+Не се допуска legacy тест да изчезне без записана причина. Броят тестове не е
+самостоятелна цел: мерим покрити behaviors, decisions, failure paths и security
+boundaries. За всеки пренесен workflow се добавят приложимите нови случаи:
+
+- празни, минимални, максимални, malformed и неочаквани входове;
+- permission matrix за всички роли и cross-store/tenant isolation;
+- CSRF, output escaping, mass assignment и липса на secrets в responses/logs;
+- празни, частични, невалидни и променени upstream payload-и;
+- pagination boundaries, duplicate records и нестабилен ред на резултатите;
+- connection timeout, HTTP 429, `Retry-After`, 4xx, 5xx и изчерпани retries;
+- timezone, DST, начална/крайна дата и други гранични стойности;
+- job retry, idempotency, concurrency, crash recovery и duplicate delivery;
+- CSV/export escaping, encoding, големи datasets и memory/request budgets;
+- accessibility и основни browser journeys за критичните workflows.
+
+Contract и integration тестовете никога не използват реална външна мрежа.
+Shopify, ShipStation, email и notification заявките се изпълняват през точни
+fakes, които отказват всяка неочаквана заявка. Анонимизирани production-derived
+fixtures допълват synthetic edge cases и golden fixtures.
+
+### Test exit criteria
+
+- Всеки legacy test ID има Laravel test ID или одобрена причина за отпадане.
+- Всеки feature-parity ред сочи success, validation, authorization, empty-state
+  и приложимите failure-path тестове.
+- Няма незаписани network calls, flaky зависимости от време или случайност и
+  order-dependent тестове.
+- Differential тестовете доказват еквивалентни нормализирани резултати за
+  общите legacy/Laravel fixtures.
+- Новооткрити edge cases се добавят първо като regression тест.
+- Пълният Laravel suite, static analysis, build и security audits са
+  задължителни CI checks преди cutover.
+
+## Фаза 1: Laravel foundation
+
+### Работа
+
+- Създаване на чист Laravel application skeleton.
+- Настройка на environments, secrets, config validation и CI.
+- Общ layout, navigation, error pages и health endpoints.
+- Базови conventions за namespaces, DTO, actions/use cases и repositories.
+- Test layers: unit, feature, integration и contract tests.
+- Fakes за Shopify, ShipStation, email, Slack и Discord.
+- Решение за asset build и production artifact.
+
+### Exit criteria
+
+- Приложението се инсталира и стартира от чист checkout по документирана
+  процедура.
+- CI изпълнява tests, static analysis, formatting/build и dependency audits.
+- Health endpoint проверява application boot, database и queue configuration.
+- Няма production credentials или mutable runtime files в Git.
+
+## Фаза 2: Integrations и domain core
+
+### Работа
+
+- Дефиниране на `ShopifyGateway` и `ShipStationGateway` interfaces.
+- Пренасяне на GraphQL query/normalization логиката зад Shopify adapter.
+- Пренасяне на ShipStation pagination, normalization и error handling.
+- Общи policies за timeout, retry, rate limits и API error classification.
+- Пренасяне на pure логиката: order normalization, comparison, risk scoring,
+  date ranges и report calculations.
+- Замяна на неструктурираните ключови масиви с DTO/value objects там, където
+  намалява двусмислието.
+- Contract tests с анонимизирани реални fixtures.
+
+### Exit criteria
+
+- Еднакви fixtures дават еднакви нормализирани резултати в legacy и Laravel.
+- Domain тестовете не boot-ват Laravel container.
+- Всяка външна API операция може да бъде симулирана без мрежова заявка.
+- Retryable и permanent integration failures са различими в логовете и jobs.
+
+## Фаза 3: Identity, stores и permissions
+
+### Работа
+
+- Нов User model; първият administrator се създава директно в Laravel
+  инсталацията, без пренасяне на legacy потребители.
+- Password login и Google login със session rotation и rate limiting.
+- Роли и permissions чрез policies/gates.
+- Multi-store модел и избор на active store без process-wide static state.
+- Store-scoped credentials и services.
+- CSRF, secure cookies, security headers и action audit log.
+- Automated permission matrix tests, базирани на сегашното поведение.
+
+### Exit criteria
+
+- Всички auth success/failure сценарии имат feature tests.
+- Нито един route или job не може да достъпи грешен store context.
+- Permission parity е потвърден за всяка роля и action.
+- Security настройките са валидирани зад реалния production proxy/TLS setup.
+
+## Фаза 4: Persistence и чисто начално състояние
+
+### Работа
+
+- Laravel migrations за users, stores, ignored orders, jobs, run logs, action
+  logs, notification rules, sidebar settings, print queue и audit snapshots.
+- Команда за създаване на първия administrator и първоначалните stores.
+- Fresh-install defaults за notification rules, sidebar settings и останалите
+  application настройки.
+- Ясен списък на legacy-only данните, които Laravel никога не чете: users,
+  ignored orders, queues, logs, snapshots, reports, cache и settings.
+- Новите jobs, logs и reports започват от момента на cutover.
+
+### Exit criteria
+
+- Чиста Laravel инсталация създава цялата schema само чрез framework migrations.
+- Administrator и stores могат да бъдат конфигурирани без редактиране на
+  database на ръка.
+- Приложението не съдържа importer или runtime dependency към legacy файлове.
+- Fresh-install defaults са покрити с automated tests.
+
+## Фаза 5: Audit pipeline, queues и scheduler
+
+### Работа
+
+- `RunAudit` application use case, използваем от HTTP, CLI и queue job.
+- Отделни jobs за fetch, comparison, report persistence и notifications, когато
+  това подобрява retry/idempotency поведението.
+- Unique/idempotency keys по store, tool и date range.
+- Job timeouts, retry backoff, failed jobs и безопасно повторно изпълнение.
+- Progress/status модел за dashboard-а.
+- Scheduled audit, worker lifecycle, email digest и cleanup задачи.
+- Защита срещу едновременно изпълнение на несъвместими jobs за един store.
+
+### Exit criteria
+
+- Един и същ audit fixture генерира еквивалентни missing/found/skipped/ignored
+  резултати и CSV съдържание.
+- Прекъснат job може да бъде повторен без дублирани side effects.
+- Notification не се изпраща два пъти при retry.
+- Queue restart и deployment по време на job са тествани.
+
+## Фаза 6: Пренасяне на инструментите
+
+Инструментите се пренасят на функционални групи. За всеки инструмент се
+реализират route, Form Request, controller, application query/command, view,
+authorization и tests.
+
+Препоръчителен ред:
+
+1. Search и read-only lookups: global search, spot check, timeline, metafields,
+   tags, customer и tracking.
+2. Основен Audit и report history.
+3. Order anomaly инструменти: duplicates, refunds, addresses, orphans, failed
+   shipments и order changes.
+4. Fulfillment и ShipStation инструменти.
+5. Product, inventory и forecasting инструменти.
+6. Policy, fraud, risk, consent, tax и dispute инструменти.
+7. Mutating workflows: ignore/unignore, push to ShipStation, notes, print queue
+   и settings.
+8. Exports, metrics, notifications и management pages.
+
+### Exit criteria за всеки инструмент
+
+- Резултатите съвпадат върху общите golden fixtures.
+- Validation и permissions са покрити с feature tests.
+- Empty, partial API failure, pagination и rate-limit сценарии са покрити.
+- UI съдържа същата operational информация и действия като stable версията.
+- Feature-parity matrix редът е одобрен и маркиран като завършен.
+
+## Фаза 7: UI parity и accessibility
+
+### Работа
+
+- Пренасяне на Blade views и reusable components без промяна на основните
+  workflows.
+- Уеднаквяване на filters, date ranges, pagination, flash messages и errors.
+- Responsive и keyboard проверка на основните workflows.
+- Escape policy за външни Shopify/ShipStation стойности.
+- Browser tests за login, store switch, audit, search, mutation и export flows.
+
+### Exit criteria
+
+- Няма блокиращи UI regression-и спрямо stable версията.
+- Основните workflows могат да бъдат изпълнени само с клавиатура.
+- Всички mutating действия имат видимо потвърждение и audit trail.
+
+## Фаза 8: Hardening и release candidate
+
+### Работа
+
+- Security review на auth, OAuth, CSRF, SSRF, file downloads/uploads, secrets и
+  authorization boundaries.
+- Load/performance тестове с production-sized fixtures.
+- Проверка на N+1 queries, memory usage и външни API request counts.
+- Structured logs, metrics, queue alerts и failed-job runbook.
+- Deployment, queue restart и scheduler runbooks.
+- Две пълни fresh-install и cutover rehearsals в production-like среда.
+- User acceptance testing по feature-parity matrix.
+
+### Exit criteria
+
+- Няма open critical/high security или data-integrity дефекти.
+- Всички parity редове са одобрени или имат изрично прието отклонение.
+- Performance е в договорения budget спрямо baseline-а.
+- Clean cutover rehearsal е успешен.
+- Laravel release candidate работи в production-like среда за договорения soak
+  период.
+
+## Фаза 9: Cutover
+
+### Преди cutover
+
+- Обявява се кратък write freeze.
+- Спират се legacy cron и workers.
+- Изчакват се изпълняващите се legacy jobs или те се прекратяват съзнателно.
+- Конфигурират се administrator, stores и secrets в чистата Laravel инсталация.
+- Проверява се, че Laravel database е нова и не съдържа импорт от legacy state.
+
+### Пускане
+
+- Laravel приложението се deploy-ва с workers и scheduler.
+- Изпълняват се smoke tests за login, store context, read-only lookup, audit
+  queueing, export и notification.
+- Legacy приложението се изключва и не остава като активна fallback система.
+- Наблюдават се errors, queue latency, failed jobs, API failures и audit result
+  deviations.
+
+Cutover се извършва само след release sign-off. След него дефектите се поправят
+в Laravel версията; production не се връща към plain-PHP приложението.
+
+## Фаза 10: След release
+
+- Засилен monitoring през определения stabilization период.
+- Legacy deployment-ът се премахва, а release tag/branch остават само като
+  source archive.
+- Secrets се ротират, ако са били копирани в нова среда.
+- Едва след стабилизацията започват нови features и целеви UI подобрения.
+
+## Feature-parity matrix
+
+Matrix-ът е release control документ, а не само checklist. Минималните колони
+са:
+
+| Поле | Описание |
+|---|---|
+| Feature/tool | Route, action, CLI или scheduled задача |
+| Legacy reference | Клас, метод, view и tests в stable версията |
+| Legacy test IDs | Всеки стар тест, който доказва feature contract-а |
+| Inputs | Полета, defaults и validation |
+| Permissions | Допустими роли и store scope |
+| Outputs | View данни, CSV, logs и notifications |
+| Side effects | DB/file/API промени |
+| Fixtures | Golden datasets за сравнение |
+| Laravel tests | Unit, feature, integration и browser coverage |
+| Added edge cases | Ново покритие над legacy suite-а |
+| Status | Not started / In progress / Parity / Accepted deviation |
+| Owner/sign-off | Техническо и продуктово одобрение |
+
+## Live migration tracker
+
+Тази секция се обновява във всеки migration slice. Source of truth за legacy
+инструментите е `src/ToolRegistry.php`; Laravel статусът се определя само по
+достъпен route/controller/view и покриващи тестове. Наличен domain helper без
+завършен потребителски workflow не се брои за готов feature.
+
+Последно обновяване: **2026-09-10**, след Slack Rules scan delivery slice-а.
+
+Легенда: **Done** = feature parity за основния workflow; **Partial** = използваем,
+но по-тесен от legacy; **Todo** = няма завършен Laravel workflow;
+**Replaced** = съзнателно заменен UX, който не трябва да се пренася едно към едно.
+
+### Обобщение на feature progress
+
+| Статус | Страници/инструменти | Дял от 72 |
+|---|---:|---:|
+| Done | 70 | 97.2% |
+| Partial | 0 | 0.0% |
+| Todo | 0 | 0.0% |
+| Replaced | 2 | 2.8% |
+| **Общо** | **72** | **100%** |
+
+Завършените foundation, authentication, store context, administration и API
+boundary задачи са реален migration progress, но не надуват броя на legacy
+feature страниците. Те се следят отделно:
+
+- [x] Laravel application foundation, health endpoint и CI
+- [x] Persisted operational health за database, cache, disk, scheduler и queue worker с admin-only dashboard и scheduled pruning
+- [x] Проверени database и artifact backups с отделен disk, retention cleanup, monitoring, health integration и опционално AES-256 архивиране
+- [x] Sentry exception observability за web и queue failures с environment/release context, изключен tracing по подразбиране и application-level PII/credential scrub
+- [x] Global Content Security Policy с Vite nonce, безопасен report-only rollout и environment switch за enforcing режим
+- [x] Queue-ready Slack notification channel с trusted webhook validation и admin-only delivery diagnostic
+- [x] Admin-only Laravel Pulse dashboard с dedicated DB connection option, bounded retention и privacy-minimized opt-in recorders
+- [x] Redis queue runtime чрез Laravel Horizon с bounded supervisors, admin-only dashboard, queue health check и scheduled metrics snapshots
+- [x] Session authentication и login throttling
+- [x] Viewer/operator/admin роли и authorization
+- [x] Stores, encrypted credentials и active-store isolation
+- [x] First-install command и administration за users/stores
+- [x] Shopify GraphQL client, normalization и pagination foundation
+- [x] ShipStation client, normalization, retries и store credentials
+- [x] Basic `/up` liveness и `/ready` database/queue configuration checks
+- [x] API Health със Shopify scopes/version, ShipStation auth и store-scoped persisted report flow history
+- [x] Един дългосрочен Draft PR за целия rewrite
+- [ ] Production observability, metrics и operational runbooks
+- [ ] Background jobs, idempotency, retry и recovery foundation
+- [ ] Final parity review, UAT, deployment rehearsal и необратим cutover
+
+### Cross-cutting и non-page legacy capabilities
+
+Подробният статус и definition of done за платформените части е в
+[platform and extras audit-а](laravel-platform-audit.md). Той отделя готовия
+workflow от наличния framework scaffold.
+
+- [x] Password/session login в Laravel
+- [x] Multi-store membership и active-store switching
+- [x] Encrypted integration credentials
+- [x] Google OAuth login и callback flow чрез Socialite, verified Workspace `hd` allowlist, existing-user binding, session rotation и OAuth throttling
+- [x] Main audit CLI/web orchestration (`audit.php`) — `RunAudit`/`RunAuditJob`/`RunAuditController`
+- [x] Queue worker и scheduled execution (`worker.php`) — DB-native `Store` resolution, `RunAudit`/`AuditOrderAnalyzer`
+- [x] Daily email digest (`email_digest.php`) — `reports:email-digest` scheduled command
+- [x] Slack channel, delivery diagnostic, audit/scan notifications, mentions и per-tool rules — всички готови
+- [x] Email notifications, recipients и per-tool rules
+- [x] SMTP configuration diagnostic и admin-only test delivery
+- [x] Discord notifications — built from scratch, mirrors the Slack channel exactly (no new dependency)
+- [ ] Report persistence, downloads и CSV/export contracts
+- [x] Metrics endpoint и authentication (`metrics.php`) — replaced by admin-only Laravel Pulse dashboard
+- [x] Structured application/run/action logging — native Laravel `Log`/Monolog
+- [ ] Cache behavior и invalidation
+- [ ] Ignore/unignore mutations и bulk import
+- [ ] Shopify → ShipStation push workflow и idempotency
+- [ ] Print queue actions и recovery
+- [ ] Webhook monitoring и health state
+- [ ] Laravel scheduler/queue deployment и failed-job runbook
+
+### Audit инструменти — 48
+
+| ID | Legacy feature | Статус | Бележка |
+|---|---|---|---|
+| `dashboard` | Dashboard | Done | Store-scoped latest/previous audit trend, all-time missing totals, push/ignored stats, latest missing-order action queue and quick report actions. |
+| `hub-audit` | Audit hub | Replaced | Заменен от постоянна sidebar навигация и директни routes. |
+| `reports` | Reports | Done | Store-scoped daily DB snapshots from Run Audit, same-day overwrite, history/detail views and formula-safe CSV download. |
+| `run` | Run Audit | Done | Validated period, matching, legacy exclusions/ignore list including no-shipping/on-hold, persisted summary, safe synchronous results and queued execution. |
+| `trends` | Trends | Done | Store-scoped date filtering, chronological missing-order totals, signed daily deltas and dependency-free bar visualization from saved snapshots. |
+| `dupes` | Duplicate Detector | Done | Case-insensitive email + exact total pairs within an inclusive 600-second window, full range pagination and visible truncation. |
+| `refunds` | Refunds Tracker | Done | Refunded Shopify orders with line-item totals, optional ShipStation cross-check and active/missing risk priority. |
+| `repeatrefunds` | Repeat Refunds | Done | Refunded/partially-refunded orders grouped by normalized email, successful transaction totals and configurable threshold. |
+| `returns` | Return / RMA Tracker | Done | One row per refund event with returned items, reason, total and aggregated SKU units/events/revenue. |
+| `returneditems` | Returned Items Report | Done | Refund-date filtered product quantities with old-order inclusion and formula-safe streamed CSV export. |
+| `orphans` | Orphan Detector | Done | Dual-source inclusive range, compound order-number matching, newest-first rows and formula-safe CSV. |
+| `activess` | Active SS Conflicts | Done | Deduped cancelled/refunded Shopify orders matched to all three active ShipStation queues with formula-safe CSV. |
+| `ssshipped` | SS Shipped / Shopify Unfulfilled | Done | Shipped-only dual-source comparison, orphan/fulfilled exclusions, partial state and formula-safe CSV. |
+| `orderedits` | Order Edit History | Done | Paginated edit events, batch order hydration, grouped summaries and edit-delay calculation. |
+| `noteflags` | Note Flags | Done | Configurable case-insensitive note keywords over paid unfulfilled orders, with safe pagination. |
+| `addrcheck` | Address Scanner | Done | Required fields, short street, US/CA postal formats, province, express phone и PO Box/carrier checks с два legacy филтъра. |
+| `emailcheck` | Email Checker | Done | Paid date-range scan с missing/invalid/disposable critical правила, suspicious warning евристики, severity sorting и visible truncation. |
+| `hvorders` | High-Value No Phone | Done | Operator/admin report с currency-aware праг, cancelled exclusion, deterministic sorting и visible truncation. |
+| `addrchanges` | Address Changes | Done | Paginated shipping-address events, latest change per order, batch hydration, current address, placement-to-change delay and formula-safe streamed CSV export. |
+| `postshipaddr` | Post-Ship Address Change | Done | Latest shipping-address event after first fulfillment, elapsed minutes and formula-safe CSV export. |
+| `addrdupes` | Duplicate Shipping Addresses | Done | Paid orders grouped by normalized address, distinct-email threshold and deterministic risk sorting. |
+| `failedship` | Voided Shipments | Done | Void-date paginated ShipStation shipments, nullable destination handling, newest-first sorting and formula-safe CSV. |
+| `slabreaches` | Fulfillment SLA Breaches | Done | Paid-order time to first fulfillment or current age, configurable threshold, lane context and formula-safe CSV. |
+| `bundlecheck` | Bundle Check | Done | Config-native Z1/Z2 required companions, exclusions, fulfilled-order inclusion and formula-safe CSV. |
+| `partialfulfill` | Partial Fulfillment Stalls | Done | Open paid partial orders stalled since latest fulfillment, remaining quantities, configurable threshold and formula-safe CSV. |
+| `onholdstall` | On-Hold Stall | Done | On-hold fulfillment orders, inclusive order-date filtering, hold details, waiting age and formula-safe CSV. |
+| `notracking` | Fulfilled Without Tracking | Done | Fulfillment-date window, configurable inclusive grace period, missing tracking details and formula-safe CSV. |
+| `shipmentaging` | Shipment Aging | Done | Live awaiting-shipment queue, configurable inclusive age, SKU/type summaries and formula-safe CSV. |
+| `itemmismatch` | Shipped Item Mismatch | Done | Shipped-only SKU quantity diff, business exclusions, bundle gaps and formula-safe CSV. |
+| `fulfilleditems` | Fulfilled Items Report | Done | Successful fulfillment-event quantities grouped by product with old-order inclusion and formula-safe streamed CSV export. |
+| `carrierperf` | Carrier Performance | Done | ShipStation delivery averages, late-over-five-day rate and missing/bad-date handling grouped by carrier. |
+| `shipmargin` | Shipping Margin Erosion | Done | ShipStation label plus insurance cost against Shopify shipping lines, configurable strict loss threshold, carrier summary and formula-safe CSV. |
+| `productcheck` | Product Completeness | Done | True image check, meaningful description, strict complete variant scan, missing/no-variant classification и visible truncation. |
+| `skudupes` | SKU Duplicates | Done | Всички product statuses, пълна variant pagination, case-sensitive SKU grouping, blank exclusion, count sorting и visible truncation. |
+| `inventoryoversell` | Inventory Oversell Risk | Done | Active tracked deny-policy stock спрямо всички ShipStation awaiting-shipment quantities, duplicate SKU aggregation и visible catalogue truncation. |
+| `inventoryaging` | Inventory Aging | Done | Active tracked deny-policy variants с stock ≤ 0, paid-order sales window, complete product/order/line-item pagination и visible truncation. |
+| `inventoryforecast` | Inventory Forecast | Done | Фиксиран 30-дневен paid-sales прозорец, cancelled-order exclusion, daily sell-through, days-to-zero severity и visible truncation. |
+| `zombieproducts` | Zombie Products | Done | No-variant и all-tracked-deny-zero-stock detection, full active catalogue pagination и visible truncation. |
+| `catalogquality` | Catalog Quality | Done | Online Store publication, SEO title/description и collection membership върху пълния active catalogue с visible truncation. |
+| `giftcards` | Gift Cards | Done | Enabled positive balances, configurable expiry window, expired/never-redeemed reasons, currency display и full pagination. |
+| `countrymismatch` | Billing ≠ Shipping Country | Done | ISO-only comparison, missing-country count, currency display, stable sorting и visible truncation. |
+| `discountabuse` | Discount Abuse | Done | Paid orders grouped by normalized discount code/address, distinct-email threshold, detailed orders and deterministic cluster sorting. |
+| `tagpolicy` | Tag Policy Audit | Done | Config-native required/forbidden combinations, case-insensitive matching, paid-order scan and visible truncation. |
+| `taxaudit` | Tax Audit | Done | Paid non-exempt zero-tax orders над configurable minimum, exact boundary и total-descending sorting. |
+| `consentaudit` | Marketing Consent Audit | Done | Paid orders без subscribed email consent, informational SMS state, unknown defaults и newest-first sorting. |
+| `riskreport` | Fraud Risk Report | Done | Paid date-range scan с осем legacy сигнала, medium/high filtering, score-descending sorting и visible truncation. |
+| `sameip` | Same IP, Different Emails | Done | Paid orders grouped by exact client IP, case-insensitive distinct-email deduplication, detailed orders and deterministic risk sorting. |
+| `disputes` | Chargebacks / Disputes | Done | Open actionable disputes, evidence deadlines, urgency sorting and bounded pagination. |
+
+Audit subtotal: **Done 47 · Partial 0 · Todo 0 · Replaced 1**.
+
+### Search & Lookup — 12
+
+| ID | Legacy feature | Статус | Бележка |
+|---|---|---|---|
+| `hub-search` | Search & Lookup hub | Replaced | Заменен от sidebar links. |
+| `globalsearch` | Global Search | Done | Normalized order-number search over bounded saved-report, push-log and ignored-order history with safe links and store isolation. |
+| `spotcheck` | Spot-check | Done | 1–50 уникални номера, three-source mode, exact batch Shopify lookup, risk badges и safe atomic errors. |
+| `compare` | Order Compare | Done | `/orders/compare`, safe errors, ambiguity и optional ShipStation status. |
+| `timeline` | Order Timeline | Done | Shopify events/refunds/fulfillments + ShipStation + risk analysis. |
+| `customer` | Customer Lookup | Done | Email-prefilled paginated order history, customer identity, spend/status/tag summary and visible truncation. |
+| `cohort` | Customer LTV | Done | Non-cancelled revenue by normalized email, top 100 customers and first-order monthly repeat cohorts with visible truncation. |
+| `tagsearch` | Tag Search | Done | Exact case-insensitive match, optional validated range, pagination/truncation и safe Shopify links. |
+| `tagaudit` | Tag Audit | Done | Per-order frequency, last seen/order, 90-day orphan signal, drill-down и visible truncation. |
+| `metafields` | Metafields | Done | Order definitions, value/date search, sample/count metrics and filtered batch lookup for up to 20 orders. |
+| `tracking` | Tracking Feed | Done | 1–30 уникални номера, real `/shipments`, unshipped fallback, carrier allowlist и atomic safe errors. |
+| `packingslip` | Packing Slip Preview | Done | Exact-match ShipStation lookup, safe view-data builder, ambiguity state и print-friendly preview. |
+
+Search subtotal: **Done 11 · Partial 0 · Todo 0 · Replaced 1**.
+
+### Manage — 6
+
+| ID | Legacy feature | Статус |
+|---|---|---|
+| `ignored` | Ignored Orders | Done | Store-scoped add/update, single and bulk unignore, CSV import normalization and durable DB persistence. |
+| `pushlog` | Push Log | Done | Append-only store-scoped DB history, newest-first pagination and safe Shopify/ShipStation links. |
+| `runlog` | Run History | Done | Store-scoped append-only execution records, legacy defaults, 500-row retention and newest-first pagination. |
+| `jobs` | Job Queue | Done | Native pending/failed visibility, retry/forget and validated Run Audit enqueue. |
+| `actionlog` | Action Log | Done | Admin-only newest-first activity history for allowlisted user/store changes, credential rotations and store-access updates, with scheduled retention cleanup. |
+| `printqueue` | Print Queue | Done | Store-scoped persistent queue with validated add, duplicate prevention, remove/clear and Packing Slip/Spot-check links. |
+
+Manage subtotal: **Done 6 · Partial 0 · Todo 0 · Replaced 0**.
+
+### Settings — 6
+
+| ID | Legacy feature | Статус | Бележка |
+|---|---|---|---|
+| `settings` | Settings | Done | Admin overview за active-store connections, credential management и notification channels; API Health покрива connection tests, а Laravel throttling заменя persistent IP bans. |
+| `slackrules` | Slack Rules | Done | Store-scoped audit/scan enable and thresholds, all-clear behavior, normalized mentions and queueable delivery through the shared run recorder. |
+| `emailrules` | Email Rules | Done | Store-scoped per-tool off/immediate/digest modes, thresholds, zero-result control, validated recipients, queueable delivery and scheduled daily digest. |
+| `apihealth` | API Health | Done | Admin-only Shopify shop/scopes, requested/returned API version mismatch, ShipStation auth и store-scoped persisted report flow history. |
+| `configcheck` | Config Check | Done | Admin-only runtime contracts за application/security, active-store credentials, order types и tag policy без показване на secrets. |
+| `webhookhealth` | Webhook Health | Done | Admin-only live Shopify registration inventory, safe credential/transport failures, HTTPS/API-version diagnostics and registration dates; Shopify remains source of truth for delivery logs. |
+
+Settings subtotal: **Done 6 · Partial 0 · Todo 0 · Replaced 0**.
+
+### Test migration tracker
+
+Подробният operational checklist е в
+[отделния legacy test audit](laravel-test-audit.md). Той е source of truth за
+ролята, method-level статуса и оставащата работа по всеки test файл.
+
+Броят Laravel тестове не е директен процент от legacy suite-а: новите feature
+тестове често заменят няколко стари unit теста и добавят validation, escaping,
+pagination, malformed payload и tenant-isolation случаи. Release gate остава
+поведенческа traceability, не механично достигане на еднакъв брой тестове.
+
+| Suite | Test files | Executed tests | Assertions |
+|---|---:|---:|---:|
+| Stable plain PHP | 115 | 1,528 | 3,659 |
+| Laravel rewrite | 192 | 588 | 2,675 |
+
+Текущ file-level disposition на всичките **115 legacy test файла**:
+
+| Статус | Файлове | Дял |
+|---|---:|---:|
+| Fully mapped | 47 | 40.9% |
+| Partial / parity verification | 18 | 15.7% |
+| Pending | 50 | 43.5% |
+| **Общо** | **115** | **100%** |
+
+#### Fully mapped legacy test files
+
+- [x] `PackingSlipPageLoaderTest.php` — всичките 6 legacy paths са нанесени в Laravel feature/domain tests; добавени са exact-match ambiguity, malformed nested data, XSS и invalid-date cases
+- [x] `TrackingFeedTest.php` — всичките 7 builder contracts са нанесени; добавени са всички carriers, истински split shipments, unshipped fallback, malformed data, tenant и atomic-error cases
+- [x] `GraphQL/OrderTagInsightsTest.php` — tag search и tag statistics contracts са нанесени; добавени са bounded pagination, date variables, malformed payload, duplicate-per-order и XSS cases
+- [x] `ProductCatalogueChecksTest.php` — всичките 16 catalogue decisions са нанесени и разширени
+- [x] `CatalogQualityTest.php` — всичките 6 quality decisions са нанесени и разширени
+- [x] `GiftCardPageLoaderTest.php` — всичките 4 visible workflow/failure paths са нанесени и разширени
+- [x] `GiftCardsTest.php` — всичките 8 gift-card decisions са нанесени и разширени
+- [x] `InventoryForecastTest.php` — всичките 9 forecast decisions са нанесени и разширени
+- [x] `ZombieProductsTest.php` — всичките 7 zombie-product decisions са нанесени и разширени
+- [x] `TaxAuditTest.php` — всичките 6 tax decisions са нанесени и разширени
+- [x] `ConsentAuditTest.php` — всичките 4 consent decisions са нанесени и разширени
+- [x] `FraudRiskReportTest.php` — всичките 4 filtering, signal, Shopify-risk и sorting decisions са нанесени и разширени
+- [x] `AddressCheckTest.php` — всичките 20 address validation и malformed-value decisions са нанесени
+- [x] `AddressScannerPageTest.php` — всичките 4 filtering, clean-row и severity sorting decisions са нанесени
+- [x] `SameIpTest.php` — всичките 5 grouping, exclusion, deduplication и sorting decisions са нанесени
+- [x] `OrderPolicyChecksTest.php` — всичките 16 Discount Abuse и Tag Policy configuration, rule semantics и tag normalization decisions са нанесени
+- [x] `RepeatRefundsTest.php` — всичките 8 threshold, transaction filtering, grouping and sorting decisions са нанесени
+- [x] `RefundsTrackerTest.php` — всичките 10 refund amount, exact-order matching, ShipStation status и risk sorting decisions са нанесени; добавени са authorization, store isolation, pagination, XSS, optional ShipStation и safe upstream failure cases
+- [x] `ReturnRmaTrackerTest.php` — всичките 7 refund-event, note, item detail, SKU aggregation/exclusion and sorting decisions са нанесени; добавени са authorization, validation, store isolation, pagination, XSS и safe upstream failure cases
+- [x] `ReturnedItemsReportTest.php` — всичките 10 refund-date, old-order, product aggregation, CSV and escaping decisions са нанесени; добавени са authorization, store isolation, updated-order discovery, bounded pagination and safe upstream failure cases
+- [x] `ApiHealthTest.php` — всичките 8 Shopify/ShipStation configuration, live request, scope, returned-version and safe failure decisions са нанесени; flow history се следи отделно в `ShopifyFlowHealthTest.php`
+- [x] `AddressChangesTest.php` — всичките 4 delay, missing/negative timestamp clamping и current-address output решения са нанесени и разширени с event pagination/filtering, batch hydration, authorization, validation, XSS, safe failure и truncation
+- [x] `GoogleAuthFlowTest.php` — custom flow е заменен със Socialite stateful OAuth; redirect/callback, cancellation, provider failure, verified Workspace domain, existing-user binding, session rotation и Google-only режим са покрити
+- [x] `GoogleAuthTest.php` — custom OIDC/PKCE клиента е заменен със Socialite; config guard, domain parsing, verified `hd` claim, stable Google subject binding и safe errors са покрити, а provider token-и не се пазят
+- [x] `GraphQL/OrderDirectLookupTest.php` — `#`-stripping, normalization, empty-result и batch dedup/keying-with-misses са нанесени; legacy `getOrder`-by-GID е консолидиран в same-query `findByOrderNumber` (по име), а 60s cache pass-through умишлено отпада за fresh reads
+- [x] `JobQueueTest.php` — native `jobs`/`failed_jobs` visibility и retry/forget са пренесени в `JobQueueController`; `RunAuditJob::handle()` store resolution и delegation към `RunAudit` (успех и missing-store failure) са покрити директно, worker execution/failure lifecycle отвъд това остава framework responsibility на Laravel queue
+- [x] `UserActionLogTest.php` — newest-first history, store-change и credential-rotation logging са покрити от DB-backed admin Action Log (Spatie Activitylog); scheduled retention (`activitylog:clean`) вече се проверява директно; legacy JSON→SQLite storage-driver import няма Laravel еквивалент (Action Log-ът е DB-native от началото)
+- [x] `AuthViewsTest.php` — login режими, incomplete-config грешка и escaping са покрити с login feature тестове; dedicated access-denied страницата е заменена от inline session-flashed грешка на login формата, а всяка от трите denial причини вече проверява точния показан текст; per-deployment branding и localhost dev-login bypass умишлено отпадат в rewrite-а
+- [x] `ReporterTest.php` — CLI-era `saveReports`/`printSummary` (local файлове, terminal echo) нямат Laravel еквивалент; `run_audit` резултатът се пази в `audit_snapshots`/`run_logs` и се рендва в Admin UI (`RunAuditControllerTest.php`); spot-check секцията мапва към отделния вече затворен `SearchLookupPageLoaderTest.php`; добавен е липсващият zero-missing "OK" success case
+- [x] `RiskScorerTest.php` — всичките 8 default тегла съвпадат точно с legacy, покрити чрез `OrderRiskScorerTest.php` data provider за всеки сигнал, четирите threshold граници и multi-signal accumulation; `data/risk_weights.json` custom-weight override умишлено не е пренесен (никога не е shipped с `.example` файл, няма management UI)
+- [x] `GraphQL/IdsTest.php` — няма отделен reusable ID клас в Laravel; `orderGid`/`legacyId` са малки private helper-и на `ShopifyAdminClient`/`ShopifyOrderNormalizer`; numeric→GID, GID passthrough (реалният path на `LoadOrderTimeline`), invalid-ID rejection и GID-fallback extraction (line items, transactions без `legacyResourceId`) са покрити чрез реалните order/event normalization тестове
+
+#### Partial или чакащи method-level parity проверка
+
+- [x] `AllViewsSmokeTest.php` — automatic authenticated traversal на всеки parameterless application GET screen
+- [x] `AuthPermissionSnapshotTest.php` — automatic report/admin route-gate completeness и runtime viewer denial
+- [x] `AuthTest.php` — persistent IP lockout built (`LoginThrottle`, `login_attempts` table, admin Banned IPs page), matching legacy's 3-attempts/1-week-ban policy; permission matrix confirmed via `RouteAuthorizationTest.php`, see [laravel-test-audit.md](laravel-test-audit.md)
+- [x] `GraphQL/EventNormalizerTest.php` — fixed a real double-counting bug (`isOrderEditEvent`/`isAddressChangeEvent` had no Laravel port), see [laravel-test-audit.md](laravel-test-audit.md)
+- [x] `GraphQL/OrderComponentNormalizerTest.php` — address/item/fulfillment verified field-for-field; shippingLine/discountCode have no shared class by design
+- [x] `OrderPolicyPageLoaderTest.php` — all 9 dispatch branches verified, each already closed under its own report row
+- [x] `FraudComplianceChecksTest.php` — всичките 22 country mismatch, high-value/no-phone и email checker решения са нанесени; non-ISO country names умишлено се броят като липсващи вместо като false-positive mismatch
+- [x] `GraphQL/OrderEventLookupTest.php` — lookup, cursor pagination, newest-first order и missing order са покрити, включително malformed payload/cursor guards
+- [x] `GraphQL/OrderNormalizerTest.php` — **the last audit row (115/115 closed, 100%)**. User chose to build the richer order-detail fields (discount codes, custom attributes, customer journey/attribution, PO/confirmation number, etc.) into `ShopifyOrderNormalizer` and surface them on the Order Lookup page, see [laravel-test-audit.md](laravel-test-audit.md)
+- [x] `HttpAuthEndpointTest.php` — login/logout, Google boundary failures, session rotation, throttling и CSP са покрити с HTTP feature tests
+- [x] `OrderInsightPageLoaderTest.php` — compare/timeline are its only two branches (verified from source); both closed
+- [x] `OrderTimelineTest.php` — ported field-for-field (and improved in places: earliest-fulfillment time-to-ship, URL scheme allowlisting) by `OrderTimelineBuilder`/`OrderTimelineRiskAnalyzer`
+- [x] `ProductInventoryPageLoaderTest.php` — all 8 dispatch branches verified, each already closed under its own report row
+- [ ] `SearchLookupPageLoaderTest.php` — single lookup/compare/timeline subset е пренесен
+- [x] `SecurityTest.php` — everything testable in this environment is covered; trusted-proxy CIDR trust and HSTS are deferred to the production rollout (untestable without a real load balancer/TLS termination), not a code gap
+- [x] `SlackNotifierTest.php` — queue-ready webhook delivery, trusted endpoint validation, safe admin diagnostic, credential-free payload, audit/scan mentions formatting (with and without mentions) и queue-based retry/failure handling са затворени; виж [laravel-test-audit.md](laravel-test-audit.md) за пълния method-level mapping
+- [x] `ShipStationClientTest.php` — lookup/shipments/pagination/retries covered; `createOrder`/`buildOrderPayload` built for the push-order feature; cache/checkpoint has zero Laravel usage
+- [x] `ShopifyClientTest.php` — all 57 read methods mapped; `updateOrderNote` mutation built for the order-note feature, see [laravel-test-audit.md](laravel-test-audit.md)
+- [x] `StoresTest.php` — file stores са заменени от DB/pivot/active-store middleware с fallback, switch и isolation tests
+- [x] `ViewSmokeTest.php` — Fraud Risk, Same IP и Disputes empty/populated rendering е покрито от route smoke + feature tests
+
+SKU Duplicates traceability (`ProductCatalogueChecksTest.php` →
+`laravel/tests/Unit/Domain/Reports/SkuDuplicatesAnalyzerTest.php`):
+
+- `testDuplicateSkuAcrossProductsIsFlagged`, `testDraftAndArchivedOnlyDuplicateIsCaught`,
+  `testSkuDupesSortedByCountDescending` → `test_groups_across_all_statuses_and_within_a_product_sorted_by_count`
+  и integration `test_finds_duplicates_across_product_pages_including_drafts_and_archived`.
+- `testUniqueSkuIsNotFlagged`, `testBlankSkusAreIgnored` →
+  `test_ignores_blank_and_unique_skus_but_counts_all_variants`.
+- Допълнително: numeric/trimmed/case-sensitive SKU, unsafe IDs, празен каталог,
+  GET без API call, viewer denial, foreign store input, safe errors/XSS,
+  truncation, product/variant pagination и malformed variant connection в
+  `SkuDuplicatesControllerTest` и `ShopifySkuDuplicatesCandidatesTest`.
+
+Inventory Aging traceability (`ProductCatalogueChecksTest.php` и
+`ProductInventoryPageLoaderTest.php` →
+`laravel/tests/Unit/Domain/Reports/InventoryAgingAnalyzerTest.php`):
+
+- `testTrackedDenyZeroStockWithRecentSalesIsFlagged`,
+  `testZeroStockWithNoRecentSalesIsExcludedFalsePositiveCheck`,
+  `testPositiveStockWithSalesIsExcludedFalseNegativeCheck`,
+  `testUntrackedVariantIsExcluded` и `testContinueSellingPolicyIsExcluded` →
+  analyzer success/exclusion tests.
+- Legacy initial range, credential validation и success wiring →
+  `InventoryAgingControllerTest` и `ShopifyInventoryAgingCandidatesTest`.
+- Допълнително: reversed/invalid dates, tenant-selected store, safe XSS/error
+  rendering, negative stock, aggregate sales, latest-order selection, malformed
+  upstream data, complete line-item pagination и отделни product/order
+  truncation indicators.
+
+Inventory Oversell traceability (`ProductInventoryPageLoaderTest.php` →
+`laravel/tests/Unit/Domain/Reports/InventoryOversellAnalyzerTest.php`):
+
+- Awaiting quantity над наличността, exact-stock exclusion, missing Shopify SKU,
+  blank SKU, untracked variant и continue-policy exclusion са пренесени.
+- Negative stock, multi-order quantity aggregation, duplicate Shopify SKU stock
+  aggregation и shortfall-descending sorting са покрити в analyzer тестовете.
+- Credential guards за двете системи, selected-store isolation, initial state,
+  safe XSS/error rendering и visible product truncation са покрити в
+  `InventoryOversellControllerTest`.
+- ShipStation adapter тестът проверява пълна pagination с
+  `awaiting_shipment` filter и 500 orders на страница.
+
+Inventory Forecast traceability (`InventoryForecastTest.php` и
+`ProductInventoryPageLoaderTest.php` →
+`laravel/tests/Unit/Domain/Reports/InventoryForecastAnalyzerTest.php`):
+
+- Rate, days-to-zero, no-sales/high-stock, no-sales/low-stock, zero-stock,
+  cancelled-order, untracked, continue-policy, null-last sorting и total variant
+  count са пренесени в analyzer тестовете.
+- Initial state, credentials, fixed 30-day window, selected-store isolation,
+  success и safe upstream failure са покрити в `InventoryForecastControllerTest`.
+- Общият Shopify catalogue/order adapter покрива active/paid filters, complete
+  product/variant/order/line-item pagination, cancelled timestamp и отделни
+  truncation indicators.
+
+Zombie Products traceability (`ZombieProductsTest.php` и
+`ProductInventoryPageLoaderTest.php` →
+`laravel/tests/Unit/Domain/Reports/ZombieProductsAnalyzerTest.php`):
+
+- No-variant, all-zero/negative, singular/plural detail, mixed positive stock,
+  untracked-only, continue-only и healthy product decisions са пренесени.
+- Initial state, credential guard, selected-store isolation, success, empty
+  state и safe upstream failure са покрити в `ZombieProductsControllerTest`.
+- Допълнително са покрити malformed variants, unsafe product IDs, XSS escaping,
+  complete variant pagination и visible catalogue truncation.
+
+Catalog Quality traceability (`CatalogQualityTest.php` и
+`ProductInventoryPageLoaderTest.php` →
+`laravel/tests/Unit/Domain/Reports/CatalogQualityAnalyzerTest.php`):
+
+- Healthy, unpublished, missing SEO title, missing SEO description, missing
+  collection и combined-issues decisions са пренесени с непроменен ред на
+  съобщенията.
+- Initial state, credential guard, selected-store isolation, success, empty
+  state и safe upstream failure са покрити в `CatalogQualityControllerTest`.
+- Допълнително: malformed nested data, unsafe product IDs, XSS escaping,
+  explicit GraphQL discovery fields, full variant pagination и visible
+  catalogue truncation.
+
+Gift Cards traceability (`GiftCardsTest.php` и `GiftCardPageLoaderTest.php` →
+`laravel/tests/Unit/Domain/Reports/GiftCardsAnalyzerTest.php`):
+
+- Disabled, zero balance, expiry inside/outside window, expired, never
+  redeemed, combined reasons и balance-descending sorting са пренесени.
+- Initial 30-day value, integer/minimum validation, credential guard,
+  selected-store isolation, success и safe upstream failure са покрити в
+  `GiftCardsControllerTest`.
+- Допълнително: currency normalization, malformed scalar fields, XSS escaping,
+  multi-page GraphQL results, stalled/malformed pagination contract и visible
+  truncation.
+
+Tax and Consent traceability (`TaxAuditTest.php`, `ConsentAuditTest.php`,
+`SimpleScanPageLoaderTest.php` и `OrderPolicyPageLoaderTest.php` → Laravel
+report analyzers/controllers и `ShopifyPolicyAuditCandidatesTest`):
+
+- Всичките 6 tax decisions и 4 consent decisions са пренесени, включително
+  exact minimum, tax exemption, unknown consent и stable business sorting.
+- Paid/date GraphQL filters, tax/customer consent полетата, normalization и
+  bounded pagination са покрити на integration границата.
+- Initial dates, validation, roles, credential guards, active-store isolation,
+  safe upstream failures, XSS и visible truncation са покрити във feature tests.
+
+Fraud Risk traceability (`FraudRiskReportTest.php` → `FraudRiskAnalyzerTest.php`,
+`FraudRiskControllerTest.php` и `ShopifyFraudRiskCandidatesTest.php`):
+
+- Low-risk exclusion, medium signal breakdown, Shopify HIGH risk и
+  score-descending sorting са пренесени.
+- Paid/date GraphQL filter и всички scorer входове са проверени на integration
+  границата; roles, validation, credentials, XSS, safe failure и truncation са
+  покрити във feature tests.
+
+Email Checker traceability (`FraudComplianceChecksTest.php` и
+`SimpleScanPageLoaderTest.php` → `EmailCheckAnalyzerTest.php`,
+`EmailCheckControllerTest.php` и `ShopifyEmailCheckCandidatesTest.php`):
+
+- Missing, invalid и 28 disposable domains са critical; short local part,
+  placeholder и пет повторени символа са warnings; legacy boundaries и
+  critical-first sorting са пренесени.
+- Paid/date query, initial range, authorization, validation, credential guard,
+  store isolation, XSS, safe failure и visible truncation са покрити.
+
+Address Scanner traceability (`AddressCheckTest.php` и
+`AddressScannerPageTest.php` → `AddressCheckAnalyzerTest.php`,
+`AddressCheckControllerTest.php` и `ShopifyAddressCheckCandidatesTest.php`):
+
+- Всички required-field, ZIP/postal, province, short-address, PO Box/carrier и
+  express-phone решения са пренесени, включително numeric ZIP стойности.
+- Critical-first sorting, PO Box-only и unfulfilled-only filters, paid date
+  query, authorization, credentials, XSS, safe failure и truncation са покрити.
+
+Discount Abuse traceability (`OrderPolicyChecksTest.php` и
+`OrderPolicyPageLoaderTest.php` → `DiscountAbuseAnalyzerTest.php`,
+`DiscountAbuseControllerTest.php` и `ShopifyDiscountAbuseCandidatesTest.php`):
+
+- Exact minimum, below-minimum exclusion, distinct-email deduplication,
+  separate-address grouping, code/address case normalization и cluster sorting
+  са покрити.
+- Paid/date query, DiscountCodeApplication filtering, validated threshold,
+  authorization, credentials, store isolation, XSS, safe failure и visible
+  truncation са покрити.
+
+Same IP traceability (`SameIpTest.php` и `OrderPolicyPageLoaderTest.php` →
+`SameIpAnalyzerTest.php`, `SameIpControllerTest.php` и
+`ShopifySameIpCandidatesTest.php`):
+
+- Exact-IP grouping, case-insensitive distinct-email counting, blank IP/email
+  and different-IP exclusions и email/order count sorting са пренесени.
+- Paid/date query и clientIp normalization, authorization, validation,
+  credentials, active-store isolation, XSS, safe failure и visible truncation
+  са покрити.
+
+Refunds Tracker traceability (`RefundsTrackerTest.php` и refund branches от
+`OrderAnomalyPageLoaderTest.php` → `RefundTrackerAnalyzerTest.php`,
+`RefundTrackerControllerTest.php` и `ShopifyRepeatRefundCandidatesTest.php`):
+
+- Missing, awaiting shipment/payment, on-hold and completed ShipStation states,
+  refund line-item subtotal, full-refund fallback и risk ordering са пренесени.
+- Exact legacy number matching, inclusive Shopify date query, seven-day
+  ShipStation tail, roles, validation, store isolation, optional ShipStation,
+  XSS, safe failures and bounded pagination са покрити.
+
+Return / RMA traceability (`ReturnRmaTrackerTest.php` и returns branches от
+`SimpleScanPageLoaderTest.php` → `ReturnRmaAnalyzerTest.php`,
+`ReturnRmaControllerTest.php` и `ShopifyRepeatRefundCandidatesTest.php`):
+
+- One-row-per-refund, note trimming, returned item name/SKU/quantity/subtotal,
+  SKU units/events/revenue aggregation, exclusions and sorting са пренесени.
+- Shopify query fields, roles, inclusive date validation, active-store
+  isolation, XSS, safe failure and bounded pagination са покрити.
+
+Returned Items traceability (`ReturnedItemsReportTest.php` и returned-items
+branches от `SimpleScanPageLoaderTest.php` → `ReturnedItemsAnalyzerTest.php`,
+`ReturnedItemsControllerTest.php` и `ShopifyRepeatRefundCandidatesTest.php`):
+
+- Refund event date filtering, orders created before the range, product/title
+  fallback, quantity aggregation and alphabetical ordering са пренесени.
+- Streamed CSV uses the shared formula-safe exporter; updated-order discovery,
+  roles, validation, store isolation, XSS, safe failures and truncation са
+  покрити.
+
+Fulfilled Items traceability (`ItemizedFulfillmentReportTest.php` →
+`FulfilledItemsAnalyzerTest.php`, `FulfilledItemsControllerTest.php` и
+`ShopifyFulfilledItemCandidatesTest.php`):
+
+- Successful fulfillment-event date filtering, orders created before the range,
+  partial-order item quantities, default variant handling, aggregation and
+  alphabetical ordering са пренесени.
+- Streamed CSV uses the shared formula-safe exporter; updated-order discovery,
+  roles, validation, store isolation, XSS, safe failures and truncation са
+  покрити.
+
+Carrier Performance traceability (`CarrierPerfTest.php` и carrier branches от
+`FulfillmentIssuePageLoaderTest.php` → `CarrierPerformanceAnalyzerTest.php`,
+`CarrierPerformanceControllerTest.php` и `ShipStationClientTest.php`):
+
+- Carrier grouping, shipment counts, delivery-day averages, strict over-five-day
+  late boundary, missing/bad date exclusion and deterministic sorting са
+  пренесени.
+- Ship-date pagination, roles, validation, active-store isolation, credentials,
+  XSS and safe upstream failures са покрити.
+
+Shipping Margin traceability (`ComparatorTest.php` и shipping-margin branches
+от `FulfillmentIssuePageLoaderTest.php` → `ShippingMarginAnalyzerTest.php`,
+`ShippingMarginControllerTest.php`, `ShopifyShippingMarginCandidatesTest.php`
+и `ShipStationClientTest.php`):
+
+- Label plus insurance cost, summed Shopify shipping lines, strict threshold,
+  voided/unmatched exclusions, loss sorting and carrier aggregation са пренесени.
+- Updated-order discovery, shipment pagination, roles, validation, both credential
+  sets, active-store isolation, XSS, safe failures and visible truncation са
+  покрити; export-ът използва общия formula-safe CSV contract.
+
+Post-Ship Address Change traceability (`PostShipAddrChangeTest.php` →
+`PostShipAddressChangeAnalyzerTest.php`, `PostShipAddressChangeControllerTest.php`
+и `ShopifyAddressChangeCandidatesTest.php`):
+
+- Latest address-change event, first-fulfillment comparison, elapsed minutes,
+  current-address rendering and newest-first sorting са пренесени.
+- Existing bounded event pagination and batch hydration now include fulfillment
+  timestamps; roles, validation, store isolation, XSS, safe failures,
+  truncation and formula-safe CSV са покрити.
+
+Voided Shipments traceability (`VoidedShipmentsTest.php` и failed-shipment
+branches от `OrderAnomalyPageLoaderTest.php` → `VoidedShipmentsAnalyzerTest.php`,
+`VoidedShipmentsControllerTest.php` и `ShipStationClientTest.php`):
+
+- Void-date filtering, complete pagination, shipment fields, nullable destination
+  handling and newest-first sorting са пренесени.
+- Roles, validation, credentials, active-store isolation, XSS, safe upstream
+  failures and formula-safe CSV са покрити.
+
+Fulfillment SLA traceability (`FulfillmentLogisticsChecksTest.php` и SLA
+branches от `FulfillmentIssuePageLoaderTest.php` →
+`FulfillmentSlaAnalyzerTest.php`, `FulfillmentSlaControllerTest.php` и
+`ShopifyFulfillmentSlaCandidatesTest.php`):
+
+- Open-order age, time to earliest fulfillment, inclusive threshold,
+  cancelled/refunded/voided exclusions, method, region and severity sorting са
+  пренесени.
+- Paid/date query, bounded pagination, roles, validation, credentials,
+  active-store isolation, XSS, safe failures, truncation and formula-safe CSV
+  са покрити; shared Laravel order-type classification now supplies real types.
+
+Bundle Check traceability (`BundleCheckPageTest.php` →
+`BundleCheckAnalyzerTest.php`, `BundleCheckControllerTest.php` и
+`ShopifyFulfillmentSlaCandidatesTest.php`):
+
+- Config-native classification, all five match types, multi-value prefixes,
+  exclusions, required companion detection, legacy skip rules, fulfilled-order
+  inclusion and newest-first sorting са пренесени.
+- Paid/date query with full line items, roles, validation, credentials,
+  active-store isolation, XSS, safe failures, truncation and formula-safe CSV
+  са покрити.
+
+Partial Fulfillment Stalls traceability (`PartialFulfillStallsTest.php` →
+`PartialFulfillmentAnalyzerTest.php`, `PartialFulfillmentControllerTest.php` и
+`ShopifyPartialFulfillmentCandidatesTest.php`):
+
+- Latest-fulfillment fallback, inclusive stall threshold, remaining-quantity
+  filtering and longest-stalled-first sorting са пренесени.
+- Exact open/paid/partial date query, bounded pagination, roles, validation,
+  credentials, active-store isolation, XSS, safe failures, truncation and
+  formula-safe CSV са покрити.
+
+On-Hold Stall traceability (`OnHoldStallTest.php` и
+`GraphQL/CatalogAndFulfillmentTest.php` → `OnHoldStallAnalyzerTest.php`,
+`OnHoldStallControllerTest.php` и `ShopifyOnHoldFulfillmentCandidatesTest.php`):
+
+- Days-since-placement, missing dates, first hold reason/notes and descending
+  wait sorting са пренесени.
+- On-hold fulfillment-order query, inclusive client-side order-date filtering,
+  bounded pagination, roles, validation, credentials, XSS, safe failures,
+  truncation and formula-safe CSV са покрити.
+
+Fulfilled Without Tracking traceability (`FulfillmentIssuePageLoaderTest.php` →
+`NoTrackingAnalyzerTest.php`, `NoTrackingControllerTest.php` и
+`ShopifyNoTrackingCandidatesTest.php`):
+
+- Fulfillment-date filtering, old-order inclusion, tracking exclusion,
+  inclusive grace threshold and oldest-first sorting са пренесени.
+- Updated-order discovery, fulfilled/partial filtering, tracking data, roles,
+  validation, credentials, XSS, safe failures, truncation and formula-safe CSV
+  са покрити.
+
+Shipment Aging traceability (`FulfillmentLogisticsChecksTest.php` и
+`FulfillmentIssuePageLoaderTest.php` → `ShipmentAgingAnalyzerTest.php`,
+`ShipmentAgingControllerTest.php` и `ShipStationClientTest.php`):
+
+- Inclusive age threshold, invalid-date exclusion, SKU quantity/distinct-order
+  aggregation, configured type grouping and oldest-first sorting са пренесени.
+- Complete awaiting-shipment pagination, roles, validation, credentials, XSS,
+  safe failures and formula-safe CSV са покрити.
+
+Shipped Item Mismatch traceability (`FulfillmentIssuePageLoaderTest.php` →
+`ItemMismatchAnalyzerTest.php`, `ItemMismatchControllerTest.php`,
+`ShopifyItemMismatchCandidatesTest.php` и `ShipStationClientTest.php`):
+
+- Exact normalized order matching, shipped-only scope, cancelled/refunded/
+  voided/free exclusions, SKU quantity differences and new bundle-required
+  shipment gaps са пренесени.
+- Inclusive dual-source range, complete pagination, credentials, roles,
+  validation, XSS, safe failures, truncation and formula-safe CSV са покрити.
+
+Orphan Detector traceability (`OrphanDetectorTest.php` и orphan branches от
+`OrderAnomalyPageLoaderTest.php` → `OrphanOrderAnalyzerTest.php`,
+`OrphanOrderControllerTest.php`, `ShopifyItemMismatchCandidatesTest.php` и
+`ShipStationClientTest.php`):
+
+- Plain, compound and addon-prefixed order numbers, empty-number exclusion,
+  genuine orphans and newest-first sorting са пренесени.
+- Inclusive dual-source range, complete pagination, both credential guards,
+  roles, validation, XSS, safe failures, truncation and formula-safe CSV са покрити.
+
+Active SS Conflicts traceability (`ActiveSsConflictsTest.php` и active-SS
+branches от `OrderPolicyPageLoaderTest.php` →
+`ActiveShipStationConflictAnalyzerTest.php`,
+`ActiveShipStationConflictControllerTest.php`, `ShopifyItemMismatchCandidatesTest.php`
+и `ShipStationClientTest.php`):
+
+- Refund/cancellation filtering, ID deduplication, compound order matching,
+  one row per active match, issue labels and newest-first sorting са пренесени.
+- All three active ShipStation queues, inclusive Shopify range, complete
+  pagination, both credential guards, roles, validation, XSS, safe failures,
+  truncation and formula-safe CSV са покрити.
+
+SS Shipped / Shopify Unfulfilled traceability (`SsShippedUnfulfilledTest.php`
+и sync branches от `FulfillmentIssuePageLoaderTest.php` →
+`ShippedUnfulfilledAnalyzerTest.php`, `ShippedUnfulfilledControllerTest.php`,
+`ShopifyItemMismatchCandidatesTest.php` и `ShipStationClientTest.php`):
+
+- Shipped-only counting, exact Shopify match, true-orphan and fulfilled
+  exclusions, unfulfilled fallback, partial status and newest-first sorting са
+  пренесени.
+- Inclusive dual-source range, complete pagination, both credential guards,
+  roles, validation, XSS, safe failures, truncation and formula-safe CSV са покрити.
+
+Tag Policy traceability (`OrderPolicyChecksTest.php` и
+`OrderPolicyPageLoaderTest.php` → `TagPolicyAnalyzerTest.php`,
+`TagPolicyControllerTest.php` и `ShopifyTagPolicyTest.php`):
+
+- Празна конфигурация, required правила с all-trigger semantics, forbidden
+  комбинации, case-insensitive сравнение и string/array tag normalization са
+  пренесени; невалидните rule entries се пропускат безопасно.
+- Правилата вече са Laravel config в `config/tag-policy.php`; празният config
+  спира audit-а преди Shopify call. Paid/date query, authorization, validation,
+  credentials, active-store isolation, XSS, safe failure и visible truncation
+  са покрити.
+
+#### Pending legacy test files
+
+- [x] `ActionsTest.php` — push-to-ShipStation and order-note actions built from scratch (did not exist), see [laravel-test-audit.md](laravel-test-audit.md)
+- [x] `ActiveSsConflictsTest.php`
+- [x] `AtomicFileTest.php` — replaced by DB transactions/casts and Laravel storage primitives
+- [ ] `AuditSnapshotTest.php`
+- [ ] `AuditTest.php`
+- [x] `AutoloadCoverageTest.php` — every `app/` PHP symbol is verified through Composer PSR-4 autoload
+- [x] `BundleCheckPageTest.php`
+- [ ] `CacheTest.php`
+- [x] `CarrierPerfTest.php`
+- [x] `ComparatorTest.php` — split across `AuditOrderAnalyzer`, `DuplicateOrderAnalyzer`, `OrderTypeClassifier`, `OrderChannelComparator` and `ShippingMarginAnalyzer`; fixed a 10-minute-vs-24-hour duplicate window bug and a missing compound-order-number index, see [laravel-test-audit.md](laravel-test-audit.md)
+- [x] `ConfigValidatorTest.php` — legacy JSON/environment validation е заменена с runtime Laravel config, DB store и admin authorization contracts.
+- [x] `CustomerLTVPageLoaderTest.php`
+- [x] `DateRangeTest.php` — GET/POST input precedence отпада при отделни routes; строгият ISO формат, start/end редът и Carbon date arithmetic са покрити
+- [x] `DiscordNotifierTest.php` — Discord notification channel built from scratch (did not exist), mirrors Slack exactly, see [laravel-test-audit.md](laravel-test-audit.md)
+- [x] `DocsGeneratorTest.php` — executable 72-feature total and route registry consistency
+- [x] `EmailDigestTest.php` — `reports:email-digest` scheduled command; fixed a rolling-24h-vs-calendar-day bug, see [laravel-test-audit.md](laravel-test-audit.md)
+- [x] `EmailNotifierTest.php` — `ReportEmailNotification`/`ReportDigestNotification`
+- [x] `EmailRulesTest.php` — `Store::resolvedEmailRules()`/`EmailRulesController`
+- [x] `FulfillmentIssuePageLoaderTest.php` — all 9 dispatch branches verified, each already closed or with its own tested controller
+- [x] `FulfillmentLogisticsChecksTest.php`
+- [x] `GraphQL/AdminLookupsTest.php` — facade delegation е заменена с директен Shopify gateway contract; order, metafield и customer lookup paths са покрити end-to-end
+- [x] `GraphQL/CatalogAndFulfillmentTest.php`
+- [x] `GraphQL/CustomDataLookupsTest.php`
+- [x] `GraphQL/CustomerOrderInsightsTest.php`
+- [x] `GraphQL/DisputeLookupTest.php` — open-status filter, normalization, cursor pagination and missing-order behavior are covered by the Shopify gateway test.
+- [x] `GraphQL/DuplicateOrderInsightsTest.php`
+- [x] `GraphQL/MetafieldNormalizerTest.php`
+- [x] `GraphQL/OrderArchiveTest.php` — inclusive all-status date range, normalized cursor pagination and fresh report reads are covered by the customer LTV gateway.
+- [x] `GraphQL/OrderAuditsTest.php` — pure facade, delegates fetched below
+- [x] `GraphQL/OrderEventAuditsTest.php` — edit/address-change grouping covered by `OrderEditAnalyzer`/`AddressChangeAnalyzer`/`PostShipAddressChangeAnalyzer`
+- [x] `GraphQL/OrderFetcherTest.php` — no shared class in Laravel; pagination/normalization exercised by every candidate fetch test
+- [x] `GraphQL/OrderHoldLookupTest.php` — replaced by a single global `onHoldFulfillmentCandidates` batch query rather than per-order lookups; corrects a wrong "blocked" finding from an earlier pass that mistook `ShopifyOrderComparator.php` for the real `Comparator.php` port (that's `AuditOrderAnalyzer.php`), see [laravel-test-audit.md](laravel-test-audit.md)
+- [x] `GraphQL/OrderInsightsTest.php` — tag search и duplicate-order facade wiring е заменено с директни gateway, analyzer и controller contracts
+- [x] `GraphQL/OrderLookupTest.php` — pure facade; direct/event/hold lookup delegation all closed above
+- [x] `GraphQL/OrderQueryAuditsTest.php` — all 18 fetchers map 1:1 to a closed `Shopify*CandidatesTest.php`; one flagged `financial_status` filter discrepancy in partial-fulfillment, see [laravel-test-audit.md](laravel-test-audit.md)
+- [x] `GraphQL/ProductNormalizerTest.php` — no shared class; inline per catalogue analyzer, each already closed
+- [x] `GraphQL/QueryStringsTest.php` — filters match except the same flagged partial-fulfillment discrepancy
+- [x] `IgnoreListTest.php`
+- [x] `ItemizedFulfillmentReportTest.php`
+- [x] `JsonFileLockTest.php` — replaced by DB constraints/transactions and Laravel cache locks
+- [x] `LoggerTest.php` — replaced end-to-end by Laravel's native `Log` facade/Monolog `daily` channel, framework behavior not app logic
+- [ ] `ManageSettingsPageLoaderTest.php`
+- [x] `MetricsEndpointTest.php` — replaced by the admin-only Laravel Pulse dashboard (`PulseDashboardTest.php`)
+- [x] `OnHoldStallTest.php`
+- [x] `OrderAnomalyPageLoaderTest.php` — all 7 dispatch branches verified, each already closed under its own report row
+- [x] `OrphanDetectorTest.php`
+- [x] `PageLoaderTest.php` — the `run_audit` page loader, covered by `RunAuditControllerTest.php`/`DashboardControllerTest.php`
+- [x] `PartialFulfillStallsTest.php`
+- [x] `PostShipAddrChangeTest.php`
+- [ ] `PrintQueueTest.php`
+- [x] `PushLogTest.php`
+- [x] `ReportRegistryTest.php` — named routes are unique and every report screen has a submit route
+- [x] `RunLogTest.php`
+- [x] `ScanRunnerTest.php` — scaffold replicated per-report across `RunXxxReport`/`RecordRun`, see [laravel-test-audit.md](laravel-test-audit.md)
+- [ ] `ShopifyFlowHealthTest.php`
+- [ ] `SidebarSettingsTest.php`
+- [x] `SimpleScanPageLoaderTest.php` — all 8 dispatch branches verified, each already closed under its own report row
+- [ ] `SlackRulesTest.php`
+- [x] `SsShippedUnfulfilledTest.php`
+- [ ] `ToolRegistryTest.php`
+- [x] `ViewHelpersTest.php` — replaced by Blade + inline Tailwind, `{{ }}` auto-escaping replaces manual `esc()`
+- [x] `VoidedShipmentsTest.php`
+- [x] `WorkerTest.php` — CLI-era precursor to `RunAudit.php`; store resolution and credential checks now DB-native (`StoresTest.php`), audit-comparison logic covered by `AuditOrderAnalyzerTest.php`
+
+При приключване на feature неговите legacy test файлове не се маркират
+автоматично като готови. Първо се сверяват отделните test methods срещу Laravel
+tests; липсващите edge cases се добавят, а заменените contracts получават кратка
+причина в tracker-а.
+
+## Definition of done за Laravel release
+
+Rewrite-ът е готов за production само когато:
+
+- всички договорени features имат parity или одобрено отклонение;
+- production-like fresh install е повторяем;
+- authentication, authorization и store isolation са проверени;
+- audit и report резултатите съвпадат върху golden и production-derived data;
+- всеки legacy тест е мигриран, заменен с по-силно покритие или има одобрена
+  причина за отпадане;
+- Laravel suite-ът покрива допълнителните validation, security, integration,
+  pagination, concurrency и recovery edge cases от test стратегията;
+- jobs са idempotent и recovery процедурите са тествани;
+- CI, security review, performance budgets и operational runbooks са готови;
+- cutover е изпълнен поне веднъж извън production;
+- Laravel версията никога не чете или записва legacy runtime formats.
+
+## Основни рискове и контрол
+
+| Риск | Контрол |
+|---|---|
+| Скрито поведение в page loaders/views | Inventory, golden fixtures и parity matrix преди имплементация |
+| Различни audit резултати | Differential tests между stable и Laravel върху едни и същи payload-и |
+| Очакване за липсваща история след cutover | Предварително описване и приемане на всички legacy-only данни |
+| Дублирани външни действия при retry | Idempotency keys и persisted delivery state |
+| Cross-store data leakage | Explicit store context, scoped repositories и isolation tests |
+| Rewrite-ът се разширява безкрайно | Feature freeze и изрично управление на accepted deviations |
+| Dependency incompatibility | Compatibility spike преди заключване на stack-а |
+| Критичен дефект след необратимия cutover | По-строг release sign-off, production-like rehearsal и бърз fix-forward процес |
+
+## Текуща практическа задача
+
+Laravel foundation, authentication, stores, administration, Shopify/ShipStation
+integration boundaries, единичното търсене, batch Spot-check, сравнението между
+две поръчки и order timeline workflow-ът са пренесени. Следващият read-only
+workflow се избира от останалите Search & Lookup инструменти. Всеки следващ
+workflow се пренася заедно със съответните legacy tests, traceability записи и
+допълнителните edge cases от test стратегията по-горе.
