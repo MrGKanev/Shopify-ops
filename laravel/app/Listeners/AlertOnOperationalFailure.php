@@ -21,6 +21,12 @@ class AlertOnOperationalFailure
             ? [$event->job->resolveName(), $this->exceptionClass($event->exception)]
             : [class_basename($event->notification), $this->exceptionClass($event->data['exception'] ?? null)];
 
+        $this->send($category, $summary);
+    }
+
+    public function send(string $category, string $summary): void
+    {
+
         $slackUrl = trim((string) config('services.slack.notifications.webhook_url'));
         if ($slackUrl !== '') {
             Notification::route('slack', $slackUrl)->notify(new OperationalAlertSlackNotification($category, $summary));

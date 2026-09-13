@@ -27,12 +27,16 @@ class ConfigCheckControllerTest extends TestCase
     public function test_contract_detects_unsafe_app_store_and_policy_configuration(): void
     {
         $store = Store::factory()->create(['shopify_access_token' => '', 'shipstation_api_secret' => '']);
-        config(['app.env' => 'production', 'app.debug' => true, 'app.url' => 'http://localhost', 'cache.default' => 'missing', 'queue.default' => 'missing', 'services.google.client_id' => 'partial', 'services.google.client_secret' => '', 'services.google.allowed_domains' => '', 'order-types.rules' => [['name' => 'Broken', 'match' => 'unknown']], 'tag-policy.required' => [['when' => [], 'must_have' => []]], 'tag-policy.forbidden' => [['tags' => ['one']]], 'mail.default' => 'missing-mailer', 'mail.from.address' => '']);
+        config(['app.env' => 'production', 'app.debug' => true, 'app.url' => 'http://localhost', 'security.trusted_proxies' => [], 'security.hsts' => false, 'session.secure' => false, 'cache.default' => 'missing', 'cache.prefix' => '', 'queue.default' => 'missing', 'services.google.client_id' => 'partial', 'services.google.client_secret' => '', 'services.google.allowed_domains' => '', 'order-types.rules' => [['name' => 'Broken', 'match' => 'unknown']], 'tag-policy.required' => [['when' => [], 'must_have' => []]], 'tag-policy.forbidden' => [['tags' => ['one']]], 'mail.default' => 'missing-mailer', 'mail.from.address' => '']);
 
         $results = collect(app(CheckConfiguration::class)->handle($store))->keyBy('name');
 
         $this->assertFalse($results['Application']['ok']);
         $this->assertContains('APP_URL must not be the localhost default in production.', $results['Application']['issues']);
+        $this->assertContains('CACHE_STORE must be redis in production.', $results['Application']['issues']);
+        $this->assertContains('CACHE_PREFIX must identify this deployment.', $results['Application']['issues']);
+        $this->assertContains('TRUSTED_PROXIES must contain the production proxy addresses.', $results['Application']['issues']);
+        $this->assertContains('SESSION_SECURE_COOKIE must be enabled in production.', $results['Application']['issues']);
         $this->assertFalse($results['Active store']['ok']);
         $this->assertFalse($results['Order types']['ok']);
         $this->assertFalse($results['Tag policy']['ok']);

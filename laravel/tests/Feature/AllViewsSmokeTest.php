@@ -7,6 +7,7 @@ use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Routing\Route;
+use Illuminate\Support\Facades\Cache;
 use Mockery;
 use Tests\TestCase;
 
@@ -22,6 +23,7 @@ class AllViewsSmokeTest extends TestCase
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
         $shopify->shouldReceive('get')->zeroOrMoreTimes()->andReturn(['webhooks' => []]);
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        Cache::put('health:checks:schedule:latestHeartbeatAt', now()->timestamp);
 
         $failures = [];
         foreach (app('router')->getRoutes()->getRoutes() as $route) {

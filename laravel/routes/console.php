@@ -1,5 +1,6 @@
 <?php
 
+use App\Application\Health\CheckOperationalAlerts;
 use App\Models\Store;
 use App\Notifications\ReportDigestNotification;
 use Illuminate\Foundation\Inspiring;
@@ -32,6 +33,13 @@ Artisan::command('reports:email-digest', function (): void {
 })->purpose('Queue daily report email digests');
 
 Schedule::command('activitylog:clean')->dailyAt('02:30')->withoutOverlapping();
+Schedule::call(function (): void {
+    app(CheckOperationalAlerts::class)->handle();
+})
+    ->name('health:operational-alerts')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onOneServer();
 Schedule::command('health:schedule-check-heartbeat')->everyMinute();
 Schedule::command('health:queue-check-heartbeat')->everyMinute();
 Schedule::command('health:check')->everyMinute()->withoutOverlapping();

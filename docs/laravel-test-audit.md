@@ -1,6 +1,6 @@
 # Laravel rewrite — legacy test audit
 
-Последно обновяване: **2026-09-11**. **115/115 файла затворени (100%)**. Последният ред, `GraphQL/OrderNormalizerTest.php`, беше флагнат product-decision (легаси order-detail полета без Laravel consumer); потребителят избра да ги построи — виж реда му за пълния context. Пълната история на одита е в git log-а на `docs/`.
+Последно обновяване: **2026-09-13**. **115/115 файла затворени (100%)**. Последният ред, `GraphQL/OrderNormalizerTest.php`, беше флагнат product-decision (легаси order-detail полета без Laravel consumer); потребителят избра да ги построи — виж реда му за пълния context. Пълната история на одита е в git log-а на `docs/`.
 
 Този документ е отделният checklist за тестова parity. Feature статусът се следи
 в [Laravel rewrite плана](laravel-rewrite.md), а тук се затваря всеки legacy test
@@ -17,7 +17,7 @@ contract има Laravel тест, по-силен еквивалент или з
 | **Оставащи за одит** | **0** | **0.0%** |
 
 Legacy baseline: **115 файла · 1,528 теста · 3,659 assertions**. Laravel
-baseline след последния slice: **686 теста · 2,908 assertions**. Броят assertions
+baseline към 2026-09-13: **720 теста · 3,024 assertions**. Броят assertions
 е ориентир; критерият е поведенческо покритие.
 
 За всеки checkbox проверяваме business decisions, boundary интеграцията,

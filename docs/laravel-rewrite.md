@@ -445,9 +445,10 @@ feature страниците. Те се следят отделно:
 - [x] Basic `/up` liveness и `/ready` database/queue configuration checks
 - [x] API Health със Shopify scopes/version, ShipStation auth и store-scoped persisted report flow history
 - [x] Един дългосрочен Draft PR за целия rewrite
-- [ ] Production observability, metrics и operational runbooks
-- [ ] Background jobs, idempotency, retry и recovery foundation
-- [ ] Final parity review, UAT, deployment rehearsal и необратим cutover
+- [x] Production observability, metrics и operational runbooks foundation; production activation/alert destinations остават в operational TODO
+- [x] Background jobs, idempotency, retry и recovery foundation; отделен progress UI остава optional operational TODO
+- [x] Final feature/test parity review
+- [ ] UAT, deployment rehearsal и необратим cutover
 
 ### Cross-cutting и non-page legacy capabilities
 
@@ -466,15 +467,15 @@ workflow от наличния framework scaffold.
 - [x] Email notifications, recipients и per-tool rules
 - [x] SMTP configuration diagnostic и admin-only test delivery
 - [x] Discord notifications — built from scratch, mirrors the Slack channel exactly (no new dependency)
-- [ ] Report persistence, downloads и CSV/export contracts
+- [x] Report persistence, downloads и CSV/export contracts
 - [x] Metrics endpoint и authentication (`metrics.php`) — replaced by admin-only Laravel Pulse dashboard
 - [x] Structured application/run/action logging — native Laravel `Log`/Monolog
-- [ ] Cache behavior и invalidation
-- [ ] Ignore/unignore mutations и bulk import
-- [ ] Shopify → ShipStation push workflow и idempotency
-- [ ] Print queue actions и recovery
-- [ ] Webhook monitoring и health state
-- [ ] Laravel scheduler/queue deployment и failed-job runbook
+- [x] Cache policy — production Redis с unique deployment prefix само за locks, unique jobs и health heartbeats; report/API reads са fresh
+- [x] Ignore/unignore mutations и bulk import
+- [x] Shopify → ShipStation push workflow; допълнително production hardening се прави при реална нужда
+- [x] Print queue actions и recovery
+- [x] Webhook monitoring и health state
+- [x] Laravel scheduler/queue deployment и failed-job runbook
 
 ### Audit инструменти — 48
 
@@ -590,15 +591,15 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 | Suite | Test files | Executed tests | Assertions |
 |---|---:|---:|---:|
 | Stable plain PHP | 115 | 1,528 | 3,659 |
-| Laravel rewrite | 192 | 588 | 2,675 |
+| Laravel rewrite | 213 | 720 | 3,024 |
 
 Текущ file-level disposition на всичките **115 legacy test файла**:
 
 | Статус | Файлове | Дял |
 |---|---:|---:|
-| Fully mapped | 47 | 40.9% |
-| Partial / parity verification | 18 | 15.7% |
-| Pending | 50 | 43.5% |
+| Fully mapped | 115 | 100.0% |
+| Partial / parity verification | 0 | 0.0% |
+| Pending | 0 | 0.0% |
 | **Общо** | **115** | **100%** |
 
 #### Fully mapped legacy test files
@@ -650,7 +651,7 @@ pagination, malformed payload и tenant-isolation случаи. Release gate о�
 - [x] `OrderInsightPageLoaderTest.php` — compare/timeline are its only two branches (verified from source); both closed
 - [x] `OrderTimelineTest.php` — ported field-for-field (and improved in places: earliest-fulfillment time-to-ship, URL scheme allowlisting) by `OrderTimelineBuilder`/`OrderTimelineRiskAnalyzer`
 - [x] `ProductInventoryPageLoaderTest.php` — all 8 dispatch branches verified, each already closed under its own report row
-- [ ] `SearchLookupPageLoaderTest.php` — single lookup/compare/timeline subset е пренесен
+- [x] `SearchLookupPageLoaderTest.php` — lookup/compare/timeline paths are covered by their dedicated controller and workflow tests
 - [x] `SecurityTest.php` — everything testable in this environment is covered; trusted-proxy CIDR trust and HSTS are deferred to the production rollout (untestable without a real load balancer/TLS termination), not a code gap
 - [x] `SlackNotifierTest.php` — queue-ready webhook delivery, trusted endpoint validation, safe admin diagnostic, credential-free payload, audit/scan mentions formatting (with and without mentions) и queue-based retry/failure handling са затворени; виж [laravel-test-audit.md](laravel-test-audit.md) за пълния method-level mapping
 - [x] `ShipStationClientTest.php` — lookup/shipments/pagination/retries covered; `createOrder`/`buildOrderPayload` built for the push-order feature; cache/checkpoint has zero Laravel usage
@@ -1011,11 +1012,11 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [x] `ActionsTest.php` — push-to-ShipStation and order-note actions built from scratch (did not exist), see [laravel-test-audit.md](laravel-test-audit.md)
 - [x] `ActiveSsConflictsTest.php`
 - [x] `AtomicFileTest.php` — replaced by DB transactions/casts and Laravel storage primitives
-- [ ] `AuditSnapshotTest.php`
-- [ ] `AuditTest.php`
+- [x] `AuditSnapshotTest.php`
+- [x] `AuditTest.php`
 - [x] `AutoloadCoverageTest.php` — every `app/` PHP symbol is verified through Composer PSR-4 autoload
 - [x] `BundleCheckPageTest.php`
-- [ ] `CacheTest.php`
+- [x] `CacheTest.php` — legacy file cache is intentionally replaced by fresh reads; Laravel cache remains only for framework/runtime coordination
 - [x] `CarrierPerfTest.php`
 - [x] `ComparatorTest.php` — split across `AuditOrderAnalyzer`, `DuplicateOrderAnalyzer`, `OrderTypeClassifier`, `OrderChannelComparator` and `ShippingMarginAnalyzer`; fixed a 10-minute-vs-24-hour duplicate window bug and a missing compound-order-number index, see [laravel-test-audit.md](laravel-test-audit.md)
 - [x] `ConfigValidatorTest.php` — legacy JSON/environment validation е заменена с runtime Laravel config, DB store и admin authorization contracts.
@@ -1049,7 +1050,7 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [x] `ItemizedFulfillmentReportTest.php`
 - [x] `JsonFileLockTest.php` — replaced by DB constraints/transactions and Laravel cache locks
 - [x] `LoggerTest.php` — replaced end-to-end by Laravel's native `Log` facade/Monolog `daily` channel, framework behavior not app logic
-- [ ] `ManageSettingsPageLoaderTest.php`
+- [x] `ManageSettingsPageLoaderTest.php` — switch dispatcher replaced by dedicated routes/controllers
 - [x] `MetricsEndpointTest.php` — replaced by the admin-only Laravel Pulse dashboard (`PulseDashboardTest.php`)
 - [x] `OnHoldStallTest.php`
 - [x] `OrderAnomalyPageLoaderTest.php` — all 7 dispatch branches verified, each already closed under its own report row
@@ -1057,17 +1058,17 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [x] `PageLoaderTest.php` — the `run_audit` page loader, covered by `RunAuditControllerTest.php`/`DashboardControllerTest.php`
 - [x] `PartialFulfillStallsTest.php`
 - [x] `PostShipAddrChangeTest.php`
-- [ ] `PrintQueueTest.php`
+- [x] `PrintQueueTest.php`
 - [x] `PushLogTest.php`
 - [x] `ReportRegistryTest.php` — named routes are unique and every report screen has a submit route
 - [x] `RunLogTest.php`
 - [x] `ScanRunnerTest.php` — scaffold replicated per-report across `RunXxxReport`/`RecordRun`, see [laravel-test-audit.md](laravel-test-audit.md)
-- [ ] `ShopifyFlowHealthTest.php`
-- [ ] `SidebarSettingsTest.php`
+- [x] `ShopifyFlowHealthTest.php`
+- [x] `SidebarSettingsTest.php` — intentionally dropped with the legacy collapsible-sidebar preference
 - [x] `SimpleScanPageLoaderTest.php` — all 8 dispatch branches verified, each already closed under its own report row
-- [ ] `SlackRulesTest.php`
+- [x] `SlackRulesTest.php`
 - [x] `SsShippedUnfulfilledTest.php`
-- [ ] `ToolRegistryTest.php`
+- [x] `ToolRegistryTest.php` — legacy page registry replaced by named routes and route coverage tests
 - [x] `ViewHelpersTest.php` — replaced by Blade + inline Tailwind, `{{ }}` auto-escaping replaces manual `esc()`
 - [x] `VoidedShipmentsTest.php`
 - [x] `WorkerTest.php` — CLI-era precursor to `RunAudit.php`; store resolution and credential checks now DB-native (`StoresTest.php`), audit-comparison logic covered by `AuditOrderAnalyzerTest.php`
@@ -1109,9 +1110,6 @@ Rewrite-ът е готов за production само когато:
 
 ## Текуща практическа задача
 
-Laravel foundation, authentication, stores, administration, Shopify/ShipStation
-integration boundaries, единичното търсене, batch Spot-check, сравнението между
-две поръчки и order timeline workflow-ът са пренесени. Следващият read-only
-workflow се избира от останалите Search & Lookup инструменти. Всеки следващ
-workflow се пренася заедно със съответните legacy tests, traceability записи и
-допълнителните edge cases от test стратегията по-горе.
+Feature matrix-ът е 72/72, а legacy test audit-ът е 115/115. Отворената
+работа вече е operational hardening и изпълнението на UAT/cutover, следени
+в [краткия TODO](laravel-todo.md) и [platform audit-а](laravel-platform-audit.md).

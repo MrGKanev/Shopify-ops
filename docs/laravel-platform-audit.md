@@ -22,7 +22,7 @@ capability-то готово.
 | First administrator | Done | Fresh-install Artisan command с atomic validation, включена в [deployment runbook](laravel-deployment-runbook.md) | — |
 | Google OAuth | Done | Socialite redirect/callback, `GoogleIdentityPolicy` allowed-domain policy, existing/new-user policy, disabled-config UX, session regeneration, `throttle:oauth` rate limit, safe error messages и tests без реална мрежа | — |
 | Lockout и banned IP management | Done | `LoginAttempt` модел, `LoginThrottle` service (persistent IP lockout след 3 неуспешни опита), `BannedIpController` admin UX и tests | Trusted-proxy IP resolution и audit log за unban се преценяват отделно при нужда |
-| Security headers/cookies/proxy | Partial | Laravel session/CSRF defaults и application middleware | CSP/frame/referrer/HSTS policy, secure cookie settings и trusted proxies, проверени зад production TLS proxy |
+| Security headers/cookies/proxy | Partial | CSP, frame/content-type/referrer/permissions headers, conditional HSTS, secure-cookie config, explicit trusted proxies, production config validation и tests | Проверка зад реалния production TLS proxy |
 
 ## Email, SMTP и notifications
 
@@ -42,21 +42,21 @@ capability-то готово.
 | Capability | Статус | Налично | Нужно за Done |
 |---|---|---|---|
 | Liveness endpoint | Done | Laravel `/up` и feature test | Да остане евтин, без външни API calls |
-| Readiness endpoint | Partial | `/ready` проверява database connection и queue configuration и връща 200/503 без secrets | Worker freshness и cache readiness след изграждането на worker/production cache foundation |
+| Readiness endpoint | Done | `/ready` проверява database, cache, queue configuration и worker-heartbeat freshness и връща 200/503 без secrets | — |
 | API Health page | Done | Admin-only live checks за Shopify shop/scopes, requested/returned API version mismatch и ShipStation auth, per-store isolation, latency, safe errors и rate limit; `flowHealth()` monitor върху persisted run history (healthy/attention summary по tool, errors count, last run/error), рендериран в "Report flow history" и покрит от `test_page_summarizes_store_scoped_persisted_flow_history` | — |
 | Webhook Health page | Done | `CheckWebhookHealth` use case, `WebhookHealthController` admin view, per-store results и tests | — |
 | Metrics endpoint | Done | `GET /metrics`, Prometheus text-exposition format, `hash_equals` bearer-token auth (404 unconfigured, 401 wrong/missing token), `checker_runs_total`/`checker_notification_deliveries_total`/`checker_failed_jobs_total`/`checker_queue_pending_jobs`, tests потвърждаващи липса на PII/secrets в body | Dashboards/alerting остават в Production observability реда |
-| Structured application logs | Partial | Laravel logging и безопасни warnings в текущите reports; production channel/retention решени — `LOG_CHANNEL=daily`, `LOG_DAILY_DAYS=180` (`.env.example`, `config/logging.php` вече поддържа тази настройка без промяна) | Общ context contract: request/run/store/tool IDs, error category/status полета и redaction tests остават |
+| Structured application logs | Done | `daily`/180-day production retention, request/run/store/tool context чрез Laravel Context, status/category полета, recursive secret/PII redaction и URL query stripping с tests | — |
 | Run history | Done | `run_logs` DB модел, `RecordRun` persist action (retention до 500 записа/store), `RunLogController` екран; свързан към **всичките 46** report/audit controllers чрез споделен `RecordsReportRun` trait — status, counts, duration, range, store/tool, newest-first, authorization | Typed error category (в момента free-text `error` поле) се преценява отделно |
 | Action audit log | Done | Spatie activity log (`create_activity_log_table` migration, `activitylog:clean` scheduled pruning), `ActionLogController` admin view и tests | — |
-| Operational alerts | Partial | `AlertOnOperationalFailure` listener на `JobFailed`/`NotificationFailed` (единна точка), Slack/Discord алармa с job/notification клас + exception category, self-alert loop guard; product решение съзнателно ограничи обхвата до failed jobs + notification failures | Queue latency, repeated API failures и scheduler-absence тригери се преценяват отделно ако станат нужни |
+| Operational alerts | Done | Slack/Discord alerts за failed jobs/notifications, queue latency >5 min, scheduler heartbeat >5 min и 3 API/report failures за 15 min; 15-min deduplication и self-alert loop guard | External monitoring на `/ready` е добра production практика; доставчикът и deployment-ът са избор на owner-а |
 
 ## Jobs, scheduler и recovery
 
 | Capability | Статус | Налично | Нужно за Done |
 |---|---|---|---|
 | Queue storage | Done | Production connection избран: `redis` управляван от Horizon (`config/horizon.php`, admin-only `/admin/horizon`, `horizon:snapshot` на 5 мин); `.env.example` и [deployment runbook-а](laravel-deployment-runbook.md) обновени с Horizon supervisor config | Health visibility отделно от Horizon dashboard-а не се планира — Horizon вече покрива queue health |
-| Audit jobs | Partial | `RunAuditJob` (ShouldQueue), dispatch от `RunAuditController::queue()`, store/range payload, explicit `tries`/`timeout`/`backoff` с `database` connection `retry_after` покачен над job timeout-а (config/queue.php), tests (`RunAuditJobTest`) | Progress/terminal-state UI отделно от run history |
+| Audit jobs | Done | `RunAuditJob` (ShouldQueue), unique store/range dispatch, explicit retries/timeouts/backoff и store-scoped queued/running/completed/failed history в Job Queue UI | — |
 | Idempotency/concurrency | Done | `RunAuditJob implements ShouldBeUnique` — `uniqueId()` по store/range, `uniqueFor()` 1-час safety-net lock (Laravel cache lock, atomic claim/release around job lifecycle), tests в `RunAuditJobTest` доказват дублиран dispatch не се queue-ва повторно докато първият е pending/running, докато различен range/store продължава да се queue-ва | — |
 | Failed-job recovery | Done | `JobQueueController` (`/jobs`, `can:run-audits`) — вече съществуваше преди тази сесия: pending + failed jobs listing, retry/forget през вградените `queue:retry`/`queue:forget`, безопасно (никога не показва exception текст на този по-широк-достъп екран), tests (`JobQueueControllerTest`). Сесията добави, после махна дублиращ `Admin\FailedJobController` — консолидирано в едно място. При `QUEUE_CONNECTION=redis` Pending секцията вече линква към `/admin/horizon` за admin потребители (`viewHorizon` gate) или показва admin-only notice за останалите, вместо празна `jobs` таблица | — |
 | Scheduler | Done | `routes/console.php` — `reports:email-digest`, `activitylog:clean`, `health:*-heartbeat`, `health:check`, `model:prune`, `backup:run`/`monitor`/`clean`, `horizon:snapshot`; всички cron-критични с `withoutOverlapping()` | Timezone policy documentation и single-server решение (locking driver) се потвърждават в deployment runbook-а |
@@ -72,7 +72,7 @@ capability-то готово.
 | Ignore/unignore orders | Done | `IgnoredOrder` модел, `IgnoredOrderController`/requests (single, bulk, import), normalization и authorization | — |
 | Audit snapshots | Done | `AuditSnapshot` модел, `updateOrCreate` per store/tool/date в `RunAudit::handle()`, Saved Reports view | — |
 | Report persistence | Done | `SavedReportController` и tests | — |
-| Cache policy | Foundation | Laravel cache config | Key namespacing by store/query, TTL matrix, locks, invalidation, corruption/failure strategy и tests |
+| Cache policy | Done decision | Production Redis с unique deployment prefix; cache-ът е само за locks, unique jobs и health heartbeats; Shopify/ShipStation/report reads остават fresh | Application-data TTL/invalidation policy се добавя само при измерена нужда |
 | Legacy runtime state | Done decision | Изрично няма import на legacy users/jobs/logs/cache/reports/settings | Cutover checklist да потвърди чиста база и липса на runtime dependency |
 
 ## Exports и mutable workflows
@@ -89,9 +89,9 @@ capability-то готово.
 | Capability | Статус | Налично | Нужно за Done |
 |---|---|---|---|
 | Application install | Done | Composer/NPM Laravel app и install command | Production runbook с migrations, assets, storage link и initial admin/store setup |
-| Configuration validation | Partial | `CheckConfiguration` (admin `/admin/config-check`) проверява APP_KEY/APP_DEBUG/APP_URL, default cache/queue connection, Google OAuth completeness, active store credentials, order-types/tag-policy schema, default mailer/MAIL_FROM_ADDRESS и Slack/Discord webhook присъствие (informational) | Trusted proxy настройка остава отделно решение (виж Security headers/cookies/proxy реда); DB connectivity вече се покрива от `/ready` |
+| Configuration validation | Done | `CheckConfiguration` проверява app/cache/queue, Google OAuth, store credentials, order types/tag policy, mail/notifications и production trusted-proxy/secure-cookie/HSTS contract | — |
 | CI checks | Done | Laravel CI изпълнява PHPUnit, Larastan level 5, Pint, Composer audit и frontend build/audit; Larastan scope покрива Application, Domain и Integrations без baseline | Разширяване към HTTP/Models и по-високо analysis ниво се прави постепенно без отслабване на gate-а |
-| Backup and restore | Partial | `spatie/laravel-backup` инсталиран, scheduled `backup:run`/`backup:monitor`/`backup:clean`, admin-only `Admin\BackupController` (list + download) с path-traversal guard (само exact matches от `allFiles()` listing-а се приемат), nav link и tests (`BackupControllerTest`) | Restore rehearsal, retention policy documentation и storage-destination ownership остават Todo |
+| Backup and restore | Partial | `spatie/laravel-backup`, scheduled run/monitor/clean, admin list/download, documented destination ownership, retention policy и safe isolated restore procedure с evidence checklist | Реална production-like restore rehearsal |
 | Deployment runbook | Done | [`docs/laravel-deployment-runbook.md`](laravel-deployment-runbook.md) — write freeze, .env decision table, supervisor/cron, routine deploy стъпки, smoke checks, fix-forward policy | Изпълнение на реален fresh-install + deploy repetition остава в UAT реда |
 | Production observability | Foundation | Sentry SDK (`config/sentry.php`, admin-scrubbed `SentryEventSanitizer`, disabled без `SENTRY_LARAVEL_DSN`), Laravel Pulse (`/admin/pulse`, admin-only), Laravel Horizon (`/admin/horizon`, admin-only `viewHorizon` gate, `horizon:snapshot` на всеки 5 мин, вече активен production queue избор — виж "Queue storage") и Prometheus `/metrics` вече са инсталирани и wired | Production решение: `SENTRY_LARAVEL_DSN` стойност и избор на кой stack получава scrape/alerting за `/metrics` — потребителят реши да отложи тази конфигурация до по-късно |
 | UAT и cutover rehearsal | Foundation | [`docs/laravel-uat-cutover-checklist.md`](laravel-uat-cutover-checklist.md) — golden fixtures план, rehearsal процедура, sign-off evidence и irreversible cutover checklist документирани | Действителното изпълнение на двете production-like репетиции — дата не е насрочена |

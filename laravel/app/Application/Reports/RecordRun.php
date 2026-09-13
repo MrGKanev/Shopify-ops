@@ -8,6 +8,7 @@ use App\Notifications\ReportEmailNotification;
 use App\Notifications\ScanDiscordNotification;
 use App\Notifications\ScanSlackNotification;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Notification;
 
 class RecordRun
@@ -21,6 +22,12 @@ class RecordRun
     {
         $attachment = $attributes['attachment'] ?? null;
         $run = $store->runLogs()->create(Arr::except($attributes, ['attachment']));
+        Context::add([
+            'run_id' => $run->getKey(),
+            'store_id' => $store->getKey(),
+            'tool' => (string) ($attributes['tool'] ?? 'unknown'),
+            'run_status' => (string) ($attributes['status'] ?? 'unknown'),
+        ]);
         $oldIds = $store->runLogs()->latest('id')->skip(500)->take(500)->pluck('id');
         if ($oldIds->isNotEmpty()) {
             RunLog::whereKey($oldIds)->delete();

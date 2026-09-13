@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -10,13 +11,14 @@ use Illuminate\View\View;
 
 class JobQueueController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
         $usingRedis = config('queue.default') === 'redis';
         $jobs = $usingRedis ? null : DB::table('jobs')->latest('id')->paginate(100, ['*'], 'jobs');
         $failed = DB::table('failed_jobs')->latest('id')->paginate(100, ['*'], 'failed');
 
         return view('jobs.index', [
+            'auditJobs' => $request->attributes->get('activeStore')->auditJobs()->latest()->limit(100)->get(),
             'jobs' => $jobs,
             'failed' => $failed,
             'usingRedis' => $usingRedis,

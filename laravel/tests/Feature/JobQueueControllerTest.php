@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditJob;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -59,6 +60,20 @@ class JobQueueControllerTest extends TestCase
         Artisan::shouldReceive('call')->once()->with('queue:forget', ['id' => 'job-1'])->andReturn(0);
         $this->actingAs($operator)->delete('/jobs/failed/job-1')->assertRedirect();
         $this->actingAs($operator)->post('/jobs/failed/missing/retry')->assertNotFound();
+    }
+
+    public function test_page_shows_only_the_active_stores_audit_execution_statuses(): void
+    {
+        [$operator, $store] = $this->userWithStore(true);
+        $otherStore = Store::factory()->create();
+        AuditJob::create(['store_id' => $store->getKey(), 'status' => 'completed', 'start_date' => '2026-09-01', 'end_date' => '2026-09-12', 'finished_at' => now()]);
+        AuditJob::create(['store_id' => $otherStore->getKey(), 'status' => 'failed', 'start_date' => '2026-08-01', 'end_date' => '2026-08-31']);
+
+        $this->actingAs($operator)->get('/jobs')
+            ->assertOk()
+            ->assertSeeText('Audit executions')
+            ->assertSeeText('2026-09-01 → 2026-09-12')
+            ->assertDontSeeText('2026-08-01 → 2026-08-31');
     }
 
     private function userWithStore(bool $operator = false): array

@@ -1,151 +1,44 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-
-        <title>{{ config('app.name') }}</title>
-
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    </head>
-    <body class="min-h-screen bg-slate-100 text-slate-950 antialiased dark:bg-slate-950 dark:text-slate-100">
-        <header class="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-            <div class="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-                <div class="flex items-center gap-4">
-                    <a class="text-lg font-semibold" href="{{ route('dashboard') }}">{{ config('app.name') }}</a>
-                    <span class="rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200">
-                        Laravel rewrite
-                    </span>
-
-                    @can('manage-administration')
-                        <nav class="hidden items-center gap-3 text-sm sm:flex" aria-label="Administration">
-                            <a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ route('admin.stores.index') }}">Stores</a>
-                            <a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ route('admin.users.index') }}">Users</a>
-                            <a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ route('admin.settings') }}">Settings</a><a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ route('admin.api-health') }}">API Health</a><a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ route('admin.config-check') }}">Config Check</a><a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ route('admin.webhook-health') }}">Webhook Health</a><a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ route('admin.slack-rules.edit') }}">Slack Rules</a><a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ route('admin.discord-rules.edit') }}">Discord Rules</a><a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ route('admin.email-rules.edit') }}">Email Rules</a>
-                            <a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ route('admin.action-log') }}">Action Log</a><a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ route('admin.banned-ips.index') }}">Banned IPs</a><a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ route('admin.backups.index') }}">Backups</a>
-                            <a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ route('admin.health') }}">Health</a>
-                            @if(config('pulse.enabled'))<a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ url(config('pulse.path')) }}">Pulse</a>@endif
-                            @if(config('queue.default') === 'redis')<a class="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400" href="{{ url(config('horizon.path')) }}">Horizon</a>@endif
-                        </nav>
-                    @endcan
-                </div>
-
-                <div class="flex flex-wrap items-center gap-3 text-sm">
-                    <span class="text-slate-500 dark:text-slate-400">
-                        {{ auth()->user()->name }} · {{ auth()->user()->role->value }}
-                    </span>
-
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button class="rounded-lg border border-slate-300 px-3 py-2 font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800" type="submit">
-                            Sign out
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </header>
-
-        <div class="mx-auto grid max-w-7xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[16rem_minmax(0,1fr)] lg:px-8">
-            <aside class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-                <nav class="mb-5 flex flex-col gap-1 border-b border-slate-200 pb-5 text-sm dark:border-slate-800" aria-label="Primary">
-                    <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('dashboard') }}">Dashboard</a>
-                    <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('orders.lookup') }}">Order lookup</a>
-                    <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('orders.spot-check') }}">Spot-check</a>
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('orders.push.create') }}">Push order / fix note</a>@endcan
-                    <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('orders.compare') }}">Order compare</a>
-                    <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('orders.timeline') }}">Order timeline</a>
-                    <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('orders.tracking') }}">Tracking feed</a>
-                    <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('orders.packing-slip') }}">Packing slip</a>
-                    <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('orders.tag-search') }}">Tag search</a>
-                    <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('customers.lookup') }}">Customer lookup</a>
-                    <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('metafields.index') }}">Metafields</a>
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('global-search') }}">Global search</a><a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.run-audit') }}">Run audit</a><a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('saved-reports.index') }}">Saved reports</a><a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('report-trends.index') }}">Audit trends</a><a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('ignored-orders.index') }}">Ignored orders</a>@endcan
-                    <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('push-logs.index') }}">Push log</a>
-                    <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('run-logs.index') }}">Run history</a>
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('jobs.index') }}">Job queue</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('print-queue.index') }}">Print queue</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.high-value-no-phone') }}">High-value no phone</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.country-mismatch') }}">Country mismatch</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.tag-audit') }}">Tag audit</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.tax-audit') }}">Tax audit</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.consent-audit') }}">Consent audit</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.fraud-risk') }}">Fraud risk</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.email-check') }}">Email checker</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.address-check') }}">Address scanner</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.discount-abuse') }}">Discount abuse</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.same-ip') }}">Same IP</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.duplicate-orders') }}">Duplicate detector</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.customer-ltv') }}">Customer LTV</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.tag-policy') }}">Tag policy</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.disputes') }}">Disputes</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.duplicate-addresses') }}">Duplicate addresses</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.note-flags') }}">Note flags</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.order-edits') }}">Order edits</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.address-changes') }}">Address changes</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.post-ship-address-changes') }}">Post-ship address changes</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.voided-shipments') }}">Voided shipments</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.fulfillment-sla') }}">Fulfillment SLA</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.bundle-check') }}">Bundle check</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.partial-fulfillment') }}">Partial fulfillment stalls</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.on-hold-stall') }}">On-hold stalls</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.no-tracking') }}">Fulfilled without tracking</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.shipment-aging') }}">Shipment aging</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.item-mismatch') }}">Shipped item mismatch</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.orphan-orders') }}">Orphan detector</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.active-shipstation-conflicts') }}">Active SS conflicts</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.shipped-unfulfilled') }}">SS shipped / Shopify unfulfilled</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.repeat-refunds') }}">Repeat refunds</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.refund-tracker') }}">Refunds tracker</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.return-rma') }}">Return / RMA</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.returned-items') }}">Returned items</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.fulfilled-items') }}">Fulfilled items</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.carrier-performance') }}">Carrier performance</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.shipping-margin') }}">Shipping margin</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.product-completeness') }}">Product completeness</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.sku-duplicates') }}">SKU duplicates</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.inventory-oversell') }}">Oversell risk</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.inventory-aging') }}">Inventory aging</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.inventory-forecast') }}">Inventory forecast</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.zombie-products') }}">Zombie products</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.catalog-quality') }}">Catalog quality</a>@endcan
-                    @can('run-audits')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 dark:hover:bg-slate-800" href="{{ route('reports.gift-cards') }}">Gift cards</a>@endcan
-                    @can('manage-administration')
-                        <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ route('admin.stores.index') }}">Manage stores</a>
-                        <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ route('admin.users.index') }}">Manage users</a>
-                        <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ route('admin.settings') }}">Settings</a><a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ route('admin.api-health') }}">API Health</a><a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ route('admin.config-check') }}">Config Check</a><a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ route('admin.webhook-health') }}">Webhook Health</a><a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ route('admin.slack-rules.edit') }}">Slack Rules</a><a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ route('admin.discord-rules.edit') }}">Discord Rules</a><a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ route('admin.email-rules.edit') }}">Email Rules</a>
-                        <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ route('admin.action-log') }}">Action Log</a><a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ route('admin.banned-ips.index') }}">Banned IPs</a><a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ route('admin.backups.index') }}">Backups</a>
-                        <a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ route('admin.health') }}">Health</a>
-                        @if(config('pulse.enabled'))<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ url(config('pulse.path')) }}">Pulse</a>@endif
-                        @if(config('queue.default') === 'redis')<a class="rounded-lg px-3 py-2 font-medium hover:bg-slate-100 sm:hidden dark:hover:bg-slate-800" href="{{ url(config('horizon.path')) }}">Horizon</a>@endif
-                    @endcan
-                </nav>
-
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Stores</p>
-
-                <div class="mt-3 flex flex-col gap-2">
-                    @foreach ($availableStores as $store)
-                        <form method="POST" action="{{ route('stores.active', $store) }}">
-                            @csrf
-                            <button
-                                class="w-full rounded-lg px-3 py-2 text-left text-sm font-medium {{ $store->is($activeStore) ? 'bg-indigo-600 text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-800' }}"
-                                type="submit"
-                            >
-                                {{ $store->label }}
-                            </button>
-                        </form>
-                    @endforeach
-                </div>
-            </aside>
-
-            <main>
-                @if (session('status'))
-                    <div class="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200" role="status">
-                        {{ session('status') }}
-                    </div>
-                @endif
-
-                @yield('content')
-            </main>
+<head>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{{ config('app.name') }}</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body>
+@php
+    $route = request()->route()?->getName() ?? '';
+    $group = str_starts_with($route, 'admin.') ? 'settings' : (in_array($route, ['ignored-orders.index','push-logs.index','run-logs.index','jobs.index','print-queue.index'], true) ? 'manage' : (str_starts_with($route, 'orders.') || in_array($route, ['customers.lookup','metafields.index','global-search'], true) ? 'search' : (str_starts_with($route, 'reports.') || str_starts_with($route, 'saved-reports.') || $route === 'report-trends.index' ? 'audit' : 'dashboard')));
+    $contextLinks = match($group) {
+        'search' => [['Order Lookup','orders.lookup'],['Spot-check','orders.spot-check'],['Push Order / Fix Note','orders.push.create'],['Order Compare','orders.compare'],['Order Timeline','orders.timeline'],['Tracking Feed','orders.tracking'],['Packing Slip','orders.packing-slip'],['Tag Search','orders.tag-search'],['Customer Lookup','customers.lookup'],['Metafields','metafields.index'],['Global Search','global-search']],
+        'manage' => [['Ignored Orders','ignored-orders.index'],['Push Log','push-logs.index'],['Run History','run-logs.index'],['Job Queue','jobs.index'],['Print Queue','print-queue.index']],
+        'settings' => [['Configuration','admin.settings'],['API Health','admin.api-health'],['Config Check','admin.config-check'],['Webhook Health','admin.webhook-health'],['Slack Rules','admin.slack-rules.edit'],['Discord Rules','admin.discord-rules.edit'],['Email Rules','admin.email-rules.edit'],['Stores','admin.stores.index'],['Users','admin.users.index'],['Action Log','admin.action-log'],['Banned IPs','admin.banned-ips.index'],['Backups','admin.backups.index'],['Health','admin.health']],
+        'audit' => [['Run Audit','reports.run-audit'],['Saved Reports','saved-reports.index'],['Audit Trends','report-trends.index'],['Address Check','reports.address-check'],['Email Check','reports.email-check'],['Bundle Check','reports.bundle-check'],['Partial Fulfillment','reports.partial-fulfillment'],['Orphan Orders','reports.orphan-orders'],['Fulfillment SLA','reports.fulfillment-sla'],['Refund Tracker','reports.refund-tracker'],['Returned Items','reports.returned-items'],['Inventory Forecast','reports.inventory-forecast']],
+        default => [],
+    };
+@endphp
+<header class="mobile-header"><div class="brand">Shopify Ops <span class="header-store">{{ $activeStore->label }}</span></div><button class="hamburger" id="js-hamburger" type="button" aria-label="Menu"><span></span><span></span><span></span></button></header>
+<div class="sidebar-overlay" id="js-overlay"></div>
+<div class="layout">
+    <aside class="sidebar" id="js-sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-header-top"><a class="brand" href="{{ route('dashboard') }}">Shopify <span>Ops</span></a><button class="theme-icon-btn" id="js-theme-toggle" type="button" title="Toggle theme"><span id="js-theme-icon">🌙</span></button></div>
+            <div class="store"><span class="store-label">Store</span> {{ $activeStore->shopify_store }}</div>
+            @if($availableStores->count() > 1)<form class="store-switcher" method="POST" action="{{ route('stores.active', $activeStore) }}" data-store-switcher>@csrf<select class="store-select" title="Switch store">@foreach($availableStores as $store)<option value="{{ route('stores.active', $store) }}" @selected($store->is($activeStore))>{{ $store->label }}</option>@endforeach</select></form>@endif
         </div>
-    </body>
+        <nav class="flat-nav" aria-label="Primary">
+            <a class="flat-nav-link {{ $group === 'dashboard' ? 'active' : '' }}" href="{{ route('dashboard') }}"><span class="flat-nav-icon">🏠</span><span class="nav-label">Dashboard</span></a>
+            @can('run-audits')<a class="flat-nav-link {{ $group === 'audit' ? 'active' : '' }}" href="{{ route('reports.run-audit') }}"><span class="flat-nav-icon">📋</span><span class="nav-label">Audit</span></a>@endcan
+            <a class="flat-nav-link {{ $group === 'search' ? 'active' : '' }}" href="{{ route('orders.lookup') }}"><span class="flat-nav-icon">🔎</span><span class="nav-label">Search &amp; Lookup</span></a>
+            <a class="flat-nav-link {{ $group === 'manage' ? 'active' : '' }}" href="{{ route('push-logs.index') }}"><span class="flat-nav-icon">📂</span><span class="nav-label">Manage</span></a>
+            @can('manage-administration')<a class="flat-nav-link {{ $group === 'settings' ? 'active' : '' }}" href="{{ route('admin.settings') }}"><span class="flat-nav-icon">⚙</span><span class="nav-label">Settings</span></a>@endcan
+        </nav>
+        @if($contextLinks)<div class="sidebar-section">{{ ucfirst($group) }}</div><ul class="sidebar-nav">@foreach($contextLinks as [$label,$name])@if((!in_array($name,['orders.push.create','global-search','jobs.index','print-queue.index'],true) || auth()->user()->can('run-audits')) && (!str_starts_with($name,'admin.') || auth()->user()->can('manage-administration')))<li><a class="{{ request()->routeIs($name) ? 'active' : '' }}" href="{{ route($name) }}">{{ $label }}</a></li>@endif @endforeach</ul>@endif
+        @can('run-audits')<div class="sidebar-search"><form method="GET" action="{{ route('global-search') }}"><input class="sidebar-search-input" name="q" type="search" placeholder="Search order #…" value="{{ request('q') }}" autocomplete="off"></form></div>@endcan
+        <div class="sidebar-footer"><form method="POST" action="{{ route('logout') }}">@csrf<button class="btn btn-ghost btn-sm btn-full sidebar-signout-btn" type="submit">Sign out</button></form><div class="sidebar-footer-row"><span class="sidebar-github">{{ auth()->user()->name }} · {{ auth()->user()->role->value }}</span><button class="sidebar-collapse-btn" id="js-sidebar-collapse" type="button" title="Collapse sidebar" aria-label="Collapse sidebar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg></button></div></div>
+    </aside>
+    <main class="main">@if(session('status'))<div class="flash toast">{{ session('status') }}</div>@endif @yield('content')</main>
+</div>
+<div id="toast-container"></div>
+</body>
 </html>

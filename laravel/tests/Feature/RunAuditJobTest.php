@@ -5,11 +5,13 @@ namespace Tests\Feature;
 use App\Application\Reports\AuditResult;
 use App\Application\Reports\RunAudit;
 use App\Jobs\RunAuditJob;
+use App\Models\AuditJob;
 use App\Models\Store;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Mockery;
+use RuntimeException;
 use Tests\TestCase;
 
 class RunAuditJobTest extends TestCase
@@ -78,5 +80,24 @@ class RunAuditJobTest extends TestCase
         $this->assertSame(300, $job->timeout);
         $this->assertSame(3, $job->tries);
         $this->assertSame(30, $job->backoff);
+    }
+
+    public function test_it_records_running_completed_and_terminal_failure_states(): void
+    {
+        $store = Store::factory()->create();
+        $auditJob = AuditJob::create(['store_id' => $store->getKey(), 'start_date' => '2026-06-01', 'end_date' => '2026-06-30']);
+        $audit = Mockery::mock(RunAudit::class);
+        $audit->shouldReceive('handle')->once()->andReturn(new AuditResult('2026-06-01', '2026-06-30', [], 0, 0, 0, 0, 0, false));
+        $job = new RunAuditJob($store->getKey(), '2026-06-01', '2026-06-30', $auditJob->getKey());
+
+        $job->handle($audit);
+
+        $this->assertSame('completed', $auditJob->fresh()->status);
+        $this->assertNotNull($auditJob->fresh()->started_at);
+        $this->assertNotNull($auditJob->fresh()->finished_at);
+
+        $job->failed(new RuntimeException('secret-token'));
+        $this->assertSame('failed', $auditJob->fresh()->status);
+        $this->assertSame(RuntimeException::class, $auditJob->fresh()->error_category);
     }
 }

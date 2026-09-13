@@ -7,6 +7,7 @@ use App\Application\Reports\RunAudit;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ItemMismatchRequest;
 use App\Jobs\RunAuditJob;
+use App\Models\AuditJob;
 use App\Models\Store;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
@@ -44,7 +45,12 @@ class RunAuditController extends Controller
         if ($this->configurationError($store)) {
             return back()->withErrors(['queue' => 'Shopify and ShipStation credentials are required.']);
         }
-        RunAuditJob::dispatch($store->getKey(), $start, $end);
+        $pending = AuditJob::where('store_id', $store->getKey())->where('start_date', $start)->where('end_date', $end)->whereIn('status', ['queued', 'running'])->exists();
+        if ($pending) {
+            return back()->with('status', 'Audit is already queued.');
+        }
+        $auditJob = AuditJob::create(['store_id' => $store->getKey(), 'start_date' => $start, 'end_date' => $end]);
+        RunAuditJob::dispatch($store->getKey(), $start, $end, $auditJob->getKey());
 
         return back()->with('status', 'Audit queued.');
     }

@@ -40,6 +40,7 @@ application-ниво настройката и routine deploy процедура
 | `METRICS_SCRAPE_TOKEN` | `/metrics` връща 404 (изключен endpoint) |
 | Google OAuth ключове (виж `config/services.php`) | Google sign-in бутонът остава скрит/неконфигуриран |
 | `QUEUE_CONNECTION` | Production решение: **`redis`**, управляван от Horizon (виж по-долу). Изисква работещ Redis и попълнени `REDIS_*`/`HORIZON_*` ключове |
+| `CACHE_STORE` / `CACHE_PREFIX` | **`redis`**; prefix-ът е уникален за deployment-а. Cache-ът е само за locks, unique jobs и health heartbeats; Shopify/ShipStation/report reads не се кешират |
 | Mail (`MAIL_*`) | Email notifications/digest не могат да се доставят |
 | `BACKUP_MAX_AGE_DAYS` и `spatie/laravel-backup` destination конфигурация | Backup health check не може да оцени свежест |
 | `LOG_CHANNEL`/`LOG_DAILY_DAYS` | Production решение: **file logging** (`daily` channel), 180 дни retention (`LOG_DAILY_DAYS=180`, вече по подразбиране в `.env.example`) |
@@ -109,8 +110,61 @@ curl -fsS -H "Authorization: Bearer $METRICS_SCRAPE_TOKEN" https://<host>/metric
 ```
 
 `/up` и `/ready` трябва да върнат 200. `/ready` съдържа `{"status":"ready"}`
-само ако database и queue конфигурацията са здрави. `/metrics` трябва да
-върне Prometheus текст с `checker_*` броячи.
+само ако database, cache, queue, worker и scheduler са здрави. Добра
+production практика е външен uptime monitor да проверява `/ready`
+поне веднъж минутно. Доставчикът и мястото на monitor-а са решение на
+deployment owner-а; препоръчително е да не работи в същия process като
+Laravel scheduler-а. `/metrics` трябва да върне Prometheus текст с
+`checker_*` броячи.
+
+## Backup ownership, retention и restore rehearsal
+
+Deployment owner-ът избира destination-а. Може да е отделен mounted
+disk/сървър чрез `BACKUP_LOCAL_PATH`, S3-compatible disk или друг Laravel
+filesystem disk в `BACKUP_DISKS`. Добра практика е поне едно копие
+да е извън application VPS-а и credentials-ите за destination-а да могат
+да пишат backup-и, без да дават по-широк достъп от нужното.
+
+Текущата retention policy в `config/backup.php` пази всички backup-и
+за 7 дни, дневни до 16 дни, седмични за 8 седмици, месечни за 4 месеца
+и годишни за 2 години, ограничени и от `BACKUP_MAX_STORAGE_MB`. Owner-ът
+може да избере по-дълъг срок според бизнес и regulatory нуждите.
+
+Проверка на backup-ите:
+
+```bash
+php artisan backup:run
+php artisan backup:list
+php artisan backup:monitor
+```
+
+Restore rehearsal се прави поне преди release/cutover и след промяна
+на database driver, destination или encryption. Никога не възстановявай
+директно върху production database-а:
+
+1. Запиши restore owner, дата, release commit и избран backup filename.
+2. Създай изолиран rehearsal host/database без production credentials,
+   workers, scheduler и outbound notification delivery.
+3. Изтегли архива от destination-а и провери списъка му с
+   `unzip -l <backup.zip>`.
+4. Разархивирай в нова temporary директория и намери database dump-а.
+   При encrypted archive въведи password-а interactive; не го пиши в
+   shell history, ticket или rehearsal log.
+5. Възстанови dump-а в празна rehearsal database: копирай SQLite
+   database файла на rehearsal path, или импортирай SQL dump-а с
+   standard `mysql`/`psql` client. Не пускай `migrate:fresh`.
+6. Насочи rehearsal `.env` към възстановената database, изпълни
+   `php artisan config:clear` и `php artisan migrate:status`.
+7. Провери login, users/stores, броя `run_logs`/`audit_snapshots`, един
+   saved report и един CSV download. Пусни `/up`; `/ready` може да е 503,
+   докато rehearsal worker/scheduler са съзнателно спрени.
+8. Запази pass/fail evidence, продължителност, backup filename/hash,
+   database driver и всички отклонения. Изтрий temporary plaintext dump-а и
+   rehearsal database след sign-off.
+
+Репетицията е успешна само ако archive-ът се декриптира,
+database-а се отваря без migration errors, ключовите counts съвпадат
+и smoke checks минават без production side effects.
 
 ## Fix-forward policy
 

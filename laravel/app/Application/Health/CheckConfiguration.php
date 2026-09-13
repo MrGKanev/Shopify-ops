@@ -35,11 +35,26 @@ class CheckConfiguration
         if (! in_array(config('cache.default'), array_keys((array) config('cache.stores')), true)) {
             $issues[] = 'The default cache store is not defined.';
         }
+        if (config('app.env') === 'production' && config('cache.default') !== 'redis') {
+            $issues[] = 'CACHE_STORE must be redis in production.';
+        }
+        if (config('app.env') === 'production' && trim((string) config('cache.prefix')) === '') {
+            $issues[] = 'CACHE_PREFIX must identify this deployment.';
+        }
         if (! in_array(config('queue.default'), array_keys((array) config('queue.connections')), true)) {
             $issues[] = 'The default queue connection is not defined.';
         }
         if (config('app.env') === 'production' && Str::contains((string) config('app.url'), 'localhost')) {
             $issues[] = 'APP_URL must not be the localhost default in production.';
+        }
+        if (config('app.env') === 'production' && config('security.trusted_proxies') === []) {
+            $issues[] = 'TRUSTED_PROXIES must contain the production proxy addresses.';
+        }
+        if (config('app.env') === 'production' && ! config('session.secure')) {
+            $issues[] = 'SESSION_SECURE_COOKIE must be enabled in production.';
+        }
+        if (config('app.env') === 'production' && ! config('security.hsts')) {
+            $issues[] = 'HSTS_ENABLED must be enabled after HTTPS proxy verification.';
         }
         $google = array_filter([(string) config('services.google.client_id'), (string) config('services.google.client_secret'), (string) config('services.google.allowed_domains')]);
         if ($google !== [] && count($google) !== 3) {
