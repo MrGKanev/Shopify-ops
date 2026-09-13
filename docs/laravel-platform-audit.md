@@ -80,7 +80,7 @@ capability-то готово.
 | Capability | Статус | Налично | Нужно за Done |
 |---|---|---|---|
 | CSV/report downloads | Done | Общ `CsvExporter` service, ползван от export() методите на report controllers (store-scoped, safe headers) | Формален security review за formula-injection escaping и large-dataset streaming се препоръчва отделно |
-| Shopify → ShipStation push | Done | `PushOrderToShipStation` action, request validation, controller и tests | Idempotency key/duplicate-prevention hardening се преценява при реален production traffic |
+| Shopify → ShipStation push | Done | `PushOrderToShipStation` action, request validation, controller и tests; `buildOrderPayload()` verified field-for-field against legacy `ShipStation::buildPayload()` via differential test 2026-09-13, see [`docs/parity-verification.md`](parity-verification.md) | Idempotency key/duplicate-prevention hardening се преценява при реален production traffic |
 | Shopify order note update | Done | `SaveOrderNote` action, request validation, controller и tests | — |
 | Print queue | Done | `PrintQueueItem` модел, `PrintQueueController`/requests — persisted enqueue/order/remove, authorization | — |
 
