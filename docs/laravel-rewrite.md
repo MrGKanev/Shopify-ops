@@ -486,7 +486,7 @@ workflow от наличния framework scaffold.
 | `reports` | Reports | Done | Store-scoped daily DB snapshots from Run Audit, same-day overwrite, history/detail views and formula-safe CSV download. |
 | `run` | Run Audit | Done | Validated period, matching, legacy exclusions/ignore list including no-shipping/on-hold, persisted summary, safe synchronous results and queued execution. |
 | `trends` | Trends | Done | Store-scoped date filtering, chronological missing-order totals, signed daily deltas and dependency-free bar visualization from saved snapshots. |
-| `dupes` | Duplicate Detector | Done | Case-insensitive email + exact total pairs within an inclusive 600-second window, full range pagination and visible truncation. |
+| `dupes` | Duplicate Detector | Done | Case-insensitive email + exact total pairs within an inclusive 600-second window, full range pagination and visible truncation. Verified 2026-09-13 via differential test against legacy `DuplicateOrderInsights` — the shipped analyzer had regressed to an 86400-second window; fixed, see [`docs/parity-verification.md`](parity-verification.md). |
 | `refunds` | Refunds Tracker | Done | Refunded Shopify orders with line-item totals, optional ShipStation cross-check and active/missing risk priority. |
 | `repeatrefunds` | Repeat Refunds | Done | Refunded/partially-refunded orders grouped by normalized email, successful transaction totals and configurable threshold. |
 | `returns` | Return / RMA Tracker | Done | One row per refund event with returned items, reason, total and aggregated SKU units/events/revenue. |
