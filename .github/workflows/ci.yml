@@ -33,6 +33,12 @@ jobs:
       - name: Run tests
         run: composer test
 
+      - name: Install Laravel dependencies (for parity suite)
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --working-dir=laravel
+
+      - name: Run parity suite
+        run: vendor/bin/phpunit -c phpunit.parity.xml
+
       - name: Run static analysis
         run: composer analyse
 

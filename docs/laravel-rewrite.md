@@ -1018,7 +1018,7 @@ Tag Policy traceability (`OrderPolicyChecksTest.php` и
 - [x] `BundleCheckPageTest.php`
 - [x] `CacheTest.php` — legacy file cache is intentionally replaced by fresh reads; Laravel cache remains only for framework/runtime coordination
 - [x] `CarrierPerfTest.php`
-- [x] `ComparatorTest.php` — split across `AuditOrderAnalyzer`, `DuplicateOrderAnalyzer`, `OrderTypeClassifier`, `OrderChannelComparator` and `ShippingMarginAnalyzer`; fixed a 10-minute-vs-24-hour duplicate window bug and a missing compound-order-number index, see [laravel-test-audit.md](laravel-test-audit.md)
+- [x] `ComparatorTest.php` — split across `AuditOrderAnalyzer`, `OrderTypeClassifier`, `OrderChannelComparator` and `ShippingMarginAnalyzer`; fixed a missing compound-order-number index, see [laravel-test-audit.md](laravel-test-audit.md). `DuplicateOrderAnalyzer` is **not** a port of this file's `findDuplicates` — that legacy method (the 24-hour clustering panel on the Run Audit page, `views/run.php`) has no Laravel port at all. An earlier pass wrongly assumed it was the same feature and changed `DuplicateOrderAnalyzer`'s window from 600s to 86400s; an independent differential test proved this backwards and it was reverted 2026-09-13, see [parity-verification.md](parity-verification.md).
 - [x] `ConfigValidatorTest.php` — legacy JSON/environment validation е заменена с runtime Laravel config, DB store и admin authorization contracts.
 - [x] `CustomerLTVPageLoaderTest.php`
 - [x] `DateRangeTest.php` — GET/POST input precedence отпада при отделни routes; строгият ISO формат, start/end редът и Carbon date arithmetic са покрити
