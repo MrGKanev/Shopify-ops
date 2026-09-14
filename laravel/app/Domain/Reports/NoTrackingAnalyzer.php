@@ -25,7 +25,6 @@ class NoTrackingAnalyzer
             if ($missing === []) {
                 continue;
             }
-            usort($missing, fn (array $a, array $b): int => $b['hours_ago'] <=> $a['hours_ago']);
             $rows[] = ['shopify_id' => $this->text($order['id'] ?? ''), 'order_number' => $this->text($order['name'] ?? ''), 'created_at' => substr($this->text($order['created_at'] ?? ''), 0, 10), 'email' => $this->text($order['email'] ?? ''), 'total' => is_numeric($order['total_price'] ?? null) ? (float) $order['total_price'] : 0.0, 'financial' => $this->text($order['financial_status'] ?? ''), 'fulfillment' => $this->text($order['fulfillment_status'] ?? ''), 'missing' => $missing];
         }
         usort($rows, fn (array $a, array $b): int => $b['missing'][0]['hours_ago'] <=> $a['missing'][0]['hours_ago']);
