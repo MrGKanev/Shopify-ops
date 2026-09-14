@@ -5,7 +5,7 @@ namespace App\Domain\Reports;
 class HighValueNoPhoneAnalyzer
 {
     /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
-    public function analyze(array $orders, float $minimum, string $currency): array
+    public function analyze(array $orders, float $minimum, ?string $currency): array
     {
         $rows = [];
         foreach ($orders as $order) {
@@ -14,7 +14,7 @@ class HighValueNoPhoneAnalyzer
             $total = is_numeric($order['total_price'] ?? null) ? (float) $order['total_price'] : 0.0;
             $orderCurrency = strtoupper($this->text($order['currency'] ?? ''));
 
-            if ($phone !== '' || $total < $minimum || $orderCurrency !== $currency) {
+            if ($phone !== '' || $total < $minimum || ($currency !== null && $orderCurrency !== $currency)) {
                 continue;
             }
 

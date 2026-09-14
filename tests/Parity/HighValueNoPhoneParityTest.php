@@ -44,6 +44,24 @@ final class HighValueNoPhoneParityTest extends TestCase
         $this->assertSame($this->summarize($legacyRows), $this->summarize($laravelRows));
     }
 
+    /**
+     * Laravel-only feature: a `null` currency means "all currencies", since
+     * legacy has no currency concept to diff against at all. A multi-currency
+     * store must not silently drop a high-value order in another currency
+     * from the one report meant to catch it.
+     */
+    public function test_null_currency_does_not_filter_by_currency(): void
+    {
+        $usd = $this->order('1', '500.00', '', '2026-01-01');
+        $usd['currency'] = 'USD';
+        $eur = $this->order('2', '500.00', '', '2026-01-01');
+        $eur['currency'] = 'EUR';
+
+        $rows = (new HighValueNoPhoneAnalyzer())->analyze([$usd, $eur], 200.0, null);
+
+        $this->assertSame(['#1', '#2'], $this->summarize($rows));
+    }
+
     /** @return array<string, mixed> */
     private function order(string $orderNumber, string $totalPrice, string $phone, string $createdAt, ?string $cancelledAt = null): array
     {

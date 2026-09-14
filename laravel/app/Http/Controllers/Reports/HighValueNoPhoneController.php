@@ -31,7 +31,7 @@ class HighValueNoPhoneController extends Controller
         $startDate = (string) $request->validated('start_date');
         $endDate = (string) $request->validated('end_date');
         $minimum = (float) $request->validated('minimum');
-        $currency = (string) $request->validated('currency');
+        $currency = $request->validated('currency') === null ? null : (string) $request->validated('currency');
         $result = null;
         $reportFailed = false;
 

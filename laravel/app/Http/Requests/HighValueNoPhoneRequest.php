@@ -27,14 +27,15 @@ class HighValueNoPhoneRequest extends FormRequest
             'start_date' => ['required', 'date_format:Y-m-d'],
             'end_date' => ['required', 'date_format:Y-m-d'],
             'minimum' => ['required', 'numeric', 'min:0', 'max:1000000'],
-            'currency' => ['required', 'string', 'size:3', 'regex:/\A[A-Za-z]{3}\z/'],
+            'currency' => ['nullable', 'string', 'size:3', 'regex:/\A[A-Za-z]{3}\z/'],
         ];
     }
 
     protected function prepareForValidation(): void
     {
         if (is_string($this->input('currency'))) {
-            $this->merge(['currency' => strtoupper(trim((string) $this->input('currency')))]);
+            $currency = strtoupper(trim($this->input('currency')));
+            $this->merge(['currency' => $currency === '' || $currency === 'ALL' ? null : $currency]);
         }
     }
 

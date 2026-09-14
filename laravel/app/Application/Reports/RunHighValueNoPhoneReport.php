@@ -10,7 +10,7 @@ class RunHighValueNoPhoneReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly HighValueNoPhoneAnalyzer $analyzer) {}
 
-    public function handle(Store $store, string $startDate, string $endDate, float $minimum, string $currency): HighValueNoPhoneResult
+    public function handle(Store $store, string $startDate, string $endDate, float $minimum, ?string $currency): HighValueNoPhoneResult
     {
         $result = $this->shopify->highValueOrderCandidates($store, $startDate, $endDate);
 

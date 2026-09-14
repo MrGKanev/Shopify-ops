@@ -49,6 +49,21 @@ class HighValueNoPhoneControllerTest extends TestCase
         $response->assertOk()->assertSeeText('1 scanned · 1 issues')->assertSeeText('500.50 USD')->assertSeeText('truncated after 100 pages')->assertSee('rel="noopener noreferrer"', false)->assertDontSee('<script>', false)->assertDontSee('<img', false)->assertDontSee('<b>Ada</b>', false);
     }
 
+    public function test_all_currencies_option_does_not_filter_by_currency(): void
+    {
+        [$user, $store] = $this->userWithStore(operator: true);
+        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify->shouldReceive('highValueOrderCandidates')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '2026-09-01', '2026-09-06')->andReturn(['orders' => [
+            ['id' => 1, 'name' => '#1', 'created_at' => '2026-09-02', 'email' => 'a@example.com', 'total_price' => '500.00', 'currency' => 'USD', 'shipping_address' => ['phone' => '']],
+            ['id' => 2, 'name' => '#2', 'created_at' => '2026-09-02', 'email' => 'b@example.com', 'total_price' => '500.00', 'currency' => 'EUR', 'shipping_address' => ['phone' => '']],
+        ], 'pages' => 1, 'truncated' => false]);
+        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+
+        $response = $this->actingAs($user)->post(route('reports.high-value-no-phone.store'), ['start_date' => '2026-09-01', 'end_date' => '2026-09-06', 'minimum' => 200, 'currency' => 'ALL']);
+
+        $response->assertOk()->assertSeeText('2 scanned · 2 issues');
+    }
+
     public function test_upstream_failure_is_atomic_and_does_not_leak_details(): void
     {
         [$user] = $this->userWithStore(operator: true);
