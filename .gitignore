@@ -25,4 +25,15 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
-/.claude/worktrees
+
+# Local AI tool scratch (worktrees, skill state) - never project source
+/.claude/
+/.superpowers/
+
+# Legacy PHP app runtime data, retained on disk locally after the 2026-09-14
+# repo cutover but no longer written to or read by anything - see
+# docs/parity-verification.md for the cutover this predates.
+/cache/
+/data/
+/reports/
+/order_types.json
