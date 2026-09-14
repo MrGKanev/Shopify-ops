@@ -41,6 +41,11 @@ final class ItemMismatchParityTest extends TestCase
             $this->ssOrder('1108', 'awaiting_shipment', '908', [$this->item('WIDGET', 1)]),
             // #9999: no matching Shopify order -> skipped
             $this->ssOrder('9999', 'shipped', '999', [$this->item('WIDGET', 1)]),
+            // 1109-A: compound ShipStation-style order number (digits + suffix)
+            // matching Shopify order_number '1109', whose `name` field disagrees
+            // ('#7777') -- exercises both the order_number-first field priority
+            // and full digit-stripping normalization (not just a leading '#')
+            $this->ssOrder('1109-A', 'shipped', '909', [$this->item('GADGET', 1)]),
         ];
 
         $shopifyOrders = [
@@ -52,6 +57,7 @@ final class ItemMismatchParityTest extends TestCase
             $this->shopifyOrder(6, '1106', [$this->item('WIDGET', 1)], totalPrice: null),
             $this->shopifyOrder(7, '1107', [$this->item('WIDGET', 1)], totalPrice: '0.00'),
             $this->shopifyOrder(8, '1108', [$this->item('WIDGET', 1)], totalPrice: '25.00'),
+            $this->shopifyOrder(9, '1109', [$this->item('WIDGET', 1)], totalPrice: '25.00', name: '#7777'),
         ];
 
         $legacyMethod = new ReflectionMethod(\FulfillmentIssuePageLoader::class, 'buildItemMismatchRows');
@@ -84,11 +90,12 @@ final class ItemMismatchParityTest extends TestCase
         ?string $totalPrice,
         ?string $cancelledAt = null,
         ?string $financialStatus = null,
+        ?string $name = null,
     ): array {
         $order = [
             'id' => $id,
             'order_number' => $orderNumber,
-            'name' => "#{$orderNumber}",
+            'name' => $name ?? "#{$orderNumber}",
             'email' => "order{$orderNumber}@example.com",
             'created_at' => '2026-01-01T00:00:00Z',
             'line_items' => $lineItems,
@@ -105,22 +112,23 @@ final class ItemMismatchParityTest extends TestCase
     }
 
     /**
-     * `order_number` is deliberately normalised (leading `#` stripped) before
-     * comparing: legacy's row echoes `$shOrder['order_number']` verbatim
-     * (here, the bare digits, e.g. `"1102"`), while `ItemMismatchAnalyzer`
-     * always echoes `$shopifyOrder['name']` (Shopify's `#`-prefixed display
-     * form, e.g. `"#1102"`). Same order, same identity, just a different
-     * source field for the label shown to an operator — not a matching,
-     * filtering, or content bug, so it doesn't belong in a "does the real
-     * business logic agree" assertion.
+     * `order_number` is excluded (identity is asserted via `shopify_id`
+     * instead): legacy's row echoes `$shOrder['order_number']` verbatim,
+     * while `ItemMismatchAnalyzer` always echoes `$shopifyOrder['name']` —
+     * a display-source difference, not a matching/filtering/content bug
+     * (same precedent as other rows' field-shape footnotes). This matters
+     * more than usual in this fixture specifically, because order #1109
+     * deliberately gives `order_number` and `name` different values to
+     * exercise the matching-index field-priority fix below — comparing the
+     * display field here would fail for that unrelated reason.
      *
      * @param list<array<string, mixed>> $rows
-     * @return list<array{order_number: mixed, missing: mixed, extra: mixed, missing_required: mixed}>
+     * @return list<array{shopify_id: mixed, missing: mixed, extra: mixed, missing_required: mixed}>
      */
     private function summarize(array $rows): array
     {
         return array_map(static fn (array $r): array => [
-            'order_number' => ltrim((string) $r['order_number'], '#'),
+            'shopify_id' => (string) $r['shopify_id'],
             'missing' => $r['missing'],
             'extra' => $r['extra'],
             'missing_required' => array_values($r['missing_required']),

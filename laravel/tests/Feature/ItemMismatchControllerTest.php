@@ -37,10 +37,13 @@ class ItemMismatchControllerTest extends TestCase
     public function test_operator_can_download_formula_safe_csv(): void
     {
         [$operator] = $this->userWithStore(true);
-        $this->bindSuccess('=bad');
+        // Needs a digit so the order-number matching index (which strips all
+        // non-digit characters, same as legacy's Comparator::normalise())
+        // still resolves a match between the ShipStation and Shopify sides.
+        $this->bindSuccess('=bad1');
         $response = $this->actingAs($operator)->post(route('reports.item-mismatch.export'), $this->input());
         $response->assertOk();
-        $this->assertStringContainsString("'=bad", $response->streamedContent());
+        $this->assertStringContainsString("'=bad1", $response->streamedContent());
     }
 
     private function bindSuccess(string $name, bool $truncated = false): void

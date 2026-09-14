@@ -14,7 +14,7 @@ class ItemMismatchAnalyzer
     {
         $shopify = [];
         foreach ($shopifyOrders as $order) {
-            $number = $this->number($order['name'] ?? $order['order_number'] ?? '');
+            $number = $this->number($order['order_number'] ?? $order['name'] ?? '');
             if ($number !== '') {
                 $shopify[$number] = $order;
             }
@@ -51,7 +51,7 @@ class ItemMismatchAnalyzer
 
     private function number(mixed $value): string
     {
-        return mb_strtolower(ltrim($this->text($value), '#'));
+        return preg_replace('/\D+/', '', $this->text($value)) ?? '';
     }
 
     private function text(mixed $value): string

@@ -9,7 +9,7 @@ class OrphanOrderAnalyzer
     {
         $shopifyNumbers = [];
         foreach ($shopifyOrders as $order) {
-            $number = $this->normalize($order['name'] ?? $order['order_number'] ?? '');
+            $number = $this->normalize($order['order_number'] ?? $order['name'] ?? '');
             if ($number !== '') {
                 $shopifyNumbers[$number] = true;
             }
