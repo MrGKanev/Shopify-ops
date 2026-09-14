@@ -34,14 +34,14 @@ class FulfillmentSlaAnalyzer
             }
             $address = is_array($order['shipping_address'] ?? null) ? $order['shipping_address'] : [];
             $shippingLine = is_array($order['shipping_lines'][0] ?? null) ? $order['shipping_lines'][0] : [];
-            $province = $this->text($address['province_code'] ?? '');
-            $country = $this->text($address['country_code'] ?? '');
+            $province = $this->text($address['province_code'] ?? $address['province'] ?? '');
+            $country = $this->text($address['country_code'] ?? $address['country'] ?? '');
             $rows[] = [
                 'shopify_id' => $this->text($order['id'] ?? ''), 'order_number' => $this->text($order['name'] ?? ''),
                 'created_at' => substr($this->text($order['created_at'] ?? ''), 0, 10), 'fulfilled_at' => substr($fulfilledAt, 0, 10), 'days' => $days,
                 'email' => $this->text($order['email'] ?? ''), 'total' => is_numeric($order['total_price'] ?? null) ? (float) $order['total_price'] : 0.0,
                 'financial' => $this->text($order['financial_status'] ?? ''), 'fulfillment' => $this->text($order['fulfillment_status'] ?? '') ?: 'unfulfilled',
-                'method' => $this->text($shippingLine['title'] ?? '') ?: 'Unknown', 'region' => implode(', ', array_filter([$province, $country])) ?: 'Unknown',
+                'method' => $this->text($shippingLine['title'] ?? $shippingLine['code'] ?? '') ?: 'Unknown', 'region' => implode(', ', array_filter([$province, $country])) ?: 'Unknown',
                 'order_type' => $this->classifier->classify($order),
             ];
         }
