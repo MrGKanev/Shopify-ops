@@ -16,12 +16,4 @@ class RegistryConsistencyTest extends TestCase
         $this->assertSame(count($names), count(array_unique($names)), 'Named routes must be unique.');
         $this->assertSame([], $missing, 'Every report screen must have a submit route.');
     }
-
-    public function test_feature_tracker_counts_remain_complete(): void
-    {
-        $contents = file_get_contents(base_path('../docs/laravel-rewrite.md'));
-        preg_match_all('/^\| (Done|Partial|Todo|Replaced) \| (\d+) \|/m', (string) $contents, $matches);
-
-        $this->assertSame(72, array_sum(array_map('intval', $matches[2])));
-    }
 }

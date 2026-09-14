@@ -1,23 +1,31 @@
 # Laravel rewrite — отворени задачи
 
-Последно обновяване: **2026-09-13**.
+Последно обновяване: **2026-09-14**.
 
-Извлечено от [platform audit-а](laravel-platform-audit.md) — всеки ред там
-е `Done` освен изброените тук. Всяка задача е самостоятелна, не изисква
-преработка на съседен код.
-
-Текущо състояние (self-reported, виж бележката по-долу): feature parity
-**72/72**, legacy test audit **115/115**. Този файл е единственият кратък
-списък за оставащата работа; подробните доказателства остават в audit
-документите.
-
-**Независима проверка в процес:** горните числа не са били доказани
-изпълнимо преди 2026-09-13 — вижте [`parity-verification.md`](parity-verification.md)
-за прогреса на независимия differential-test одит (1/72 инструмента
-потвърден до момента, 1 регресия намерена и оправена, 1 нов пропуск
-намерен — виж по-долу).
+Списък със самостоятелни отворени product-decision задачи, всяка от които не
+изисква преработка на съседен код. По-старите self-reported "72/72 Done"
+одитни документи (`laravel-platform-audit.md`, `laravel-rewrite.md`) бяха
+премахнати на 2026-09-14 — техните твърдения не бяха доказани изпълнимо и в
+няколко реда бяха грешни (виж по-долу). Единственото място, което вече
+твърди feature parity, е [`docs/parity-verification.md`](parity-verification.md)
+(изисква линкнат, реално изпълняван тест за всеки ред) — виж прогреса там.
 
 ## Продуктови решения (от независимия одит)
+
+- [ ] **Bulk-ignore от чекбокси на report изгледи** — legacy `bulk_ignore_orders`
+      (`src/Actions.php::bulkIgnore()`) позволява да маркираш няколко избрани
+      order numbers от чекбокси на 6 различни изгледа (`missing-table.php`
+      partial, ползван от `run.php`, `refunds.php`, `emailcheck.php`,
+      `addrcheck.php`, `trends.php`, плюс собствената форма на `ignored.php`)
+      и да ги игнорираш наведнъж с една обща причина. Laravel
+      `IgnoredOrderController` има само single-ignore (`store`), CSV import
+      (`import`) и bulk *un*ignore по ID (`bulkDestroy`) — **няма bulk-ignore
+      по списък от order numbers изобщо**. `laravel-platform-audit.md`
+      погрешно твърдеше "bulk" за този ред; коригирано на `Partial`. Нужно е
+      продуктово решение: да се построи ли тази bulk-select форма в Laravel
+      report изгледите, или да се приеме съзнателно отклонение (single
+      ignore + CSV import покриват повечето случаи). Виж
+      [`parity-verification.md`](parity-verification.md).
 
 - [ ] **Run Audit inline duplicates panel** — legacy `Comparator::findDuplicates()`
       (24-часово clustering, показва се на `views/run.php:87-103` като "N
@@ -29,6 +37,38 @@
       inline секция в Laravel, или да се приеме съзнателно отклонение (audit
       резултатите вече показват missing/found/skipped/ignored без нея). Виж
       [`parity-verification.md`](parity-verification.md).
+
+- [ ] **Slack/Discord audit & scan notification content е орязано до едно
+      изречение** — legacy `SlackNotifier::auditPayload()`/`scanPayload()` и
+      `DiscordNotifier::auditPayload()`/`scanPayload()` пращат структурирано
+      съобщение: полета за store/period/missing/matched/skipped/ignored/
+      ShipStation total/duration, списък до 10 missing order имена+суми, и
+      цветово кодиране (зелено/червено). Laravel `AuditSlackNotification`/
+      `ScanSlackNotification`/`AuditDiscordNotification`/`ScanDiscordNotification`
+      връщат само едно голо изречение ("{store}: Run Audit found {N} missing
+      orders ({period})."), без нито едно от горните полета — данните вече се
+      изчисляват в `RunAudit::handle()`/`RecordRun::handle()`, просто не се
+      подават на notification конструкторите. `DiscordWebhookChannel` праща
+      каквото върне `toDiscord()` verbatim, така че добавяне на `embeds` ключ
+      ще проработи директно като при legacy — не е transport ограничение.
+      Нужно е продуктово решение: да се разшири ли съдържанието да съвпада с
+      legacy, или да се приеме съзнателно опростяване. Виж
+      [`parity-verification.md`](parity-verification.md).
+
+- [ ] **Email rules нямат global fallback recipient** — legacy build-ва всеки
+      `EmailNotifier` от `ALERT_EMAIL` веднъж и всеки tool-ов `recipientFor()`
+      само override-ва тази стойност; празен per-tool email нарочно означава
+      "прати на ALERT_EMAIL", не "не пращай". Затова legacy оператор може да
+      включи "immediate" на всичките ~40 tool-а в trigger catalog-а и да не
+      въвежда адрес никъде. Laravel няма никакъв еквивалент на ALERT_EMAIL —
+      `EmailRulesRequest` изисква изричен email за всеки tool с mode различен
+      от `off`, а `RecordRun::handle()` просто не пуска известие, ако е
+      празен. Не е живо счупване (формата не позволява да се запази празен
+      immediate rule), но е реална изгубена удобство: всеки от 40-те tool-а
+      трябва отделно да получи същия адрес вместо един env var да ги покрива
+      всичките. Нужно е продуктово решение: да се добави ли global default
+      recipient концепция, или да се приеме изричното per-tool изискване
+      като по-ясен design избор. Виж [`parity-verification.md`](parity-verification.md).
 
 ## Production/infra решения
 

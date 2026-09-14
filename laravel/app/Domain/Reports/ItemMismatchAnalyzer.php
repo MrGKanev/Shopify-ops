@@ -26,7 +26,7 @@ class ItemMismatchAnalyzer
                 continue;
             }
             $shopifyOrder = $shopify[$number];
-            if (($shopifyOrder['cancelled_at'] ?? null) || in_array($shopifyOrder['financial_status'] ?? '', ['refunded', 'voided'], true) || (array_key_exists('total_price', $shopifyOrder) && (float) $shopifyOrder['total_price'] === 0.0)) {
+            if (($shopifyOrder['cancelled_at'] ?? null) || in_array($shopifyOrder['financial_status'] ?? '', ['refunded', 'voided'], true) || (isset($shopifyOrder['total_price']) && (float) $shopifyOrder['total_price'] === 0.0)) {
                 continue;
             }
             $items = array_values(array_filter(is_array($order['items'] ?? null) ? $order['items'] : [], is_array(...)));

@@ -3,10 +3,12 @@
 Последно обновяване: **2026-09-11**.
 
 Този документ е чеклист/процес, не код. Той подготвя двете production-like
-repetitions, изисквани от [Laravel rewrite плана](laravel-rewrite.md) (Фаза 8
-"Hardening и release candidate" и Фаза 9 "Cutover"), и release gate-а в
-[platform audit-а](laravel-platform-audit.md). Реалната дата на репетицията
-все още не е насрочена — виж "Отворени въпроси" накрая.
+repetitions ("Hardening и release candidate" и "Cutover" фазите), gate-нати
+от пълна `Verified match` завършеност в [`docs/parity-verification.md`](parity-verification.md)
+(единственото място, което твърди feature parity — виж дизайна в
+[`superpowers/specs/2026-09-13-parity-verification-design.md`](superpowers/specs/2026-09-13-parity-verification-design.md)).
+Реалната дата на репетицията все още не е насрочена — виж "Отворени въпроси"
+накрая.
 
 ## 1. Golden fixtures
 
@@ -15,17 +17,19 @@ repetitions, изисквани от [Laravel rewrite плана](laravel-rewrit
 
 - **Източник**: анонимизиран export от реален Shopify/ShipStation store с
   представителен обем — достатъчно поръчки да покрият всеки branch в
-  `order_types.json` (виж [required items check](laravel-platform-audit.md)),
-  включително Z1/Z2 required-items случаи, mismatched/missing items,
+  `order_types.json` (Z1/Z2 orders изискват Accent Piece, Funnel Cap, Burr Set
+  — виж `required_items` в конфигурацията), включително Z1/Z2 required-items
+  случаи, mismatched/missing items,
   address edits, duplicate orders и refunds.
 - **Формат**: заснет като fixture JSON/CSV под контрол на repo-то (или
   отделен private fixtures repo, ако данните са твърде чувствителни за
   публичен history — решение за собственика на данните, не техническо).
   PII (имена, адреси, email) се маскира преди commit, докато структурата
   остава вярна за Shopify/ShipStation payload схемите.
-- **Обхват**: минимум по един fixture ред за всеки от 72-та tools/reports
-  в [feature-parity matrix-а](laravel-rewrite.md#feature-parity-matrix), плюс
-  edge cases от production bug fixes-ите, документирани в тази сесия
+- **Обхват**: минимум по един fixture ред за всеки от 72-та tools/reports в
+  `src/ToolRegistry.php` (проследени поинструментно в
+  [`docs/parity-verification.md`](parity-verification.md)), плюс edge cases
+  от production bug fixes-ите, документирани в тази сесия
   (address-edit double counting, missing event classifiers, EmailDigest
   24h→calendar day и др. — виж git history на branch-а).
 - **Сравнение**: fixture run-ът минава през legacy PHP инструмента и през
@@ -55,8 +59,8 @@ repetitions, изисквани от [Laravel rewrite плана](laravel-rewrit
    (email/Slack/Discord), queued audit job.
 4. Diff на резултатите срещу legacy baseline-а (виж golden fixtures секцията).
 5. Cutover dry-run: write freeze → спиране на legacy cron/workers → deploy
-   → smoke checks → observe период (виж Фаза 9 в rewrite плана) — без реално
-   изключване на production legacy системата.
+   → smoke checks → observe период — без реално изключване на production
+   legacy системата.
 6. Документиране на всеки дефект/разлика с severity и owner.
 7. Втората репетиция се изпълнява само след като всички severity-blocking
    находки от първата са затворени.
@@ -70,26 +74,25 @@ repetitions, изисквани от [Laravel rewrite плана](laravel-rewrit
 - [ ] Пълен резултат от feature-parity diff-а (нула недокументирани разлики).
 - [ ] CI резултат (PHPUnit, Larastan, Pint, Composer audit, frontend build)
       на release commit-а.
-- [ ] Security review resolution (виж release gate-а в platform audit-а).
+- [ ] Security review resolution.
 - [ ] Продуктово одобрение (owner sign-off) отделно от техническото.
 
 ## 5. Irreversible cutover checklist
 
 Само след успешна втора репетиция и пълен sign-off. Cutover-ът е one-way —
-[rewrite планът](laravel-rewrite.md) изрично изключва rollback или паралелна
-работа на двете системи след него.
+не се планира rollback или паралелна работа на двете системи след него.
 
 - [ ] И двете rehearsals са Clean (без открити blocking находки).
-- [ ] Release gate-ът в [platform audit-а](laravel-platform-audit.md) е
-      затворен (всеки ред Done или изрично прието отклонение).
+- [ ] Всеки ред в [`docs/parity-verification.md`](parity-verification.md) е
+      `Verified match` или има изрично прието отклонение.
 - [ ] Write freeze обявен на засегнатите потребители.
 - [ ] Legacy cron/workers спрени, in-flight jobs изчакани или съзнателно
       прекратени.
 - [ ] Production administrator/stores/secrets конфигурирани в чистата
-      Laravel инсталация (не import от legacy state — виж "Legacy runtime
-      state" реда в platform audit-а).
+      Laravel инсталация — изрично няма import на legacy users/jobs/logs/
+      cache/reports/settings.
 - [ ] Production observability активиран доколкото е решено (Sentry DSN,
-      Horizon/queue избор, `/metrics` scrape — виж platform audit-а).
+      Horizon/queue избор, `/metrics` scrape).
 - [ ] Smoke checks минати по deployment runbook-а.
 - [ ] Legacy приложението изключено — не остава като fallback.
 - [ ] Post-cutover monitoring период дефиниран (продължителност, кой следи
@@ -101,4 +104,4 @@ repetitions, изисквани от [Laravel rewrite плана](laravel-rewrit
   процеса предварително; датата и собственика на golden fixtures export-а
   трябва да се потвърдят отделно.
 - **Production observability активиране** (Sentry DSN, Horizon queue избор,
-  `/metrics` scrape stack) е съзнателно отложено — виж platform audit-а.
+  `/metrics` scrape stack) е съзнателно отложено.

@@ -8,10 +8,11 @@ Node.js 24+/pnpm, nginx или друг reverse proxy, php-fpm, supervisor, git,
 избраната database — SQLite или MySQL/PostgreSQL). Този документ покрива само
 application-ниво настройката и routine deploy процедурата.
 
-Свързани документи: [Laravel rewrite план](laravel-rewrite.md) (git/release
-стратегия, one-way cutover), [platform audit](laravel-platform-audit.md)
-(release gate checklist) и [UAT и cutover checklist](laravel-uat-cutover-checklist.md)
-(golden fixtures, rehearsal процедура, sign-off evidence).
+Свързан документ: [UAT и cutover checklist](laravel-uat-cutover-checklist.md)
+(golden fixtures, rehearsal процедура, sign-off evidence). Независимата
+feature-parity проверка (source of truth за готовност) е в
+[`docs/parity-verification.md`](parity-verification.md); отворените product
+decisions са в [`docs/laravel-todo.md`](laravel-todo.md).
 
 ## Първоначална инсталация
 
@@ -22,8 +23,8 @@ application-ниво настройката и routine deploy процедура
 5. `php artisan migrate --force`
 6. `npm ci && npm run build` (или `pnpm install && pnpm run build`, според lockfile-а).
 7. `php artisan storage:link`
-8. Създай първия administrator през наличната Artisan install команда (виж
-   `laravel-platform-audit.md` → "First administrator").
+8. Създай първия administrator през наличната Artisan install команда:
+   `php artisan ops:install`.
 9. Настрой supervisor и cron съгласно секциите по-долу.
 10. Направи smoke checks (виж по-долу) преди да пуснеш реален трафик.
 
@@ -177,10 +178,9 @@ commit-а, не като отделна ръчна операция извън g
 ## Все още отворено
 
 - Production observability активиране — Sentry, Pulse, Horizon dashboards и
-  `/metrics` вече са инсталирани и wired (виж [platform
-  audit](laravel-platform-audit.md) → "Production observability"), но
-  `SENTRY_LARAVEL_DSN` и кой получава `/metrics` scrape/alerting остават
-  съзнателно отложени production решения. `QUEUE_CONNECTION=redis`+Horizon
-  вече е решено (виж "Queue worker (Horizon)" по-горе).
+  `/metrics` вече са инсталирани и wired, но `SENTRY_LARAVEL_DSN` и кой получава
+  `/metrics` scrape/alerting остават съзнателно отложени production решения.
+  `QUEUE_CONNECTION=redis`+Horizon вече е решено (виж "Queue worker (Horizon)"
+  по-горе).
 - UAT и cutover repetition — виж [UAT и cutover checklist](laravel-uat-cutover-checklist.md)
-  и release gate-а в [platform audit](laravel-platform-audit.md).
+  и завършеността на [`docs/parity-verification.md`](parity-verification.md).

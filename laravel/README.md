@@ -8,8 +8,10 @@ plain-PHP application remains the production version until the Laravel feature
 parity checklist is complete. No legacy runtime data will be imported: the
 Laravel application starts with a new database and fresh operational state.
 
-See the [rewrite plan](../docs/laravel-rewrite.md) for scope, architecture,
-delivery phases, and cutover rules.
+See [`docs/parity-verification.md`](../docs/parity-verification.md) for
+independently verified feature-parity progress, [`docs/laravel-todo.md`](../docs/laravel-todo.md)
+for open product decisions, and [`docs/laravel-uat-cutover-checklist.md`](../docs/laravel-uat-cutover-checklist.md)
+for cutover rules.
 
 ## Requirements
 

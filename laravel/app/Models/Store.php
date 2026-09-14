@@ -83,8 +83,9 @@ class Store extends Model
     public function resolvedSlackRules(): array
     {
         $rules = array_replace(['audit_enabled' => true, 'audit_min_missing' => 0, 'include_zero_audit' => true, 'scan_enabled' => false, 'scan_min_rows' => 1, 'mentions' => ''], $this->slack_rules ?? []);
+        preg_match_all('/[UWS][A-Z0-9]{8,}/', strtoupper((string) $rules['mentions']), $mentionIds);
 
-        return ['audit_enabled' => (bool) $rules['audit_enabled'], 'audit_min_missing' => max(0, (int) $rules['audit_min_missing']), 'include_zero_audit' => (bool) $rules['include_zero_audit'], 'scan_enabled' => (bool) $rules['scan_enabled'], 'scan_min_rows' => max(1, (int) $rules['scan_min_rows']), 'mentions' => (string) $rules['mentions']];
+        return ['audit_enabled' => (bool) $rules['audit_enabled'], 'audit_min_missing' => max(0, (int) $rules['audit_min_missing']), 'include_zero_audit' => (bool) $rules['include_zero_audit'], 'scan_enabled' => (bool) $rules['scan_enabled'], 'scan_min_rows' => max(1, (int) $rules['scan_min_rows']), 'mentions' => implode(' ', array_unique($mentionIds[0]))];
     }
 
     /** @return array{audit_enabled:bool,audit_min_missing:int,include_zero_audit:bool,scan_enabled:bool,scan_min_rows:int} */
@@ -103,7 +104,8 @@ class Store extends Model
             if (! is_string($tool) || ! is_array($rule) || ! in_array($rule['mode'] ?? null, ['off', 'immediate', 'digest'], true)) {
                 continue;
             }
-            $resolved[$tool] = ['mode' => $rule['mode'], 'threshold' => max($tool === 'run_audit' ? 0 : 1, (int) ($rule['threshold'] ?? 1)), 'include_zero' => (bool) ($rule['include_zero'] ?? false), 'email' => (string) ($rule['email'] ?? '')];
+            $email = trim((string) ($rule['email'] ?? ''));
+            $resolved[$tool] = ['mode' => $rule['mode'], 'threshold' => max($tool === 'run_audit' ? 0 : 1, (int) ($rule['threshold'] ?? 1)), 'include_zero' => (bool) ($rule['include_zero'] ?? false), 'email' => $email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : ''];
         }
 
         return $resolved;
