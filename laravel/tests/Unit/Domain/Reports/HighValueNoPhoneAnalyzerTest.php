@@ -9,27 +9,41 @@ class HighValueNoPhoneAnalyzerTest extends TestCase
 {
     public function test_includes_blank_phone_at_threshold_and_sorts_deterministically(): void
     {
+        // #B and #C tie on total -- legacy's sort has no tiebreaker beyond
+        // total (PHP 8's stable usort() just preserves input order for
+        // ties), so #B (inserted first) stays before #C.
         $rows = (new HighValueNoPhoneAnalyzer)->analyze([
             $this->order('#A', '200.00', ' ', '2026-09-01'),
             $this->order('#B', '900.00', '', '2026-09-02'),
             $this->order('#C', '900.00', '', '2026-09-03'),
         ], 200.0, 'USD');
 
-        $this->assertSame(['#C', '#B', '#A'], array_column($rows, 'number'));
+        $this->assertSame(['#B', '#C', '#A'], array_column($rows, 'number'));
         $this->assertSame(200.0, $rows[2]['total']);
     }
 
-    public function test_excludes_phone_below_threshold_other_currency_and_cancelled_orders(): void
+    public function test_excludes_phone_below_threshold_and_other_currency(): void
     {
         $rows = (new HighValueNoPhoneAnalyzer)->analyze([
             $this->order('#phone', '500', '555'),
             $this->order('#below', '199.99', ''),
             $this->order('#eur', '500', '', currency: 'EUR'),
-            $this->order('#cancelled', '500', '', cancelledAt: '2026-09-01'),
             $this->order('#invalid', 'invalid', ''),
         ], 200.0, 'USD');
 
         $this->assertSame([], $rows);
+    }
+
+    public function test_cancelled_orders_are_still_flagged(): void
+    {
+        // Legacy's buildHvOrderRows() has no cancelled-order exclusion at
+        // all -- a high-value order with no phone is still a delivery/fraud
+        // risk worth reviewing regardless of cancellation status.
+        $rows = (new HighValueNoPhoneAnalyzer)->analyze([
+            $this->order('#cancelled', '500', '', cancelledAt: '2026-09-01'),
+        ], 200.0, 'USD');
+
+        $this->assertSame(['#cancelled'], array_column($rows, 'number'));
     }
 
     public function test_missing_address_is_included_and_identified_by_blank_address(): void

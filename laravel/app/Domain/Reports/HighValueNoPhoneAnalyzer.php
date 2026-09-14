@@ -14,7 +14,7 @@ class HighValueNoPhoneAnalyzer
             $total = is_numeric($order['total_price'] ?? null) ? (float) $order['total_price'] : 0.0;
             $orderCurrency = strtoupper($this->text($order['currency'] ?? ''));
 
-            if ($phone !== '' || $total < $minimum || $orderCurrency !== $currency || $this->text($order['cancelled_at'] ?? '') !== '') {
+            if ($phone !== '' || $total < $minimum || $orderCurrency !== $currency) {
                 continue;
             }
 
@@ -31,7 +31,7 @@ class HighValueNoPhoneAnalyzer
             ];
         }
 
-        usort($rows, fn (array $left, array $right): int => [$right['total'], $right['created_at'], $right['number']] <=> [$left['total'], $left['created_at'], $left['number']]);
+        usort($rows, fn (array $left, array $right): int => $right['total'] <=> $left['total']);
 
         return $rows;
     }

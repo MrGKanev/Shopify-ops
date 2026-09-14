@@ -84,6 +84,20 @@
       теста) до structured points, или да се приеме съзнателно опростената
       breakdown-по-нищо форма. Виж [`parity-verification.md`](parity-verification.md).
 
+- [ ] **High-Value No Phone има currency филтър, който legacy никога не е
+      имал** — `HighValueNoPhoneAnalyzer::analyze()` приема `$currency`
+      параметър и тихо изключва всяка поръчка, чиято `currency` не съвпада
+      точно (form поле, подразбиране `USD`, `HighValueNoPhoneRequest`
+      валидация). Legacy `buildHvOrderRows()` флагва high-value поръчки без
+      телефон независимо от валутата. За store само в USD подразбирането
+      възпроизвежда legacy точно; за multi-currency store (Shopify Markets)
+      или ако operator смени полето, отчетът тихо пропуска high-value
+      поръчки в друга валута — точно обратното на целта на отчета (хване
+      скъпа поръчка, която може да не се достави). Нужно е продуктово
+      решение: да се запази ли currency филтъра (и как да изглежда "всички
+      валути" — опция "any", или per-currency scan), или да се премахне за
+      съответствие с legacy. Виж [`parity-verification.md`](parity-verification.md).
+
 ## Production/infra решения
 
 - [x] **Security headers/cookies/proxy code** — CSP/frame/referrer/HSTS policy,
