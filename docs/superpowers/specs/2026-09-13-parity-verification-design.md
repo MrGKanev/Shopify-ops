@@ -131,6 +131,21 @@ booted container) и `LoginThrottle` (всеки метод прави `LoginAtt
 тест) трябва да остане видима в `parity-verification.md`, не да се смесва с
 редовете, които реално минават през CI.
 
+**Второ известно ограничение (установено 2026-09-14):** различно от DB/HTTP
+boot-а по-горе — няколко `load*()` метода в legacy никога не са факторирани в
+отделна pure builder функция (за разлика от повечето `scan_*` товари, които
+имат частен `buildXRows()`/`buildXRows`-style метод точно за да са
+тестваеми без HTTP). Row-building логиката е inline вътре в closure-а,
+подаден на `ScanRunner::run()`. Установено конкретно за
+`OrderPolicyPageLoader::loadAddrDupes()` (Duplicate Shipping Addresses,
+`scan_addrdupes`) и `OrderPolicyPageLoader::loadNoteFlags()` (Note Flags,
+`scan_noteflags`). Извличането на такава функция би било редактиране на
+legacy код, а "Legacy файлове не се пипат инкрементално преди
+[cutover]-а" (виж "Извън обхвата" по-долу) — така че тези редове остават
+`Not yet audited`, докато не се реши изрично да се направи изключение за
+тестваемост (не за поведение) или докато не се приеме четене-по код вместо
+изпълним тест (същия подход като Discord trigger conditions по-горе).
+
 **Разширение (2026-09-14):** `config()` helper вече се поддържа. Класове като
 `OrderTypeClassifier` четат настройки (`order_types.json`/`config/order-types.php`
 — Z1/Z2 required items) през `config()`, не през constructor параметър, а
