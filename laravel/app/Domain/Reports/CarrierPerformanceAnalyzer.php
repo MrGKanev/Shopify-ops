@@ -35,7 +35,7 @@ class CarrierPerformanceAnalyzer
                 'late_pct' => $delivered ? round($carrier['late_count'] / $delivered * 100, 1) : null,
             ];
         }, array_values($carriers));
-        usort($rows, fn (array $a, array $b): int => $b['count'] <=> $a['count'] ?: $a['carrier'] <=> $b['carrier']);
+        usort($rows, fn (array $a, array $b): int => $b['count'] <=> $a['count']);
 
         return $rows;
     }

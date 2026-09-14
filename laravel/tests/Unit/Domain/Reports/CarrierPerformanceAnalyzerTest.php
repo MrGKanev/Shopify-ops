@@ -17,9 +17,13 @@ class CarrierPerformanceAnalyzerTest extends TestCase
             $this->shipment('', '2026-06-01', '2026-06-06'),
         ]);
 
+        // Tied counts (fedex, Unknown both 1) keep the order they first
+        // appeared in the input, matching legacy's insertion-order behavior
+        // (no alphabetical tiebreak) -- fedex appears before the blank/Unknown
+        // shipment in the fixture above.
         $this->assertSame(['carrier' => 'ups', 'count' => 3, 'with_delivery' => 2, 'avg_days' => 4.0, 'late_count' => 1, 'late_pct' => 50.0], $rows[0]);
-        $this->assertSame(['carrier' => 'Unknown', 'count' => 1, 'with_delivery' => 1, 'avg_days' => 5.0, 'late_count' => 0, 'late_pct' => 0.0], $rows[1]);
-        $this->assertSame(['carrier' => 'fedex', 'count' => 1, 'with_delivery' => 0, 'avg_days' => null, 'late_count' => 0, 'late_pct' => null], $rows[2]);
+        $this->assertSame(['carrier' => 'fedex', 'count' => 1, 'with_delivery' => 0, 'avg_days' => null, 'late_count' => 0, 'late_pct' => null], $rows[1]);
+        $this->assertSame(['carrier' => 'Unknown', 'count' => 1, 'with_delivery' => 1, 'avg_days' => 5.0, 'late_count' => 0, 'late_pct' => 0.0], $rows[2]);
     }
 
     private function shipment(string $carrier, string $shipped, string $delivered): array
