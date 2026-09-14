@@ -27,9 +27,26 @@ class ReportTrendControllerTest extends TestCase
         $this->actingAs($operator)->get('/report-trends?start_date=2026-09-01&end_date=2026-09-05')->assertOk()->assertSeeTextInOrder(['2026-09-01', '2026-09-03', '+3', '2026-09-05', '-4'])->assertDontSee(route('saved-reports.show', $other), false);
     }
 
-    private function snapshot(Store $store, string $date, int $missing): mixed
+    public function test_aggregates_and_repeat_offenders(): void
     {
-        return $store->auditSnapshots()->create(['tool' => 'run_audit', 'report_date' => $date, 'start_date' => $date, 'end_date' => $date, 'rows_found' => $missing, 'result' => ['missing' => []]]);
+        [$operator, $store] = $this->userWithStore(true);
+        $this->snapshot($store, '2026-09-01', 2, [['name' => '#1001'], ['name' => '#1002']]);
+        $this->snapshot($store, '2026-09-03', 0, []);
+        $this->snapshot($store, '2026-09-05', 1, [['name' => '#1001']]);
+
+        $response = $this->actingAs($operator)->get('/report-trends?start_date=2026-09-01&end_date=2026-09-05')->assertOk();
+
+        $response->assertViewHas('avgMissing', 1.0);
+        $response->assertViewHas('clearReportCount', 1);
+        $response->assertViewHas('uniqueMissingCount', 2);
+        $response->assertViewHas('worstReport', fn ($worst) => $worst->rows_found === 2);
+        $response->assertViewHas('repeatOffenders', fn ($offenders) => $offenders[0]['number'] === '#1001' && $offenders[0]['count'] === 2);
+        $response->assertSeeText('#1001');
+    }
+
+    private function snapshot(Store $store, string $date, int $missing, array $missingOrders = []): mixed
+    {
+        return $store->auditSnapshots()->create(['tool' => 'run_audit', 'report_date' => $date, 'start_date' => $date, 'end_date' => $date, 'rows_found' => $missing, 'result' => ['missing' => $missingOrders]]);
     }
 
     /** @return array{User,Store} */

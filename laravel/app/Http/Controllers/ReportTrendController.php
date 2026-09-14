@@ -27,6 +27,24 @@ class ReportTrendController extends Controller
         })->all();
         $maximum = max(array_column($rows, 'missing') ?: [0]);
 
-        return view('saved-reports.trends', compact('rows', 'maximum') + ['startDate' => $start, 'endDate' => $end]);
+        $missingColumn = array_column($rows, 'missing');
+        $avgMissing = $missingColumn === [] ? 0.0 : round(array_sum($missingColumn) / count($missingColumn), 1);
+        $clearReportCount = $snapshots->where('rows_found', 0)->count();
+        $worstReport = $snapshots->sortByDesc('rows_found')->first();
+
+        $missingCounts = [];
+        foreach ($snapshots as $snapshot) {
+            foreach ((array) ($snapshot->result['missing'] ?? []) as $order) {
+                $number = (string) ($order['name'] ?? $order['order_number'] ?? '');
+                if ($number !== '') {
+                    $missingCounts[$number] = ($missingCounts[$number] ?? 0) + 1;
+                }
+            }
+        }
+        arsort($missingCounts);
+        $uniqueMissingCount = count($missingCounts);
+        $repeatOffenders = collect($missingCounts)->filter(fn (int $count): bool => $count >= 2)->map(fn (int $count, string $number): array => ['number' => $number, 'count' => $count])->values()->all();
+
+        return view('saved-reports.trends', compact('rows', 'maximum', 'avgMissing', 'clearReportCount', 'worstReport', 'uniqueMissingCount', 'repeatOffenders') + ['startDate' => $start, 'endDate' => $end]);
     }
 }
