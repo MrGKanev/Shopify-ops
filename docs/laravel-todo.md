@@ -70,6 +70,20 @@
       recipient концепция, или да се приеме изричното per-tool изискване
       като по-ясен design избор. Виж [`parity-verification.md`](parity-verification.md).
 
+- [ ] **Fraud risk signals нямат per-signal точки** — legacy `RiskScorer::score()`
+      връща `signals` като `list<{label, points}>`, и `ViewHelpers::riskBadge()`
+      показва всеки сигнал с приноса му към резултата (напр. "Fraud/high-risk
+      tag +35") в expandable breakdown. Laravel `OrderRiskScorer::score()`
+      връща само `list<string>` (голи label-и, без points) — консумирано
+      директно от 3 blade изгледа (`fraud-risk`, `spot-check`,
+      `orders/timeline`). Резултатът (`score`/`level`) е коректен и на двете
+      страни (потвърдено с диференциален тест), само breakdown-ът липсва —
+      оператор вижда *че* поръчка е рискова, но не и *кой конкретен сигнал
+      колко тежи*. Нужно е продуктово решение: да се разшири ли `signals`
+      формата (един domain клас + 3 blade изгледа + 2 съществуващи unit
+      теста) до structured points, или да се приеме съзнателно опростената
+      breakdown-по-нищо форма. Виж [`parity-verification.md`](parity-verification.md).
+
 ## Production/infra решения
 
 - [x] **Security headers/cookies/proxy code** — CSP/frame/referrer/HSTS policy,
