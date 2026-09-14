@@ -21,7 +21,7 @@ class CountryMismatchAnalyzer
                 continue;
             }
 
-            if ($billingCountry === $shippingCountry || $this->text($order['cancelled_at'] ?? '') !== '') {
+            if ($billingCountry === $shippingCountry) {
                 continue;
             }
             $id = $this->text($order['id'] ?? '');
@@ -34,7 +34,7 @@ class CountryMismatchAnalyzer
                 'billing_name' => trim($this->text($billing['first_name'] ?? '').' '.$this->text($billing['last_name'] ?? '')),
             ];
         }
-        usort($rows, fn (array $left, array $right): int => [$right['created_at'], $right['number']] <=> [$left['created_at'], $left['number']]);
+        usort($rows, fn (array $left, array $right): int => strcmp($right['created_at'], $left['created_at']));
 
         return ['rows' => $rows, 'skipped_missing_country' => $skippedMissingCountry];
     }
@@ -42,9 +42,7 @@ class CountryMismatchAnalyzer
     /** @param array<string, mixed> $address */
     private function country(array $address): string
     {
-        $code = strtoupper($this->text($address['country_code'] ?? ''));
-
-        return preg_match('/\A[A-Z]{2}\z/', $code) === 1 ? $code : '';
+        return strtoupper($this->text($address['country_code'] ?? $address['country'] ?? ''));
     }
 
     private function text(mixed $value): string
