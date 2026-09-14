@@ -9,7 +9,7 @@ class ShippedUnfulfilledAnalyzer
     {
         $index = [];
         foreach ($shopifyOrders as $order) {
-            $number = $this->number($order['name'] ?? $order['order_number'] ?? '');
+            $number = $this->number($order['order_number'] ?? $order['name'] ?? '');
             if ($number !== '') {
                 $index[$number] = $order;
             }
