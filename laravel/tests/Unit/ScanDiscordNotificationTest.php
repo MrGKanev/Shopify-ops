@@ -16,6 +16,8 @@ class ScanDiscordNotificationTest extends TestCase
         $this->assertInstanceOf(ShouldQueue::class, $notification);
         $this->assertSame('notifications', $notification->queue);
         $this->assertSame([DiscordWebhookChannel::class], $notification->via((object) []));
-        $this->assertSame(['content' => 'Store A: scan_sla found 3 rows.'], $notification->toDiscord((object) []));
+        $payload = $notification->toDiscord((object) []);
+        $this->assertSame('Store A: scan_sla found 3 rows.', $payload['content']);
+        $this->assertSame(0xE74C3C, $payload['embeds'][0]['color']);
     }
 }

@@ -16,6 +16,8 @@ class AuditDiscordNotificationTest extends TestCase
         $this->assertInstanceOf(ShouldQueue::class, $notification);
         $this->assertSame('notifications', $notification->queue);
         $this->assertSame([DiscordWebhookChannel::class], $notification->via((object) []));
-        $this->assertSame(['content' => 'Store A: Run Audit found 3 missing orders (2026-09-01 → 2026-09-10).'], $notification->toDiscord((object) []));
+        $payload = $notification->toDiscord((object) []);
+        $this->assertSame('Store A: Run Audit found 3 missing orders (2026-09-01 → 2026-09-10).', $payload['content']);
+        $this->assertSame(0xE74C3C, $payload['embeds'][0]['color']);
     }
 }

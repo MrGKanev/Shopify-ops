@@ -34,12 +34,13 @@ class RecordRun
         }
         $rules = $store->resolvedSlackRules();
         $rows = (int) ($attributes['rows_found'] ?? 0);
+        $duration = (float) ($attributes['duration_seconds'] ?? 0.0);
         if (($attributes['tool'] ?? '') !== 'run_audit' && ($attributes['status'] ?? '') !== 'error' && $rules['scan_enabled'] && $rows >= $rules['scan_min_rows'] && trim((string) config('services.slack.notifications.webhook_url')) !== '') {
-            Notification::route('slack', config('services.slack.notifications.webhook_url'))->notify(new ScanSlackNotification($store->label, (string) ($attributes['tool'] ?? 'scan'), $rows, $rules['mentions']));
+            Notification::route('slack', config('services.slack.notifications.webhook_url'))->notify(new ScanSlackNotification($store->label, (string) ($attributes['tool'] ?? 'scan'), $rows, $rules['mentions'], $duration));
         }
         $discordRules = $store->resolvedDiscordRules();
         if (($attributes['tool'] ?? '') !== 'run_audit' && ($attributes['status'] ?? '') !== 'error' && $discordRules['scan_enabled'] && $rows >= $discordRules['scan_min_rows'] && trim((string) config('services.discord.notifications.webhook_url')) !== '') {
-            Notification::route('discord', config('services.discord.notifications.webhook_url'))->notify(new ScanDiscordNotification($store->label, (string) ($attributes['tool'] ?? 'scan'), $rows));
+            Notification::route('discord', config('services.discord.notifications.webhook_url'))->notify(new ScanDiscordNotification($store->label, (string) ($attributes['tool'] ?? 'scan'), $rows, $duration));
         }
         $tool = (string) ($attributes['tool'] ?? '');
         $emailRule = $store->resolvedEmailRules()[$tool] ?? null;

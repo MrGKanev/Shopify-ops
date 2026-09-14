@@ -12,8 +12,13 @@ class ScanSlackNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public string $store, public string $tool, public int $rows, public string $mentions = '')
-    {
+    public function __construct(
+        public string $store,
+        public string $tool,
+        public int $rows,
+        public string $mentions = '',
+        public float $durationSeconds = 0.0,
+    ) {
         $this->onQueue('notifications');
     }
 
@@ -26,6 +31,12 @@ class ScanSlackNotification extends Notification implements ShouldQueue
     {
         $prefix = $this->mentions === '' ? '' : implode(' ', array_map(fn (string $id): string => "<@{$id}>", explode(' ', $this->mentions))).' ';
 
-        return (new SlackMessage)->text("{$prefix}{$this->store}: {$this->tool} found {$this->rows} rows.");
+        return (new SlackMessage)
+            ->text("{$prefix}{$this->store}: {$this->tool} found {$this->rows} rows.")
+            ->headerBlock("{$this->store} — {$this->tool}")
+            ->sectionBlock(function ($block): void {
+                $block->field("*Rows:* {$this->rows}")->markdown();
+                $block->field("*Duration:* {$this->durationSeconds}s")->markdown();
+            });
     }
 }
