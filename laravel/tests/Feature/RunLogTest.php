@@ -39,6 +39,19 @@ class RunLogTest extends TestCase
         $this->get('/run-logs')->assertRedirect(route('login'));
     }
 
+    public function test_q_filters_by_tool_status_or_error(): void
+    {
+        $store = Store::factory()->create();
+        $user = User::factory()->create();
+        $user->stores()->attach($store);
+        $recorder = app(RecordRun::class);
+        $recorder->handle($store, ['tool' => 'address_check', 'status' => 'ok']);
+        $recorder->handle($store, ['tool' => 'run_audit', 'status' => 'error', 'error' => 'Audit failed.']);
+
+        $this->actingAs($user)->get('/run-logs?q=address')->assertOk()->assertSeeText('address_check')->assertDontSeeText('run_audit');
+        $this->actingAs($user)->get('/run-logs?q=Audit+failed')->assertOk()->assertSeeText('run_audit')->assertDontSeeText('address_check');
+    }
+
     public function test_scan_rules_dispatch_only_at_threshold(): void
     {
         Notification::fake();

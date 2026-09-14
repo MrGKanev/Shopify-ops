@@ -34,4 +34,17 @@ class PushLogTest extends TestCase
     {
         $this->get('/push-logs')->assertRedirect(route('login'));
     }
+
+    public function test_q_filters_by_order_number_or_shopify_id(): void
+    {
+        $store = Store::factory()->create();
+        $user = User::factory()->create();
+        $user->stores()->attach($store);
+        $recorder = app(RecordPush::class);
+        $recorder->handle($store, '#1001', '42', 100);
+        $recorder->handle($store, '#2002', '43', null);
+
+        $this->actingAs($user)->get('/push-logs?q=1001')->assertOk()->assertSeeText('#1001')->assertDontSeeText('#2002');
+        $this->actingAs($user)->get('/push-logs?q=43')->assertOk()->assertSeeText('#2002')->assertDontSeeText('#1001');
+    }
 }
