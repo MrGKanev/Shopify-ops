@@ -44,8 +44,10 @@ class RecordRun
         }
         $tool = (string) ($attributes['tool'] ?? '');
         $emailRule = $store->resolvedEmailRules()[$tool] ?? null;
-        if (($attributes['status'] ?? '') !== 'error' && $emailRule && $emailRule['mode'] === 'immediate' && $emailRule['email'] !== '' && $rows >= $emailRule['threshold'] && ($rows > 0 || $emailRule['include_zero'])) {
-            Notification::route('mail', $emailRule['email'])->notify(new ReportEmailNotification($store->label, $tool, $rows, isset($attributes['start_date']) ? (string) $attributes['start_date'] : null, isset($attributes['end_date']) ? (string) $attributes['end_date'] : null, $attachment['headers'] ?? null, $attachment['rows'] ?? null));
+        $recipient = $emailRule['email'] ?? '';
+        $recipient = $recipient !== '' ? $recipient : trim((string) ($store->default_alert_email ?? ''));
+        if (($attributes['status'] ?? '') !== 'error' && $emailRule && $emailRule['mode'] === 'immediate' && $recipient !== '' && $rows >= $emailRule['threshold'] && ($rows > 0 || $emailRule['include_zero'])) {
+            Notification::route('mail', $recipient)->notify(new ReportEmailNotification($store->label, $tool, $rows, isset($attributes['start_date']) ? (string) $attributes['start_date'] : null, isset($attributes['end_date']) ? (string) $attributes['end_date'] : null, $attachment['headers'] ?? null, $attachment['rows'] ?? null));
         }
 
         return $run;

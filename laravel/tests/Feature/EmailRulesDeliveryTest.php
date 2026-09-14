@@ -79,4 +79,26 @@ class EmailRulesDeliveryTest extends TestCase
         Notification::assertSentOnDemandTimes(ReportEmailNotification::class, 1);
         Notification::assertSentOnDemand(ReportEmailNotification::class, fn (ReportEmailNotification $notification): bool => $notification->tool === 'run_audit');
     }
+
+    public function test_a_blank_rule_email_falls_back_to_the_store_default_alert_email(): void
+    {
+        Notification::fake();
+        $store = Store::factory()->create(['default_alert_email' => 'ops@example.com', 'email_rules' => ['scan_test' => ['mode' => 'immediate', 'threshold' => 1, 'include_zero' => false, 'email' => '']]]);
+
+        app(RecordRun::class)->handle($store, ['tool' => 'scan_test', 'rows_found' => 3]);
+
+        Notification::assertSentOnDemand(ReportEmailNotification::class, function (ReportEmailNotification $notification, array $channels, $notifiable): bool {
+            return $notifiable->routeNotificationFor('mail') === 'ops@example.com';
+        });
+    }
+
+    public function test_no_delivery_when_rule_email_and_default_alert_email_are_both_blank(): void
+    {
+        Notification::fake();
+        $store = Store::factory()->create(['default_alert_email' => null, 'email_rules' => ['scan_test' => ['mode' => 'immediate', 'threshold' => 1, 'include_zero' => false, 'email' => '']]]);
+
+        app(RecordRun::class)->handle($store, ['tool' => 'scan_test', 'rows_found' => 3]);
+
+        Notification::assertNothingSent();
+    }
 }

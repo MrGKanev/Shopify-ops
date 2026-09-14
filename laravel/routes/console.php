@@ -17,13 +17,14 @@ Artisan::command('reports:email-digest', function (): void {
     Store::whereNotNull('email_rules')->each(function (Store $store): void {
         $byRecipient = [];
         foreach ($store->resolvedEmailRules() as $tool => $rule) {
-            if ($rule['mode'] !== 'digest' || $rule['email'] === '') {
+            $recipient = $rule['email'] !== '' ? $rule['email'] : trim((string) ($store->default_alert_email ?? ''));
+            if ($rule['mode'] !== 'digest' || $recipient === '') {
                 continue;
             }
             $run = $store->runLogs()->where('tool', $tool)->where('status', '!=', 'error')->where('created_at', '>=', today())->latest()->first();
             $rows = (int) ($run?->rows_found ?? 0);
             if ($run && $rows >= $rule['threshold'] && ($rows > 0 || $rule['include_zero'])) {
-                $byRecipient[$rule['email']][] = ['tool' => $tool, 'rows' => $rows];
+                $byRecipient[$recipient][] = ['tool' => $tool, 'rows' => $rows];
             }
         }
         foreach ($byRecipient as $email => $sections) {

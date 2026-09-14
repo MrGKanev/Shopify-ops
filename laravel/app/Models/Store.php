@@ -23,6 +23,7 @@ use Spatie\Activitylog\Support\LogOptions;
     'slack_rules',
     'email_rules',
     'discord_rules',
+    'default_alert_email',
 ])]
 #[Hidden(['shopify_access_token', 'shipstation_api_key', 'shipstation_api_secret'])]
 class Store extends Model

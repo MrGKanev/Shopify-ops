@@ -14,19 +14,18 @@ class EmailRulesController extends Controller
     public function edit(Request $request): View
     {
         $store = $this->store($request);
-        $tools = $store->runLogs()->distinct()->orderBy('tool')->pluck('tool')->prepend('run_audit')->unique()->values();
         $rules = $store->resolvedEmailRules();
-        foreach ($tools as $tool) {
+        foreach (array_keys(config('tool-catalog')) as $tool) {
             $rules[$tool] ??= ['mode' => 'off', 'threshold' => $tool === 'run_audit' ? 0 : 1, 'include_zero' => false, 'email' => ''];
         }
 
-        return view('admin.email-rules', ['rules' => $rules]);
+        return view('admin.email-rules', ['rules' => $rules, 'catalog' => config('tool-catalog'), 'defaultAlertEmail' => $store->default_alert_email]);
     }
 
     public function update(EmailRulesRequest $request): RedirectResponse
     {
         $store = $this->store($request);
-        $store->update(['email_rules' => $request->validated('rules')]);
+        $store->update(['email_rules' => $request->validated('rules'), 'default_alert_email' => $request->validated('default_alert_email')]);
         activity('operator-actions')->causedBy($request->user())->performedOn($store)
             ->withProperties($store->resolvedEmailRules())->log('save_email_rules');
 

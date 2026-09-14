@@ -13,7 +13,7 @@ class EmailRulesRequest extends FormRequest
 
     public function rules(): array
     {
-        return ['rules' => ['required', 'array'], 'rules.*.mode' => ['required', 'in:off,immediate,digest'], 'rules.*.threshold' => ['required', 'integer', 'min:0', 'max:100000'], 'rules.*.include_zero' => ['required', 'boolean'], 'rules.*.email' => ['required_unless:rules.*.mode,off', 'nullable', 'email:rfc', 'max:254']];
+        return ['rules' => ['required', 'array'], 'rules.*.mode' => ['required', 'in:off,immediate,digest'], 'rules.*.threshold' => ['required', 'integer', 'min:0', 'max:100000'], 'rules.*.include_zero' => ['required', 'boolean'], 'rules.*.email' => ['required_unless:rules.*.mode,off', 'nullable', 'email:rfc', 'max:254'], 'default_alert_email' => ['nullable', 'email:rfc', 'max:254']];
     }
 
     protected function prepareForValidation(): void
@@ -24,6 +24,6 @@ class EmailRulesRequest extends FormRequest
                 $rules[$tool] = [...$rule, 'include_zero' => filter_var($rule['include_zero'] ?? false, FILTER_VALIDATE_BOOL), 'email' => trim((string) ($rule['email'] ?? ''))];
             }
         }
-        $this->merge(['rules' => $rules]);
+        $this->merge(['rules' => $rules, 'default_alert_email' => trim((string) ($this->input('default_alert_email') ?? '')) ?: null]);
     }
 }
