@@ -45,6 +45,20 @@ class IgnoredOrderControllerTest extends TestCase
         $this->assertSame(['1001', '1002'], $store->ignoredOrders()->orderBy('order_number')->pluck('order_number')->all());
     }
 
+    public function test_index_shows_recurrence_counts_for_repeatedly_missing_orders(): void
+    {
+        [$operator, $store] = $this->userWithStore(true);
+        $store->ignoredOrders()->create(['order_number' => '1234', 'ignored_at' => today()]);
+        $store->auditSnapshots()->create(['tool' => 'run_audit', 'report_date' => '2026-09-01', 'start_date' => '2026-09-01', 'end_date' => '2026-09-01', 'rows_found' => 1, 'result' => ['missing' => [['name' => '#1234']]]]);
+        $store->auditSnapshots()->create(['tool' => 'run_audit', 'report_date' => '2026-09-03', 'start_date' => '2026-09-03', 'end_date' => '2026-09-03', 'rows_found' => 1, 'result' => ['missing' => [['name' => '#1234']]]]);
+        $store->auditSnapshots()->create(['tool' => 'run_audit', 'report_date' => '2026-09-05', 'start_date' => '2026-09-05', 'end_date' => '2026-09-05', 'rows_found' => 1, 'result' => ['missing' => [['name' => '#1234']]]]);
+
+        $response = $this->actingAs($operator)->get('/ignored-orders')->assertOk();
+
+        $response->assertViewHas('recurrenceCounts', fn ($counts) => $counts['1234'] === 3);
+        $response->assertSeeText('Hot');
+    }
+
     private function userWithStore(bool $operator = false): array
     {
         $user = $operator ? User::factory()->operator()->create() : User::factory()->create();

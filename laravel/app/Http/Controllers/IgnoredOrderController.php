@@ -14,7 +14,18 @@ class IgnoredOrderController extends Controller
 {
     public function index(Request $request): View
     {
-        return view('ignored-orders.index', ['orders' => $this->activeStore($request)->ignoredOrders()->latest('ignored_at')->latest('id')->get()]);
+        $store = $this->activeStore($request);
+        $recurrenceCounts = [];
+        foreach ($store->auditSnapshots()->where('tool', 'run_audit')->latest('report_date')->limit(30)->get() as $snapshot) {
+            foreach ((array) ($snapshot->result['missing'] ?? []) as $order) {
+                $number = ltrim((string) ($order['name'] ?? $order['order_number'] ?? ''), '#');
+                if ($number !== '') {
+                    $recurrenceCounts[$number] = ($recurrenceCounts[$number] ?? 0) + 1;
+                }
+            }
+        }
+
+        return view('ignored-orders.index', ['orders' => $store->ignoredOrders()->latest('ignored_at')->latest('id')->get(), 'recurrenceCounts' => $recurrenceCounts]);
     }
 
     public function store(IgnoredOrderRequest $request): RedirectResponse
