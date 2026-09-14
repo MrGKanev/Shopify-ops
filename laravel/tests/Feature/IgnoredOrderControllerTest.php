@@ -45,6 +45,17 @@ class IgnoredOrderControllerTest extends TestCase
         $this->assertSame(['1001', '1002'], $store->ignoredOrders()->orderBy('order_number')->pluck('order_number')->all());
     }
 
+    public function test_bulk_ignore_by_selection_with_a_shared_reason(): void
+    {
+        [$operator, $store] = $this->userWithStore(true);
+
+        $this->actingAs($operator)->post('/ignored-orders/bulk', ['order_numbers' => ['#1001', '', '1002'], 'reason' => 'Repeat offender'])
+            ->assertRedirect()
+            ->assertSessionHas('status', '2 orders ignored.');
+
+        $this->assertSame([['1001', 'Repeat offender'], ['1002', 'Repeat offender']], $store->ignoredOrders()->orderBy('order_number')->get(['order_number', 'reason'])->map(fn ($o) => [$o->order_number, $o->reason])->all());
+    }
+
     public function test_index_shows_recurrence_counts_for_repeatedly_missing_orders(): void
     {
         [$operator, $store] = $this->userWithStore(true);

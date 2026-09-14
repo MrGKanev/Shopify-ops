@@ -51,7 +51,7 @@ class RunAuditControllerTest extends TestCase
         $this->app->instance(ShipStationClientFactory::class, $factory);
         $this->app->instance(ShopifyAdminGateway::class, $gateway);
 
-        $this->actingAs($operator)->post('/reports/run-audit', $this->input())->assertOk()->assertSeeText('2 Shopify orders · 1 missing')->assertSeeText('data was truncated')->assertDontSee('<script>', false);
+        $this->actingAs($operator)->post('/reports/run-audit', $this->input())->assertOk()->assertSeeText('2 Shopify orders · 1 missing')->assertSeeText('data was truncated')->assertDontSee('<script>', false)->assertSee(route('ignored-orders.bulk-store'), false)->assertSee('name="order_numbers[]"', false);
         $this->assertDatabaseHas('run_logs', ['store_id' => $store->getKey(), 'tool' => 'run_audit', 'status' => 'issues_found', 'rows_found' => 1]);
         $this->assertTrue($store->auditSnapshots()->where('tool', 'run_audit')->whereDate('report_date', now()->toDateString())->where('rows_found', 1)->exists());
         $this->actingAs($operator)->post('/reports/run-audit', $this->input())->assertOk();

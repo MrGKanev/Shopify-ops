@@ -50,6 +50,38 @@ class IgnoredOrderController extends Controller
         return back()->with('status', 'Order restored to audits.');
     }
 
+    public function bulkStore(Request $request): RedirectResponse
+    {
+        $validated = $request->validate(['order_numbers' => ['required', 'array', 'max:500'], 'reason' => ['nullable', 'string', 'max:255']]);
+        $reason = trim((string) ($validated['reason'] ?? ''));
+        $store = $this->storeModel($request);
+        $entries = $this->buildBulkEntries($validated['order_numbers'], $reason);
+        foreach ($entries as $entry) {
+            $store->ignoredOrders()->updateOrCreate(['order_number' => $entry['number']], ['reason' => $entry['reason'], 'ignored_at' => today()]);
+        }
+        activity('operator-actions')->causedBy($request->user())->performedOn($store)
+            ->withProperties(['count' => count($entries), 'reason' => $reason])->log('bulk_ignore_orders');
+
+        return back()->with('status', count($entries).' orders ignored.');
+    }
+
+    /**
+     * @param  array<int, mixed>  $rawNumbers
+     * @return array<int, array{number: string, reason: string}>
+     */
+    private function buildBulkEntries(array $rawNumbers, string $reason): array
+    {
+        $entries = [];
+        foreach ($rawNumbers as $raw) {
+            $number = $this->normalize((string) $raw);
+            if ($number !== '') {
+                $entries[] = ['number' => $number, 'reason' => $reason];
+            }
+        }
+
+        return $entries;
+    }
+
     public function bulkDestroy(Request $request): RedirectResponse
     {
         $ids = $request->validate(['ids' => ['required', 'array', 'max:500'], 'ids.*' => ['integer']])['ids'];

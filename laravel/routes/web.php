@@ -134,6 +134,7 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/ignored-orders', [IgnoredOrderController::class, 'index'])->middleware('can:run-audits')->name('ignored-orders.index');
         Route::post('/ignored-orders', [IgnoredOrderController::class, 'store'])->middleware('can:run-audits')->name('ignored-orders.store');
         Route::post('/ignored-orders/import', [IgnoredOrderController::class, 'import'])->middleware('can:run-audits')->name('ignored-orders.import');
+        Route::post('/ignored-orders/bulk', [IgnoredOrderController::class, 'bulkStore'])->middleware('can:run-audits')->name('ignored-orders.bulk-store');
         Route::delete('/ignored-orders', [IgnoredOrderController::class, 'bulkDestroy'])->middleware('can:run-audits')->name('ignored-orders.bulk-destroy');
         Route::delete('/ignored-orders/{ignoredOrder}', [IgnoredOrderController::class, 'destroy'])->middleware('can:run-audits')->name('ignored-orders.destroy');
         Route::get('/push-logs', PushLogController::class)->name('push-logs.index');
