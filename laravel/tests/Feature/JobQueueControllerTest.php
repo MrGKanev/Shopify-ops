@@ -76,6 +76,19 @@ class JobQueueControllerTest extends TestCase
             ->assertDontSeeText('2026-08-01 → 2026-08-31');
     }
 
+    public function test_completed_audit_execution_shows_rows_found_and_failed_shows_error_category(): void
+    {
+        [$operator, $store] = $this->userWithStore(true);
+        $store->runLogs()->create(['tool' => 'run_audit', 'status' => 'ok', 'start_date' => '2026-09-01', 'end_date' => '2026-09-12', 'rows_found' => 4]);
+        AuditJob::create(['store_id' => $store->getKey(), 'status' => 'completed', 'start_date' => '2026-09-01', 'end_date' => '2026-09-12', 'finished_at' => now()]);
+        AuditJob::create(['store_id' => $store->getKey(), 'status' => 'failed', 'start_date' => '2026-08-01', 'end_date' => '2026-08-31', 'error_category' => 'RuntimeException']);
+
+        $this->actingAs($operator)->get('/jobs')
+            ->assertOk()
+            ->assertSeeText('4')
+            ->assertSeeText('RuntimeException');
+    }
+
     private function userWithStore(bool $operator = false): array
     {
         $user = $operator ? User::factory()->operator()->create() : User::factory()->create();

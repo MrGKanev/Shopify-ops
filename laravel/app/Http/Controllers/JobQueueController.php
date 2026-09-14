@@ -16,9 +16,15 @@ class JobQueueController extends Controller
         $usingRedis = config('queue.default') === 'redis';
         $jobs = $usingRedis ? null : DB::table('jobs')->latest('id')->paginate(100, ['*'], 'jobs');
         $failed = DB::table('failed_jobs')->latest('id')->paginate(100, ['*'], 'failed');
+        $store = $request->attributes->get('activeStore');
+        $auditJobs = $store->auditJobs()->latest()->limit(100)->get();
+        $rowsFoundByRange = $store->runLogs()->where('tool', 'run_audit')->get()->keyBy(fn ($run): string => $run->start_date->toDateString().'|'.$run->end_date->toDateString())->map(fn ($run): int => (int) $run->rows_found);
+        $auditJobs->each(function ($auditJob) use ($rowsFoundByRange): void {
+            $auditJob->rows_found = $rowsFoundByRange[$auditJob->start_date->toDateString().'|'.$auditJob->end_date->toDateString()] ?? null;
+        });
 
         return view('jobs.index', [
-            'auditJobs' => $request->attributes->get('activeStore')->auditJobs()->latest()->limit(100)->get(),
+            'auditJobs' => $auditJobs,
             'jobs' => $jobs,
             'failed' => $failed,
             'usingRedis' => $usingRedis,
