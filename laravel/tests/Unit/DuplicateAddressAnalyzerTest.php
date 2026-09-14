@@ -26,6 +26,17 @@ class DuplicateAddressAnalyzerTest extends TestCase
         $this->assertSame([3, 2], array_column($rows, 'email_count'));
     }
 
+    public function test_country_name_fallback_keeps_different_countries_separate(): void
+    {
+        $address = ['address1' => '1 Main', 'city' => 'Springfield', 'zip' => '12345'];
+        $rows = (new DuplicateAddressAnalyzer)->analyze([
+            $this->order('a@example.com', [...$address, 'country' => 'United States']),
+            $this->order('b@example.com', [...$address, 'country' => 'Canada']),
+        ]);
+
+        $this->assertSame([], $rows);
+    }
+
     /** @param array<string, mixed> $address @return array<string, mixed> */
     private function order(string $email, array $address): array
     {

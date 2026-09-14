@@ -49,7 +49,7 @@ class TrackingFeedBuilder
             'carrierCode' => $carrier,
             'serviceCode' => $this->scalar($shipment['serviceCode'] ?? ''),
             'trackingNumber' => $tracking,
-            'shipDate' => substr($this->scalar($shipment['shipDate'] ?? ''), 0, 10),
+            'shipDate' => $this->scalar($shipment['shipDate'] ?? ''),
             'trackingUrl' => $baseUrl !== null && $tracking !== '' ? $baseUrl.urlencode($tracking) : null,
             'ssUrl' => ctype_digit($orderId) ? 'https://app.shipstation.com/#!/orders/order-details/'.$orderId : null,
         ];

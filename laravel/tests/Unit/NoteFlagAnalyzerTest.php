@@ -13,4 +13,11 @@ class NoteFlagAnalyzerTest extends TestCase
         $this->assertSame(['#2', '#1'], array_column($rows, 'order_number'));
         $this->assertSame(['do not ship'], $rows[0]['matched']);
     }
+
+    public function test_deduplicates_keywords_and_matches_unicode_case_insensitively(): void
+    {
+        $rows = (new NoteFlagAnalyzer)->analyze([['name' => '#1', 'note' => 'Моля СПРИ поръчката']], ['спри', ' СПРИ ']);
+
+        $this->assertSame(['спри'], $rows[0]['matched']);
+    }
 }

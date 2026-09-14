@@ -45,7 +45,7 @@ class OrderEditAnalyzer
             }
             $created = strtotime($this->text($order['created_at'] ?? ''));
             $edited = strtotime($event['latest_at']);
-            $rows[] = ['shopify_id' => ctype_digit($id) ? $id : '', 'order_number' => $this->text($order['name'] ?? ''), 'created_at' => substr($this->text($order['created_at'] ?? ''), 0, 10), 'edited_at' => substr($event['latest_at'], 0, 16), 'diff_mins' => $created !== false && $edited !== false ? max(0, (int) (($edited - $created) / 60)) : 0, 'email' => $this->text($order['email'] ?? ''), 'total' => is_numeric($order['total_price'] ?? null) ? (float) $order['total_price'] : 0.0, 'financial' => $this->text($order['financial_status'] ?? ''), 'fulfillment' => $this->text($order['fulfillment_status'] ?? ''), 'edit_summary' => $event['summary']];
+            $rows[] = ['shopify_id' => ctype_digit((string) $id) ? (string) $id : '', 'order_number' => $this->text($order['name'] ?? ''), 'created_at' => substr($this->text($order['created_at'] ?? ''), 0, 10), 'edited_at' => substr($event['latest_at'], 0, 16), 'diff_mins' => $created !== false && $edited !== false ? max(0, (int) (($edited - $created) / 60)) : 0, 'email' => $this->text($order['email'] ?? ''), 'total' => is_numeric($order['total_price'] ?? null) ? (float) $order['total_price'] : 0.0, 'financial' => $this->text($order['financial_status'] ?? ''), 'fulfillment' => $this->text($order['fulfillment_status'] ?? ''), 'edit_summary' => $event['summary']];
         }
         usort($rows, fn (array $a, array $b): int => strcmp($b['edited_at'], $a['edited_at']));
 

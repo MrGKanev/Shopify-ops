@@ -38,7 +38,7 @@ class TagUsageAnalyzer
         }
         unset($row);
 
-        usort($rows, fn (array $left, array $right): int => [$right['count'], $right['last_date'], $left['tag']] <=> [$left['count'], $left['last_date'], $right['tag']]);
+        usort($rows, fn (array $left, array $right): int => $right['count'] <=> $left['count']);
 
         return $rows;
     }

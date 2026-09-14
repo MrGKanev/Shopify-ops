@@ -12,6 +12,71 @@
 
 ## Продуктови решения (от независимия одит)
 
+- [ ] **Email Rules catalog за fresh store** — legacy винаги показва целия
+      `ToolRegistry::triggerCatalog()`, а Laravel извлича tool-овете от вече
+      съществуващи `run_logs` и добавя само `run_audit`. Така scan правило не
+      може да се настрои преди първото изпълнение. Нужно е едно canonical
+      Laravel tool catalog с default `off` правило за всеки entry; същият
+      catalog може да захрани и непълната Audit навигация.
+
+- [ ] **Saved Reports / Ignored Orders / Job Queue губят operational context** —
+      Saved Reports няма history chart, recurrence badges, investigation
+      actions, ignore и same-day re-audit; Ignored Orders няма `seen in
+      reports`; Job Queue не показва sanitized payload/result/error summary за
+      завършен audit. Laravel подобрява scope/pagination/retry/Horizon, но е
+      нужно да се избере кой от липсващия контекст реално трябва за cutover.
+
+- [ ] **Приемане на по-строгите Note Flags / Duplicate Addresses / Spot-check
+      semantics** — Laravel deduplicate-ва и Unicode-normalize-ва note
+      keywords, използва full-country fallback срещу cross-country address
+      false positives, и canonicalize/validate/deduplicate-ва Spot-check
+      входа. Това са тествани correctness подобрения; не изискват код, а
+      изрично приемане като отклонения преди cutover.
+
+- [ ] **Dashboard е по-тесен от legacy оперативния overview** — Laravel пази
+      основните audit/push/ignored числа и action queue, но няма audit cadence,
+      average resolution time, stale ignored, oldest missing, missing-by-type,
+      7-day audit история и cache freshness/flush. Да се изберат реално
+      използваните сигнали за портване или по-малкият dashboard да се приеме
+      изрично преди legacy cutover.
+
+- [ ] **Trends е само timeline, без legacy aggregate/repeat-offender анализа** —
+      Laravel показва date-filtered missing counts и delta, но не изчислява
+      average/worst/clear reports, unique missing или top repeat offenders.
+      Нужно е решение дали тези анализи да се върнат, или опростеният timeline
+      е достатъчен.
+
+- [ ] **Settings няма Sidebar History controls** — legacy пази два toggle-а за
+      Missing Orders и Recent Activity sidebar секциите; Laravel няма нито
+      секциите, нито настройките им. Това е консистентно премахване, но трябва
+      да бъде прието изрично, ако тези бързи sidebar справки вече не трябват.
+
+- [ ] **Print Queue canonicalize-ва водещ `#`** — legacy пази въведения
+      `#ORD-002`, Laravel го записва като `ORD-002`. Това прави lookup-а и
+      deduplication-а по-предвидими и не е върнато назад; нужно е само изрично
+      приемане като намерено отклонение преди cutover.
+
+- [ ] **Audit/Search discovery навигацията е непълна** — legacy Audit hub
+      показва 46 групирани инструмента, а Laravel audit sidebar показва 12;
+      route-овете съществуват, но много отчети нямат видим вход. Search пази
+      8 от 10 legacy entries и добавя 3 полезни нови, но Customer LTV и Tag
+      Audit са преместени към audit route-ове без да присъстват и в audit
+      списъка. Нужно е пълен grouped hub/sidebar или изрично решение кои
+      инструменти могат да останат достъпни само по URL.
+
+- [ ] **Action Log изпуска нормалните operator mutations** — Laravel
+      `administration` log покрива основно User/Store промени и няколко admin
+      събития, но не записва ignore/unignore/import, push, print queue,
+      queue audit, note save, store switch и cache flush. Да се определи кои
+      от тези действия изискват audit trail и да се логнат в общите им write
+      paths преди махането на legacy.
+
+- [ ] **Push Log и Run History нямат филтър** — данните, newest-first редът,
+      cap-ът на run history и store scope са запазени/подобрени, но legacy
+      позволява моментно търсене по order/tool/status/date/error. Добавяне на
+      един server-side `q` филтър е достатъчно, ако операторите го ползват;
+      иначе pagination-only поведението трябва да се приеме изрично.
+
 - [ ] **Bulk-ignore от чекбокси на report изгледи** — legacy `bulk_ignore_orders`
       (`src/Actions.php::bulkIgnore()`) позволява да маркираш няколко избрани
       order numbers от чекбокси на 6 различни изгледа (`missing-table.php`

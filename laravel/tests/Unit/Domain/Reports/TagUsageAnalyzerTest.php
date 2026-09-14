@@ -20,13 +20,13 @@ class TagUsageAnalyzerTest extends TestCase
         ], $rows);
     }
 
-    public function test_keeps_case_variants_separate_and_sorts_ties_deterministically(): void
+    public function test_keeps_case_variants_separate_and_preserves_source_order_for_ties(): void
     {
         $rows = (new TagUsageAnalyzer)->analyze([
             ['name' => '#1', 'createdAt' => '2026-09-01', 'tags' => ['vip', 'VIP']],
         ], '2026-06-08');
 
-        $this->assertSame(['VIP', 'vip'], array_column($rows, 'tag'));
+        $this->assertSame(['vip', 'VIP'], array_column($rows, 'tag'));
     }
 
     public function test_ignores_blank_and_malformed_values_without_creating_false_orphans(): void
