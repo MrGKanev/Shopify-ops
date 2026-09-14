@@ -3,6 +3,7 @@
 namespace App\Application\Reports;
 
 use App\Domain\Reports\AuditOrderAnalyzer;
+use App\Domain\Reports\DuplicateOrderClusterer;
 use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
@@ -15,7 +16,7 @@ use Throwable;
 
 class RunAudit
 {
-    public function __construct(private readonly ShipStationClientFactory $factory, private readonly ShopifyAdminGateway $shopify, private readonly AuditOrderAnalyzer $analyzer, private readonly RecordRun $runs) {}
+    public function __construct(private readonly ShipStationClientFactory $factory, private readonly ShopifyAdminGateway $shopify, private readonly AuditOrderAnalyzer $analyzer, private readonly RecordRun $runs, private readonly DuplicateOrderClusterer $clusterer = new DuplicateOrderClusterer) {}
 
     public function handle(Store $store, string $start, string $end): AuditResult
     {
@@ -52,7 +53,7 @@ class RunAudit
                 Notification::route('discord', config('services.discord.notifications.webhook_url'))->notify(new AuditDiscordNotification($store->label, $missing, "{$start} → {$end}", count($result['found']), count($result['skipped']), count($result['ignored']), count($shipstation), $duration, $missingOrders));
             }
 
-            return new AuditResult($start, $end, $result['missing'], count($result['found']), count($result['skipped']), count($result['ignored']), count($shopify['orders']), count($shipstation), $shopify['truncated'] || $onHold['truncated']);
+            return new AuditResult($start, $end, $result['missing'], count($result['found']), count($result['skipped']), count($result['ignored']), count($shopify['orders']), count($shipstation), $shopify['truncated'] || $onHold['truncated'], $this->clusterer->cluster($shopify['orders']));
         } catch (Throwable $exception) {
             $this->runs->handle($store, ['tool' => 'run_audit', 'status' => 'error', 'start_date' => $start, 'end_date' => $end, 'duration_seconds' => round(microtime(true) - $started, 3), 'error' => 'Audit failed.']);
             throw $exception;

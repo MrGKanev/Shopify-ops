@@ -60,6 +60,25 @@ class RunAuditControllerTest extends TestCase
         Notification::assertSentOnDemand(AuditDiscordNotification::class);
     }
 
+    public function test_it_shows_the_inline_duplicates_panel(): void
+    {
+        [$operator] = $this->userWithStore(true);
+        $client = Mockery::mock(ShipStationClientContract::class);
+        $client->shouldReceive('fetchAllOrders')->once()->andReturn([]);
+        $factory = Mockery::mock(ShipStationClientFactory::class);
+        $factory->shouldReceive('forStore')->once()->andReturn($client);
+        $gateway = Mockery::mock(ShopifyAdminGateway::class);
+        $gateway->shouldReceive('itemMismatchCandidates')->once()->andReturn(['orders' => [
+            ['name' => '#1001', 'email' => 'a@example.com', 'financial_status' => 'paid', 'total_price' => '50.00', 'created_at' => '2026-06-01T10:00:00Z'],
+            ['name' => '#1002', 'email' => 'a@example.com', 'financial_status' => 'paid', 'total_price' => '50.00', 'created_at' => '2026-06-01T10:10:00Z'],
+        ], 'pages' => 1, 'truncated' => false]);
+        $gateway->shouldReceive('onHoldFulfillmentCandidates')->once()->andReturn(['fulfillment_orders' => [], 'pages' => 1, 'truncated' => false]);
+        $this->app->instance(ShipStationClientFactory::class, $factory);
+        $this->app->instance(ShopifyAdminGateway::class, $gateway);
+
+        $this->actingAs($operator)->post('/reports/run-audit', $this->input())->assertOk()->assertSeeText('1 potential duplicate detected')->assertSeeText('#1002, #1001');
+    }
+
     public function test_it_shows_the_ok_state_when_nothing_is_missing(): void
     {
         Notification::fake();
