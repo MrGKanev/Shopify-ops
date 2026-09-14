@@ -8,141 +8,115 @@
 | `SHOPIFY_ACCESS_TOKEN` | ✅ | Shopify Admin API access token |
 | `SS_API_KEY` | - | ShipStation → Settings → API (required for audit/push features) |
 | `SS_API_SECRET` | - | Same page |
-| `WEB_PASSWORD` | Conditional | Dashboard login password. Not required when Google sign-in is fully configured. Plain text is supported for compatibility; a PHP `password_hash()` value is also accepted. |
-| `WEB_USERNAME` | - | Login username (default: `admin`) |
 | `GOOGLE_CLIENT_ID` | - | OAuth 2.0 Web application client ID from Google Cloud. Required to enable Google sign-in. |
 | `GOOGLE_CLIENT_SECRET` | - | OAuth client secret. Required to enable Google sign-in. |
-| `GOOGLE_REDIRECT_URI` | - | Exact callback URL registered in Google Cloud, for example `https://ops.example.com/?auth=google_callback`. |
-| `GOOGLE_ALLOWED_DOMAINS` | - | Comma-separated Google Workspace domains allowed to sign in, for example `example.com,subsidiary.com`. |
-| `GOOGLE_DEFAULT_ROLE` | - | RBAC role assigned to Google users: `viewer` (default), `operator`, or `admin`. |
-| `GOOGLE_LOGIN_ONLY` | - | Set to `1` to hide and disable username/password login outside the localhost quick-login path. |
+| `GOOGLE_REDIRECT_URI` | - | Callback URL registered in Google Cloud. Defaults to `${APP_URL}/auth/google/callback`. |
+| `GOOGLE_ALLOWED_DOMAINS` | - | Comma-separated Google Workspace domains allowed to sign in. |
+| `GOOGLE_LOGIN_ONLY` | - | Set to `true` to disable password login. |
 | `TRUSTED_PROXIES` | - | Comma-separated proxy IPs/CIDRs whose forwarded HTTPS and client-IP headers may be trusted. Leave empty when not behind a proxy. |
-| `SESSION_IDLE_TIMEOUT` | - | Authenticated-session idle timeout in seconds (default: `1800`). |
-| `SESSION_ABSOLUTE_TIMEOUT` | - | Maximum authenticated-session lifetime in seconds (default: `43200`). |
-| `STATE_STORAGE` | - | `sqlite` (default) for jobs/operator audit state, or `json` for rollback. |
-| `CACHE_TTL` | - | Cache duration in seconds (default: `82800` = 23 h). Set to `0` to disable. |
-| `APP_TITLE` | - | Label shown in browser tab and sidebar as `{APP_TITLE} - Shopify OPS` (default: `Shopify OPS`) |
-| `APP_LOGO` | - | URL to an image that replaces the brand text |
-| `APP_STORE_NUMBER` | - | Store number - shown as subtitle on login and in the browser tab |
-| `SLACK_WEBHOOK_URL` | - | Slack Incoming Webhook URL. When set, completed audits send a concise summary to Slack. |
-| `SMTP_HOST` | - | SMTP server host. Required (with `ALERT_EMAIL`) for any email notification/report feature. |
-| `SMTP_PORT` | - | SMTP port (default: `587`) |
-| `SMTP_USER` / `SMTP_PASS` | - | SMTP auth credentials |
-| `SMTP_FROM` | - | From address (defaults to `SMTP_USER`) |
-| `SMTP_SECURE` | - | `tls` or `ssl` (default: `tls`) |
-| `ALERT_EMAIL` | - | Default recipient for audit/scan/digest emails. Per-tool rules can override this in **Settings → Email Rules**. |
-| `METRICS_TOKEN` | - | Bearer/query token for `metrics.php`. If empty, the endpoint is disabled by default. |
-| `METRICS_ALLOW_PUBLIC` | - | Set to `1` only for local/dev public metrics without `METRICS_TOKEN`. |
+| `HSTS_ENABLED` | - | Set to `true` once HTTPS is confirmed working end-to-end. |
+| `CSP_ENABLED` / `CSP_REPORT_ONLY` | - | Content-Security-Policy enforcement (spatie/laravel-csp). Ships report-only by default. |
+| `SESSION_LIFETIME` | - | Idle-session timeout in minutes (default: `120`). |
+| `QUEUE_CONNECTION` | - | `redis` in production (Horizon-managed); `database`/`sync` work for local dev. |
+| `CACHE_STORE` / `CACHE_PREFIX` | - | Redis cache store. `CACHE_PREFIX` must be unique per deployment when Redis is shared. |
+| `MAIL_MAILER`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS` | - | Standard Laravel mail transport. Required for any Email Rules notification. |
+| `SLACK_NOTIFICATION_WEBHOOK_URL` | - | Slack Incoming Webhook URL. Thresholds are configured in **Settings → Slack Rules**, not `.env`. |
+| `DISCORD_NOTIFICATION_WEBHOOK_URL` | - | Discord webhook URL. Thresholds are configured in **Settings → Discord Rules**. |
+| `METRICS_SCRAPE_TOKEN` | - | Bearer token required by `GET /metrics`. Leave empty to keep the endpoint disabled (404). |
+| `ACTIVITYLOG_ENABLED` | - | Enables the operator Action Log (spatie/laravel-activitylog). |
+| `SENTRY_LARAVEL_DSN` | - | Error tracking. Leave empty to disable. |
+| `BACKUP_DISKS`, `BACKUP_ARCHIVE_PASSWORD`, `BACKUP_NOTIFICATIONS_ENABLED` | - | spatie/laravel-backup configuration; see **Settings → Backups**. |
+| `HORIZON_PATH` | - | URL path for the Horizon dashboard (Redis queue only). |
+| `PULSE_ENABLED` / `PULSE_PATH` | - | Application performance monitoring dashboard. |
+
+See `.env.example` for the full list, including AWS/S3, database, and broadcast settings.
 
 ---
 
 ## Caching
 
-API responses are cached under `cache/` as JSON files keyed by platform and request shape. `CACHE_TTL` is the maximum cache duration (default: 23 hours / `82800` seconds). Heavy full-order audits use that maximum; operational data has shorter caps so it does not become stale:
-
-- order scan results, product catalog and shipment date-range reports: 15 minutes;
-- Shopify event scans: 5 minutes;
-- active ShipStation queues and targeted order lookups: 60 seconds;
-- Shopify metafield definitions and report-history summaries: 1 hour.
-
-Repeated runs inside those windows reuse cached data automatically. A cache miss is locked per key, so concurrent requests wait for one fetch instead of each starting the same paginated API sync.
-
-To force a fresh fetch: **Clear all cache** in the Run Audit page, or set `CACHE_TTL=0` in `.env`.
+Redis (`CACHE_STORE`) is used only for locks, unique-job deduplication, and health-check heartbeats — **Shopify/ShipStation API reads and report data are always fetched live, never cached.** This is a deliberate departure from the legacy PHP app, which cached API responses under `cache/` with per-endpoint TTLs; the Laravel rewrite trades that for always-current data at the cost of more API calls. See `docs/parity-verification.md` for the audit that confirmed this.
 
 ## Background jobs
 
-The Job Queue and operator action log use `data/state.sqlite` (or `data/<store>/state.sqlite` in multi-store mode). On first use, existing `jobs.json` and `user_action_log.json` rows are imported automatically. The JSON files are retained unchanged as rollback copies; set `STATE_STORAGE=json` to switch back. Queue an audit from **Run Audit** or **Job Queue**, then process one pending job:
+Queued audits run on the Laravel queue (`AuditJob`/`RunAuditJob`), tracked per-store in **Job Queue**. Start a worker:
 
 ```bash
-php worker.php --once
+php artisan queue:work
 ```
 
-For multi-store mode, process a specific store queue:
+Or run Horizon if `QUEUE_CONNECTION=redis` (dashboard at the `HORIZON_PATH` route). Scheduled tasks (daily email digest, health checks, backups, activity-log cleanup — see `routes/console.php`) run via:
 
 ```bash
-php worker.php --store store_id --once
+php artisan schedule:work
 ```
 
-Schedule that command from cron when you want queued audits to run automatically.
+In production, schedule that command (or `schedule:run` on a cron minute-tick) with your process supervisor.
 
 ## Slack rules
 
-Set `SLACK_WEBHOOK_URL` in `.env`, then configure thresholds in **Settings → Slack Rules**.
+Set `SLACK_NOTIFICATION_WEBHOOK_URL` in `.env`, then configure thresholds in **Settings → Slack Rules**.
 
 - Audit notifications can require a minimum missing-order count.
 - All-clear audit notifications can be disabled.
 - Scan notifications are optional and default to off to avoid noisy channels.
+- `@mention` prefixes are sanitized on both save and read (defense-in-depth against a hand-edited value).
+
+## Discord rules
+
+Set `DISCORD_NOTIFICATION_WEBHOOK_URL` in `.env`, then configure thresholds in **Settings → Discord Rules**. Same shape as Slack rules, minus mentions (Discord has no equivalent concept here).
 
 ## Email rules
 
-Set `SMTP_HOST` and `ALERT_EMAIL` in `.env`, then configure each check individually in **Settings → Email Rules**. Unlike Slack (one shared toggle for "audit" and one for "all scans"), every audit/scan check gets its own row:
+Set `MAIL_*` in `.env`, then configure each check individually in **Settings → Email Rules**. Every audit/scan check gets its own row:
 
 - **Off** (default) - never emails.
 - **Immediate** - emails right after that check's own run, once its row/missing count clears the threshold.
-- **Digest** - held for a once-daily rollup email instead of firing per-run. Requires scheduling `email_digest.php` via cron (see [cron scheduling](../README.md#5-schedule-via-cron)); without that cron entry, digest-mode checks are recorded but never actually emailed.
+- **Digest** - held for a once-daily rollup email (`reports:email-digest`, scheduled at 08:00 — see `routes/console.php`).
 
-Each check can also override the recipient - leave its email field blank to fall back to `ALERT_EMAIL`.
+Each check can override the recipient; leave it blank to fall back to the store's **default alert email** (also set on the Email Rules page) — one address can cover every tool that doesn't need its own override.
 
 ## Tag policy rules
 
-`Tag Policy Audit` is enabled by creating `tag_policy.json` from `tag_policy.example.json`.
+`Tag Policy Audit` is driven by [`config/tag-policy.php`](../config/tag-policy.php):
 
-```json
-{
-  "required": [
-    { "name": "Express orders need priority review", "when": ["express"], "must_have": ["priority-review"] }
-  ],
-  "forbidden": [
-    { "name": "Wholesale cannot be fraud review", "tags": ["wholesale", "fraud-review"] }
-  ]
-}
+```php
+return [
+    'required' => [
+        ['name' => 'Express orders need priority review', 'when' => ['express'], 'must_have' => ['priority-review']],
+    ],
+    'forbidden' => [
+        ['name' => 'Wholesale cannot be fraud review', 'tags' => ['wholesale', 'fraud-review']],
+    ],
+];
 ```
+
+## Order type rules
+
+`Bundle Check` and the missing-by-type dashboard breakdown are driven by [`config/order-types.php`](../config/order-types.php) — see [order-types.md](order-types.md).
 
 ---
 
 ## Security
 
-- Google sign-in uses the authorization-code flow with PKCE and a one-time, 10-minute `state` value.
-- Google OAuth starts are rate-limited to 10 attempts per 10-minute session window.
-- Domain access is checked server-side against Google's verified Workspace `hd` claim. The email suffix and the account-picker hint are not trusted for authorization.
-- Authenticated sessions expire after 30 idle minutes or 12 hours total by default.
-- Responses set CSP, clickjacking, MIME-sniffing, referrer and browser-permission protections; HTTPS responses also set HSTS.
+- Google sign-in uses Laravel Socialite's OAuth flow.
+- Domain access is checked server-side against Google's verified Workspace `hd` claim.
+- Idle sessions expire after `SESSION_LIFETIME` minutes (default: 120).
+- CSP, HSTS, and other security headers are configured via `.env` (`CSP_ENABLED`, `HSTS_ENABLED`) and applied by spatie/laravel-csp and Laravel's own middleware.
 - Forwarded protocol/client-IP headers are used only when the direct peer matches `TRUSTED_PROXIES`.
-- Username/password authentication remains available unless `GOOGLE_LOGIN_ONLY=1`; set a non-placeholder `WEB_PASSWORD` when using it.
-- 3 failed login attempts per IP triggers a 1-week lockout (manageable from Settings)
-- `metrics.php` requires `METRICS_TOKEN` by default; use `METRICS_ALLOW_PUBLIC=1` only for local/dev deployments.
-- All user-supplied values escaped with `htmlspecialchars`
-- Protect runtime directories from direct web access:
-
-```apache
-<DirectoryMatch "^/var/www/shopify-ops/(reports|cache|data|logs)/">
-    Require all denied
-</DirectoryMatch>
-```
-
-If `data/users.json` does not exist, the legacy `.env` login is disabled outside
-localhost when `WEB_PASSWORD` is missing or still set to `changeme` /
-`change_me_now`.
+- Password login remains available unless `GOOGLE_LOGIN_ONLY=true`.
+- 3 failed login attempts per IP triggers a 1-week lockout, manageable from **Settings → Banned IPs**.
+- `GET /metrics` requires `METRICS_SCRAPE_TOKEN`; leave it empty to keep the endpoint disabled.
+- All Blade output is escaped by default.
 
 ## Google sign-in
 
 1. In Google Cloud Console, create an **OAuth client ID** with application type **Web application**.
-2. Add the exact `GOOGLE_REDIRECT_URI` to **Authorized redirect URIs**. The scheme, host, path, and query string must match the deployed value.
+2. Add the exact `GOOGLE_REDIRECT_URI` to **Authorized redirect URIs** (defaults to `${APP_URL}/auth/google/callback`).
 3. Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, and `GOOGLE_ALLOWED_DOMAINS` in `.env`.
-4. Optionally set `GOOGLE_DEFAULT_ROLE=operator` (or `admin`) and `GOOGLE_LOGIN_ONLY=1`.
+4. Optionally set `GOOGLE_LOGIN_ONLY=true` to disable password login.
 
-Example:
-
-```dotenv
-GOOGLE_CLIENT_ID=123456789.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxxxxx
-GOOGLE_REDIRECT_URI=https://ops.example.com/?auth=google_callback
-GOOGLE_ALLOWED_DOMAINS=example.com,subsidiary.com
-GOOGLE_DEFAULT_ROLE=viewer
-GOOGLE_LOGIN_ONLY=1
-```
-
-Accounts authenticated by Google but outside the allowlist are redirected to a dedicated access-denied page. Multiple domains are supported; separate them with commas.
+Accounts authenticated by Google but outside `GOOGLE_ALLOWED_DOMAINS` are redirected to an access-denied page.
 
 ---
 

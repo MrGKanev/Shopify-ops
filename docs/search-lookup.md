@@ -44,7 +44,6 @@ Fetches and renders a ShipStation packing slip for any order. Live call, not cac
 - Displays: warehouse address, ship-to address, order metadata, line items with options
 - Detects and decodes a known ShipStation bug where item options are stored as a JSON string
 - Shows internal notes, customer notes, and custom fields 1–3
-- Configure `SS_WAREHOUSE_ADDR` in `.env` to populate the warehouse corner block
 
 ### Global Search
 Searches a single query string across three local data sources: audit reports, push log, and ignored orders.

@@ -1,27 +1,23 @@
 # Order Type Classification
 
-Orders are automatically classified into named types based on line items. The label appears as a coloured chip in the missing-orders table and in exported CSV reports.
-
-## Setup
-
-```bash
-cp order_types.example.json order_types.json
-```
+Orders are automatically classified into named types based on line items. The label appears as a coloured chip in the missing-orders table, in exported CSV reports, and in the Dashboard's missing-by-type breakdown.
 
 ## Configuration
 
-```json
-{
-  "fallback": "Accessory",
-  "rules": [
-    { "name": "Pro",    "match": "sku_starts_with", "value": "widget-pro-" },
-    { "name": "Bundle", "match": "title_contains",  "value": "starter kit" },
-    { "name": "OEM",    "match": "vendor_is",        "value": "Acme Corp" }
-  ]
-}
+Rules live in [`config/order-types.php`](../config/order-types.php):
+
+```php
+return [
+    'fallback' => 'Accessory',
+    'rules' => [
+        ['name' => 'Pro', 'match' => 'sku_starts_with', 'value' => 'widget-pro-'],
+        ['name' => 'Bundle', 'match' => 'title_contains', 'value' => 'starter kit'],
+        ['name' => 'OEM', 'match' => 'vendor_is', 'value' => 'Acme Corp'],
+    ],
+];
 ```
 
-Rules are evaluated top-to-bottom. The first match wins. If no rule matches, the order is classified as the `fallback` value.
+Rules are evaluated top-to-bottom against each order's line items (`App\Domain\Orders\OrderTypeClassifier::classify()`). An order can match more than one rule — matched names are joined with ` + `. If no rule matches, the order is classified as the `fallback` value.
 
 ## Match types
 
@@ -33,20 +29,32 @@ Rules are evaluated top-to-bottom. The first match wins. If no rule matches, the
 | `title_contains` | Product title contains the given string (case-insensitive) |
 | `vendor_is` | Product vendor exactly matches the given string (case-insensitive) |
 
+`value` may be a string or an array of strings (any-match).
+
 ## Required items check
 
-Certain order types can be configured to require specific line items. If an order of that type is missing a required item, it is flagged in the audit output.
+A rule can require specific companion line items — used by **Bundle Check** to flag orders missing an accessory. `exclude_if` skips the required-items check entirely when the order also matches one of its own listed conditions (for example, a warranty-only line item).
 
-```json
-{
-  "fallback": "Accessory",
-  "order_types": {
-    "Z1": { "required_items": ["Accent Piece", "Funnel Cap", "Burr Set"] },
-    "Z2": { "required_items": ["Accent Piece", "Funnel Cap", "Burr Set"] }
-  },
-  "rules": [
-    { "name": "Z1", "match": "sku_starts_with", "value": "z1-" },
-    { "name": "Z2", "match": "sku_starts_with", "value": "z2-" }
-  ]
-}
+```php
+return [
+    'fallback' => 'Addons',
+    'rules' => [
+        [
+            'name' => 'Z1',
+            'match' => 'sku_starts_with',
+            'value' => 'zerno-z1-',
+            'exclude_if' => [
+                ['match' => 'sku_contains', 'value' => 'warranty'],
+                ['match' => 'title_contains', 'value' => 'warranty'],
+            ],
+            'required_items' => [
+                ['label' => 'Accent Piece', 'match' => 'title_contains', 'value' => 'accent piece'],
+                ['label' => 'Funnel Cap', 'match' => 'title_contains', 'value' => 'funnel cap'],
+                ['label' => 'Burr Set', 'match' => 'sku_starts_with', 'value' => ['ssp-', 'burrs-', 'core-', 'ulf-']],
+            ],
+        ],
+    ],
+];
 ```
+
+An order that matches `Z1`'s trigger condition but is missing any of its `required_items` is flagged by Bundle Check, listing exactly which required item(s) were not found.
