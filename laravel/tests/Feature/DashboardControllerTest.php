@@ -79,4 +79,39 @@ class DashboardControllerTest extends TestCase
 
         $this->actingAs($user)->get(route('dashboard'))->assertOk()->assertSeeText('missing · 2026-09-10')->assertSeeText('was 3')->assertSeeText('4 total missing')->assertSeeText('buyer@example.com')->assertSeeText('42.50')->assertSeeText('Run Audit')->assertDontSee('<script>', false)->assertDontSeeText('secret-order');
     }
+
+    public function test_dashboard_shows_cadence_resolution_stale_ignored_oldest_and_seven_day_chart(): void
+    {
+        $user = User::factory()->operator()->create();
+        $store = Store::factory()->create();
+        $this->travelTo('2026-09-10');
+        $user->stores()->attach($store);
+        // Order #A appears missing on day 1, resolved by day 3 (2-day resolution).
+        $store->auditSnapshots()->create(['tool' => 'run_audit', 'report_date' => '2026-09-01', 'start_date' => '2026-09-01', 'end_date' => '2026-09-01', 'rows_found' => 1, 'result' => ['missing' => [['name' => '#A', 'created_at' => '2026-08-30', 'email' => 'a@example.com', 'total_price' => 10]]]]);
+        $store->auditSnapshots()->create(['tool' => 'run_audit', 'report_date' => '2026-09-03', 'start_date' => '2026-09-01', 'end_date' => '2026-09-03', 'rows_found' => 1, 'result' => ['missing' => [['name' => '#A', 'created_at' => '2026-08-30', 'email' => 'a@example.com', 'total_price' => 10]]]]);
+        $store->auditSnapshots()->create(['tool' => 'run_audit', 'report_date' => '2026-09-05', 'start_date' => '2026-09-01', 'end_date' => '2026-09-05', 'rows_found' => 0, 'result' => ['missing' => []]]);
+        $store->auditSnapshots()->create(['tool' => 'run_audit', 'report_date' => '2026-09-10', 'start_date' => '2026-09-01', 'end_date' => '2026-09-10', 'rows_found' => 1, 'result' => ['missing' => [['name' => '#B', 'created_at' => '2026-09-08', 'email' => 'b@example.com', 'total_price' => 20]]]]);
+        $store->ignoredOrders()->create(['order_number' => 'old', 'ignored_at' => '2026-07-01']);
+        $store->ignoredOrders()->create(['order_number' => 'recent', 'ignored_at' => '2026-09-09']);
+
+        $response = $this->actingAs($user)->get(route('dashboard'))->assertOk();
+
+        $response->assertViewHas('staleIgnoredCount', 1);
+        $response->assertViewHas('oldestMissingAge', 2);
+        $response->assertViewHas('avgResolutionDays', 2.0);
+        $response->assertViewHas('sevenDayChart', fn ($chart) => count($chart) === 4 && $chart->last()['missing'] === 1);
+        $response->assertViewHas('auditCadenceDays', fn ($days) => $days > 0);
+    }
+
+    public function test_admin_sees_a_cache_flush_button_operator_does_not(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $store = Store::factory()->create();
+        $admin->stores()->attach($store);
+        $operator = User::factory()->operator()->create();
+        $operator->stores()->attach($store);
+
+        $this->actingAs($admin)->get(route('dashboard'))->assertOk()->assertSee(route('admin.cache.flush'), false);
+        $this->actingAs($operator)->get(route('dashboard'))->assertOk()->assertDontSee(route('admin.cache.flush'), false);
+    }
 }
