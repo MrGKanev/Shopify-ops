@@ -35,7 +35,10 @@ class PushToShipStationController extends Controller
         $orderNumber = (string) $request->validated('order_number');
 
         try {
-            $result = $push->handle($this->activeStore($request), $orderNumber);
+            $store = $this->activeStore($request);
+            $result = $push->handle($store, $orderNumber);
+            activity('operator-actions')->causedBy($request->user())->performedOn($store)
+                ->withProperties(['order_number' => $result['order_number']])->log('push_to_shipstation');
 
             return back()->with('status', "Pushed order #{$result['order_number']} to ShipStation.");
         } catch (Throwable $exception) {

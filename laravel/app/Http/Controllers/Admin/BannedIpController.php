@@ -19,6 +19,7 @@ class BannedIpController extends Controller
     {
         $ip = (string) $request->validate(['ip' => ['required', 'ip']])['ip'];
         $throttle->unban($ip);
+        activity('operator-actions')->causedBy($request->user())->withProperties(['ip' => $ip])->log('unban_ip');
 
         return back()->with('status', "Unbanned {$ip}.");
     }

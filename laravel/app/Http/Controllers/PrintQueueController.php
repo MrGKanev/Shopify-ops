@@ -18,21 +18,33 @@ class PrintQueueController extends Controller
     public function store(PrintQueueRequest $request): RedirectResponse
     {
         $store = $this->activeStore($request);
-        $store->printQueueItems()->firstOrCreate(['order_number' => $request->validated('order_number')], ['note' => (string) ($request->validated('note') ?? '')]);
+        $orderNumber = (string) $request->validated('order_number');
+        $store->printQueueItems()->firstOrCreate(['order_number' => $orderNumber], ['note' => (string) ($request->validated('note') ?? '')]);
+        activity('operator-actions')->causedBy($request->user())->performedOn($store)
+            ->withProperties(['order_number' => $orderNumber])->log('pq_add');
 
         return back()->with('status', 'Order added to the print queue.');
     }
 
     public function destroy(Request $request, int $item): RedirectResponse
     {
-        $this->activeStore($request)->printQueueItems()->findOrFail($item)->delete();
+        $store = $this->activeStore($request);
+        $printQueueItem = $store->printQueueItems()->findOrFail($item);
+        $orderNumber = $printQueueItem->order_number;
+        $printQueueItem->delete();
+        activity('operator-actions')->causedBy($request->user())->performedOn($store)
+            ->withProperties(['order_number' => $orderNumber])->log('pq_remove');
 
         return back()->with('status', 'Order removed from the print queue.');
     }
 
     public function clear(Request $request): RedirectResponse
     {
-        $this->activeStore($request)->printQueueItems()->delete();
+        $store = $this->activeStore($request);
+        $count = $store->printQueueItems()->count();
+        $store->printQueueItems()->delete();
+        activity('operator-actions')->causedBy($request->user())->performedOn($store)
+            ->withProperties(['count' => $count])->log('pq_clear');
 
         return back()->with('status', 'Print queue cleared.');
     }

@@ -25,7 +25,10 @@ class EmailRulesController extends Controller
 
     public function update(EmailRulesRequest $request): RedirectResponse
     {
-        $this->store($request)->update(['email_rules' => $request->validated('rules')]);
+        $store = $this->store($request);
+        $store->update(['email_rules' => $request->validated('rules')]);
+        activity('operator-actions')->causedBy($request->user())->performedOn($store)
+            ->withProperties($store->resolvedEmailRules())->log('save_email_rules');
 
         return back()->with('status', 'Email rules saved.');
     }

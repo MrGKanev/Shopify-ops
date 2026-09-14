@@ -20,7 +20,10 @@ class IgnoredOrderController extends Controller
     public function store(IgnoredOrderRequest $request): RedirectResponse
     {
         $number = $this->normalize((string) $request->validated('order_number'));
-        $this->storeModel($request)->ignoredOrders()->updateOrCreate(['order_number' => $number], ['reason' => trim((string) ($request->validated('reason') ?? '')), 'ignored_at' => today()]);
+        $reason = trim((string) ($request->validated('reason') ?? ''));
+        $this->storeModel($request)->ignoredOrders()->updateOrCreate(['order_number' => $number], ['reason' => $reason, 'ignored_at' => today()]);
+        activity('operator-actions')->causedBy($request->user())->performedOn($this->storeModel($request))
+            ->withProperties(['order_number' => $number, 'reason' => $reason])->log('ignore_order');
 
         return back()->with('status', "Order #{$number} is ignored.");
     }
@@ -28,7 +31,10 @@ class IgnoredOrderController extends Controller
     public function destroy(Request $request, IgnoredOrder $ignoredOrder): RedirectResponse
     {
         abort_unless($ignoredOrder->store_id === $this->storeModel($request)->getKey(), 404);
+        $orderNumber = $ignoredOrder->order_number;
         $ignoredOrder->delete();
+        activity('operator-actions')->causedBy($request->user())->performedOn($this->storeModel($request))
+            ->withProperties(['order_number' => $orderNumber])->log('unignore_order');
 
         return back()->with('status', 'Order restored to audits.');
     }
@@ -37,6 +43,8 @@ class IgnoredOrderController extends Controller
     {
         $ids = $request->validate(['ids' => ['required', 'array', 'max:500'], 'ids.*' => ['integer']])['ids'];
         $count = $this->storeModel($request)->ignoredOrders()->whereKey($ids)->delete();
+        activity('operator-actions')->causedBy($request->user())->performedOn($this->storeModel($request))
+            ->withProperties(['count' => $count])->log('bulk_unignore_orders');
 
         return back()->with('status', "{$count} orders restored to audits.");
     }
@@ -63,6 +71,8 @@ class IgnoredOrderController extends Controller
         foreach ($rows as $number => $values) {
             $this->storeModel($request)->ignoredOrders()->updateOrCreate(['order_number' => $number], $values);
         }
+        activity('operator-actions')->causedBy($request->user())->performedOn($this->storeModel($request))
+            ->withProperties(['count' => count($rows), 'reason' => trim((string) ($request->validated('reason') ?? ''))])->log('import_ignore_csv');
 
         return back()->with('status', count($rows).' orders imported.');
     }

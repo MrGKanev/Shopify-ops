@@ -18,6 +18,8 @@ class ActiveStoreController extends Controller
         abort_unless($hasAccess, 404);
 
         $request->session()->put('active_store_id', $store->getKey());
+        activity('operator-actions')->causedBy($request->user())->performedOn($store)
+            ->withProperties(['store_id' => $store->getKey()])->log('switch_store');
 
         return redirect()->route('dashboard');
     }

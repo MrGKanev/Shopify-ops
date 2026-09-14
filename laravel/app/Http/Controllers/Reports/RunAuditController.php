@@ -51,6 +51,8 @@ class RunAuditController extends Controller
         }
         $auditJob = AuditJob::create(['store_id' => $store->getKey(), 'start_date' => $start, 'end_date' => $end]);
         RunAuditJob::dispatch($store->getKey(), $start, $end, $auditJob->getKey());
+        activity('operator-actions')->causedBy($request->user())->performedOn($store)
+            ->withProperties(['start_date' => $start, 'end_date' => $end])->log('queue_audit');
 
         return back()->with('status', 'Audit queued.');
     }

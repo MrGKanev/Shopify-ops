@@ -15,9 +15,13 @@ class OrderNoteController extends Controller
     public function update(SaveOrderNoteRequest $request, SaveOrderNote $saveOrderNote): RedirectResponse
     {
         $orderNumber = (string) $request->validated('order_number');
+        $orderId = (string) $request->validated('order_id');
+        $note = (string) $request->validated('note');
 
         try {
-            $saveOrderNote->handle($this->store($request), (string) $request->validated('order_id'), (string) $request->validated('note'));
+            $saveOrderNote->handle($this->store($request), $orderId, $note);
+            activity('operator-actions')->causedBy($request->user())->performedOn($this->store($request))
+                ->withProperties(['shopify_id' => $orderId, 'note_length' => strlen($note)])->log('save_order_note');
 
             return back()->with('status', "Note saved for order #{$orderNumber}.");
         } catch (Throwable $exception) {

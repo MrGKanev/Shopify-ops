@@ -20,7 +20,10 @@ class SlackRulesController extends Controller
 
     public function update(SlackRulesRequest $request): RedirectResponse
     {
-        $this->store($request)->update(['slack_rules' => $request->validated()]);
+        $store = $this->store($request);
+        $store->update(['slack_rules' => $request->validated()]);
+        activity('operator-actions')->causedBy($request->user())->performedOn($store)
+            ->withProperties($store->resolvedSlackRules())->log('save_slack_rules');
 
         return back()->with('status', 'Slack rules saved.');
     }

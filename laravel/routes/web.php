@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\ActionLogController;
 use App\Http\Controllers\Admin\ApiHealthController;
 use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\BannedIpController;
+use App\Http\Controllers\Admin\CacheFlushController;
 use App\Http\Controllers\Admin\ConfigCheckController;
 use App\Http\Controllers\Admin\DiscordRulesController;
 use App\Http\Controllers\Admin\EmailRulesController;
@@ -287,6 +288,7 @@ Route::middleware('auth')->group(function (): void {
                 Route::post('/api-health/test-discord', [ApiHealthController::class, 'sendTestDiscord'])->middleware('throttle:api-health')->name('api-health.test-discord');
                 Route::resource('stores', StoreController::class)->except(['show', 'destroy']);
                 Route::resource('users', UserController::class)->except(['show', 'destroy']);
+                Route::post('/cache/flush', CacheFlushController::class)->name('cache.flush');
             });
     });
 });
