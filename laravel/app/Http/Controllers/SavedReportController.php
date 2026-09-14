@@ -20,7 +20,20 @@ class SavedReportController extends Controller
 
     public function show(Request $request, int $report): View
     {
-        return view('saved-reports.show', ['report' => $this->report($request, $report)]);
+        $snapshot = $this->report($request, $report);
+        $store = $this->store($request);
+        $history = $store->auditSnapshots()->where('tool', 'run_audit')->latest('report_date')->limit(30)->get()->reverse()->values();
+        $recurrenceCounts = [];
+        foreach ($history as $historical) {
+            foreach ((array) ($historical->result['missing'] ?? []) as $order) {
+                $number = ltrim((string) ($order['name'] ?? $order['order_number'] ?? ''), '#');
+                if ($number !== '') {
+                    $recurrenceCounts[$number] = ($recurrenceCounts[$number] ?? 0) + 1;
+                }
+            }
+        }
+
+        return view('saved-reports.show', ['report' => $snapshot, 'history' => $history, 'recurrenceCounts' => $recurrenceCounts]);
     }
 
     public function export(Request $request, int $report, CsvExporter $csv): StreamedResponse
