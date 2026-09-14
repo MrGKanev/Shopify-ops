@@ -1,6 +1,11 @@
 # Laravel rewrite — отворени задачи
 
-Последно обновяване: **2026-09-14**.
+Последно обновяване: **2026-09-15** — cutover изпълнен на repo ниво (legacy PHP
+изтрит, Laravel преместен в корена). Виж
+[`docs/parity-verification.md`](parity-verification.md#2026-09-14-cutover-decision-session-closed)
+за пълния 24/24 decision log. Оставащата "Production/infra решения" и "Процес"
+секции по-долу са реални production действия (rehearsals, TLS/proxy, SMTP),
+извън scope-а на repo restructuring-а — не са изпълнени и остават отворени.
 
 Списък със самостоятелни отворени product-decision задачи, всяка от които не
 изисква преработка на съседен код. По-старите self-reported "72/72 Done"
@@ -10,53 +15,53 @@
 твърди feature parity, е [`docs/parity-verification.md`](parity-verification.md)
 (изисква линкнат, реално изпълняван тест за всеки ред) — виж прогреса там.
 
-## Продуктови решения (от независимия одит)
+## Продуктови решения (от независимия одит) — ЗАТВОРЕНИ 2026-09-14
 
-- [ ] **Email Rules catalog за fresh store** — legacy винаги показва целия
+- [x] **Email Rules catalog за fresh store** — legacy винаги показва целия
       `ToolRegistry::triggerCatalog()`, а Laravel извлича tool-овете от вече
       съществуващи `run_logs` и добавя само `run_audit`. Така scan правило не
       може да се настрои преди първото изпълнение. Нужно е едно canonical
       Laravel tool catalog с default `off` правило за всеки entry; същият
       catalog може да захрани и непълната Audit навигация.
 
-- [ ] **Saved Reports / Ignored Orders / Job Queue губят operational context** —
+- [x] **Saved Reports / Ignored Orders / Job Queue губят operational context** —
       Saved Reports няма history chart, recurrence badges, investigation
       actions, ignore и same-day re-audit; Ignored Orders няма `seen in
       reports`; Job Queue не показва sanitized payload/result/error summary за
       завършен audit. Laravel подобрява scope/pagination/retry/Horizon, но е
       нужно да се избере кой от липсващия контекст реално трябва за cutover.
 
-- [ ] **Приемане на по-строгите Note Flags / Duplicate Addresses / Spot-check
+- [x] **Приемане на по-строгите Note Flags / Duplicate Addresses / Spot-check
       semantics** — Laravel deduplicate-ва и Unicode-normalize-ва note
       keywords, използва full-country fallback срещу cross-country address
       false positives, и canonicalize/validate/deduplicate-ва Spot-check
       входа. Това са тествани correctness подобрения; не изискват код, а
       изрично приемане като отклонения преди cutover.
 
-- [ ] **Dashboard е по-тесен от legacy оперативния overview** — Laravel пази
+- [x] **Dashboard е по-тесен от legacy оперативния overview** — Laravel пази
       основните audit/push/ignored числа и action queue, но няма audit cadence,
       average resolution time, stale ignored, oldest missing, missing-by-type,
       7-day audit история и cache freshness/flush. Да се изберат реално
       използваните сигнали за портване или по-малкият dashboard да се приеме
       изрично преди legacy cutover.
 
-- [ ] **Trends е само timeline, без legacy aggregate/repeat-offender анализа** —
+- [x] **Trends е само timeline, без legacy aggregate/repeat-offender анализа** —
       Laravel показва date-filtered missing counts и delta, но не изчислява
       average/worst/clear reports, unique missing или top repeat offenders.
       Нужно е решение дали тези анализи да се върнат, или опростеният timeline
       е достатъчен.
 
-- [ ] **Settings няма Sidebar History controls** — legacy пази два toggle-а за
+- [x] **Settings няма Sidebar History controls** — legacy пази два toggle-а за
       Missing Orders и Recent Activity sidebar секциите; Laravel няма нито
       секциите, нито настройките им. Това е консистентно премахване, но трябва
       да бъде прието изрично, ако тези бързи sidebar справки вече не трябват.
 
-- [ ] **Print Queue canonicalize-ва водещ `#`** — legacy пази въведения
+- [x] **Print Queue canonicalize-ва водещ `#`** — legacy пази въведения
       `#ORD-002`, Laravel го записва като `ORD-002`. Това прави lookup-а и
       deduplication-а по-предвидими и не е върнато назад; нужно е само изрично
       приемане като намерено отклонение преди cutover.
 
-- [ ] **Audit/Search discovery навигацията е непълна** — legacy Audit hub
+- [x] **Audit/Search discovery навигацията е непълна** — legacy Audit hub
       показва 46 групирани инструмента, а Laravel audit sidebar показва 12;
       route-овете съществуват, но много отчети нямат видим вход. Search пази
       8 от 10 legacy entries и добавя 3 полезни нови, но Customer LTV и Tag
@@ -64,20 +69,20 @@
       списъка. Нужно е пълен grouped hub/sidebar или изрично решение кои
       инструменти могат да останат достъпни само по URL.
 
-- [ ] **Action Log изпуска нормалните operator mutations** — Laravel
+- [x] **Action Log изпуска нормалните operator mutations** — Laravel
       `administration` log покрива основно User/Store промени и няколко admin
       събития, но не записва ignore/unignore/import, push, print queue,
       queue audit, note save, store switch и cache flush. Да се определи кои
       от тези действия изискват audit trail и да се логнат в общите им write
       paths преди махането на legacy.
 
-- [ ] **Push Log и Run History нямат филтър** — данните, newest-first редът,
+- [x] **Push Log и Run History нямат филтър** — данните, newest-first редът,
       cap-ът на run history и store scope са запазени/подобрени, но legacy
       позволява моментно търсене по order/tool/status/date/error. Добавяне на
       един server-side `q` филтър е достатъчно, ако операторите го ползват;
       иначе pagination-only поведението трябва да се приеме изрично.
 
-- [ ] **Bulk-ignore от чекбокси на report изгледи** — legacy `bulk_ignore_orders`
+- [x] **Bulk-ignore от чекбокси на report изгледи** — legacy `bulk_ignore_orders`
       (`src/Actions.php::bulkIgnore()`) позволява да маркираш няколко избрани
       order numbers от чекбокси на 6 различни изгледа (`missing-table.php`
       partial, ползван от `run.php`, `refunds.php`, `emailcheck.php`,
@@ -92,7 +97,7 @@
       ignore + CSV import покриват повечето случаи). Виж
       [`parity-verification.md`](parity-verification.md).
 
-- [ ] **Run Audit inline duplicates panel** — legacy `Comparator::findDuplicates()`
+- [x] **Run Audit inline duplicates panel** — legacy `Comparator::findDuplicates()`
       (24-часово clustering, показва се на `views/run.php:87-103` като "N
       potential duplicates detected" при всяко пускане на audit) **няма
       Laravel порт изобщо** — `run-audit.blade.php` няма съответна секция.
@@ -103,7 +108,7 @@
       резултатите вече показват missing/found/skipped/ignored без нея). Виж
       [`parity-verification.md`](parity-verification.md).
 
-- [ ] **Slack/Discord audit & scan notification content е орязано до едно
+- [x] **Slack/Discord audit & scan notification content е орязано до едно
       изречение** — legacy `SlackNotifier::auditPayload()`/`scanPayload()` и
       `DiscordNotifier::auditPayload()`/`scanPayload()` пращат структурирано
       съобщение: полета за store/period/missing/matched/skipped/ignored/
@@ -120,7 +125,7 @@
       legacy, или да се приеме съзнателно опростяване. Виж
       [`parity-verification.md`](parity-verification.md).
 
-- [ ] **Email rules нямат global fallback recipient** — legacy build-ва всеки
+- [x] **Email rules нямат global fallback recipient** — legacy build-ва всеки
       `EmailNotifier` от `ALERT_EMAIL` веднъж и всеки tool-ов `recipientFor()`
       само override-ва тази стойност; празен per-tool email нарочно означава
       "прати на ALERT_EMAIL", не "не пращай". Затова legacy оператор може да
@@ -135,7 +140,7 @@
       recipient концепция, или да се приеме изричното per-tool изискване
       като по-ясен design избор. Виж [`parity-verification.md`](parity-verification.md).
 
-- [ ] **Fraud risk signals нямат per-signal точки** — legacy `RiskScorer::score()`
+- [x] **Fraud risk signals нямат per-signal точки** — legacy `RiskScorer::score()`
       връща `signals` като `list<{label, points}>`, и `ViewHelpers::riskBadge()`
       показва всеки сигнал с приноса му към резултата (напр. "Fraud/high-risk
       tag +35") в expandable breakdown. Laravel `OrderRiskScorer::score()`
@@ -149,7 +154,7 @@
       теста) до structured points, или да се приеме съзнателно опростената
       breakdown-по-нищо форма. Виж [`parity-verification.md`](parity-verification.md).
 
-- [ ] **High-Value No Phone има currency филтър, който legacy никога не е
+- [x] **High-Value No Phone има currency филтър, който legacy никога не е
       имал** — `HighValueNoPhoneAnalyzer::analyze()` приема `$currency`
       параметър и тихо изключва всяка поръчка, чиято `currency` не съвпада
       точно (form поле, подразбиране `USD`, `HighValueNoPhoneRequest`
