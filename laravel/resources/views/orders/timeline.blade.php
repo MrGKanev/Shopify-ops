@@ -69,7 +69,7 @@
                         @else
                             <ul class="mt-3 list-disc space-y-2 pl-5 text-sm">
                                 @foreach ($result->riskScore['signals'] as $signal)
-                                    <li>{{ $signal }}</li>
+                                    <li>{{ $signal['label'] }} <span class="text-slate-400">+{{ $signal['points'] }}</span></li>
                                 @endforeach
                             </ul>
                         @endif

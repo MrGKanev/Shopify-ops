@@ -38,7 +38,7 @@ class OrderRiskScorerTest extends TestCase
         $result = $this->scorer()->score($order);
 
         $this->assertSame($points, $result['score']);
-        $this->assertSame([$label], $result['signals']);
+        $this->assertSame([['label' => $label, 'points' => $points]], $result['signals']);
     }
 
     /** @return array<string, array{array<string, mixed>, string, int}> */
@@ -72,8 +72,8 @@ class OrderRiskScorerTest extends TestCase
 
         $this->assertSame(35, $result['score']);
         $this->assertSame([
-            'Missing phone on high-value order',
-            'No shipping address',
+            ['label' => 'Missing phone on high-value order', 'points' => 15],
+            ['label' => 'No shipping address', 'points' => 20],
         ], $result['signals']);
     }
 
@@ -132,13 +132,13 @@ class OrderRiskScorerTest extends TestCase
         $this->assertSame(165, $result['score']);
         $this->assertSame('high', $result['level']);
         $this->assertSame([
-            'Disposable/invalid email',
-            'Billing ≠ shipping country',
-            'Missing phone on high-value order',
-            'PO Box address',
-            'Partially paid',
-            'Fraud/high-risk tag',
-            'Shopify HIGH risk level',
+            ['label' => 'Disposable/invalid email', 'points' => 30],
+            ['label' => 'Billing ≠ shipping country', 'points' => 25],
+            ['label' => 'Missing phone on high-value order', 'points' => 15],
+            ['label' => 'PO Box address', 'points' => 10],
+            ['label' => 'Partially paid', 'points' => 10],
+            ['label' => 'Fraud/high-risk tag', 'points' => 35],
+            ['label' => 'Shopify HIGH risk level', 'points' => 40],
         ], $result['signals']);
     }
 

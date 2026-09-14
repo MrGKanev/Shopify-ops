@@ -96,7 +96,7 @@
                                                 <div class="mt-2 text-xs text-slate-600 dark:text-slate-300">
                                                     Risk: {{ $risk['score'] }} · {{ ucfirst($risk['level']) }}
                                                     @if ($risk['signals'] !== [])
-                                                        · {{ implode(', ', $risk['signals']) }}
+                                                        · {{ implode(', ', array_map(fn ($signal) => "{$signal['label']} (+{$signal['points']})", $risk['signals'])) }}
                                                     @endif
                                                 </div>
                                             @endif

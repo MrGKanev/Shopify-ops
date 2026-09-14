@@ -17,7 +17,7 @@ class FraudRiskAnalyzerTest extends TestCase
 
         $this->assertCount(1, $rows);
         $this->assertSame('#2', $rows[0]['number']);
-        $this->assertSame(['score' => 30, 'level' => 'medium', 'signals' => ['Disposable/invalid email']], $rows[0]['risk']);
+        $this->assertSame(['score' => 30, 'level' => 'medium', 'signals' => [['label' => 'Disposable/invalid email', 'points' => 30]]], $rows[0]['risk']);
     }
 
     public function test_shopify_high_risk_is_included_and_rows_are_sorted_by_score_descending(): void
@@ -28,7 +28,7 @@ class FraudRiskAnalyzerTest extends TestCase
         ]);
 
         $this->assertSame(['#55', '#40'], array_column($rows, 'number'));
-        $this->assertSame('Shopify HIGH risk level', $rows[1]['risk']['signals'][0]);
+        $this->assertSame('Shopify HIGH risk level', $rows[1]['risk']['signals'][0]['label']);
     }
 
     private function analyzer(): FraudRiskAnalyzer

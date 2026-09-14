@@ -50,7 +50,7 @@ class OrderRiskScorer
 
     /**
      * @param  array<string, mixed>  $order
-     * @return array{score: int, level: 'low'|'medium'|'high', signals: list<string>}
+     * @return array{score: int, level: 'low'|'medium'|'high', signals: list<array{label: string, points: int}>}
      */
     public function score(array $order): array
     {
@@ -119,7 +119,7 @@ class OrderRiskScorer
                 $score >= 21 => 'medium',
                 default => 'low',
             },
-            'signals' => $signals,
+            'signals' => array_map(fn (string $signal): array => ['label' => $signal, 'points' => self::Weights[$signal]], $signals),
         ];
     }
 

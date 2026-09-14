@@ -86,7 +86,7 @@ class BatchLookupOrders
 
     /**
      * @param  list<array<string, mixed>>  $orders
-     * @return array<string, array{score: int, level: string, signals: list<string>}>
+     * @return array<string, array{score: int, level: string, signals: list<array{label: string, points: int}>}>
      */
     private function riskScores(array $orders): array
     {
