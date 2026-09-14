@@ -79,7 +79,7 @@ class AuditOrderAnalyzer
         if (in_array($order['fulfillment_status'] ?? '', ['fulfilled', 'restocked'], true)) {
             return 'fulfilled';
         }
-        if (array_key_exists('total_price', $order) && (float) $order['total_price'] === 0.0) {
+        if (isset($order['total_price']) && (float) $order['total_price'] === 0.0) {
             return 'zero_value';
         }
         if (array_key_exists('shipping_lines', $order) && $order['shipping_lines'] === []) {
