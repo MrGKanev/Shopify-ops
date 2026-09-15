@@ -136,10 +136,15 @@ a:hover { text-decoration: underline; }
 .login-split-right {
   flex: 1;
   min-height: 100vh;
-  background-color: var(--accent);
-  background-image: linear-gradient(135deg, #5b51f0 0%, #7b73f5 40%, #9d97f8 100%);
-  background-size: cover;
-  background-position: center;
+  background: #f4efe5;
+  overflow: hidden;
+}
+.login-split-right img {
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  object-fit: cover;
+  object-position: center;
 }
 @media (max-width: 700px) {
   .login-split-right { display: none; }
@@ -925,8 +930,9 @@ input[type="checkbox"] { @apply cursor-pointer; accent-color: var(--accent); wid
   border-color: var(--border);
   padding: .75rem 1rem;
 }
-.mobile-header .brand      { @apply font-bold; font-size: .95rem; color: var(--text); }
+.mobile-header .brand      { @apply font-bold no-underline; font-size: .95rem; color: var(--text); }
 .mobile-header .brand span { color: var(--accent); }
+.mobile-brand { @apply flex items-center gap-2; }
 .hamburger {
   @apply flex flex-col gap-[5px] cursor-pointer;
   background: none; border: none; padding: 4px;
@@ -1066,7 +1072,25 @@ input[type="checkbox"] { @apply cursor-pointer; accent-color: var(--accent); wid
   font-size: .7rem;
   color: var(--muted);
 }
+.sidebar-version {
+  @apply block no-underline mb-2;
+  font-size: .7rem;
+  color: var(--muted);
+}
+.sidebar-version:hover { color: var(--accent); text-decoration: none; }
 .sidebar-footer .btn-full { @apply mb-2; }
+
+/* ── User-configured utility links ── */
+.custom-links {
+  @apply flex flex-wrap justify-end gap-2 mb-4;
+}
+.custom-links a {
+  @apply rounded-lg border px-3 py-1.5 text-xs font-semibold no-underline transition-colors;
+  color: var(--muted);
+  border-color: var(--border);
+  background: var(--surface);
+}
+.custom-links a:hover { color: var(--accent); border-color: var(--accent); text-decoration: none; }
 
 /* ── Metafields page ── */
 .mf-ns-cell           { @apply font-mono; font-size: .82rem; color: var(--muted); }
@@ -1507,6 +1531,7 @@ td:hover .copy-btn,
   .sidebar.collapsed .flat-nav-icon { font-size: 1.1rem; }
   .sidebar.collapsed .sidebar-signout-btn { display: none; }
   .sidebar.collapsed .sidebar-github { display: none; }
+  .sidebar.collapsed .sidebar-version { display: none; }
   .sidebar.collapsed .sidebar-footer { padding: .4rem .3rem; }
   .sidebar.collapsed .sidebar-footer-row { justify-content: center; margin-top: 0; }
   .sidebar.collapsed .sidebar-collapse-btn svg { transform: rotate(180deg); }

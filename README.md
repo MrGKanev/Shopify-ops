@@ -81,6 +81,7 @@ cp .env.example .env
 php artisan key:generate
 touch database/database.sqlite
 php artisan migrate
+php artisan storage:link
 pnpm install --frozen-lockfile
 pnpm build
 php artisan ops:install
@@ -177,6 +178,12 @@ The minimum API Health check expects Shopify `read_orders` and `read_fulfillment
 - Email uses the Laravel mail configuration plus store-specific per-tool rules.
 - Email rules support `Off`, `Immediate`, and `Digest` modes with thresholds and optional recipient overrides.
 - The daily digest uses the store's default alert email when a tool-specific recipient is not set.
+
+### Branding and custom links
+
+Administrators can use **Settings → Branding & custom links** to change the site name, upload the shared sidebar/login logo, replace the login artwork, and configure up to five utility links. Links appear at the top right of application pages and can target all users, operators and administrators, or administrators only. Uploaded images use Laravel's public disk, so `php artisan storage:link` is required.
+
+The application version and repository URL come from `package.json` and are shown in the sidebar footer.
 
 ### Domain rules
 

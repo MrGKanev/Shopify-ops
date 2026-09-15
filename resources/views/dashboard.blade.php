@@ -13,7 +13,7 @@
         @endcan
     </x-page-header>
 
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
         <x-stat-tile label="Latest audit" :value="$latest?->rows_found ?? '—'" :tone="($latest?->rows_found ?? 0) > 0 ? 'warn' : 'ok'">
             <x-slot:sub>
                 @if ($latest)
@@ -26,6 +26,12 @@
         </x-stat-tile>
         <x-stat-tile label="All-time audits" :value="$totalReports">
             <x-slot:sub>{{ $totalMissing }} total missing</x-slot:sub>
+        </x-stat-tile>
+        <x-stat-tile label="30-day audits" :value="$auditsLast30Days">
+            <x-slot:sub>runs in the last 30 days</x-slot:sub>
+        </x-stat-tile>
+        <x-stat-tile label="Clear rate" :value="$clearAuditRate === null ? '—' : $clearAuditRate.'%'" :tone="($clearAuditRate ?? 0) >= 75 ? 'ok' : 'default'">
+            <x-slot:sub>clear runs in the last 30 audits</x-slot:sub>
         </x-stat-tile>
         <x-stat-tile label="Pushes" :value="$pushesToday">
             <x-slot:sub>today · {{ $pushesMonth }} in 30 days</x-slot:sub>
@@ -41,6 +47,9 @@
         </x-stat-tile>
         <x-stat-tile label="Oldest missing" :value="$oldestMissingAge ?? '—'" :tone="($oldestMissingAge ?? 0) > 7 ? 'warn' : 'default'">
             <x-slot:sub>days since placed</x-slot:sub>
+        </x-stat-tile>
+        <x-stat-tile label="Recurring missing" :value="$recurringMissingCount" :tone="$recurringMissingCount > 0 ? 'warn' : 'ok'">
+            <x-slot:sub>current orders seen in 2+ audits</x-slot:sub>
         </x-stat-tile>
     </div>
 

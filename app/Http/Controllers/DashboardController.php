@@ -32,6 +32,7 @@ class DashboardController extends Controller
 
         $firstSeen = [];
         $lastSeen = [];
+        $appearances = [];
         foreach ($recent as $snapshot) {
             foreach ((array) ($snapshot->result['missing'] ?? []) as $order) {
                 $number = (string) ($order['name'] ?? $order['order_number'] ?? '');
@@ -40,6 +41,7 @@ class DashboardController extends Controller
                 }
                 $firstSeen[$number] ??= $snapshot->report_date;
                 $lastSeen[$number] = $snapshot->report_date;
+                $appearances[$number] = ($appearances[$number] ?? 0) + 1;
             }
         }
         $resolutionDays = [];
@@ -55,6 +57,8 @@ class DashboardController extends Controller
             $cadenceGaps[] = $recent[$i - 1]->report_date->diffInDays($recent[$i]->report_date);
         }
         $auditCadenceDays = $cadenceGaps === [] ? null : round(array_sum($cadenceGaps) / count($cadenceGaps), 1);
+        $clearAuditRate = $recent->isEmpty() ? null : round($recent->filter(fn ($snapshot): bool => (int) $snapshot->rows_found === 0)->count() / $recent->count() * 100);
+        $recurringMissingCount = count(array_filter(array_unique($latestNumbers), fn (string $number): bool => ($appearances[$number] ?? 0) >= 2));
 
         return view('dashboard', [
             'latest' => $latest,
@@ -70,6 +74,9 @@ class DashboardController extends Controller
             'oldestMissingAge' => $oldestMissingAge,
             'avgResolutionDays' => $avgResolutionDays,
             'auditCadenceDays' => $auditCadenceDays,
+            'auditsLast30Days' => $store->auditSnapshots()->where('tool', 'run_audit')->where('report_date', '>=', today()->subDays(29))->count(),
+            'clearAuditRate' => $clearAuditRate,
+            'recurringMissingCount' => $recurringMissingCount,
             'sevenDayChart' => $recent->slice(-7)->map(fn ($s) => ['date' => $s->report_date->toDateString(), 'missing' => $s->rows_found])->values(),
         ]);
     }

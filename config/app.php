@@ -1,5 +1,7 @@
 <?php
 
+$package = json_decode((string) file_get_contents(base_path('package.json')), true, flags: JSON_THROW_ON_ERROR);
+
 return [
 
     /*
@@ -14,6 +16,10 @@ return [
     */
 
     'name' => env('APP_NAME', 'Laravel'),
+
+    'version' => (string) ($package['version'] ?? 'dev'),
+
+    'repository_url' => (string) ($package['repository'] ?? ''),
 
     /*
     |--------------------------------------------------------------------------

@@ -6,6 +6,7 @@ use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Integrations\Shopify\ShopifyAdminClient;
 use App\Listeners\AlertOnOperationalFailure;
 use App\Listeners\LogNotificationDelivery;
+use App\Models\AppSetting;
 use App\Models\User;
 use App\UserRole;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -16,8 +17,10 @@ use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Illuminate\View\View as ViewContract;
 use Spatie\Health\Checks\Checks\BackupsCheck;
 use Spatie\Health\Checks\Checks\CacheCheck;
 use Spatie\Health\Checks\Checks\DatabaseCheck;
@@ -42,6 +45,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        View::composer(['auth.login', 'layouts.app', 'layouts.guest', 'admin.settings'], function (ViewContract $view): void {
+            $appSettings = request()->attributes->get('appSettings');
+            if (! $appSettings instanceof AppSetting) {
+                $appSettings = AppSetting::current();
+                request()->attributes->set('appSettings', $appSettings);
+            }
+
+            $view->with('appSettings', $appSettings);
+        });
+
         $healthChecks = [
             DatabaseCheck::new(),
             CacheCheck::new(),

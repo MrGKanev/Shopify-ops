@@ -88,9 +88,9 @@ class DashboardControllerTest extends TestCase
         $user->stores()->attach($store);
         // Order #A appears missing on day 1, resolved by day 3 (2-day resolution).
         $store->auditSnapshots()->create(['tool' => 'run_audit', 'report_date' => '2026-09-01', 'start_date' => '2026-09-01', 'end_date' => '2026-09-01', 'rows_found' => 1, 'result' => ['missing' => [['name' => '#A', 'created_at' => '2026-08-30', 'email' => 'a@example.com', 'total_price' => 10]]]]);
-        $store->auditSnapshots()->create(['tool' => 'run_audit', 'report_date' => '2026-09-03', 'start_date' => '2026-09-01', 'end_date' => '2026-09-03', 'rows_found' => 1, 'result' => ['missing' => [['name' => '#A', 'created_at' => '2026-08-30', 'email' => 'a@example.com', 'total_price' => 10]]]]);
+        $store->auditSnapshots()->create(['tool' => 'run_audit', 'report_date' => '2026-09-03', 'start_date' => '2026-09-01', 'end_date' => '2026-09-03', 'rows_found' => 2, 'result' => ['missing' => [['name' => '#A', 'created_at' => '2026-08-30', 'email' => 'a@example.com', 'total_price' => 10], ['name' => '#C', 'created_at' => '2026-09-01', 'email' => 'c@example.com', 'total_price' => 30]]]]);
         $store->auditSnapshots()->create(['tool' => 'run_audit', 'report_date' => '2026-09-05', 'start_date' => '2026-09-01', 'end_date' => '2026-09-05', 'rows_found' => 0, 'result' => ['missing' => []]]);
-        $store->auditSnapshots()->create(['tool' => 'run_audit', 'report_date' => '2026-09-10', 'start_date' => '2026-09-01', 'end_date' => '2026-09-10', 'rows_found' => 1, 'result' => ['missing' => [['name' => '#B', 'created_at' => '2026-09-08', 'email' => 'b@example.com', 'total_price' => 20]]]]);
+        $store->auditSnapshots()->create(['tool' => 'run_audit', 'report_date' => '2026-09-10', 'start_date' => '2026-09-01', 'end_date' => '2026-09-10', 'rows_found' => 2, 'result' => ['missing' => [['name' => '#B', 'created_at' => '2026-09-08', 'email' => 'b@example.com', 'total_price' => 20], ['name' => '#C', 'created_at' => '2026-09-09', 'email' => 'c@example.com', 'total_price' => 30]]]]);
         $store->ignoredOrders()->create(['order_number' => 'old', 'ignored_at' => '2026-07-01']);
         $store->ignoredOrders()->create(['order_number' => 'recent', 'ignored_at' => '2026-09-09']);
 
@@ -99,8 +99,11 @@ class DashboardControllerTest extends TestCase
         $response->assertViewHas('staleIgnoredCount', 1);
         $response->assertViewHas('oldestMissingAge', 2);
         $response->assertViewHas('avgResolutionDays', 2.0);
-        $response->assertViewHas('sevenDayChart', fn ($chart) => count($chart) === 4 && $chart->last()['missing'] === 1);
+        $response->assertViewHas('sevenDayChart', fn ($chart) => count($chart) === 4 && $chart->last()['missing'] === 2);
         $response->assertViewHas('auditCadenceDays', fn ($days) => $days > 0);
+        $response->assertViewHas('auditsLast30Days', 4);
+        $response->assertViewHas('clearAuditRate', 25.0);
+        $response->assertViewHas('recurringMissingCount', 1);
     }
 
     public function test_admin_sees_a_cache_flush_button_operator_does_not(): void

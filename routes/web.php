@@ -3,6 +3,7 @@
 use App\Http\Controllers\ActiveStoreController;
 use App\Http\Controllers\Admin\ActionLogController;
 use App\Http\Controllers\Admin\ApiHealthController;
+use App\Http\Controllers\Admin\AppearanceSettingsController;
 use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\BannedIpController;
 use App\Http\Controllers\Admin\CacheFlushController;
@@ -271,6 +272,7 @@ Route::middleware('auth')->group(function (): void {
             ->group(function (): void {
                 Route::get('/api-health', [ApiHealthController::class, 'show'])->name('api-health');
                 Route::get('/settings', SettingsController::class)->name('settings');
+                Route::put('/appearance', [AppearanceSettingsController::class, 'update'])->name('appearance.update');
                 Route::get('/config-check', ConfigCheckController::class)->name('config-check');
                 Route::get('/webhook-health', WebhookHealthController::class)->name('webhook-health');
                 Route::get('/slack-rules', [SlackRulesController::class, 'edit'])->name('slack-rules.edit');

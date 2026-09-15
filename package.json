@@ -1,8 +1,10 @@
 {
     "$schema": "https://www.schemastore.org/package.json",
     "name": "shopify-ops",
+    "version": "2.2.0",
     "private": true,
     "type": "module",
+    "repository": "https://github.com/MrGKanev/Shopify-ops",
     "packageManager": "pnpm@11.15.1",
     "scripts": {
         "build": "vite build",
