@@ -10,17 +10,17 @@
             <x-button type="submit">Run health check</x-button>
         </form>
 
-        <section class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+        <x-card>
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
                     <h2 class="text-xl font-bold">SMTP delivery</h2>
                     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Mailer: {{ $mailConfiguration['mailer'] ?: 'not set' }} · From: {{ $mailConfiguration['from_address'] ?: 'invalid' }}</p>
                 </div>
-                <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $mailConfiguration['configured'] ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200' }}">{{ $mailConfiguration['configured'] ? 'Configured' : 'Needs configuration' }}</span>
+                <x-badge :tone="$mailConfiguration['configured'] ? 'ok' : 'warn'">{{ $mailConfiguration['configured'] ? 'Configured' : 'Needs configuration' }}</x-badge>
             </div>
 
-            @if ($mailResult === 'sent')<p class="mt-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">Test email sent successfully.</p>@endif
-            @if ($mailResult === 'failed')<p class="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">Test email could not be sent. Check the SMTP configuration and application log.</p>@endif
+            @if ($mailResult === 'sent')<x-alert class="mt-4" tone="ok">Test email sent successfully.</x-alert>@endif
+            @if ($mailResult === 'failed')<x-alert class="mt-4" tone="error">Test email could not be sent. Check the SMTP configuration and application log.</x-alert>@endif
 
             <form class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end" method="POST" action="{{ route('admin.api-health.test-email') }}">
                 @csrf
@@ -31,55 +31,55 @@
                 </div>
                 <x-button type="submit" :disabled="! $mailConfiguration['configured']">Send test email</x-button>
             </form>
-        </section>
+        </x-card>
 
-        <section class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+        <x-card>
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
                     <h2 class="text-xl font-bold">Slack delivery</h2>
                     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Incoming webhook: {{ $slackConfiguration['endpoint'] ?: 'not configured' }}</p>
                 </div>
-                <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $slackConfiguration['configured'] ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200' }}">{{ $slackConfiguration['configured'] ? 'Configured' : 'Needs configuration' }}</span>
+                <x-badge :tone="$slackConfiguration['configured'] ? 'ok' : 'warn'">{{ $slackConfiguration['configured'] ? 'Configured' : 'Needs configuration' }}</x-badge>
             </div>
 
-            @if ($slackResult === 'sent')<p class="mt-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">Test Slack notification sent successfully.</p>@endif
-            @if ($slackResult === 'failed')<p class="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">Test Slack notification could not be sent. Check the webhook configuration and application log.</p>@endif
+            @if ($slackResult === 'sent')<x-alert class="mt-4" tone="ok">Test Slack notification sent successfully.</x-alert>@endif
+            @if ($slackResult === 'failed')<x-alert class="mt-4" tone="error">Test Slack notification could not be sent. Check the webhook configuration and application log.</x-alert>@endif
 
             <form class="mt-4" method="POST" action="{{ route('admin.api-health.test-slack') }}">
                 @csrf
                 <x-button type="submit" :disabled="! $slackConfiguration['configured']">Send test notification</x-button>
             </form>
-        </section>
+        </x-card>
 
-        <section class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+        <x-card>
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
                     <h2 class="text-xl font-bold">Discord delivery</h2>
                     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Incoming webhook: {{ $discordConfiguration['endpoint'] ?: 'not configured' }}</p>
                 </div>
-                <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $discordConfiguration['configured'] ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200' }}">{{ $discordConfiguration['configured'] ? 'Configured' : 'Needs configuration' }}</span>
+                <x-badge :tone="$discordConfiguration['configured'] ? 'ok' : 'warn'">{{ $discordConfiguration['configured'] ? 'Configured' : 'Needs configuration' }}</x-badge>
             </div>
 
-            @if ($discordResult === 'sent')<p class="mt-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">Test Discord notification sent successfully.</p>@endif
-            @if ($discordResult === 'failed')<p class="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">Test Discord notification could not be sent. Check the webhook configuration and application log.</p>@endif
+            @if ($discordResult === 'sent')<x-alert class="mt-4" tone="ok">Test Discord notification sent successfully.</x-alert>@endif
+            @if ($discordResult === 'failed')<x-alert class="mt-4" tone="error">Test Discord notification could not be sent. Check the webhook configuration and application log.</x-alert>@endif
 
             <form class="mt-4" method="POST" action="{{ route('admin.api-health.test-discord') }}">
                 @csrf
                 <x-button type="submit" :disabled="! $discordConfiguration['configured']">Send test notification</x-button>
             </form>
-        </section>
+        </x-card>
 
         @if ($health)
             <p class="text-sm text-slate-500 dark:text-slate-400">Checked at {{ $health['checked_at'] }}</p>
             <div class="grid gap-5 lg:grid-cols-2">
                 @foreach (['shopify' => 'Shopify', 'shipstation' => 'ShipStation'] as $key => $label)
                     @php($result = $health[$key])
-                    <section class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+                    <x-card>
                         <div class="flex items-center justify-between gap-4">
                             <h2 class="text-xl font-bold">{{ $label }}</h2>
-                            <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $result['ok'] ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200' : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200' }}">{{ $result['ok'] ? 'Healthy' : 'Needs attention' }}</span>
+                            <x-badge :tone="$result['ok'] ? 'ok' : 'danger'">{{ $result['ok'] ? 'Healthy' : 'Needs attention' }}</x-badge>
                         </div>
-                        @if ($result['error'])<p class="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">{{ $result['error'] }}</p>@endif
+                        @if ($result['error'])<x-alert class="mt-4" tone="error">{{ $result['error'] }}</x-alert>@endif
                         <dl class="mt-4 grid grid-cols-[auto_1fr] gap-x-5 gap-y-2 text-sm">
                             <dt class="text-slate-500">Configured</dt><dd>{{ $result['configured'] ? 'Yes' : 'No' }}</dd>
                             <dt class="text-slate-500">Latency</dt><dd>{{ $result['latency_ms'] === null ? '—' : $result['latency_ms'].' ms' }}</dd>
@@ -91,14 +91,29 @@
                                 <dt class="text-slate-500">Missing scopes</dt><dd class="{{ $result['missing_scopes'] === [] ? '' : 'text-red-600 dark:text-red-400' }}">{{ $result['missing_scopes'] === [] ? 'None' : implode(', ', $result['missing_scopes']) }}</dd>
                             @endif
                         </dl>
-                    </section>
+                    </x-card>
                 @endforeach
             </div>
         @endif
 
-        <section class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+        <x-card>
             <div class="flex flex-wrap items-center justify-between gap-4"><div><h2 class="text-xl font-bold">Report flow history</h2><p class="mt-1 text-sm text-slate-500">Latest status from the active store's persisted run history.</p></div><p class="text-sm"><span class="text-emerald-700">{{ $flowHealth['summary']['healthy'] }} healthy</span> · <span class="text-red-700">{{ $flowHealth['summary']['attention'] }} need attention</span></p></div>
-            @if($flowHealth['flows']===[])<p class="mt-4 text-sm text-slate-500">No report runs recorded yet.</p>@else<div class="mt-4 overflow-x-auto"><table class="min-w-full text-left text-sm"><thead><tr><th class="py-2 pr-4">Tool</th><th>Status</th><th>Runs</th><th>Errors</th><th>Last run</th><th>Last error</th></tr></thead><tbody>@foreach($flowHealth['flows'] as $flow)<tr><td class="py-2 pr-4">{{ $flow['tool'] }}</td><td>{{ $flow['status'] }}</td><td>{{ $flow['runs'] }}</td><td>{{ $flow['errors'] }}</td><td>{{ $flow['last_run_at'] }}</td><td>{{ $flow['last_error'] ?: '—' }}</td></tr>@endforeach</tbody></table></div>@endif
-        </section>
+            @if ($flowHealth['flows'] === [])
+                <p class="mt-4 text-sm text-slate-500 dark:text-slate-400">No report runs recorded yet.</p>
+            @else
+                <x-data-table class="mt-4" :headers="['Tool', 'Status', 'Runs', 'Errors', 'Last run', 'Last error']">
+                    @foreach ($flowHealth['flows'] as $flow)
+                        <tr>
+                            <td class="px-4 py-3">{{ $flow['tool'] }}</td>
+                            <td class="px-4 py-3">{{ $flow['status'] }}</td>
+                            <td class="px-4 py-3">{{ $flow['runs'] }}</td>
+                            <td class="px-4 py-3">{{ $flow['errors'] }}</td>
+                            <td class="px-4 py-3">{{ $flow['last_run_at'] }}</td>
+                            <td class="px-4 py-3">{{ $flow['last_error'] ?: '—' }}</td>
+                        </tr>
+                    @endforeach
+                </x-data-table>
+            @endif
+        </x-card>
     </div>
 @endsection

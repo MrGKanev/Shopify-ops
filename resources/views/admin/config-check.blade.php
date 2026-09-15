@@ -1,4 +1,28 @@
 @extends('layouts.app')
+
 @section('content')
-<div class="flex flex-col gap-6"><section><p class="text-sm font-medium text-indigo-600">Administration</p><h1 class="mt-1 text-3xl font-bold">Config Check</h1><p class="mt-2 text-slate-500">Runtime validation of Laravel configuration and the active store.</p></section><div class="grid gap-4 lg:grid-cols-2">@foreach($results as $result)<section class="rounded-xl border p-5"><div class="flex items-center justify-between"><h2 class="text-xl font-bold">{{ $result['name'] }}</h2><span class="rounded-full px-3 py-1 text-xs font-semibold {{ $result['ok'] ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800' }}">{{ $result['ok'] ? 'Valid' : 'Needs attention' }}</span></div>@foreach($result['issues'] as $issue)<p class="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800">{{ $issue }}</p>@endforeach<ul class="mt-3 list-disc pl-5 text-sm text-slate-500">@foreach($result['notes'] as $note)<li>{{ $note }}</li>@endforeach</ul></section>@endforeach</div></div>
+    <div class="flex flex-col gap-6">
+        <x-page-header eyebrow="Administration" title="Config Check" subtitle="Runtime validation of Laravel configuration and the active store." />
+
+        <div class="grid gap-4 lg:grid-cols-2">
+            @foreach ($results as $result)
+                <x-card>
+                    <div class="flex items-center justify-between gap-4">
+                        <h2 class="text-xl font-bold">{{ $result['name'] }}</h2>
+                        <x-badge :tone="$result['ok'] ? 'ok' : 'danger'">{{ $result['ok'] ? 'Valid' : 'Needs attention' }}</x-badge>
+                    </div>
+
+                    @foreach ($result['issues'] as $issue)
+                        <x-alert class="mt-3" tone="error">{{ $issue }}</x-alert>
+                    @endforeach
+
+                    <ul class="mt-3 list-disc pl-5 text-sm text-slate-500 dark:text-slate-400">
+                        @foreach ($result['notes'] as $note)
+                            <li>{{ $note }}</li>
+                        @endforeach
+                    </ul>
+                </x-card>
+            @endforeach
+        </div>
+    </div>
 @endsection

@@ -1,4 +1,26 @@
 @extends('layouts.app')
+
 @section('content')
-<div class="flex flex-col gap-6"><section><p class="text-sm font-medium text-indigo-600">Administration</p><h1 class="mt-1 text-3xl font-bold">Webhook Health</h1><p class="mt-2 text-slate-500">Live Shopify webhook registrations for the active store. Delivery history remains available in Shopify.</p></section>@if($error)<p class="rounded-xl bg-red-50 p-4 text-red-800">{{ $error }}</p>@elseif($webhooks===[])<p class="rounded-xl border p-6 text-center text-slate-500">No Shopify webhooks are registered.</p>@else<div class="overflow-x-auto rounded-xl border"><table class="min-w-full text-left text-sm"><thead><tr><th class="p-3">Status</th><th>Topic</th><th>Endpoint</th><th>Format</th><th>Registered</th><th>API version</th></tr></thead><tbody>@foreach($webhooks as $webhook)<tr><td class="p-3"><span class="rounded-full px-2 py-1 text-xs font-semibold {{ $webhook['healthy'] ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' }}">{{ $webhook['healthy'] ? 'Healthy' : 'Review' }}</span></td><td>{{ $webhook['topic'] ?: '—' }}</td><td class="break-all">{{ $webhook['address'] ?: '—' }}</td><td>{{ $webhook['format'] }}</td><td>{{ $webhook['created_at'] ? substr($webhook['created_at'],0,10) : '—' }}</td><td>{{ $webhook['api_version'] ?: '—' }}</td></tr>@endforeach</tbody></table></div>@endif</div>
+    <div class="flex flex-col gap-6">
+        <x-page-header eyebrow="Administration" title="Webhook Health" subtitle="Live Shopify webhook registrations for the active store. Delivery history remains available in Shopify." />
+
+        @if ($error)
+            <x-alert tone="error">{{ $error }}</x-alert>
+        @elseif ($webhooks === [])
+            <x-empty-state title="No Shopify webhooks are registered." />
+        @else
+            <x-data-table :headers="['Status', 'Topic', 'Endpoint', 'Format', 'Registered', 'API version']">
+                @foreach ($webhooks as $webhook)
+                    <tr>
+                        <td class="px-4 py-3"><x-badge :tone="$webhook['healthy'] ? 'ok' : 'warn'">{{ $webhook['healthy'] ? 'Healthy' : 'Review' }}</x-badge></td>
+                        <td class="px-4 py-3">{{ $webhook['topic'] ?: '—' }}</td>
+                        <td class="px-4 py-3 break-all">{{ $webhook['address'] ?: '—' }}</td>
+                        <td class="px-4 py-3">{{ $webhook['format'] }}</td>
+                        <td class="px-4 py-3">{{ $webhook['created_at'] ? substr($webhook['created_at'], 0, 10) : '—' }}</td>
+                        <td class="px-4 py-3">{{ $webhook['api_version'] ?: '—' }}</td>
+                    </tr>
+                @endforeach
+            </x-data-table>
+        @endif
+    </div>
 @endsection
