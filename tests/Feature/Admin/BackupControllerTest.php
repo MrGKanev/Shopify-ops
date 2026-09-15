@@ -5,6 +5,7 @@ namespace Tests\Feature\Admin;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -55,6 +56,15 @@ class BackupControllerTest extends TestCase
         [$admin] = $this->userWithStore(true);
 
         $this->actingAs($admin)->get(route('admin.backups.download', ['../../.env']))->assertNotFound();
+    }
+
+    public function test_admin_can_create_a_database_backup_on_demand(): void
+    {
+        [$admin] = $this->userWithStore(true);
+        Artisan::shouldReceive('call')->once()->with('backup:run', ['--isolated' => true, '--disable-notifications' => true, '--only-db' => true])->andReturn(0);
+
+        $this->actingAs($admin)->post(route('admin.backups.store'), ['scope' => 'database'])
+            ->assertSessionHas('status', 'Database backup-ът е създаден.');
     }
 
     /** @return array{User, Store} */

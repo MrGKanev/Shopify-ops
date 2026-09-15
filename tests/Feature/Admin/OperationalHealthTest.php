@@ -49,7 +49,7 @@ class OperationalHealthTest extends TestCase
         $this->seedRecentBackup();
         $this->artisan('health:check')->assertSuccessful();
 
-        $this->actingAs($admin)->get(route('admin.health'))->assertOk()->assertSeeText('Laravel Health')->assertSeeText('Database')->assertSeeText('Queue');
+        $this->actingAs($admin)->get(route('admin.health'))->assertOk()->assertSeeText('Operational Health')->assertSeeText('Database')->assertSeeText('Queue worker');
     }
 
     private function seedRecentBackup(): void

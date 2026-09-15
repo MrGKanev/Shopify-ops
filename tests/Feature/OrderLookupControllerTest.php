@@ -384,7 +384,7 @@ class OrderLookupControllerTest extends TestCase
         Http::assertSentCount(1);
     }
 
-    public function test_upstream_failure_returns_a_safe_error_without_retrying_graphql(): void
+    public function test_upstream_failure_returns_a_safe_error_after_retrying_graphql(): void
     {
         Http::preventStrayRequests();
         [$user, $store] = $this->userWithStore();
@@ -402,7 +402,7 @@ class OrderLookupControllerTest extends TestCase
             ->assertOk()
             ->assertSeeText('The order lookup could not be completed.')
             ->assertDontSee('private upstream details');
-        Http::assertSentCount(1);
+        Http::assertSentCount(4);
     }
 
     /**

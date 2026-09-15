@@ -2,6 +2,7 @@
 
 namespace App\Application\Reports;
 
+use App\Application\Operations\SyncAuditIssues;
 use App\Domain\Reports\AuditOrderAnalyzer;
 use App\Domain\Reports\DuplicateOrderClusterer;
 use App\Integrations\ShipStation\ShipStationClientFactory;
@@ -16,7 +17,7 @@ use Throwable;
 
 class RunAudit
 {
-    public function __construct(private readonly ShipStationClientFactory $factory, private readonly ShopifyAdminGateway $shopify, private readonly AuditOrderAnalyzer $analyzer, private readonly RecordRun $runs, private readonly DuplicateOrderClusterer $clusterer = new DuplicateOrderClusterer) {}
+    public function __construct(private readonly ShipStationClientFactory $factory, private readonly ShopifyAdminGateway $shopify, private readonly AuditOrderAnalyzer $analyzer, private readonly RecordRun $runs, private readonly SyncAuditIssues $issues, private readonly DuplicateOrderClusterer $clusterer = new DuplicateOrderClusterer) {}
 
     public function handle(Store $store, string $start, string $end): AuditResult
     {
@@ -39,6 +40,7 @@ class RunAudit
                 }
             }
             $result = $this->analyzer->analyze($shopify['orders'], $shipstation, $ignored, $onHoldIds);
+            $this->issues->handle($store, $result['missing']);
             $store->auditSnapshots()->updateOrCreate(['tool' => 'run_audit', 'report_date' => today()->toDateString()], ['start_date' => $start, 'end_date' => $end, 'rows_found' => count($result['missing']), 'result' => ['missing' => $result['missing'], 'found' => count($result['found']), 'skipped' => count($result['skipped']), 'ignored' => count($result['ignored']), 'shopify_total' => count($shopify['orders']), 'shipstation_total' => count($shipstation), 'truncated' => $shopify['truncated'] || $onHold['truncated']]]);
             $this->runs->handle($store, ['tool' => 'run_audit', 'status' => $result['missing'] ? 'issues_found' : 'ok', 'start_date' => $start, 'end_date' => $end, 'duration_seconds' => round(microtime(true) - $started, 3), 'scanned' => count($shopify['orders']), 'rows_found' => count($result['missing']), 'meta' => ['shipstation_total' => count($shipstation), 'found' => count($result['found']), 'skipped' => count($result['skipped']), 'ignored' => count($result['ignored'])], 'attachment' => ['headers' => ['Order', 'Placed', 'Email', 'Total'], 'rows' => array_map(fn (array $order): array => [(string) ($order['name'] ?? $order['order_number'] ?? ''), (string) ($order['created_at'] ?? ''), (string) ($order['email'] ?? ''), (string) ($order['total_price'] ?? '')], $result['missing'])]]);
             $rules = $store->resolvedSlackRules();

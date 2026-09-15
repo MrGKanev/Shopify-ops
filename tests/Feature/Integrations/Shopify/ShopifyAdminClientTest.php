@@ -873,23 +873,21 @@ class ShopifyAdminClientTest extends TestCase
         ]);
     }
 
-    public function test_does_not_retry_a_graphql_post_after_a_server_error(): void
+    public function test_retries_a_graphql_query_after_a_server_error(): void
     {
         Http::preventStrayRequests();
+        Sleep::fake();
         Http::fake([
             'https://acme.myshopify.com/admin/api/2026-07/graphql.json' => Http::sequence()
                 ->pushStatus(500)
                 ->push(['data' => ['shop' => ['name' => 'Unexpected retry']]]),
         ]);
 
-        try {
-            $this->client()->graphql($this->store(), 'query ShopName { shop { name } }');
-            $this->fail('Expected RequestException was not thrown.');
-        } catch (RequestException $exception) {
-            $this->assertSame(500, $exception->response->status());
-        }
+        $result = $this->client()->graphql($this->store(), 'query ShopName { shop { name } }');
 
-        Http::assertSentCount(1);
+        $this->assertSame('Unexpected retry', $result['data']['shop']['name']);
+        Http::assertSentCount(2);
+        Sleep::assertSequence([Sleep::for(100)->milliseconds()]);
     }
 
     #[DataProvider('invalidResourcePaths')]

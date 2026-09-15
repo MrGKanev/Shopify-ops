@@ -22,9 +22,12 @@ class StoreStoreRequest extends FormRequest
             'label' => ['required', 'string', 'max:255'],
             'shopify_store' => ['required', 'string', 'max:255', 'alpha_dash', 'unique:stores,shopify_store'],
             'shopify_access_token' => ['required', 'string', 'max:2048'],
+            'shopify_webhook_secret' => ['nullable', 'string', 'max:2048'],
             'shipstation_api_key' => ['nullable', 'string', 'max:2048'],
             'shipstation_api_secret' => ['nullable', 'string', 'max:2048'],
             'store_number' => ['nullable', 'string', 'max:255'],
+            'scheduled_audit_enabled' => ['nullable', 'boolean'],
+            'scheduled_audit_time' => ['nullable', 'date_format:H:i', 'required_if:scheduled_audit_enabled,1'],
         ];
     }
 

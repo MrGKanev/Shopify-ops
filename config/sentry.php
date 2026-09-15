@@ -10,7 +10,7 @@ use App\Support\SentryEventSanitizer;
 return [
 
     // @see https://docs.sentry.io/concepts/key-terms/dsn-explainer/
-    'dsn' => env('SENTRY_LARAVEL_DSN', env('SENTRY_DSN')),
+    'dsn' => env('SENTRY_LARAVEL_DSN', env('SENTRY_DSN')) ?: null,
 
     // @see https://spotlightjs.com/
     // 'spotlight' => env('SENTRY_SPOTLIGHT', false),

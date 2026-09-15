@@ -37,6 +37,15 @@ class AppearanceSettingsRequest extends FormRequest
         ];
     }
 
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return [
+            'custom_links.*.url.required' => 'Моля, въведете адрес за допълнителния линк.',
+            'custom_links.*.url.url' => 'Адресът на допълнителния линк трябва да започва с http:// или https://.',
+        ];
+    }
+
     protected function prepareForValidation(): void
     {
         $links = collect($this->input('custom_links', []))

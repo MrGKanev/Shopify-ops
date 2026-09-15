@@ -17,7 +17,7 @@ class HorizonDashboardTest extends TestCase
         $this->assertSame('default', config('horizon.use'));
         $this->assertSame(['critical', 'default', 'notifications'], config('horizon.defaults.supervisor-1.queue'));
         $this->assertSame(3, config('horizon.defaults.supervisor-1.tries'));
-        $this->assertSame(60, config('horizon.defaults.supervisor-1.timeout'));
+        $this->assertSame(300, config('horizon.defaults.supervisor-1.timeout'));
         $this->assertSame(10, config('horizon.environments.production.supervisor-1.maxProcesses'));
         $this->assertTrue(config('horizon.fast_termination'));
         $this->assertSame('admin/horizon/{view?}', Route::getRoutes()->getByName('horizon.index')?->uri());

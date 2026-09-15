@@ -27,6 +27,13 @@
         @error('shopify_access_token') <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
     </div>
 
+    <div class="flex flex-col gap-2 sm:col-span-2">
+        <label class="text-sm font-medium" for="shopify_webhook_secret">Shopify webhook signing secret</label>
+        <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="shopify_webhook_secret" name="shopify_webhook_secret" type="password" autocomplete="new-password">
+        <p class="text-xs text-slate-500 dark:text-slate-400">Used only to verify incoming webhook signatures. Leave blank to keep the current secret.</p>
+        @error('shopify_webhook_secret') <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
+    </div>
+
     <div class="flex flex-col gap-2">
         <label class="text-sm font-medium" for="shipstation_api_key">ShipStation API key</label>
         <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="shipstation_api_key" name="shipstation_api_key" type="password" autocomplete="new-password">
@@ -45,6 +52,11 @@
         <label class="text-sm font-medium" for="store_number">ShipStation store number</label>
         <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="store_number" name="store_number" value="{{ old('store_number', $store?->store_number) }}">
         @error('store_number') <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
+    </div>
+
+    <div class="flex flex-col gap-3 rounded-lg border border-slate-200 p-4 sm:col-span-2 dark:border-slate-800">
+        <div class="flex items-center gap-2"><input id="scheduled_audit_enabled" name="scheduled_audit_enabled" type="checkbox" value="1" @checked(old('scheduled_audit_enabled', $store?->scheduled_audit_enabled))><label class="text-sm font-medium" for="scheduled_audit_enabled">Run the core audit automatically every day</label></div>
+        <div class="flex max-w-xs flex-col gap-2"><label class="text-sm font-medium" for="scheduled_audit_time">Local run time</label><input class="rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="scheduled_audit_time" name="scheduled_audit_time" type="time" value="{{ old('scheduled_audit_time', $store?->scheduled_audit_time?->format('H:i')) }}"><p class="text-xs text-slate-500 dark:text-slate-400">Uses the application timezone and scans the previous 30 days.</p></div>
     </div>
 </div>
 

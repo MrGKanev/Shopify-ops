@@ -109,7 +109,8 @@ class AppearanceSettingsControllerTest extends TestCase
 
         $this->actingAs($admin)->from(route('admin.settings'))->put(route('admin.appearance.update'), $payload)
             ->assertRedirect(route('admin.settings'))
-            ->assertSessionHasErrors(['custom_links.0.url', 'logo']);
+            ->assertSessionHasErrors(['custom_links.0.url', 'logo'])
+            ->assertSessionHasErrors(['custom_links.0.url' => 'Адресът на допълнителния линк трябва да започва с http:// или https://.']);
         $this->actingAs($operator)->put(route('admin.appearance.update'), [
             'site_name' => 'Forbidden change',
             'custom_links' => [],

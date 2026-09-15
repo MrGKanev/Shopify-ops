@@ -2,7 +2,15 @@
 
 @section('content')
     <div class="flex flex-col gap-6">
-        <x-page-header eyebrow="Administration" title="Webhook Health" subtitle="Live Shopify webhook registrations for the active store. Delivery history remains available in Shopify." />
+        <x-page-header eyebrow="Administration" title="Webhook Health" subtitle="Live Shopify webhook registrations for the active store.">
+            <x-button size="sm" variant="ghost" :href="route('admin.webhook-events')">Event history</x-button>
+        </x-page-header>
+
+        <x-card>
+            <p class="text-sm font-semibold">Callback URL</p>
+            <p class="mt-2 break-all font-mono text-sm text-slate-600 dark:text-slate-300">{{ route('webhooks.shopify', $activeStore->slug) }}</p>
+            <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Configure this HTTPS address in Shopify and save the signing secret in the store settings.</p>
+        </x-card>
 
         @if ($error)
             <x-alert tone="error">{{ $error }}</x-alert>

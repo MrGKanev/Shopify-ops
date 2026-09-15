@@ -17,6 +17,7 @@ use Spatie\Activitylog\Support\LogOptions;
     'label',
     'shopify_store',
     'shopify_access_token',
+    'shopify_webhook_secret',
     'shipstation_api_key',
     'shipstation_api_secret',
     'store_number',
@@ -24,8 +25,10 @@ use Spatie\Activitylog\Support\LogOptions;
     'email_rules',
     'discord_rules',
     'default_alert_email',
+    'scheduled_audit_enabled',
+    'scheduled_audit_time',
 ])]
-#[Hidden(['shopify_access_token', 'shipstation_api_key', 'shipstation_api_secret'])]
+#[Hidden(['shopify_access_token', 'shopify_webhook_secret', 'shipstation_api_key', 'shipstation_api_secret'])]
 class Store extends Model
 {
     /** @use HasFactory<StoreFactory> */
@@ -80,6 +83,18 @@ class Store extends Model
         return $this->hasMany(PrintQueueItem::class);
     }
 
+    /** @return HasMany<OperationalIssue, $this> */
+    public function operationalIssues(): HasMany
+    {
+        return $this->hasMany(OperationalIssue::class);
+    }
+
+    /** @return HasMany<WebhookEvent, $this> */
+    public function webhookEvents(): HasMany
+    {
+        return $this->hasMany(WebhookEvent::class);
+    }
+
     /** @return array{audit_enabled:bool,audit_min_missing:int,include_zero_audit:bool,scan_enabled:bool,scan_min_rows:int,mentions:string} */
     public function resolvedSlackRules(): array
     {
@@ -119,11 +134,14 @@ class Store extends Model
     {
         return [
             'shopify_access_token' => 'encrypted',
+            'shopify_webhook_secret' => 'encrypted',
             'shipstation_api_key' => 'encrypted',
             'shipstation_api_secret' => 'encrypted',
             'slack_rules' => 'array',
             'email_rules' => 'array',
             'discord_rules' => 'array',
+            'scheduled_audit_enabled' => 'boolean',
+            'scheduled_audit_time' => 'datetime:H:i',
         ];
     }
 }

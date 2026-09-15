@@ -1749,6 +1749,11 @@ class ShopifyAdminClient implements ShopifyAdminGateway
 
         $this->lastResponseApiVersion = '';
         $response = $this->request($store)
+            ->when(! str_contains($query, 'mutation'), fn (PendingRequest $request): PendingRequest => $request->retry(
+                [100, 500, 1000],
+                when: fn (Throwable $exception): bool => $this->isTransientFailure($exception),
+                throw: false,
+            ))
             ->post('graphql.json', $payload)
             ->throw();
         $this->lastResponseApiVersion = trim($response->header('X-Shopify-API-Version'));

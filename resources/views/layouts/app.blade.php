@@ -10,8 +10,8 @@
     $route = request()->route()?->getName() ?? '';
     $group = str_starts_with($route, 'admin.') ? 'settings' : (in_array($route, ['ignored-orders.index','push-logs.index','run-logs.index','jobs.index','print-queue.index'], true) ? 'manage' : (str_starts_with($route, 'orders.') || in_array($route, ['customers.lookup','metafields.index','global-search'], true) ? 'search' : (str_starts_with($route, 'reports.') || str_starts_with($route, 'saved-reports.') || in_array($route, ['report-trends.index','audits.index'], true) ? 'audit' : 'dashboard')));
     $contextLinks = match($group) {
-        'manage' => [['Ignored Orders','ignored-orders.index'],['Push Log','push-logs.index'],['Run History','run-logs.index'],['Job Queue','jobs.index'],['Print Queue','print-queue.index']],
-        'settings' => [['Configuration','admin.settings'],['API Health','admin.api-health'],['Config Check','admin.config-check'],['Webhook Health','admin.webhook-health'],['Slack Rules','admin.slack-rules.edit'],['Discord Rules','admin.discord-rules.edit'],['Email Rules','admin.email-rules.edit'],['Stores','admin.stores.index'],['Users','admin.users.index'],['Action Log','admin.action-log'],['Banned IPs','admin.banned-ips.index'],['Backups','admin.backups.index'],['Health','admin.health']],
+        'manage' => [['Issues','operational-issues.index'],['Ignored Orders','ignored-orders.index'],['Push Log','push-logs.index'],['Run History','run-logs.index'],['Job Queue','jobs.index'],['Print Queue','print-queue.index']],
+        'settings' => [['Configuration','admin.settings'],['API Health','admin.api-health'],['Config Check','admin.config-check'],['Webhook Health','admin.webhook-health'],['Webhook Events','admin.webhook-events'],['Slack Rules','admin.slack-rules.edit'],['Discord Rules','admin.discord-rules.edit'],['Email Rules','admin.email-rules.edit'],['Stores','admin.stores.index'],['Users','admin.users.index'],['Action Log','admin.action-log'],['Banned IPs','admin.banned-ips.index'],['Backups','admin.backups.index'],['Health','admin.health'],['Incidents','admin.health-incidents']],
         default => [],
     };
     // Laravel-only search additions with no equivalent in legacy's grouped hub (search-hub.php mirrors legacy exactly).
@@ -47,11 +47,26 @@
                 </ul>
             @endif
         @elseif($contextLinks)<div class="sidebar-section">{{ ucfirst($group) }}</div><ul class="sidebar-nav">@foreach($contextLinks as [$label,$name])@if((!in_array($name,['jobs.index','print-queue.index'],true) || auth()->user()->can('run-audits')) && (!str_starts_with($name,'admin.') || auth()->user()->can('manage-administration')))<li><a class="{{ request()->routeIs($name) ? 'active' : '' }}" href="{{ route($name) }}">{{ $label }}</a></li>@endif @endforeach</ul>@endif
-        @can('run-audits')<div class="sidebar-search"><form method="GET" action="{{ route('global-search') }}"><input class="sidebar-search-input" name="q" type="search" placeholder="Search order #…" value="{{ request('q') }}" autocomplete="off"></form></div>@endcan
+        @can('run-audits')<div class="sidebar-search"><button class="command-palette-trigger" type="button" data-command-palette-open><span>Quick search</span><kbd>⌘ K</kbd></button></div>@endcan
         <div class="sidebar-footer"><form method="POST" action="{{ route('logout') }}">@csrf<button class="btn btn-ghost btn-sm btn-full sidebar-signout-btn" type="submit">Sign out</button></form><a class="sidebar-version" href="{{ config('app.repository_url') }}" target="_blank" rel="noopener noreferrer">v{{ config('app.version') }} · GitHub</a><div class="sidebar-footer-row"><span class="sidebar-github">{{ auth()->user()->name }} · {{ auth()->user()->role->value }}</span><button class="sidebar-collapse-btn" id="js-sidebar-collapse" type="button" title="Collapse sidebar" aria-label="Collapse sidebar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg></button></div></div>
     </aside>
     <main class="main">@if($customLinks !== [])<nav class="custom-links" aria-label="Custom links">@foreach($customLinks as $link)<a href="{{ $link['url'] }}" target="_blank" rel="noopener noreferrer">{{ $link['label'] }}</a>@endforeach</nav>@endif @if(session('status'))<x-alert class="toast">{{ session('status') }}</x-alert>@endif @yield('content')</main>
 </div>
+@can('run-audits')
+<div class="command-palette" data-command-palette hidden>
+    <button class="command-palette-backdrop" type="button" aria-label="Close quick search" data-command-palette-close></button>
+    <section class="command-palette-dialog" role="dialog" aria-modal="true" aria-labelledby="command-palette-title">
+        <h2 class="sr-only" id="command-palette-title">Quick search</h2>
+        <div class="command-palette-input-wrap">
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+            <input data-command-palette-input type="search" placeholder="Search pages, issues and runs…" autocomplete="off" data-endpoint="{{ route('command-palette') }}">
+            <kbd>Esc</kbd>
+        </div>
+        <div class="command-palette-results" data-command-palette-results role="listbox" aria-label="Search results"></div>
+        <footer><span>↑↓ Navigate</span><span>↵ Open</span><span>Ctrl/⌘ K Search</span></footer>
+    </section>
+</div>
+@endcan
 <div id="toast-container"></div>
 </body>
 </html>

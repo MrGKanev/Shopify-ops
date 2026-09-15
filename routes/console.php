@@ -50,7 +50,10 @@ Schedule::command('backup:run', ['--only-db'])->dailyAt('01:15')->withoutOverlap
 Schedule::command('backup:run')->weeklyOn(0, '01:45')->withoutOverlapping();
 Schedule::command('backup:monitor')->hourlyAt(20)->withoutOverlapping();
 Schedule::command('backup:clean')->dailyAt('03:30')->withoutOverlapping();
+Schedule::command('backup:verify-latest')->weeklyOn(0, '03:00')->withoutOverlapping()->onOneServer();
 Schedule::command('reports:email-digest')->dailyAt('08:00')->withoutOverlapping();
+Schedule::command('reports:queue-scheduled-audits')->everyMinute()->withoutOverlapping()->onOneServer();
+Schedule::command('operations:detect-anomalies')->hourlyAt(10)->withoutOverlapping()->onOneServer();
 
 if (config('queue.default') === 'redis') {
     Schedule::command('horizon:snapshot')->everyFiveMinutes();

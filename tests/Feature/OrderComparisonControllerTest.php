@@ -229,7 +229,7 @@ class OrderComparisonControllerTest extends TestCase
             ->assertOk()
             ->assertSeeText('The order comparison could not be completed.')
             ->assertDontSee('private comparison failure');
-        Http::assertSentCount(1);
+        Http::assertSentCount(4);
     }
 
     /**
