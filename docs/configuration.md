@@ -1,13 +1,19 @@
 # Configuration
 
+Copy `.env.example` and review it before starting the application. Shopify and ShipStation credentials are **not** set in `.env`; they are managed per store under **Settings → Stores** (see [Administration](administration.md#multi-store-operation)) and encrypted in the database.
+
+After configuring a store, use:
+
+- **Settings → API Health** to test Shopify, ShipStation, email, Slack, and Discord delivery.
+- **Settings → Config Check** to validate runtime configuration and the active store.
+- **Settings → Webhook Health** to inspect Shopify webhook registrations.
+
+The minimum API Health check expects Shopify `read_orders` and `read_fulfillments`. Individual tools may need additional Shopify scopes for their resources, such as fulfillment orders or Shopify Payments disputes. See [Audit Checks](audit-checks.md).
+
 ## Environment variables
 
 | Variable | Required | Notes |
 |---|---|---|
-| `SHOPIFY_STORE` | ✅ | Subdomain of `yourstore.myshopify.com` |
-| `SHOPIFY_ACCESS_TOKEN` | ✅ | Shopify Admin API access token |
-| `SS_API_KEY` | - | ShipStation → Settings → API (required for audit/push features) |
-| `SS_API_SECRET` | - | Same page |
 | `GOOGLE_CLIENT_ID` | - | OAuth 2.0 Web application client ID from Google Cloud. Required to enable Google sign-in. |
 | `GOOGLE_CLIENT_SECRET` | - | OAuth client secret. Required to enable Google sign-in. |
 | `GOOGLE_REDIRECT_URI` | - | Callback URL registered in Google Cloud. Defaults to `${APP_URL}/auth/google/callback`. |
