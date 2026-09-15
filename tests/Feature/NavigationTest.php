@@ -21,15 +21,26 @@ class NavigationTest extends TestCase
         }
     }
 
-    public function test_audit_page_sidebar_lists_a_tool_absent_from_the_old_flat_list(): void
+    public function test_audits_index_lists_every_tool_grouped_by_category(): void
     {
         [$operator] = $this->userWithStore(true);
 
-        $this->actingAs($operator)->get(route('reports.run-audit'))->assertOk()
+        $this->actingAs($operator)->get(route('audits.index'))->assertOk()
             ->assertSeeText('Order Issues')
             ->assertSeeText('Duplicate Detector')
             ->assertSeeText('Fraud & Compliance')
             ->assertSeeText('Chargebacks / Disputes');
+    }
+
+    public function test_audit_page_sidebar_shows_recent_runs_instead_of_the_full_tool_list(): void
+    {
+        [$operator] = $this->userWithStore(true);
+
+        $this->actingAs($operator)->get(route('reports.run-audit'))->assertOk()
+            ->assertSeeText('Recent Runs')
+            ->assertSeeText('Full run history')
+            ->assertDontSeeText('Order Issues')
+            ->assertDontSeeText('Fraud & Compliance');
     }
 
     public function test_search_page_sidebar_lists_customer_ltv_and_tag_audit(): void

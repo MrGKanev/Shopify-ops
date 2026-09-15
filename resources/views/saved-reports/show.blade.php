@@ -1,6 +1,79 @@
 @extends('layouts.app')
+
 @section('content')
-<div class="flex flex-col gap-6"><section><p class="text-sm font-medium text-indigo-600">{{ $report->report_date->toDateString() }}</p><h1 class="text-3xl font-bold">Run Audit snapshot</h1><p class="text-slate-500">{{ $report->start_date->toDateString() }} → {{ $report->end_date->toDateString() }}</p></section><div class="flex justify-between"><h2 class="text-2xl font-bold">{{ $report->rows_found }} missing</h2><div class="flex gap-2"><a class="rounded-lg border px-4 py-2" href="{{ route('saved-reports.export',$report) }}">Download CSV</a><form method="POST" action="{{ route('reports.run-audit.store') }}"><input type="hidden" name="start_date" value="{{ $report->report_date->toDateString() }}"><input type="hidden" name="end_date" value="{{ $report->report_date->toDateString() }}">@csrf<button class="rounded-lg border px-4 py-2">Re-run this audit</button></form></div></div>
-@if($history->isNotEmpty())<section class="db-section"><div class="db-section-title">Last {{ $history->count() }} audits</div><div class="flex items-end gap-2" style="height:60px">@php($max = max(1, $history->max('rows_found')))@foreach($history as $point)<a href="{{ route('saved-reports.show', $point) }}" class="flex flex-col items-center gap-1" title="{{ $point->report_date->toDateString() }}: {{ $point->rows_found }} missing"><div style="width:16px;height:{{ max(4, (int) ($point->rows_found/$max*50)) }}px;background:{{ $point->is($report) ? '#4f46e5' : '#a5b4fc' }};border-radius:3px 3px 0 0"></div></a>@endforeach</div></section>@endif
-<div class="overflow-x-auto rounded-xl border"><table class="min-w-full text-left"><thead><tr><th class="p-3">Order</th><th>Date</th><th>Email</th><th>Total</th><th>Recurrence</th><th></th></tr></thead><tbody>@forelse($report->result['missing'] ?? [] as $order)@php($number = ltrim((string) ($order['name'] ?? $order['order_number'] ?? ''), '#'))@php($count = $recurrenceCounts[$number] ?? 0)<tr><td class="p-3 font-semibold">{{ $order['name'] ?? $order['order_number'] ?? '—' }}</td><td>{{ $order['created_at'] ?? '—' }}</td><td>{{ $order['email'] ?? '—' }}</td><td>{{ number_format((float) ($order['total_price'] ?? 0),2) }}</td><td>@if($count >= 3)<span class="rounded bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">Hot · {{ $count }}</span>@elseif($count >= 2)<span class="rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">Recurring · {{ $count }}</span>@else—@endif</td><td class="flex flex-wrap gap-2 p-3 text-sm">@if($number !== '')<a class="text-indigo-600" href="{{ route('orders.spot-check', ['order_number' => $number]) }}">Spot-check</a><a class="text-indigo-600" href="{{ route('orders.timeline', ['order_number' => $number]) }}">Timeline</a>@endif @if(!empty($order['id']))<a class="text-indigo-600" href="https://{{ $activeStore->shopify_store }}.myshopify.com/admin/orders/{{ $order['id'] }}" target="_blank" rel="noopener noreferrer">Shopify</a>@endif @if($number !== '')<a class="text-indigo-600" href="https://app.shipstation.com/#!/orders/all-orders-search-result?quickSearch={{ urlencode($number) }}" target="_blank" rel="noopener noreferrer">ShipStation</a><form method="POST" action="{{ route('ignored-orders.store') }}"><input type="hidden" name="order_number" value="{{ $number }}">@csrf<button class="text-red-600">Ignore</button></form>@endif</td></tr>@empty<tr><td class="p-6 text-center" colspan="6">No missing orders.</td></tr>@endforelse</tbody></table></div></div>
+    <div class="flex flex-col gap-6">
+        <x-page-header :eyebrow="$report->report_date->toDateString()" title="Run Audit snapshot" :subtitle="$report->start_date->toDateString().' → '.$report->end_date->toDateString()" />
+
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 class="text-2xl font-bold">{{ $report->rows_found }} missing</h2>
+            <div class="flex flex-wrap items-center gap-2">
+                <x-button variant="ghost" :href="route('saved-reports.export', $report)">Download CSV</x-button>
+                <form method="POST" action="{{ route('reports.run-audit.store') }}">
+                    @csrf
+                    <input type="hidden" name="start_date" value="{{ $report->report_date->toDateString() }}">
+                    <input type="hidden" name="end_date" value="{{ $report->report_date->toDateString() }}">
+                    <x-button type="submit" variant="ghost">Re-run this audit</x-button>
+                </form>
+            </div>
+        </div>
+
+        @if ($history->isNotEmpty())
+            <x-card>
+                <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Last {{ $history->count() }} audits</h2>
+                <div class="flex items-end gap-2" style="height: 60px">
+                    @php($max = max(1, $history->max('rows_found')))
+                    @foreach ($history as $point)
+                        <a class="flex flex-col items-center gap-1" href="{{ route('saved-reports.show', $point) }}" title="{{ $point->report_date->toDateString() }}: {{ $point->rows_found }} missing">
+                            <div class="rounded-t bg-indigo-300 dark:bg-indigo-700" style="width: 16px; height: {{ max(4, (int) ($point->rows_found / $max * 50)) }}px; @if ($point->is($report)) background: #4f46e5; @endif"></div>
+                        </a>
+                    @endforeach
+                </div>
+            </x-card>
+        @endif
+
+        <x-data-table :headers="['Order', 'Date', 'Email', 'Total', 'Recurrence', '']">
+            @forelse ($report->result['missing'] ?? [] as $order)
+                @php($number = ltrim((string) ($order['name'] ?? $order['order_number'] ?? ''), '#'))
+                @php($count = $recurrenceCounts[$number] ?? 0)
+                <tr>
+                    <td class="px-4 py-3 font-semibold">{{ $order['name'] ?? $order['order_number'] ?? '—' }}</td>
+                    <td class="px-4 py-3">{{ $order['created_at'] ?? '—' }}</td>
+                    <td class="px-4 py-3">{{ $order['email'] ?? '—' }}</td>
+                    <td class="px-4 py-3">{{ number_format((float) ($order['total_price'] ?? 0), 2) }}</td>
+                    <td class="px-4 py-3">
+                        @if ($count >= 3)
+                            <x-badge tone="danger">Hot · {{ $count }}</x-badge>
+                        @elseif ($count >= 2)
+                            <x-badge tone="warn">Recurring · {{ $count }}</x-badge>
+                        @else
+                            —
+                        @endif
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="flex flex-wrap items-center gap-2 text-sm">
+                            @if ($number !== '')
+                                <a class="text-indigo-600 dark:text-indigo-400" href="{{ route('orders.spot-check', ['order_number' => $number]) }}">Spot-check</a>
+                                <a class="text-indigo-600 dark:text-indigo-400" href="{{ route('orders.timeline', ['order_number' => $number]) }}">Timeline</a>
+                            @endif
+                            @if (! empty($order['id']))
+                                <a class="text-indigo-600 dark:text-indigo-400" href="https://{{ $activeStore->shopify_store }}.myshopify.com/admin/orders/{{ $order['id'] }}" target="_blank" rel="noopener noreferrer">Shopify</a>
+                            @endif
+                            @if ($number !== '')
+                                <a class="text-indigo-600 dark:text-indigo-400" href="https://app.shipstation.com/#!/orders/all-orders-search-result?quickSearch={{ urlencode($number) }}" target="_blank" rel="noopener noreferrer">ShipStation</a>
+                                <form method="POST" action="{{ route('ignored-orders.store') }}">
+                                    @csrf
+                                    <input type="hidden" name="order_number" value="{{ $number }}">
+                                    <x-button type="submit" size="sm" variant="danger">Ignore</x-button>
+                                </form>
+                            @endif
+                        </div>
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="6">No missing orders.</td>
+                </tr>
+            @endforelse
+        </x-data-table>
+    </div>
 @endsection

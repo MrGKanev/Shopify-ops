@@ -1,4 +1,25 @@
 @extends('layouts.app')
+
 @section('content')
-<div class="flex flex-col gap-6"><section><h1 class="text-3xl font-bold">Saved Reports</h1><p class="mt-2 text-slate-500">Daily snapshots from completed audits.</p></section><div class="overflow-x-auto rounded-xl border"><table class="min-w-full text-left"><thead><tr><th class="p-3">Saved</th><th>Tool</th><th>Period</th><th>Rows</th><th></th></tr></thead><tbody>@forelse($reports as $report)<tr><td class="p-3">{{ $report->updated_at->toDateTimeString() }}</td><td>{{ $report->tool }}</td><td>{{ $report->start_date->toDateString() }} → {{ $report->end_date->toDateString() }}</td><td>{{ $report->rows_found }}</td><td><a class="text-indigo-600" href="{{ route('saved-reports.show',$report) }}">Open</a></td></tr>@empty<tr><td class="p-6 text-center" colspan="5">No saved reports yet.</td></tr>@endforelse</tbody></table></div>{{ $reports->links() }}</div>
+    <div class="flex flex-col gap-6">
+        <x-page-header eyebrow="Operations" title="Saved Reports" subtitle="Daily snapshots from completed audits." />
+
+        <x-data-table :headers="['Saved', 'Tool', 'Period', 'Rows', '']">
+            @forelse ($reports as $report)
+                <tr>
+                    <td class="px-4 py-3">{{ $report->updated_at->toDateTimeString() }}</td>
+                    <td class="px-4 py-3">{{ $report->tool }}</td>
+                    <td class="px-4 py-3">{{ $report->start_date->toDateString() }} → {{ $report->end_date->toDateString() }}</td>
+                    <td class="px-4 py-3">{{ $report->rows_found }}</td>
+                    <td class="px-4 py-3"><a class="font-medium text-indigo-600 dark:text-indigo-400" href="{{ route('saved-reports.show', $report) }}">Open</a></td>
+                </tr>
+            @empty
+                <tr>
+                    <td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="5">No saved reports yet.</td>
+                </tr>
+            @endforelse
+        </x-data-table>
+
+        {{ $reports->links() }}
+    </div>
 @endsection

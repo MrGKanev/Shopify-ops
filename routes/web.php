@@ -100,6 +100,7 @@ Route::middleware('guest')->group(function (): void {
         ->name('login.store');
     Route::get('/auth/google/redirect', [GoogleAuthenticationController::class, 'redirect'])->middleware('throttle:oauth')->name('auth.google.redirect');
     Route::get('/auth/google/callback', [GoogleAuthenticationController::class, 'callback'])->middleware('throttle:oauth')->name('auth.google.callback');
+    Route::post('/dev-login/{role}', [AuthenticatedSessionController::class, 'devLogin'])->whereIn('role', ['admin', 'operator'])->name('dev-login');
 });
 
 Route::middleware('auth')->group(function (): void {
@@ -151,6 +152,7 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/jobs/failed/{uuid}/retry', [JobQueueController::class, 'retry'])->middleware('can:run-audits')->name('jobs.retry');
         Route::delete('/jobs/failed/{uuid}', [JobQueueController::class, 'destroy'])->middleware('can:run-audits')->name('jobs.destroy');
         Route::middleware('can:run-audits')->group(function (): void {
+            Route::view('/reports', 'reports.index')->name('audits.index');
             Route::get('/reports/run-audit', [RunAuditController::class, 'create'])->middleware('can:run-audits')->name('reports.run-audit');
             Route::post('/reports/run-audit', [RunAuditController::class, 'store'])->middleware('throttle:audit-report')->name('reports.run-audit.store');
             Route::post('/reports/run-audit/queue', [RunAuditController::class, 'queue'])->middleware('throttle:audit-report')->name('reports.run-audit.queue');

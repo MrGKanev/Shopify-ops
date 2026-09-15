@@ -1,21 +1,81 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="flex flex-col gap-6">
-    <section><p class="text-sm font-medium text-indigo-600">Fulfillment report</p><h1 class="text-3xl font-bold">Shipping Margin Erosion</h1><p class="text-slate-500">ShipStation label cost compared with shipping charged in Shopify.</p></section>
-    <form class="grid gap-4 rounded-xl border p-5 sm:grid-cols-4" method="POST" action="{{ route('reports.shipping-margin.store') }}">
-        @csrf
-        @foreach(['start_date' => ['From', $startDate, 'date'], 'end_date' => ['To', $endDate, 'date'], 'threshold' => ['Loss threshold', $threshold, 'number']] as $field => [$label, $value, $type])<div><label for="{{ $field }}">{{ $label }}</label><input class="w-full rounded-lg border px-3 py-2" id="{{ $field }}" name="{{ $field }}" type="{{ $type }}" min="{{ $type === 'number' ? 1 : '' }}" step="{{ $type === 'number' ? '0.01' : '' }}" value="{{ old($field, $value) }}">@error($field)<p class="text-red-600">{{ $message }}</p>@enderror</div>@endforeach
-        <button class="rounded-lg bg-indigo-600 px-5 py-2 text-white">Run report</button>
-    </form>
-    @error('export')<div class="rounded-xl bg-red-50 p-4">{{ $message }}</div>@enderror
-    @if($configurationError)<div class="rounded-xl bg-amber-50 p-4">Shopify or ShipStation credentials are incomplete for the active store.</div>@endif
-    @if($reportFailed)<div class="rounded-xl bg-red-50 p-4">The report could not be completed. Check Shopify and ShipStation, then try again.</div>@endif
-    @if($result)
-        <div class="flex flex-wrap items-center justify-between gap-3"><h2 class="text-2xl font-bold">{{ $result->scanned }} shipments scanned · {{ count($result->rows) }} losses over ${{ number_format($result->threshold, 2) }}</h2><form method="POST" action="{{ route('reports.shipping-margin.export') }}">@csrf<input type="hidden" name="start_date" value="{{ $result->startDate }}"><input type="hidden" name="end_date" value="{{ $result->endDate }}"><input type="hidden" name="threshold" value="{{ $result->threshold }}"><button class="rounded-lg border px-4 py-2">Download CSV</button></form></div>
-        @if($result->shopifyTruncated)<div class="rounded-xl bg-amber-50 p-4">Results are incomplete: Shopify orders were truncated after {{ $result->shopifyPages }} pages.</div>@endif
-        @if($result->byCarrier)<div class="overflow-x-auto rounded-xl border"><table class="min-w-full text-left"><thead><tr><th class="p-3">Carrier</th><th>Orders</th><th>Total loss</th><th>Average loss</th></tr></thead><tbody>@foreach($result->byCarrier as $row)<tr><td class="p-3 font-semibold">{{ $row['carrier'] }}</td><td>{{ $row['count'] }}</td><td>${{ number_format($row['total_loss'], 2) }}</td><td>${{ number_format($row['avg_loss'], 2) }}</td></tr>@endforeach</tbody></table></div>@endif
-        <div class="overflow-x-auto rounded-xl border"><table class="min-w-full text-left"><thead><tr><th class="p-3">Order</th><th>Ship date</th><th>Carrier / service</th><th>Ship cost</th><th>Charged</th><th>Loss</th><th>Email</th><th>Total</th></tr></thead><tbody>@forelse($result->rows as $row)<tr><td class="p-3 font-semibold">{{ $row['order_number'] }}</td><td>{{ $row['ship_date'] }}</td><td>{{ $row['carrier'] }}{{ $row['service'] ? ' / '.$row['service'] : '' }}</td><td>${{ number_format($row['ship_cost'], 2) }}</td><td>${{ number_format($row['shipping_charged'], 2) }}</td><td class="font-semibold text-red-600">${{ number_format($row['loss'], 2) }}</td><td>{{ $row['email'] ?: '—' }}</td><td>${{ number_format($row['total'], 2) }}</td></tr>@empty<tr><td class="p-6 text-center" colspan="8">No margin-eroding shipments found.</td></tr>@endforelse</tbody></table></div>
-    @endif
-</div>
+    <div class="flex flex-col gap-6">
+        <x-page-header eyebrow="Fulfillment report" title="Shipping Margin Erosion" subtitle="ShipStation label cost compared with shipping charged in Shopify." />
+
+        <form class="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:grid-cols-4 dark:border-slate-800 dark:bg-slate-900" method="POST" action="{{ route('reports.shipping-margin.store') }}">
+            @csrf
+            @foreach (['start_date' => ['From', $startDate, 'date'], 'end_date' => ['To', $endDate, 'date'], 'threshold' => ['Loss threshold', $threshold, 'number']] as $field => [$label, $value, $type])
+                <div>
+                    <label class="text-sm font-medium" for="{{ $field }}">{{ $label }}</label>
+                    <input class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="{{ $field }}" name="{{ $field }}" type="{{ $type }}" min="{{ $type === 'number' ? 1 : '' }}" step="{{ $type === 'number' ? '0.01' : '' }}" value="{{ old($field, $value) }}">
+                    @error($field)
+                        <p class="text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+            @endforeach
+            <div class="flex items-end"><x-button type="submit">Run report</x-button></div>
+        </form>
+
+        @error('export')
+            <x-alert tone="error">{{ $message }}</x-alert>
+        @enderror
+        @if ($configurationError)
+            <x-alert tone="warn">Shopify or ShipStation credentials are incomplete for the active store.</x-alert>
+        @endif
+        @if ($reportFailed)
+            <x-alert tone="error">The report could not be completed. Check Shopify and ShipStation, then try again.</x-alert>
+        @endif
+
+        @if ($result)
+            <section class="flex flex-col gap-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <h2 class="text-2xl font-bold">{{ $result->scanned }} shipments scanned · {{ count($result->rows) }} losses over ${{ number_format($result->threshold, 2) }}</h2>
+                    <form method="POST" action="{{ route('reports.shipping-margin.export') }}">
+                        @csrf
+                        <input type="hidden" name="start_date" value="{{ $result->startDate }}">
+                        <input type="hidden" name="end_date" value="{{ $result->endDate }}">
+                        <input type="hidden" name="threshold" value="{{ $result->threshold }}">
+                        <x-button type="submit" variant="ghost">Download CSV</x-button>
+                    </form>
+                </div>
+                @if ($result->shopifyTruncated)
+                    <x-alert tone="warn">Results are incomplete: Shopify orders were truncated after {{ $result->shopifyPages }} pages.</x-alert>
+                @endif
+
+                @if ($result->byCarrier)
+                    <x-data-table :headers="['Carrier', 'Orders', 'Total loss', 'Average loss']">
+                        @foreach ($result->byCarrier as $row)
+                            <tr>
+                                <td class="px-4 py-3 font-semibold">{{ $row['carrier'] }}</td>
+                                <td class="px-4 py-3">{{ $row['count'] }}</td>
+                                <td class="px-4 py-3">${{ number_format($row['total_loss'], 2) }}</td>
+                                <td class="px-4 py-3">${{ number_format($row['avg_loss'], 2) }}</td>
+                            </tr>
+                        @endforeach
+                    </x-data-table>
+                @endif
+
+                <x-data-table :headers="['Order', 'Ship date', 'Carrier / service', 'Ship cost', 'Charged', 'Loss', 'Email', 'Total']">
+                    @forelse ($result->rows as $row)
+                        <tr>
+                            <td class="px-4 py-3 font-semibold">{{ $row['order_number'] }}</td>
+                            <td class="px-4 py-3">{{ $row['ship_date'] }}</td>
+                            <td class="px-4 py-3">{{ $row['carrier'] }}{{ $row['service'] ? ' / '.$row['service'] : '' }}</td>
+                            <td class="px-4 py-3">${{ number_format($row['ship_cost'], 2) }}</td>
+                            <td class="px-4 py-3">${{ number_format($row['shipping_charged'], 2) }}</td>
+                            <td class="px-4 py-3 font-semibold text-red-600 dark:text-red-400">${{ number_format($row['loss'], 2) }}</td>
+                            <td class="px-4 py-3">{{ $row['email'] ?: '—' }}</td>
+                            <td class="px-4 py-3">${{ number_format($row['total'], 2) }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td class="px-4 py-8 text-center text-slate-500" colspan="8">No margin-eroding shipments found.</td>
+                        </tr>
+                    @endforelse
+                </x-data-table>
+            </section>
+        @endif
+    </div>
 @endsection

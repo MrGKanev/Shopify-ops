@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Store;
 use App\Models\User;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
@@ -130,5 +132,51 @@ class AuthenticatedSessionControllerTest extends TestCase
 
         $response->assertRedirect(route('login'));
         $this->assertGuest();
+    }
+
+    public function test_login_form_hides_dev_shortcuts_outside_the_local_environment(): void
+    {
+        $this->get(route('login'))->assertDontSeeText('Login as Admin');
+    }
+
+    public function test_dev_login_is_unavailable_outside_the_local_environment(): void
+    {
+        $response = $this->post(route('dev-login', 'admin'));
+
+        $response->assertNotFound();
+        $this->assertGuest();
+    }
+
+    public function test_login_form_shows_dev_shortcuts_in_the_local_environment(): void
+    {
+        $this->app->detectEnvironment(fn () => 'local');
+
+        $this->get(route('login'))->assertSeeText('Login as Admin');
+    }
+
+    public function test_dev_login_creates_and_authenticates_an_admin_with_store_access_in_the_local_environment(): void
+    {
+        $this->app->detectEnvironment(fn () => 'local');
+        $this->withoutMiddleware(PreventRequestForgery::class);
+
+        $response = $this->post(route('dev-login', 'admin'));
+
+        $response->assertRedirect(route('dashboard'));
+        $user = User::where('email', 'dev-admin@local.test')->firstOrFail();
+        $this->assertAuthenticatedAs($user);
+        $this->assertTrue($user->isAdministrator());
+        $this->assertTrue($user->stores()->exists());
+    }
+
+    public function test_dev_login_reuses_the_same_dev_store_and_user_on_repeated_calls(): void
+    {
+        $this->app->detectEnvironment(fn () => 'local');
+        $this->withoutMiddleware(PreventRequestForgery::class);
+
+        $this->post(route('dev-login', 'operator'));
+        $this->post(route('dev-login', 'operator'));
+
+        $this->assertSame(1, User::where('email', 'dev-operator@local.test')->count());
+        $this->assertSame(1, Store::where('slug', 'dev-store')->count());
     }
 }

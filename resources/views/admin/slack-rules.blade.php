@@ -1,4 +1,47 @@
 @extends('layouts.app')
+
 @section('content')
-<div class="flex flex-col gap-6"><section><h1 class="text-3xl font-bold">Slack Rules</h1><p class="text-slate-500">Control audit and scan notifications for the active store.</p></section>@if(session('status'))<div class="rounded-xl bg-green-50 p-4">{{ session('status') }}</div>@endif @unless($configured)<div class="rounded-xl bg-amber-50 p-4">Slack webhook is not configured.</div>@endunless<form class="grid gap-4 rounded-xl border p-5" method="POST">@csrf @method('PUT')<label><input name="audit_enabled" type="checkbox" value="1" @checked(old('audit_enabled',$rules['audit_enabled']))> Audit notifications enabled</label><div><label for="audit_min_missing">Minimum missing orders</label><input class="block rounded-lg border px-3 py-2" id="audit_min_missing" min="0" name="audit_min_missing" type="number" value="{{ old('audit_min_missing',$rules['audit_min_missing']) }}">@error('audit_min_missing')<p class="text-red-600">{{ $message }}</p>@enderror</div><label><input name="include_zero_audit" type="checkbox" value="1" @checked(old('include_zero_audit',$rules['include_zero_audit']))> Send all-clear notifications</label><label><input name="scan_enabled" type="checkbox" value="1" @checked(old('scan_enabled',$rules['scan_enabled']))> Scan notifications enabled</label><div><label for="scan_min_rows">Minimum scan rows</label><input class="block rounded-lg border px-3 py-2" id="scan_min_rows" min="1" name="scan_min_rows" type="number" value="{{ old('scan_min_rows',$rules['scan_min_rows']) }}">@error('scan_min_rows')<p class="text-red-600">{{ $message }}</p>@enderror</div><div><label for="mentions">Slack member/group IDs</label><input class="w-full rounded-lg border px-3 py-2" id="mentions" maxlength="500" name="mentions" value="{{ old('mentions',$rules['mentions']) }}" placeholder="U012ABC3DE S024XYZ9FG"></div><button class="rounded-lg bg-indigo-600 px-5 py-2 text-white">Save rules</button></form></div>
+    <div class="flex max-w-3xl flex-col gap-6">
+        <x-page-header eyebrow="Administration · Notifications" title="Slack Rules" subtitle="Control audit and scan notifications for the active store." />
+
+        @unless ($configured)
+            <x-alert tone="warn">Slack webhook is not configured.</x-alert>
+        @endunless
+
+        <form class="flex flex-col gap-5 rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900" method="POST">
+            @csrf
+            @method('PUT')
+
+            <div class="grid gap-5 sm:grid-cols-2">
+                <label class="flex items-center gap-3 rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+                    <input class="size-4 rounded border-slate-300 text-indigo-600" name="audit_enabled" type="checkbox" value="1" @checked(old('audit_enabled', $rules['audit_enabled']))>
+                    <span class="text-sm font-medium">Audit notifications enabled</span>
+                </label>
+                <div>
+                    <label class="text-sm font-medium" for="audit_min_missing">Minimum missing orders</label>
+                    <input class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="audit_min_missing" min="0" name="audit_min_missing" type="number" value="{{ old('audit_min_missing', $rules['audit_min_missing']) }}">
+                    @error('audit_min_missing')<p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                </div>
+                <label class="flex items-center gap-3 rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+                    <input class="size-4 rounded border-slate-300 text-indigo-600" name="include_zero_audit" type="checkbox" value="1" @checked(old('include_zero_audit', $rules['include_zero_audit']))>
+                    <span class="text-sm font-medium">Send all-clear notifications</span>
+                </label>
+                <label class="flex items-center gap-3 rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+                    <input class="size-4 rounded border-slate-300 text-indigo-600" name="scan_enabled" type="checkbox" value="1" @checked(old('scan_enabled', $rules['scan_enabled']))>
+                    <span class="text-sm font-medium">Scan notifications enabled</span>
+                </label>
+                <div>
+                    <label class="text-sm font-medium" for="scan_min_rows">Minimum scan rows</label>
+                    <input class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="scan_min_rows" min="1" name="scan_min_rows" type="number" value="{{ old('scan_min_rows', $rules['scan_min_rows']) }}">
+                    @error('scan_min_rows')<p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <label class="text-sm font-medium" for="mentions">Slack member/group IDs</label>
+                    <input class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="mentions" maxlength="500" name="mentions" value="{{ old('mentions', $rules['mentions']) }}" placeholder="U012ABC3DE S024XYZ9FG">
+                </div>
+            </div>
+
+            <x-button class="self-start" type="submit">Save rules</x-button>
+        </form>
+    </div>
 @endsection

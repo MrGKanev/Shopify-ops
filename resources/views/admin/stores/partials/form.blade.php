@@ -49,6 +49,6 @@
 </div>
 
 <div class="mt-6 flex items-center gap-3">
-    <button class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500" type="submit">Save store</button>
+    <x-button type="submit">Save store</x-button>
     <a class="text-sm font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white" href="{{ route('admin.stores.index') }}">Cancel</a>
 </div>

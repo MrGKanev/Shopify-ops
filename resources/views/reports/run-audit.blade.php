@@ -1,11 +1,87 @@
 @extends('layouts.app')
+
 @section('content')
-<div class="flex flex-col gap-6"><section><p class="text-sm font-medium text-indigo-600">Operations</p><h1 class="text-3xl font-bold">Run audit</h1><p class="text-slate-500">Find active Shopify orders missing from ShipStation.</p></section>
-@if(session('status'))<div class="rounded-xl bg-green-50 p-4">{{ session('status') }}</div>@endif @error('queue')<div class="rounded-xl bg-red-50 p-4">{{ $message }}</div>@enderror
-<form class="grid gap-4 rounded-xl border p-5 sm:grid-cols-4" method="POST">@csrf @foreach(['start_date'=>['From',$startDate],'end_date'=>['To',$endDate]] as $field=>[$label,$value])<div><label for="{{ $field }}">{{ $label }}</label><input class="w-full rounded-lg border px-3 py-2" id="{{ $field }}" name="{{ $field }}" type="date" value="{{ old($field,$value) }}">@error($field)<p class="text-red-600">{{ $message }}</p>@enderror</div>@endforeach<button class="rounded-lg bg-indigo-600 px-5 py-2 text-white" formaction="{{ route('reports.run-audit.store') }}">Run now</button><button class="rounded-lg border px-5 py-2" formaction="{{ route('reports.run-audit.queue') }}">Queue</button></form>
-@if($configurationError)<div class="rounded-xl bg-amber-50 p-4">Shopify and ShipStation credentials are required for the active store.</div>@endif @if($reportFailed)<div class="rounded-xl bg-red-50 p-4">The audit could not be completed. Check both integrations and try again.</div>@endif
-@if($result)<h2 class="text-2xl font-bold">{{ $result->shopifyTotal }} Shopify orders · {{ count($result->missing) }} missing</h2><div class="grid gap-3 sm:grid-cols-4"><div class="rounded-xl border p-4">Found: {{ $result->found }}</div><div class="rounded-xl border p-4">Skipped: {{ $result->skipped }}</div><div class="rounded-xl border p-4">Ignored: {{ $result->ignored }}</div><div class="rounded-xl border p-4">ShipStation: {{ $result->shipstationTotal }}</div></div>@if($result->shopifyTruncated)<div class="rounded-xl bg-amber-50 p-4">Results are incomplete because Shopify data was truncated.</div>@endif
-@if($result->duplicates !== [])<div class="rounded-xl border border-amber-300 bg-amber-50 p-4"><strong>{{ count($result->duplicates) }} potential duplicate{{ count($result->duplicates) === 1 ? '' : 's' }} detected</strong> — same email and amount within 24 hours.<ul class="mt-2 list-disc pl-5">@foreach($result->duplicates as $cluster)<li>{{ $cluster['email'] }} · {{ number_format((float) $cluster['amount'], 2) }} — {{ implode(', ', array_map(fn($o) => $o['name'] ?? $o['order_number'] ?? '?', $cluster['orders'])) }}</li>@endforeach</ul></div>@endif
-@if($result->missing !== [])@include('partials.bulk-ignore-form')@endif
-<div class="overflow-x-auto rounded-xl border"><table class="min-w-full text-left"><thead><tr><th></th><th class="p-3">Order</th><th>Date</th><th>Email</th><th>Total</th></tr></thead><tbody>@forelse($result->missing as $order)@php($number = $order['name'] ?? $order['order_number'] ?? '')<tr><td class="p-3"><input type="checkbox" name="order_numbers[]" value="{{ $number }}" form="bulk-ignore"></td><td class="p-3 font-semibold">{{ $number ?: '—' }}</td><td>{{ $order['created_at'] ?? '—' }}</td><td>{{ $order['email'] ?? '—' }}</td><td>{{ number_format((float) ($order['total_price'] ?? 0), 2) }}</td></tr>@empty<tr><td class="p-6 text-center" colspan="5">Every eligible Shopify order was found in ShipStation.</td></tr>@endforelse</tbody></table></div>@endif</div>
+    <div class="flex flex-col gap-6">
+        <x-page-header eyebrow="Operations" title="Run audit" subtitle="Find active Shopify orders missing from ShipStation." />
+
+        @if (session('status'))
+            <x-alert tone="ok">{{ session('status') }}</x-alert>
+        @endif
+        @error('queue')
+            <x-alert tone="error">{{ $message }}</x-alert>
+        @enderror
+
+        <form class="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:grid-cols-4 dark:border-slate-800 dark:bg-slate-900" method="POST">
+            @csrf
+            @foreach (['start_date' => ['From', $startDate], 'end_date' => ['To', $endDate]] as $field => [$label, $value])
+                <div>
+                    <label class="text-sm font-medium" for="{{ $field }}">{{ $label }}</label>
+                    <input class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="{{ $field }}" name="{{ $field }}" type="date" value="{{ old($field, $value) }}">
+                    @error($field)
+                        <p class="text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+            @endforeach
+            <div class="flex items-end gap-2">
+                <x-button type="submit" formaction="{{ route('reports.run-audit.store') }}">Run now</x-button>
+                <x-button type="submit" variant="ghost" formaction="{{ route('reports.run-audit.queue') }}">Queue</x-button>
+            </div>
+        </form>
+
+        @if ($configurationError)
+            <x-alert tone="warn">Shopify and ShipStation credentials are required for the active store.</x-alert>
+        @endif
+        @if ($reportFailed)
+            <x-alert tone="error">The audit could not be completed. Check both integrations and try again.</x-alert>
+        @endif
+
+        @if ($result)
+            <section class="flex flex-col gap-4">
+                <h2 class="text-2xl font-bold">{{ $result->shopifyTotal }} Shopify orders · {{ count($result->missing) }} missing</h2>
+
+                <div class="grid gap-3 sm:grid-cols-4">
+                    <x-card padding="p-4">Found: {{ $result->found }}</x-card>
+                    <x-card padding="p-4">Skipped: {{ $result->skipped }}</x-card>
+                    <x-card padding="p-4">Ignored: {{ $result->ignored }}</x-card>
+                    <x-card padding="p-4">ShipStation: {{ $result->shipstationTotal }}</x-card>
+                </div>
+
+                @if ($result->shopifyTruncated)
+                    <x-alert tone="warn">Results are incomplete because Shopify data was truncated.</x-alert>
+                @endif
+
+                @if ($result->duplicates !== [])
+                    <x-alert tone="warn">
+                        <strong>{{ count($result->duplicates) }} potential duplicate{{ count($result->duplicates) === 1 ? '' : 's' }} detected</strong> — same email and amount within 24 hours.
+                        <ul class="mt-2 list-disc pl-5">
+                            @foreach ($result->duplicates as $cluster)
+                                <li>{{ $cluster['email'] }} · {{ number_format((float) $cluster['amount'], 2) }} — {{ implode(', ', array_map(fn ($order) => $order['name'] ?? $order['order_number'] ?? '?', $cluster['orders'])) }}</li>
+                            @endforeach
+                        </ul>
+                    </x-alert>
+                @endif
+
+                @if ($result->missing !== [])
+                    @include('partials.bulk-ignore-form')
+                @endif
+
+                <x-data-table :headers="['', 'Order', 'Date', 'Email', 'Total']">
+                    @forelse ($result->missing as $order)
+                        @php($number = $order['name'] ?? $order['order_number'] ?? '')
+                        <tr>
+                            <td class="px-4 py-3"><input type="checkbox" name="order_numbers[]" value="{{ $number }}" form="bulk-ignore"></td>
+                            <td class="px-4 py-3 font-semibold">{{ $number ?: '—' }}</td>
+                            <td class="px-4 py-3">{{ $order['created_at'] ?? '—' }}</td>
+                            <td class="px-4 py-3">{{ $order['email'] ?? '—' }}</td>
+                            <td class="px-4 py-3">{{ number_format((float) ($order['total_price'] ?? 0), 2) }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td class="px-4 py-8 text-center text-slate-500" colspan="5">Every eligible Shopify order was found in ShipStation.</td>
+                        </tr>
+                    @endforelse
+                </x-data-table>
+            </section>
+        @endif
+    </div>
 @endsection
