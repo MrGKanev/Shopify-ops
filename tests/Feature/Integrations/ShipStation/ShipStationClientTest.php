@@ -366,6 +366,7 @@ class ShipStationClientTest extends TestCase
     public function test_build_order_payload_maps_shopify_fields_to_the_shipstation_shape(): void
     {
         $payload = $this->client()->buildOrderPayload([
+            'admin_graphql_api_id' => 'gid://shopify/Order/123',
             'order_number' => '65075',
             'created_at' => '2026-06-01T10:00:00Z',
             'email' => 'jane@example.com',
@@ -377,6 +378,7 @@ class ShipStationClientTest extends TestCase
             'shipping_lines' => [['price' => '5.00'], ['price' => '2.00']],
         ]);
 
+        $this->assertSame('gid://shopify/Order/123', $payload['orderKey']);
         $this->assertSame('65075', $payload['orderNumber']);
         $this->assertSame('awaiting_shipment', $payload['orderStatus']);
         $this->assertSame('jane@example.com', $payload['customerEmail']);
@@ -422,6 +424,7 @@ class ShipStationClientTest extends TestCase
         Http::assertSent(function (Request $request): bool {
             return $request->method() === 'POST'
                 && parse_url($request->url(), PHP_URL_PATH) === '/orders/createorder'
+                && $request['orderKey'] === '65075'
                 && $request['orderNumber'] === '65075'
                 && $request->hasHeader('Authorization', 'Basic '.base64_encode('api-key:api-secret'));
         });

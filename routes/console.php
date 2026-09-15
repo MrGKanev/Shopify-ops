@@ -34,6 +34,7 @@ Artisan::command('reports:email-digest', function (): void {
 })->purpose('Queue daily report email digests');
 
 Schedule::command('activitylog:clean')->dailyAt('02:30')->withoutOverlapping();
+Schedule::command('auth:clear-resets')->hourly();
 Schedule::call(function (): void {
     app(CheckOperationalAlerts::class)->handle();
 })

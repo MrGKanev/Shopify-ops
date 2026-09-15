@@ -141,6 +141,7 @@ class ShipStationClient implements ShipStationClientContract
         }
 
         return [
+            'orderKey' => (string) ($shopifyOrder['admin_graphql_api_id'] ?? $shopifyOrder['id'] ?? $shopifyOrder['order_number'] ?? $shopifyOrder['name'] ?? ''),
             'orderNumber' => (string) ($shopifyOrder['order_number'] ?? $shopifyOrder['name'] ?? ''),
             'orderDate' => $shopifyOrder['created_at'] ?? now()->toIso8601String(),
             'orderStatus' => 'awaiting_shipment',

@@ -32,6 +32,7 @@ use App\Http\Controllers\OrderTagSearchController;
 use App\Http\Controllers\OrderTimelineController;
 use App\Http\Controllers\OrderTrackingController;
 use App\Http\Controllers\PackingSlipController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\PrintQueueController;
 use App\Http\Controllers\PushLogController;
 use App\Http\Controllers\PushToShipStationController;
@@ -99,6 +100,10 @@ Route::middleware('guest')->group(function (): void {
     Route::post('/login', [AuthenticatedSessionController::class, 'store'])
         ->middleware('throttle:login')
         ->name('login.store');
+    Route::get('/forgot-password', [PasswordResetController::class, 'create'])->name('password.request');
+    Route::post('/forgot-password', [PasswordResetController::class, 'store'])->middleware('throttle:password-reset')->name('password.email');
+    Route::get('/reset-password/{token}', [PasswordResetController::class, 'edit'])->name('password.reset');
+    Route::post('/reset-password', [PasswordResetController::class, 'update'])->middleware('throttle:password-reset')->name('password.update');
     Route::get('/auth/google/redirect', [GoogleAuthenticationController::class, 'redirect'])->middleware('throttle:oauth')->name('auth.google.redirect');
     Route::get('/auth/google/callback', [GoogleAuthenticationController::class, 'callback'])->middleware('throttle:oauth')->name('auth.google.callback');
     Route::post('/dev-login/{role}', [AuthenticatedSessionController::class, 'devLogin'])->whereIn('role', ['admin', 'operator'])->name('dev-login');

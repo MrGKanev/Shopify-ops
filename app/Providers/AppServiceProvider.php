@@ -45,7 +45,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        View::composer(['auth.login', 'layouts.app', 'layouts.guest', 'admin.settings'], function (ViewContract $view): void {
+        View::composer(['auth.login', 'auth.forgot-password', 'auth.reset-password', 'layouts.app', 'layouts.guest', 'admin.settings'], function (ViewContract $view): void {
             $appSettings = request()->attributes->get('appSettings');
             if (! $appSettings instanceof AppSetting) {
                 $appSettings = AppSetting::current();
@@ -89,6 +89,9 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by(Str::transliterate($email.'|'.$request->ip()));
         });
         RateLimiter::for('oauth', fn (Request $request): Limit => Limit::perMinute(10)->by($request->ip()));
+        RateLimiter::for('password-reset', fn (Request $request): Limit => Limit::perMinute(3)->by(
+            Str::transliterate(Str::lower((string) $request->input('email')).'|'.$request->ip()),
+        ));
 
         RateLimiter::for('spot-check', fn (Request $request): Limit => Limit::perMinute(10)->by(
             ($request->user()?->getAuthIdentifier() ?? 'guest').'|'.$request->ip(),
