@@ -1,0 +1,55 @@
+<?php
+
+namespace App\Application\Reports;
+
+use App\Models\RunLog;
+use App\Models\Store;
+use App\Notifications\ReportEmailNotification;
+use App\Notifications\ScanDiscordNotification;
+use App\Notifications\ScanSlackNotification;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Context;
+use Illuminate\Support\Facades\Notification;
+
+class RecordRun
+{
+    /**
+     * @param  array<string, mixed>  $attributes  may include an 'attachment' key shaped
+     *                                            array{headers: list<string>, rows: list<list<bool|float|int|string|null>>}
+     *                                            for the immediate-mode email CSV attachment
+     */
+    public function handle(Store $store, array $attributes): RunLog
+    {
+        $attachment = $attributes['attachment'] ?? null;
+        $run = $store->runLogs()->create(Arr::except($attributes, ['attachment']));
+        Context::add([
+            'run_id' => $run->getKey(),
+            'store_id' => $store->getKey(),
+            'tool' => (string) ($attributes['tool'] ?? 'unknown'),
+            'run_status' => (string) ($attributes['status'] ?? 'unknown'),
+        ]);
+        $oldIds = $store->runLogs()->latest('id')->skip(500)->take(500)->pluck('id');
+        if ($oldIds->isNotEmpty()) {
+            RunLog::whereKey($oldIds)->delete();
+        }
+        $rules = $store->resolvedSlackRules();
+        $rows = (int) ($attributes['rows_found'] ?? 0);
+        $duration = (float) ($attributes['duration_seconds'] ?? 0.0);
+        if (($attributes['tool'] ?? '') !== 'run_audit' && ($attributes['status'] ?? '') !== 'error' && $rules['scan_enabled'] && $rows >= $rules['scan_min_rows'] && trim((string) config('services.slack.notifications.webhook_url')) !== '') {
+            Notification::route('slack', config('services.slack.notifications.webhook_url'))->notify(new ScanSlackNotification($store->label, (string) ($attributes['tool'] ?? 'scan'), $rows, $rules['mentions'], $duration));
+        }
+        $discordRules = $store->resolvedDiscordRules();
+        if (($attributes['tool'] ?? '') !== 'run_audit' && ($attributes['status'] ?? '') !== 'error' && $discordRules['scan_enabled'] && $rows >= $discordRules['scan_min_rows'] && trim((string) config('services.discord.notifications.webhook_url')) !== '') {
+            Notification::route('discord', config('services.discord.notifications.webhook_url'))->notify(new ScanDiscordNotification($store->label, (string) ($attributes['tool'] ?? 'scan'), $rows, $duration));
+        }
+        $tool = (string) ($attributes['tool'] ?? '');
+        $emailRule = $store->resolvedEmailRules()[$tool] ?? null;
+        $recipient = $emailRule['email'] ?? '';
+        $recipient = $recipient !== '' ? $recipient : trim((string) ($store->default_alert_email ?? ''));
+        if (($attributes['status'] ?? '') !== 'error' && $emailRule && $emailRule['mode'] === 'immediate' && $recipient !== '' && $rows >= $emailRule['threshold'] && ($rows > 0 || $emailRule['include_zero'])) {
+            Notification::route('mail', $recipient)->notify(new ReportEmailNotification($store->label, $tool, $rows, isset($attributes['start_date']) ? (string) $attributes['start_date'] : null, isset($attributes['end_date']) ? (string) $attributes['end_date'] : null, $attachment['headers'] ?? null, $attachment['rows'] ?? null));
+        }
+
+        return $run;
+    }
+}

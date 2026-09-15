@@ -1,0 +1,56 @@
+<?php
+
+// Canonical list of every report tool that can record a run_log and be
+// configured in Email Rules, keyed by the exact `tool` string each
+// controller passes to RecordRun::handle() (see RecordsReportRun trait
+// call sites). Lets Email Rules render every tool before a store has any
+// run_logs yet, mirroring legacy's ToolRegistry::triggerCatalog().
+
+return [
+    'run_audit' => ['label' => 'Run Audit', 'route' => 'reports.run-audit'],
+    'active_shipstation_conflicts' => ['label' => 'Active ShipStation Conflicts', 'route' => 'reports.active-shipstation-conflicts'],
+    'address_changes' => ['label' => 'Address Changes', 'route' => 'reports.address-changes'],
+    'address_check' => ['label' => 'Address Check', 'route' => 'reports.address-check'],
+    'bundle_check' => ['label' => 'Bundle Check', 'route' => 'reports.bundle-check'],
+    'carrier_performance' => ['label' => 'Carrier Performance', 'route' => 'reports.carrier-performance'],
+    'catalog_quality' => ['label' => 'Catalog Quality', 'route' => 'reports.catalog-quality'],
+    'consent_audit' => ['label' => 'Marketing Consent Audit', 'route' => 'reports.consent-audit'],
+    'country_mismatch' => ['label' => 'Billing / Shipping Country Mismatch', 'route' => 'reports.country-mismatch'],
+    'customer_ltv' => ['label' => 'Customer LTV', 'route' => 'reports.customer-ltv'],
+    'discount_abuse' => ['label' => 'Discount Abuse', 'route' => 'reports.discount-abuse'],
+    'disputes' => ['label' => 'Chargebacks / Disputes', 'route' => 'reports.disputes'],
+    'duplicate_addresses' => ['label' => 'Duplicate Shipping Addresses', 'route' => 'reports.duplicate-addresses'],
+    'duplicate_orders' => ['label' => 'Duplicate Detector', 'route' => 'reports.duplicate-orders'],
+    'email_check' => ['label' => 'Email Checker', 'route' => 'reports.email-check'],
+    'fraud_risk' => ['label' => 'Fraud Risk Report', 'route' => 'reports.fraud-risk'],
+    'fulfilled_items' => ['label' => 'Fulfilled Items Report', 'route' => 'reports.fulfilled-items'],
+    'fulfillment_sla' => ['label' => 'Fulfillment SLA Breaches', 'route' => 'reports.fulfillment-sla'],
+    'gift_cards' => ['label' => 'Gift Cards', 'route' => 'reports.gift-cards'],
+    'high_value_no_phone' => ['label' => 'High-Value No Phone', 'route' => 'reports.high-value-no-phone'],
+    'inventory_aging' => ['label' => 'Inventory Aging', 'route' => 'reports.inventory-aging'],
+    'inventory_forecast' => ['label' => 'Inventory Forecast', 'route' => 'reports.inventory-forecast'],
+    'inventory_oversell' => ['label' => 'Inventory Oversell Risk', 'route' => 'reports.inventory-oversell'],
+    'item_mismatch' => ['label' => 'Shipped Item Mismatch', 'route' => 'reports.item-mismatch'],
+    'no_tracking' => ['label' => 'Fulfilled Without Tracking', 'route' => 'reports.no-tracking'],
+    'note_flags' => ['label' => 'Note Flags', 'route' => 'reports.note-flags'],
+    'on_hold_stall' => ['label' => 'On-Hold Stall', 'route' => 'reports.on-hold-stall'],
+    'order_edits' => ['label' => 'Order Edit History', 'route' => 'reports.order-edits'],
+    'orphan_orders' => ['label' => 'Orphan Detector', 'route' => 'reports.orphan-orders'],
+    'partial_fulfillment' => ['label' => 'Partial Fulfillment Stalls', 'route' => 'reports.partial-fulfillment'],
+    'post_ship_address_changes' => ['label' => 'Post-Ship Address Change', 'route' => 'reports.post-ship-address-changes'],
+    'product_completeness' => ['label' => 'Product Completeness', 'route' => 'reports.product-completeness'],
+    'refund_tracker' => ['label' => 'Refunds Tracker', 'route' => 'reports.refund-tracker'],
+    'repeat_refunds' => ['label' => 'Repeat Refunds', 'route' => 'reports.repeat-refunds'],
+    'return_rma' => ['label' => 'Return / RMA Tracker', 'route' => 'reports.return-rma'],
+    'returned_items' => ['label' => 'Returned Items Report', 'route' => 'reports.returned-items'],
+    'same_ip' => ['label' => 'Same IP, Different Emails', 'route' => 'reports.same-ip'],
+    'shipment_aging' => ['label' => 'Shipment Aging', 'route' => 'reports.shipment-aging'],
+    'shipped_unfulfilled' => ['label' => 'SS Shipped / Shopify Unfulfilled', 'route' => 'reports.shipped-unfulfilled'],
+    'shipping_margin' => ['label' => 'Shipping Margin Erosion', 'route' => 'reports.shipping-margin'],
+    'sku_duplicates' => ['label' => 'SKU Duplicates', 'route' => 'reports.sku-duplicates'],
+    'tag_audit' => ['label' => 'Tag Audit', 'route' => 'reports.tag-audit'],
+    'tag_policy' => ['label' => 'Tag Policy Audit', 'route' => 'reports.tag-policy'],
+    'tax_audit' => ['label' => 'Tax Audit', 'route' => 'reports.tax-audit'],
+    'voided_shipments' => ['label' => 'Voided Shipments', 'route' => 'reports.voided-shipments'],
+    'zombie_products' => ['label' => 'Zombie Products', 'route' => 'reports.zombie-products'],
+];

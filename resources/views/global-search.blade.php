@@ -1,0 +1,9 @@
+@extends('layouts.app')
+@section('content')
+<div class="flex flex-col gap-6"><section><h1 class="text-3xl font-bold">Global Search</h1><p class="mt-2 text-slate-500">Search order numbers across saved reports, push log and ignored orders.</p></section><form class="flex gap-3 rounded-xl border p-5" method="GET"><div class="flex-1"><label for="q">Order number</label><input class="w-full rounded-lg border px-3 py-2" id="q" name="q" value="{{ old('q',$query) }}" placeholder="#1001">@error('q')<p class="text-red-600">{{ $message }}</p>@enderror</div><button class="rounded-lg bg-indigo-600 px-5 py-2 text-white">Search</button></form>
+@if($results !== null)@php($total=count($results['reports'])+$results['pushes']->count()+$results['ignored']->count())<h2 class="text-2xl font-bold">{{ $total }} matches for “{{ $query }}”</h2>@if($total===0)<p class="rounded-xl border p-6 text-center">Nothing found locally. <a class="text-indigo-600" href="{{ route('orders.spot-check',['prefill'=>$query]) }}">Run a live Spot-check</a>.</p>@else
+@if($results['reports'])<section><h3 class="mb-2 text-xl font-bold">Saved reports</h3>@foreach($results['reports'] as $row)<div class="rounded border p-3"><a class="text-indigo-600" href="{{ route('saved-reports.show',$row['id']) }}">{{ $row['order_number'] }}</a> · {{ $row['report_date'] }}</div>@endforeach</section>@endif
+@if($results['pushes']->isNotEmpty())<section><h3 class="mb-2 text-xl font-bold">Push log</h3>@foreach($results['pushes'] as $row)<div class="rounded border p-3">{{ $row->order_number }} · {{ $row->pushed_at->toDateTimeString() }}</div>@endforeach</section>@endif
+@if($results['ignored']->isNotEmpty())<section><h3 class="mb-2 text-xl font-bold">Ignored orders</h3>@foreach($results['ignored'] as $row)<div class="rounded border p-3">{{ $row->order_number }} · {{ $row->reason ?: 'No reason' }}</div>@endforeach</section>@endif
+@endif @endif</div>
+@endsection

@@ -2,7 +2,7 @@
 
 ## Audit
 
-_The tables in this section are generated from `ToolRegistry::hubSections('audit')` - run `composer docs` after adding or editing an audit page, don't hand-edit between the AUTO-GENERATED markers. `composer test` fails if this file drifts out of sync._
+_Sections mirror the grouped sidebar navigation in [`config/audit-hub.php`](../config/audit-hub.php). Update both when adding or removing an audit page — this table is maintained by hand, not generated._
 
 <!-- AUTO-GENERATED:AUDIT-SECTION:START -->
 
@@ -114,12 +114,25 @@ _The tables in this section are generated from `ToolRegistry::hubSections('audit
 
 | Page | What it does |
 | --- | --- |
-| **Ignored** | View and manage all ignored orders. Bulk-unignore with checkboxes. Import via CSV. |
-| **Push Log** | Full history of every order pushed to ShipStation from the dashboard. |
-| **Run History** | Recent audit and scan executions with status, duration, scanned count, issue count, and errors. |
-| **Job Queue** | File-backed pending/running/done background audit jobs processed by `worker.php`. |
-| **Action Log** | Operator audit trail for ignore/unignore, ShipStation pushes, queued jobs, store switches, and settings changes. |
-| **Settings** | Test API connectivity, view current `.env` config, manage banned IPs. |
-| **API Health** | Live Shopify/ShipStation health checks, Shopify API version, and required Shopify scopes. |
-| **Config Check** | Validate `order_types.json`, `tag_policy.json`, and `stores.json`. |
-| **Slack Rules** | Configure thresholds for Slack audit and scan notifications. |
+| **Ignored Orders** | View and manage all ignored orders. Single ignore, checkbox bulk-ignore (Run Audit), bulk-unignore, and CSV import. Recurrence badges show orders that keep coming back missing. |
+| **Push Log** | Full history of every order pushed to ShipStation from the dashboard, filterable by order/Shopify ID. |
+| **Run History** | Recent audit and scan executions with status, duration, scanned count, issue count, and errors, filterable by tool/status/error. |
+| **Job Queue** | Store-scoped queued/running/completed/failed audit jobs processed by the Laravel queue worker (`php artisan queue:work`), plus generic queue diagnostics (Horizon when Redis-backed). |
+
+## Settings (admin)
+
+| Page | What it does |
+| --- | --- |
+| **Configuration** | Store credentials (Shopify, ShipStation), integration status. |
+| **API Health** | Live Shopify/ShipStation health checks, Shopify API version match, and required Shopify scopes. |
+| **Config Check** | Validate [`config/order-types.php`](../config/order-types.php) and [`config/tag-policy.php`](../config/tag-policy.php), plus runtime application/store/cache/queue/mail/notification configuration. |
+| **Webhook Health** | Lists registered Shopify webhooks and flags unhealthy ones (wrong URL scheme, stale API version). |
+| **Slack Rules** | Configure thresholds for Slack audit and scan notifications, and the `@mention` prefix. |
+| **Discord Rules** | Configure thresholds for Discord audit and scan notifications. |
+| **Email Rules** | Per-tool email delivery mode (off / immediate / digest), threshold, and recipient, plus a global fallback recipient. |
+| **Stores** | Manage multi-store credentials and access. |
+| **Users** | Manage operator accounts and roles (viewer / operator / admin). |
+| **Action Log** | Operator audit trail for ignore/unignore, ShipStation pushes, print queue changes, queued audits, order notes, store switches, cache flush, banned-IP unbans, and rule changes. |
+| **Banned IPs** | View and manually unban IPs locked out after repeated failed logins. |
+| **Backups** | Trigger and download database/application backups. |
+| **Health** | Framework health checks (database, cache, queue, scheduler heartbeat). |

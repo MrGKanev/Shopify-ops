@@ -1,56 +1,39 @@
-# Local secrets and deployment configuration
-/.env
-/.env.*
-!/.env.example
-/stores.json
-/order_types.json
-/tag_policy.json
-
-# Installed PHP and frontend dependencies
-/vendor/
-/node_modules/
-
-# Runtime state; keep server-deny rules and distributable examples
-/cache/*
-!/cache/.htaccess
-/logs/*
-!/logs/.htaccess
-/reports/*
-!/reports/.htaccess
-/data/*
-!/data/.htaccess
-!/data/*.example
-!/data/**/*.example
-/temp/
-/tmp/
-
-# SQLite runtime and sidecar files, wherever a store data directory lives
-*.sqlite
-*.sqlite-shm
-*.sqlite-wal
-*.sqlite-journal
-*.db
-*.db-shm
-*.db-wal
-
-# Test, coverage and static-analysis output
-/.phpunit.cache/
-/.phpunit.result.cache
-/coverage/
-/coverage.xml
-/var/
-/.phpstan.cache
-/.php-cs-fixer.cache
-
-# Editors, operating systems and local agent worktrees
-/.idea/
-/.vscode/
-/.fleet/
-*.swp
-*.swo
+*.log
 .DS_Store
+.env
+.env.backup
+.env.production
+.phpactor.json
+.phpunit.result.cache
+/.codex
+/.cursor/
+/.idea
+/.nova
+/.phpunit.cache
+/.vscode
+/.zed
+/auth.json
+/node_modules
+/public/build
+/public/fonts-manifest.dev.json
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/vendor
+_ide_helper.php
+Homestead.json
+Homestead.yaml
 Thumbs.db
-/.claude/worktrees/
 
-# Local root-level exports
-/*.txt
+# Local AI tool scratch (worktrees, skill state) - never project source
+/.claude/
+/.superpowers/
+
+# Legacy PHP app runtime data, retained on disk locally after the 2026-09-14
+# repo cutover but no longer written to or read by anything - see
+# docs/parity-verification.md for the cutover this predates.
+/cache/
+/data/
+/reports/
+/order_types.json

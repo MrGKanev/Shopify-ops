@@ -161,8 +161,8 @@ Finds paid orders placed by customers whose Shopify email marketing consent stat
 Scores every paid order in the date range with the same composite risk model used by Spot-check and Metafields search (disposable/invalid email, billing ≠ shipping country, missing phone on a high-value order, PO Box address, partially paid, fraud/high-risk tag, Shopify HIGH risk assessment, no shipping address), then lists everything above *low* risk.
 
 - Only medium (score ≥ 21) and high (score ≥ 51) orders are shown; low is too noisy to review at scale
-- Sorted by score descending; each row expands to show the exact signals that contributed
-- Custom signal weights can be set in `data/risk_weights.json`
+- Sorted by score descending; each row expands to show the exact signals and the points each contributed
+- Signal weights are fixed (`App\Domain\Orders\OrderRiskScorer`); there is currently no per-deployment override
 
 ### Same IP, Different Emails
 Finds paid orders where two or more *different* customer emails share the same client IP address recorded at checkout - a signal for multi-account abuse or a fraud ring operating from one device/network.
@@ -194,7 +194,7 @@ Finds Shopify orders that are refunded or cancelled but still active in ShipStat
 - Uses the same normalized order matching as the audit engine
 
 ### Bundle Check
-Scans for orders missing required companion items as defined in `order_types.json` under `required_items`. Covers fulfilled orders too - catching shipped bundles missing a component is the most urgent case. See [order-types.md](order-types.md) for configuration.
+Scans for orders missing required companion items as defined in [`config/order-types.php`](../config/order-types.php) under `required_items`. Covers fulfilled orders too - catching shipped bundles missing a component is the most urgent case. See [order-types.md](order-types.md) for configuration.
 
 ### Return / RMA Tracker
 Fetches refunded and partially-refunded orders in a date range and shows the returned items from each refund.
@@ -267,7 +267,7 @@ Finds enabled gift cards with a remaining balance that are either expiring soon 
 Groups paid orders by discount code and shipping address, then flags clusters where multiple distinct customer emails used the same code at the same destination.
 
 ### Tag Policy Audit
-Validates paid orders against `tag_policy.json`.
+Validates paid orders against [`config/tag-policy.php`](../config/tag-policy.php).
 
 - `required`: when all trigger tags are present, required tags must also be present
 - `forbidden`: listed tags must not appear together on one order

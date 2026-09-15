@@ -1,8 +1,12 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
 parameters:
     level: 5
+    parseModelCastsMethod: true
     paths:
-        - src
-    scanFiles:
-        - tests/Unit/support/PHPMailerStub.php
-    treatPhpDocTypesAsCertain: false
-    tmpDir: var/phpstan
+        - app/Application
+        - app/Domain
+        - app/Integrations
+
+    tmpDir: storage/framework/cache/phpstan

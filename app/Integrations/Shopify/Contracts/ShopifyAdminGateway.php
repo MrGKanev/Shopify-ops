@@ -1,0 +1,177 @@
+<?php
+
+namespace App\Integrations\Shopify\Contracts;
+
+use App\Integrations\Shopify\Exceptions\ShopifyGraphqlException;
+use App\Models\Store;
+
+interface ShopifyAdminGateway
+{
+    /** @return array{shop_name: string, scopes: list<string>, requested_version: string, returned_version: string} */
+    public function healthCheck(Store $store): array;
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function findByOrderNumber(Store $store, string $orderNumber): array;
+
+    /**
+     * @param  list<mixed>  $orderNumbers
+     * @return array<int|string, list<array<string, mixed>>>
+     */
+    public function findByOrderNumbers(Store $store, array $orderNumbers): array;
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function getOrderEvents(Store $store, string $orderId): array;
+
+    /** @throws ShopifyGraphqlException on an invalid order id or Shopify-reported user error */
+    public function updateOrderNote(Store $store, string $orderId, string $note): void;
+
+    /**
+     * @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool}
+     */
+    public function searchOrdersByTag(Store $store, string $tag, ?string $startDate = null, ?string $endDate = null): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function highValueOrderCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function countryMismatchCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function taxAuditCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function consentAuditCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function fraudRiskCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function emailCheckCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function addressCheckCandidates(Store $store, string $startDate, string $endDate, bool $unfulfilledOnly): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function discountAbuseCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function sameIpCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function duplicateOrderCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function customerLtvCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, customer: array<string, mixed>|null, pages: int, truncated: bool} */
+    public function customerOrderHistory(Store $store, string $email): array;
+
+    /** @return list<array<string, mixed>> */
+    public function orderMetafieldDefinitions(Store $store): array;
+
+    /** @return array{orders: list<array<string, mixed>>, scanned: int, with_metafield: int, sample_values: list<string>, pages: int, truncated: bool} */
+    public function searchOrdersByMetafield(Store $store, string $namespace, string $key, string $value, ?string $startDate, ?string $endDate): array;
+
+    /** @param list<int|string> $orderIds @return array<string, list<array<string, mixed>>> */
+    public function orderMetafields(Store $store, array $orderIds): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function tagPolicyCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{disputes: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function openDisputes(Store $store): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function noteFlagCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function repeatRefundCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function refundTrackerCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function returnedItemCandidates(Store $store, string $startDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function fulfilledItemCandidates(Store $store, string $startDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function shippingMarginCandidates(Store $store, string $startDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function fulfillmentSlaCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function partialFulfillmentCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{fulfillment_orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function onHoldFulfillmentCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function noTrackingCandidates(Store $store, string $startDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function itemMismatchCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{events: list<array<string, mixed>>, orders: array<string, array<string, mixed>>, pages: int, truncated: bool} */
+    public function orderEditCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{events: list<array<string, mixed>>, orders: array<string, array<string, mixed>>, pages: int, truncated: bool} */
+    public function addressChangeCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function tagAuditCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{products: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function productCompletenessCandidates(Store $store): array;
+
+    /** @return array{products: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function skuDuplicatesCandidates(Store $store): array;
+
+    /** @return array{products: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function inventoryOversellCandidates(Store $store): array;
+
+    /** @return array{products: list<array<string, mixed>>, orders: list<array<string, mixed>>, product_pages: int, order_pages: int, products_truncated: bool, orders_truncated: bool} */
+    public function inventoryAgingCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{products: list<array<string, mixed>>, orders: list<array<string, mixed>>, product_pages: int, order_pages: int, products_truncated: bool, orders_truncated: bool} */
+    public function inventoryForecastCandidates(Store $store, string $startDate, string $endDate): array;
+
+    /** @return array{products: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function zombieProductsCandidates(Store $store): array;
+
+    /** @return array{products: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function catalogQualityCandidates(Store $store): array;
+
+    /** @return array{gift_cards: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function giftCardCandidates(Store $store): array;
+
+    /**
+     * @param  array<string, bool|int|string>  $query
+     * @return array<string, mixed>
+     */
+    public function get(Store $store, string $resource, array $query = []): array;
+
+    /**
+     * @param  array<string, mixed>  $variables
+     * @return array<string, mixed>
+     */
+    public function graphql(Store $store, string $query, array $variables = []): array;
+
+    /**
+     * @param  array<string, mixed>  $variables
+     * @return array{edges: list<array<string, mixed>>, pages: int, truncated: bool}
+     */
+    public function paginateGraphql(
+        Store $store,
+        string $query,
+        string $rootKey,
+        array $variables = [],
+        int $maxPages = 20,
+    ): array;
+}
