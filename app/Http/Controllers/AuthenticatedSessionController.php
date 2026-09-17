@@ -27,6 +27,7 @@ class AuthenticatedSessionController extends Controller
     public function devLogin(Request $request, string $role): RedirectResponse
     {
         abort_unless(app()->environment('local'), 404);
+        abort_unless(in_array($request->ip(), ['127.0.0.1', '::1'], true), 404);
 
         $store = Store::firstOrCreate(
             ['slug' => 'dev-store'],

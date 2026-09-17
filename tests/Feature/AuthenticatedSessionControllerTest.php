@@ -179,4 +179,16 @@ class AuthenticatedSessionControllerTest extends TestCase
         $this->assertSame(1, User::where('email', 'dev-operator@local.test')->count());
         $this->assertSame(1, Store::where('slug', 'dev-store')->count());
     }
+
+    public function test_dev_login_is_unavailable_when_the_request_is_not_from_a_loopback_address(): void
+    {
+        $this->app->detectEnvironment(fn () => 'local');
+        $this->withoutMiddleware(PreventRequestForgery::class);
+
+        $response = $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.5'])
+            ->post('http://example.com/dev-login/admin');
+
+        $response->assertNotFound();
+        $this->assertGuest();
+    }
 }
