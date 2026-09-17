@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToStore;
 use Database\Factories\OperationalIssueFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,13 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class OperationalIssue extends Model
 {
     /** @use HasFactory<OperationalIssueFactory> */
-    use HasFactory;
-
-    /** @return BelongsTo<Store, $this> */
-    public function store(): BelongsTo
-    {
-        return $this->belongsTo(Store::class);
-    }
+    use BelongsToStore, HasFactory;
 
     /** @return BelongsTo<User, $this> */
     public function owner(): BelongsTo
