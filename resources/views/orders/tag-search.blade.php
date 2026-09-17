@@ -9,8 +9,8 @@
             <div><label class="text-sm font-medium" for="end_date">To (optional)</label><input class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="end_date" name="end_date" type="date" value="{{ old('end_date', $endDate) }}">@error('end_date')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror</div>
             <div class="flex items-end"><button class="rounded-lg bg-indigo-600 px-5 py-2.5 font-semibold text-white" type="submit">Search</button></div>
         </form>
-        @if($searchFailed)<div class="rounded-xl border border-red-200 bg-red-50 p-5 text-red-800" role="alert">The tag search could not be completed. Check the Shopify integration and try again.</div>@endif
-        @if($configurationError)<div class="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-800" role="alert">Shopify is not configured completely for this store.</div>@endif
+        @if($searchFailed)<x-alert tone="error">The tag search could not be completed. Check the Shopify integration and try again.</x-alert>@endif
+        @if($configurationError)<x-alert tone="warn">Shopify is not configured completely for this store.</x-alert>@endif
         @if($result !== null)<section class="flex flex-col gap-4">
             <div class="flex flex-wrap items-center gap-3"><h2 class="text-2xl font-bold">Results</h2><span class="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold dark:bg-slate-800">{{ count($result->orders) }} found</span><span class="text-sm text-slate-500">Tag: {{ $result->tag }}@if($result->startDate || $result->endDate) · {{ $result->startDate ?: '…' }} → {{ $result->endDate ?: '…' }}@endif</span></div>
             @if($result->truncated)<div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800" role="status">Results were truncated after {{ $result->pages }} pages. Add a date range to narrow the search.</div>@endif

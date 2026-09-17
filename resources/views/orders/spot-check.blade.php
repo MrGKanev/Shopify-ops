@@ -40,15 +40,15 @@
         </form>
 
         @if ($configurationError)
-            <div class="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200" role="alert">
+            <x-alert tone="warn">
                 ShipStation is not configured completely for this store. Choose Shopify only or update the store credentials.
-            </div>
+            </x-alert>
         @endif
 
         @if ($lookupFailed)
-            <div class="rounded-xl border border-red-200 bg-red-50 p-5 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200" role="alert">
+            <x-alert tone="error">
                 The spot-check could not be completed. Check the selected integrations and try again.
-            </div>
+            </x-alert>
         @endif
 
         @if ($result !== null)

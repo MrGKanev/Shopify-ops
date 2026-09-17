@@ -9,8 +9,8 @@
         @error('orders')<p class="mt-2 text-sm text-red-600" role="alert">{{ $message }}</p>@enderror
         <button class="mt-4 rounded-lg bg-indigo-600 px-5 py-2.5 font-semibold text-white" type="submit">Load tracking</button>
     </form>
-    @if($configurationError)<div class="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-800" role="alert">ShipStation is not configured completely for this store.</div>@endif
-    @if($lookupFailed)<div class="rounded-xl border border-red-200 bg-red-50 p-5 text-red-800" role="alert">Tracking could not be loaded. Try again.</div>@endif
+    @if($configurationError)<x-alert tone="warn">ShipStation is not configured completely for this store.</x-alert>@endif
+    @if($lookupFailed)<x-alert tone="error">Tracking could not be loaded. Try again.</x-alert>@endif
     @if($results !== null)<section class="flex flex-col gap-4"><h2 class="text-2xl font-bold">Results</h2>
         @foreach($results as $result)<article class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
             <div class="flex justify-between gap-3"><h3 class="font-semibold">#{{ $result['number'] }}</h3><span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs dark:bg-slate-800">{{ !$result['found'] ? 'Not found' : (count($result['shipments']) > 1 ? count($result['shipments']).' shipments' : 'Found') }}</span></div>

@@ -9,7 +9,7 @@
         </section>
 
         @if (session('status'))
-            <div class="rounded-xl bg-emerald-50 p-4 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">{{ session('status') }}</div>
+            <x-alert tone="ok">{{ session('status') }}</x-alert>
         @endif
 
         <section class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">

@@ -28,9 +28,9 @@
         </form>
 
         @if ($lookupFailed)
-            <div class="rounded-xl border border-red-200 bg-red-50 p-5 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200" role="alert">
+            <x-alert tone="error">
                 The order lookup could not be completed. Check the store integrations and try again.
-            </div>
+            </x-alert>
         @endif
 
         @if ($result !== null)
@@ -103,7 +103,7 @@
                     </div>
 
                     @if (! $result->shipStationConfigured)
-                        <div class="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">ShipStation credentials are not configured for this store.</div>
+                        <x-alert tone="warn">ShipStation credentials are not configured for this store.</x-alert>
                     @else
                         @forelse ($result->shipStationOrders as $order)
                             <article class="grid gap-3 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
@@ -142,16 +142,16 @@
                 @if ($result->comparisonState === 'not_configured')
                     <div class="rounded-xl border border-slate-200 bg-white p-5 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">Configure ShipStation to enable detailed comparison.</div>
                 @elseif ($result->comparisonState === 'shopify_missing')
-                    <div class="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">Comparison unavailable because the order was not found in Shopify.</div>
+                    <x-alert tone="warn">Comparison unavailable because the order was not found in Shopify.</x-alert>
                 @elseif ($result->comparisonState === 'shipstation_missing')
-                    <div class="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">Comparison unavailable because the order was not found in ShipStation.</div>
+                    <x-alert tone="warn">Comparison unavailable because the order was not found in ShipStation.</x-alert>
                 @elseif ($result->comparisonState === 'ambiguous')
-                    <div class="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">Multiple matching records were found. No record was selected automatically.</div>
+                    <x-alert tone="warn">Multiple matching records were found. No record was selected automatically.</x-alert>
                 @elseif ($result->comparison !== null)
                     @foreach ($result->comparison['warnings'] as $warning)
-                        <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200" role="alert">
+                        <x-alert tone="error">
                             {{ $warning['message'] }}
-                        </div>
+                        </x-alert>
                     @endforeach
 
                     <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
@@ -202,25 +202,25 @@
 
                     @if ($result->comparison['items']['state'] === 'different')
                         <div class="grid gap-4 sm:grid-cols-2">
-                            <div class="rounded-xl border border-red-200 bg-red-50 p-5 dark:border-red-900 dark:bg-red-950">
+                            <x-alert tone="error">
                                 <h3 class="font-semibold text-red-800 dark:text-red-200">Missing from ShipStation</h3>
                                 @forelse ($result->comparison['items']['missing'] as $sku => $quantity)
                                     <p class="mt-2 text-sm text-red-700 dark:text-red-300"><span class="font-mono">{{ $sku }}</span> · {{ $quantity }}</p>
                                 @empty
                                     <p class="mt-2 text-sm text-red-700 dark:text-red-300">None</p>
                                 @endforelse
-                            </div>
-                            <div class="rounded-xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-900 dark:bg-amber-950">
+                            </x-alert>
+                            <x-alert tone="warn">
                                 <h3 class="font-semibold text-amber-800 dark:text-amber-200">Extra in ShipStation</h3>
                                 @forelse ($result->comparison['items']['extra'] as $sku => $quantity)
                                     <p class="mt-2 text-sm text-amber-700 dark:text-amber-300"><span class="font-mono">{{ $sku }}</span> · {{ $quantity }}</p>
                                 @empty
                                     <p class="mt-2 text-sm text-amber-700 dark:text-amber-300">None</p>
                                 @endforelse
-                            </div>
+                            </x-alert>
                         </div>
                     @else
-                        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">SKU quantities match.</div>
+                        <x-alert tone="ok">SKU quantities match.</x-alert>
                     @endif
                 @endif
             </section>

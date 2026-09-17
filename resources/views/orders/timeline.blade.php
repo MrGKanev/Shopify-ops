@@ -21,9 +21,9 @@
         </form>
 
         @if ($timelineFailed)
-            <div class="rounded-xl border border-red-200 bg-red-50 p-5 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200" role="alert">
+            <x-alert tone="error">
                 The order timeline could not be completed. Check the store integrations and try again.
-            </div>
+            </x-alert>
         @endif
 
         @if ($result !== null && $result->state === 'not_found')
@@ -31,9 +31,9 @@
                 No Shopify order was found for #{{ $result->orderNumber }}.
             </div>
         @elseif ($result !== null && $result->state === 'ambiguous')
-            <div class="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200" role="alert">
+            <x-alert tone="warn">
                 Shopify returned {{ $result->shopifyMatchCount }} matches for #{{ $result->orderNumber }}. No ambiguous order was selected automatically.
-            </div>
+            </x-alert>
         @elseif ($result !== null && $result->state === 'ready')
             <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <article class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">

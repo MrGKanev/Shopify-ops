@@ -8,10 +8,10 @@
         @error('order_number')<p class="mt-2 text-sm text-red-600" role="alert">{{ $message }}</p>@enderror
         <button class="mt-4 rounded-lg bg-indigo-600 px-5 py-2.5 font-semibold text-white" type="submit">Preview</button>
     </form>
-    @if($configurationError)<div class="print-hidden rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-800" role="alert">ShipStation is not configured completely for this store.</div>@endif
-    @if($lookupFailed)<div class="print-hidden rounded-xl border border-red-200 bg-red-50 p-5 text-red-800" role="alert">The packing slip could not be loaded. Try again.</div>@endif
+    @if($configurationError)<x-alert tone="warn" class="print-hidden">ShipStation is not configured completely for this store.</x-alert>@endif
+    @if($lookupFailed)<x-alert tone="error" class="print-hidden">The packing slip could not be loaded. Try again.</x-alert>@endif
     @if($result && $result['status'] === 'not_found')<div class="print-hidden rounded-xl border p-5" role="status">Order #{{ $orderNumber }} was not found in ShipStation.</div>@endif
-    @if($result && $result['status'] === 'ambiguous')<div class="print-hidden rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-800" role="alert">More than one exact ShipStation order matched. Refine the order number.</div>@endif
+    @if($result && $result['status'] === 'ambiguous')<x-alert tone="warn" class="print-hidden">More than one exact ShipStation order matched. Refine the order number.</x-alert>@endif
     @if($result && $result['status'] === 'ready') @php($slip = $result['slip'])
     <article class="rounded-xl border border-slate-300 bg-white p-8 text-slate-950">
         <div class="flex items-start justify-between"><div><h2 class="text-3xl font-bold">Packing Slip</h2><p class="mt-1 text-lg">Order #{{ $slip['orderNumber'] }}</p></div><button class="print-hidden rounded-lg bg-slate-900 px-4 py-2 text-white" type="button" data-print-window>Print</button></div>

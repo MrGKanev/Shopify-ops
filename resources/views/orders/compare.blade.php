@@ -29,9 +29,9 @@
         </form>
 
         @if ($comparisonFailed)
-            <div class="rounded-xl border border-red-200 bg-red-50 p-5 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200" role="alert">
+            <x-alert tone="error">
                 The order comparison could not be completed. Check the store integrations and try again.
-            </div>
+            </x-alert>
         @endif
 
         @if ($result !== null)
@@ -47,9 +47,9 @@
                 </div>
 
                 @if ($result->shopifyMatchCountA > 1 || $result->shopifyMatchCountB > 1)
-                    <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200" role="alert">
+                    <x-alert tone="warn">
                         Multiple Shopify matches were found for at least one order number. No ambiguous record was selected automatically.
-                    </div>
+                    </x-alert>
                 @endif
 
                 <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
