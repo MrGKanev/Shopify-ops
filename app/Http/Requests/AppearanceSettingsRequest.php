@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AuthorizesAdministration;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -9,13 +10,7 @@ use Illuminate\Validation\Rules\File;
 
 class AppearanceSettingsRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
-    public function authorize(): bool
-    {
-        return $this->user()?->can('manage-administration') ?? false;
-    }
+    use AuthorizesAdministration;
 
     /**
      * Get the validation rules that apply to the request.

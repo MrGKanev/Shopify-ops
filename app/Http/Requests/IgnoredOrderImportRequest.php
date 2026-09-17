@@ -2,14 +2,12 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AuthorizesRunAudits;
 use Illuminate\Foundation\Http\FormRequest;
 
 class IgnoredOrderImportRequest extends FormRequest
 {
-    public function authorize(): bool
-    {
-        return $this->user()?->can('run-audits') ?? false;
-    }
+    use AuthorizesRunAudits;
 
     public function rules(): array
     {

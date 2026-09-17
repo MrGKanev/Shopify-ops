@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AuthorizesAdministration;
 use App\Models\Store;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -10,10 +11,7 @@ use Illuminate\Validation\Rule;
 
 class StoreUpdateRequest extends FormRequest
 {
-    public function authorize(): bool
-    {
-        return $this->user()?->can('manage-administration') ?? false;
-    }
+    use AuthorizesAdministration;
 
     /**
      * @return array<string, array<int, ValidationRule|string>>

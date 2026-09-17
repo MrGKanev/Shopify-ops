@@ -2,14 +2,12 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AuthorizesRunAudits;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateOperationalIssueRequest extends FormRequest
 {
-    public function authorize(): bool
-    {
-        return $this->user()?->can('run-audits') ?? false;
-    }
+    use AuthorizesRunAudits;
 
     /** @return array<string, array<int, string>> */
     public function rules(): array

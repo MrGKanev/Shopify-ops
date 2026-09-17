@@ -2,12 +2,15 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\HasOrderNumberRules;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
 class OrderTrackingRequest extends FormRequest
 {
+    use HasOrderNumberRules;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -40,7 +43,7 @@ class OrderTrackingRequest extends FormRequest
                 $validator->errors()->add('orders', 'Enter at least one order number.');
             } elseif (count($numbers) > 30) {
                 $validator->errors()->add('orders', 'Maximum 30 order numbers at once.');
-            } elseif (collect($numbers)->contains(fn (string $number): bool => mb_strlen($number) > 64 || preg_match('/\A[a-zA-Z0-9_-]+\z/', $number) !== 1)) {
+            } elseif (collect($numbers)->contains(fn (string $number): bool => ! $this->isValidOrderNumber($number))) {
                 $validator->errors()->add('orders', 'Every order number must contain only letters, numbers, hyphens, or underscores.');
             }
         }];
@@ -57,6 +60,6 @@ class OrderTrackingRequest extends FormRequest
     {
         $tokens = preg_split('/[\s,]+/', trim($input), -1, PREG_SPLIT_NO_EMPTY) ?: [];
 
-        return array_values(array_map(fn (string $number): string => ltrim(trim($number), '#'), $tokens));
+        return array_values(array_map(fn (string $number): string => $this->stripOrderNumberHash($number), $tokens));
     }
 }

@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\HasOrderNumberRules;
 use Illuminate\Foundation\Http\FormRequest;
 
 class OrderComparisonRequest extends FormRequest
 {
+    use HasOrderNumberRules;
+
     public function authorize(): bool
     {
         return true;
@@ -17,8 +20,8 @@ class OrderComparisonRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'order_a' => ['nullable', 'required_with:order_b', 'string', 'max:64', 'regex:/\A#?[a-zA-Z0-9_-]+\z/'],
-            'order_b' => ['nullable', 'required_with:order_a', 'string', 'max:64', 'regex:/\A#?[a-zA-Z0-9_-]+\z/'],
+            'order_a' => ['nullable', 'required_with:order_b', 'string', 'max:64', $this->orderNumberRule()],
+            'order_b' => ['nullable', 'required_with:order_a', 'string', 'max:64', $this->orderNumberRule()],
         ];
     }
 
@@ -44,7 +47,7 @@ class OrderComparisonRequest extends FormRequest
                 continue;
             }
 
-            $orderNumber = ltrim(trim($value), '#');
+            $orderNumber = $this->stripOrderNumberHash($value);
             $this->merge([$field => $orderNumber === '' ? null : $orderNumber]);
         }
     }

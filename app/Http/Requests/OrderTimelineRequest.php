@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\HasOrderNumberRules;
 use Illuminate\Foundation\Http\FormRequest;
 
 class OrderTimelineRequest extends FormRequest
 {
+    use HasOrderNumberRules;
+
     public function authorize(): bool
     {
         return true;
@@ -15,7 +18,7 @@ class OrderTimelineRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'order_number' => ['nullable', 'string', 'max:64', 'regex:/\A#?[a-zA-Z0-9_-]+\z/'],
+            'order_number' => ['nullable', 'string', 'max:64', $this->orderNumberRule()],
         ];
     }
 
@@ -31,7 +34,7 @@ class OrderTimelineRequest extends FormRequest
             return;
         }
 
-        $orderNumber = ltrim(trim($value), '#');
+        $orderNumber = $this->stripOrderNumberHash($value);
         $this->merge(['order_number' => $orderNumber === '' ? null : $orderNumber]);
     }
 }

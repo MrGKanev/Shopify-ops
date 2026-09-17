@@ -2,17 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AuthorizesRunAudits;
 use App\Http\Requests\Concerns\HasDateRangeRules;
 use Illuminate\Foundation\Http\FormRequest;
 
 class FulfillmentSlaRequest extends FormRequest
 {
-    use HasDateRangeRules;
-
-    public function authorize(): bool
-    {
-        return $this->user()?->can('run-audits') ?? false;
-    }
+    use AuthorizesRunAudits, HasDateRangeRules;
 
     public function rules(): array
     {

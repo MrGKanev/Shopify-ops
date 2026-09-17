@@ -2,14 +2,12 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AuthorizesRunAudits;
 use Illuminate\Foundation\Http\FormRequest;
 
 class CommandPaletteRequest extends FormRequest
 {
-    public function authorize(): bool
-    {
-        return $this->user()?->can('run-audits') ?? false;
-    }
+    use AuthorizesRunAudits;
 
     /**
      * Get the validation rules that apply to the request.

@@ -2,12 +2,15 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\HasOrderNumberRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class OrderBatchLookupRequest extends FormRequest
 {
+    use HasOrderNumberRules;
+
     public function authorize(): bool
     {
         return true;
@@ -53,7 +56,7 @@ class OrderBatchLookupRequest extends FormRequest
             }
 
             foreach ($orderNumbers as $orderNumber) {
-                if (mb_strlen($orderNumber) > 64 || preg_match('/\A[a-zA-Z0-9_-]+\z/', $orderNumber) !== 1) {
+                if (! $this->isValidOrderNumber($orderNumber)) {
                     $validator->errors()->add('orders', 'Every order number must contain only letters, numbers, hyphens, or underscores.');
 
                     return;
@@ -81,7 +84,7 @@ class OrderBatchLookupRequest extends FormRequest
         $tokens = preg_split('/[\s,]+/', trim($input), -1, PREG_SPLIT_NO_EMPTY) ?: [];
 
         return array_values(array_map(
-            fn (string $orderNumber): string => ltrim(trim($orderNumber), '#'),
+            fn (string $orderNumber): string => $this->stripOrderNumberHash($orderNumber),
             $tokens,
         ));
     }

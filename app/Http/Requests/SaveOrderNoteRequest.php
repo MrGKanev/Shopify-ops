@@ -2,14 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AuthorizesRunAudits;
+use App\Http\Requests\Concerns\HasOrderNumberRules;
 use Illuminate\Foundation\Http\FormRequest;
 
 class SaveOrderNoteRequest extends FormRequest
 {
-    public function authorize(): bool
-    {
-        return $this->user()?->can('run-audits') ?? false;
-    }
+    use AuthorizesRunAudits, HasOrderNumberRules;
 
     public function rules(): array
     {
@@ -25,7 +24,7 @@ class SaveOrderNoteRequest extends FormRequest
         $orderNumber = $this->input('order_number');
         $this->merge([
             'note' => trim((string) $this->input('note')),
-            'order_number' => is_string($orderNumber) ? ltrim(trim($orderNumber), '#') : $orderNumber,
+            'order_number' => is_string($orderNumber) ? $this->stripOrderNumberHash($orderNumber) : $orderNumber,
         ]);
     }
 }

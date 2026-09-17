@@ -2,15 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AuthorizesAdministration;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 
 class StoreStoreRequest extends FormRequest
 {
-    public function authorize(): bool
-    {
-        return $this->user()?->can('manage-administration') ?? false;
-    }
+    use AuthorizesAdministration;
 
     /**
      * @return array<string, list<string>>

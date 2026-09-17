@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AuthorizesAdministration;
 use App\Models\User;
 use App\UserRole;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -12,10 +13,7 @@ use Illuminate\Validation\Validator;
 
 class UserUpdateRequest extends FormRequest
 {
-    public function authorize(): bool
-    {
-        return $this->user()?->can('manage-administration') ?? false;
-    }
+    use AuthorizesAdministration;
 
     /**
      * @return array<string, array<int, ValidationRule|string>>

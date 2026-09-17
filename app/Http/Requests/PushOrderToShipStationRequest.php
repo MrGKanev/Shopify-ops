@@ -2,24 +2,23 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\AuthorizesRunAudits;
+use App\Http\Requests\Concerns\HasOrderNumberRules;
 use Illuminate\Foundation\Http\FormRequest;
 
 class PushOrderToShipStationRequest extends FormRequest
 {
-    public function authorize(): bool
-    {
-        return $this->user()?->can('run-audits') ?? false;
-    }
+    use AuthorizesRunAudits, HasOrderNumberRules;
 
     public function rules(): array
     {
-        return ['order_number' => ['required', 'string', 'max:64', 'regex:/\A#?[a-zA-Z0-9_-]+\z/']];
+        return ['order_number' => ['required', 'string', 'max:64', $this->orderNumberRule()]];
     }
 
     protected function prepareForValidation(): void
     {
         if (is_string($this->input('order_number'))) {
-            $this->merge(['order_number' => ltrim(trim($this->input('order_number')), '#')]);
+            $this->merge(['order_number' => $this->stripOrderNumberHash($this->input('order_number'))]);
         }
     }
 }

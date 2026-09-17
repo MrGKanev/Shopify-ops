@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\HasOrderNumberRules;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class PackingSlipRequest extends FormRequest
 {
+    use HasOrderNumberRules;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -23,14 +26,14 @@ class PackingSlipRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'order_number' => ['required', 'string', 'max:64', 'regex:/\A[a-zA-Z0-9_-]+\z/'],
+            'order_number' => ['required', 'string', 'max:64', $this->orderNumberRule()],
         ];
     }
 
     protected function prepareForValidation(): void
     {
         if (is_string($this->input('order_number'))) {
-            $this->merge(['order_number' => ltrim(trim((string) $this->input('order_number')), '#')]);
+            $this->merge(['order_number' => $this->stripOrderNumberHash((string) $this->input('order_number'))]);
         }
     }
 }
