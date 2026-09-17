@@ -8,7 +8,6 @@ use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ZombieProductsRequest;
-use App\Models\Store;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
@@ -25,9 +24,7 @@ class ZombieProductsController extends Controller
 
     public function store(ZombieProductsRequest $request, RunZombieProductsReport $report, RecordRun $runs): View
     {
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
-        $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        $store = $this->resolveStore($request);
         $result = null;
         $reportFailed = false;
         $configurationError = trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '';

@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class AddressChangeAnalyzer
 {
+    use NormalizesText;
+
     /** @param list<array<string, mixed>> $events @return array<string, string> */
     public function latestChanges(array $events): array
     {
@@ -91,10 +95,5 @@ class AddressChangeAnalyzer
         $haystack = mb_strtolower(trim($this->text($event['verb'] ?? '').' '.$this->text($event['action'] ?? '').' '.$this->text($event['message'] ?? '')));
 
         return str_contains($haystack, 'shipping address') || str_contains($haystack, 'address was') || str_contains($haystack, 'shipping_address');
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

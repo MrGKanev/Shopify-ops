@@ -7,7 +7,6 @@ use App\Application\Reports\RunTaxAuditReport;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\TaxAuditRequest;
-use App\Models\Store;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
@@ -24,8 +23,7 @@ class TaxAuditController extends Controller
 
     public function store(TaxAuditRequest $request, RunTaxAuditReport $report, RecordRun $runs): View
     {
-        /** @var Store $active */ $active = $request->attributes->get('activeStore');
-        $store = $request->user()->stores()->whereKey($active->getKey())->firstOrFail();
+        $store = $this->resolveStore($request);
         $data = $request->validated();
         $result = null;
         $failed = false;

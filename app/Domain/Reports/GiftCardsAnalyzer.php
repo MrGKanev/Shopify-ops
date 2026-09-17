@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class GiftCardsAnalyzer
 {
+    use NormalizesText;
+
     /** @param list<array<string, mixed>> $giftCards @return list<array<string, mixed>> */
     public function analyze(array $giftCards, int $days, int $now): array
     {
@@ -40,10 +44,5 @@ class GiftCardsAnalyzer
         usort($rows, fn (array $left, array $right): int => $right['balance'] <=> $left['balance']);
 
         return $rows;
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

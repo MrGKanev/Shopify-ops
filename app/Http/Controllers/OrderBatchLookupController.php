@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Application\Orders\BatchLookupOrders;
 use App\Application\Orders\BatchLookupResult;
 use App\Http\Requests\OrderBatchLookupRequest;
-use App\Models\Store;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -28,9 +27,7 @@ class OrderBatchLookupController extends Controller
 
     public function store(OrderBatchLookupRequest $request, BatchLookupOrders $batchLookupOrders): View
     {
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
-        $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        $store = $this->resolveStore($request);
         $ordersInput = (string) $request->validated('orders');
         $mode = (string) $request->validated('mode');
         $result = null;

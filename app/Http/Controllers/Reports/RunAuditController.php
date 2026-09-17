@@ -60,15 +60,13 @@ class RunAuditController extends Controller
     /** @return array{Store,string,string} */
     private function context(ItemMismatchRequest $request): array
     {
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
 
-        return [$request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail(), (string) $request->validated('start_date'), (string) $request->validated('end_date')];
+        return [$this->resolveStore($request), (string) $request->validated('start_date'), (string) $request->validated('end_date')];
     }
 
     private function configurationError(Store $store): bool
     {
-        return trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '' || trim((string) $store->shipstation_api_key) === '' || trim((string) $store->shipstation_api_secret) === '';
+        return $store->missingShopifyCredentials() || $store->missingShipStationCredentials();
     }
 
     /** @return array<string,mixed> */

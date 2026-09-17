@@ -6,20 +6,19 @@ use App\Application\Exports\CsvExporter;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunShipmentAgingReport;
 use App\Application\Reports\ShipmentAgingResult;
+use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ShipmentAgingRequest;
 use App\Models\Store;
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
 class ShipmentAgingController extends Controller
 {
-    use RecordsReportRun;
+    use LogsReportFailure, RecordsReportRun;
 
     public function create(): View
     {
@@ -66,19 +65,14 @@ class ShipmentAgingController extends Controller
 
     /** @return array{Store,int} */
     private function context(ShipmentAgingRequest $request): array
-    {/** @var Store $activeStore */ $activeStore = $request->attributes->get('activeStore');
+    {
 
-        return [$request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail(), (int) $request->validated('threshold')];
+        return [$this->resolveStore($request), (int) $request->validated('threshold')];
     }
 
     private function configurationError(Store $store): bool
     {
-        return trim((string) $store->shipstation_api_key) === '' || trim((string) $store->shipstation_api_secret) === '';
-    }
-
-    private function logFailure(string $message, Throwable $exception, Store $store): void
-    {
-        Log::warning($message, ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
+        return $store->missingShipStationCredentials();
     }
 
     /** @return array<string,mixed> */

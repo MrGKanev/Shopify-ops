@@ -6,20 +6,19 @@ use App\Application\Exports\CsvExporter;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunShippedUnfulfilledReport;
 use App\Application\Reports\ShippedUnfulfilledResult;
+use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ShippedUnfulfilledRequest;
 use App\Models\Store;
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
 class ShippedUnfulfilledController extends Controller
 {
-    use RecordsReportRun;
+    use LogsReportFailure, RecordsReportRun;
 
     public function create(): View
     {
@@ -64,19 +63,14 @@ class ShippedUnfulfilledController extends Controller
 
     /** @return array{Store,string,string} */
     private function context(ShippedUnfulfilledRequest $request): array
-    {/** @var Store $activeStore */ $activeStore = $request->attributes->get('activeStore');
+    {
 
-        return [$request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail(), (string) $request->validated('start_date'), (string) $request->validated('end_date')];
+        return [$this->resolveStore($request), (string) $request->validated('start_date'), (string) $request->validated('end_date')];
     }
 
     private function configurationError(Store $store): bool
     {
-        return trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '' || trim((string) $store->shipstation_api_key) === '' || trim((string) $store->shipstation_api_secret) === '';
-    }
-
-    private function logFailure(string $message, Throwable $exception, Store $store): void
-    {
-        Log::warning($message, ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
+        return $store->missingShopifyCredentials() || $store->missingShipStationCredentials();
     }
 
     /** @return array<string,mixed> */

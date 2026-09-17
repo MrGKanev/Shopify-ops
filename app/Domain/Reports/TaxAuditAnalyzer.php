@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class TaxAuditAnalyzer
 {
+    use NormalizesText;
+
     /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
     public function analyze(array $orders, float $minimum): array
     {
@@ -20,10 +24,5 @@ class TaxAuditAnalyzer
         usort($rows, fn (array $a, array $b): int => $b['total'] <=> $a['total']);
 
         return $rows;
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

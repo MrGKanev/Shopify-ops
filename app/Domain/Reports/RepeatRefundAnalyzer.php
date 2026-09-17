@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class RepeatRefundAnalyzer
 {
+    use NormalizesText;
+
     /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
     public function analyze(array $orders, int $minimum): array
     {
@@ -38,10 +42,5 @@ class RepeatRefundAnalyzer
         usort($rows, fn (array $a, array $b): int => $b['refund_count'] <=> $a['refund_count']);
 
         return $rows;
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

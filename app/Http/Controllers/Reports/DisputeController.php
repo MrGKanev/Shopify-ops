@@ -7,7 +7,6 @@ use App\Application\Reports\RunDisputeReport;
 use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
-use App\Models\Store;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -26,9 +25,7 @@ class DisputeController extends Controller
     public function store(Request $request, RunDisputeReport $report, RecordRun $runs): View
     {
         abort_unless($request->user()?->can('run-audits'), 403);
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
-        $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        $store = $this->resolveStore($request);
         $configurationError = trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '';
         $result = null;
         $reportFailed = false;

@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class SkuDuplicatesAnalyzer
 {
+    use NormalizesText;
+
     /** @param list<array<string, mixed>> $products @return array{rows: list<array<string, mixed>>, totalVariants: int} */
     public function analyze(array $products): array
     {
@@ -32,10 +36,5 @@ class SkuDuplicatesAnalyzer
         usort($rows, fn (array $left, array $right): int => $right['count'] <=> $left['count']);
 
         return ['rows' => $rows, 'totalVariants' => $totalVariants];
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class ConsentAuditAnalyzer
 {
+    use NormalizesText;
+
     /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
     public function analyze(array $orders): array
     {
@@ -19,10 +23,5 @@ class ConsentAuditAnalyzer
         usort($rows, fn (array $a, array $b): int => strcmp($b['created_at'], $a['created_at']));
 
         return $rows;
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -15,9 +14,7 @@ class WebhookEventController extends Controller
             'topic' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'in:received,processed,failed,ignored'],
         ]);
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
-        $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        $store = $this->resolveStore($request);
         $topic = trim((string) ($validated['topic'] ?? ''));
         $status = (string) ($validated['status'] ?? '');
         $events = $store->webhookEvents()

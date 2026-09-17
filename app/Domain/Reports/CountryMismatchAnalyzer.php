@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class CountryMismatchAnalyzer
 {
+    use NormalizesText;
+
     /** @param list<array<string, mixed>> $orders @return array{rows: list<array<string, mixed>>, skipped_missing_country: int} */
     public function analyze(array $orders): array
     {
@@ -43,10 +47,5 @@ class CountryMismatchAnalyzer
     private function country(array $address): string
     {
         return strtoupper($this->text($address['country_code'] ?? $address['country'] ?? ''));
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class HighValueNoPhoneAnalyzer
 {
+    use NormalizesText;
+
     /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
     public function analyze(array $orders, float $minimum, ?string $currency): array
     {
@@ -34,10 +38,5 @@ class HighValueNoPhoneAnalyzer
         usort($rows, fn (array $left, array $right): int => $right['total'] <=> $left['total']);
 
         return $rows;
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

@@ -25,7 +25,7 @@ class QueueScheduledAudits extends Command
             ->where('scheduled_audit_enabled', true)
             ->whereTime('scheduled_audit_time', $time)
             ->each(function (Store $store) use (&$queued): void {
-                if (trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '' || trim((string) $store->shipstation_api_key) === '' || trim((string) $store->shipstation_api_secret) === '') {
+                if ($store->missingShopifyCredentials() || $store->missingShipStationCredentials()) {
                     return;
                 }
 

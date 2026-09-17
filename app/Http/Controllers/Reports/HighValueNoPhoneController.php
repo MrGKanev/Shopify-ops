@@ -8,7 +8,6 @@ use App\Application\Reports\RunHighValueNoPhoneReport;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\HighValueNoPhoneRequest;
-use App\Models\Store;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
@@ -25,9 +24,7 @@ class HighValueNoPhoneController extends Controller
 
     public function store(HighValueNoPhoneRequest $request, RunHighValueNoPhoneReport $report, RecordRun $runs): View
     {
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
-        $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        $store = $this->resolveStore($request);
         $startDate = (string) $request->validated('start_date');
         $endDate = (string) $request->validated('end_date');
         $minimum = (float) $request->validated('minimum');

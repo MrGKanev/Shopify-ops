@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class OnHoldStallAnalyzer
 {
+    use NormalizesText;
+
     /** @param list<array<string, mixed>> $nodes @return list<array<string, mixed>> */
     public function analyze(array $nodes, int $now): array
     {
@@ -25,10 +29,5 @@ class OnHoldStallAnalyzer
         usort($rows, fn (array $a, array $b): int => $b['days_waiting'] <=> $a['days_waiting']);
 
         return $rows;
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

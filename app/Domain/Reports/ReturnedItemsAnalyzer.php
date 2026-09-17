@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class ReturnedItemsAnalyzer
 {
+    use NormalizesText;
+
     /**
      * @param  list<array<string, mixed>>  $orders
      * @return list<array{product: string, quantity: int}>
@@ -45,10 +49,5 @@ class ReturnedItemsAnalyzer
         ksort($totals);
 
         return array_map(fn (string $product, int $quantity): array => ['product' => $product, 'quantity' => $quantity], array_keys($totals), array_values($totals));
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

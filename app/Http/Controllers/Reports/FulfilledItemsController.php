@@ -6,20 +6,19 @@ use App\Application\Exports\CsvExporter;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunFulfilledItemsReport;
 use App\Application\Reports\ScanResult;
+use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\FulfilledItemsRequest;
 use App\Models\Store;
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
 class FulfilledItemsController extends Controller
 {
-    use RecordsReportRun;
+    use LogsReportFailure, RecordsReportRun;
 
     public function create(): View
     {
@@ -66,21 +65,14 @@ class FulfilledItemsController extends Controller
     /** @return array{Store, string, string} */
     private function context(FulfilledItemsRequest $request): array
     {
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
-        $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        $store = $this->resolveStore($request);
 
         return [$store, (string) $request->validated('start_date'), (string) $request->validated('end_date')];
     }
 
     private function configurationError(Store $store): bool
     {
-        return trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '';
-    }
-
-    private function logFailure(string $message, Throwable $exception, Store $store): void
-    {
-        Log::warning($message, ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
+        return $store->missingShopifyCredentials();
     }
 
     /** @return array<string, mixed> */

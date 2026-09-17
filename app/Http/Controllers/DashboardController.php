@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Domain\Orders\OrderTypeClassifier;
-use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -11,9 +10,7 @@ class DashboardController extends Controller
 {
     public function __invoke(Request $request, OrderTypeClassifier $classifier): View
     {
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
-        $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        $store = $this->resolveStore($request);
         $reports = $store->auditSnapshots()->where('tool', 'run_audit')->latest('report_date')->limit(2)->get();
         $latest = $reports->first();
         $recent = $store->auditSnapshots()->where('tool', 'run_audit')->latest('report_date')->limit(30)->get()->reverse()->values();

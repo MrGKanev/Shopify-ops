@@ -4,9 +4,12 @@ namespace App\Domain\Reports;
 
 use App\Domain\Orders\OrderChannelComparator;
 use App\Domain\Orders\OrderTypeClassifier;
+use App\Domain\Reports\Concerns\NormalizesText;
 
 class ItemMismatchAnalyzer
 {
+    use NormalizesText;
+
     public function __construct(private readonly OrderChannelComparator $comparator, private readonly OrderTypeClassifier $classifier) {}
 
     /** @param list<array<string, mixed>> $shipStationOrders @param list<array<string, mixed>> $shopifyOrders @return list<array<string, mixed>> */
@@ -52,10 +55,5 @@ class ItemMismatchAnalyzer
     private function number(mixed $value): string
     {
         return preg_replace('/\D+/', '', $this->text($value)) ?? '';
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

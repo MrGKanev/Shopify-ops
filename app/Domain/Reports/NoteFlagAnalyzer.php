@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class NoteFlagAnalyzer
 {
+    use NormalizesText;
+
     /** @param list<array<string, mixed>> $orders @param list<string> $keywords @return list<array<string, mixed>> */
     public function analyze(array $orders, array $keywords): array
     {
@@ -25,10 +29,5 @@ class NoteFlagAnalyzer
         usort($rows, fn (array $a, array $b): int => strcmp($b['created_at'], $a['created_at']));
 
         return $rows;
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

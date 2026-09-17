@@ -29,7 +29,7 @@ class CheckApiHealth
     /** @return array<string, mixed> */
     private function checkShopify(Store $store): array
     {
-        if (trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '') {
+        if ($store->missingShopifyCredentials()) {
             return ['ok' => false, 'configured' => false, 'error' => 'Shopify credentials are incomplete.', 'latency_ms' => null, 'shop_name' => '', 'requested_version' => '', 'returned_version' => '', 'version_matches' => false, 'scopes' => [], 'missing_scopes' => []];
         }
 
@@ -54,7 +54,7 @@ class CheckApiHealth
     /** @return array<string, mixed> */
     private function checkShipStation(Store $store): array
     {
-        if (trim((string) $store->shipstation_api_key) === '' || trim((string) $store->shipstation_api_secret) === '') {
+        if ($store->missingShipStationCredentials()) {
             return ['ok' => false, 'configured' => false, 'error' => 'ShipStation credentials are incomplete.', 'latency_ms' => null];
         }
 

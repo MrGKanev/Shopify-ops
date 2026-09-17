@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\HasDateRangeRules;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class TaxAuditRequest extends FormRequest
 {
+    use HasDateRangeRules;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -22,6 +25,6 @@ class TaxAuditRequest extends FormRequest
      */
     public function rules(): array
     {
-        return ['start_date' => ['required', 'date_format:Y-m-d'], 'end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:start_date'], 'minimum' => ['required', 'numeric', 'min:0', 'max:1000000']];
+        return $this->dateRangeRules() + ['minimum' => ['required', 'numeric', 'min:0', 'max:1000000']];
     }
 }

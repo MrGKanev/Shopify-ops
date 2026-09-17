@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class PartialFulfillmentAnalyzer
 {
+    use NormalizesText;
+
     /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
     public function analyze(array $orders, int $threshold, int $now): array
     {
@@ -43,10 +47,5 @@ class PartialFulfillmentAnalyzer
         usort($rows, fn (array $a, array $b): int => $b['days_stalled'] <=> $a['days_stalled']);
 
         return $rows;
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

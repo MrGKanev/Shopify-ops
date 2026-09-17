@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class VoidedShipmentsAnalyzer
 {
+    use NormalizesText;
+
     /** @param list<array<string, mixed>> $shipments @return list<array<string, mixed>> */
     public function analyze(array $shipments): array
     {
@@ -22,10 +26,5 @@ class VoidedShipmentsAnalyzer
         usort($rows, fn (array $a, array $b): int => strcmp($b['void_date'], $a['void_date']));
 
         return $rows;
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class ReturnRmaAnalyzer
 {
+    use NormalizesText;
+
     /**
      * @param  list<array<string, mixed>>  $orders
      * @return array{rows: list<array<string, mixed>>, sku_stats: list<array<string, mixed>>}
@@ -64,10 +68,5 @@ class ReturnRmaAnalyzer
         usort($skuStats, fn (array $left, array $right): int => $right['units'] <=> $left['units']);
 
         return ['rows' => $rows, 'sku_stats' => $skuStats];
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

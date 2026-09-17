@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Application\Orders\OrderTagSearchResult;
 use App\Application\Orders\SearchOrdersByTag;
 use App\Http\Requests\OrderTagSearchRequest;
-use App\Models\Store;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -28,15 +27,13 @@ class OrderTagSearchController extends Controller
 
     public function store(OrderTagSearchRequest $request, SearchOrdersByTag $search): View
     {
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
-        $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        $store = $this->resolveStore($request);
         $tag = (string) $request->validated('tag');
         $startDate = $request->validated('start_date');
         $endDate = $request->validated('end_date');
         $result = null;
         $searchFailed = false;
-        $configurationError = trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '';
+        $configurationError = $store->missingShopifyCredentials();
 
         if (! $configurationError) {
             try {

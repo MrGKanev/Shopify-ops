@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class CatalogQualityAnalyzer
 {
+    use NormalizesText;
+
     /** @param list<array<string, mixed>> $products @return list<array<string, mixed>> */
     public function analyze(array $products): array
     {
@@ -33,10 +37,5 @@ class CatalogQualityAnalyzer
         }
 
         return $rows;
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

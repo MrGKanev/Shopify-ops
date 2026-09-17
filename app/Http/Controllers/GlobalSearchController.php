@@ -14,9 +14,7 @@ class GlobalSearchController extends Controller
         $validated = $request->validate(['q' => ['nullable', 'string', 'max:64', 'regex:/\d/']]);
         $query = trim((string) ($validated['q'] ?? ''));
         $number = preg_replace('/\D+/', '', $query) ?? '';
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
-        $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        $store = $this->resolveStore($request);
         $results = null;
         if ($number !== '') {
             // ponytail: bounded local-history scan; add indexed order rows if any table exceeds 500 entries per store.

@@ -3,9 +3,12 @@
 namespace App\Domain\Reports;
 
 use App\Domain\Orders\OrderRiskScorer;
+use App\Domain\Reports\Concerns\NormalizesText;
 
 class FraudRiskAnalyzer
 {
+    use NormalizesText;
+
     public function __construct(private readonly OrderRiskScorer $scorer) {}
 
     /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
@@ -23,10 +26,5 @@ class FraudRiskAnalyzer
         usort($rows, fn (array $a, array $b): int => $b['risk']['score'] <=> $a['risk']['score']);
 
         return $rows;
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

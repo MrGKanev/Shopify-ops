@@ -9,7 +9,6 @@ use App\Domain\Reports\TagPolicyAnalyzer;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\TagPolicyRequest;
-use App\Models\Store;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
@@ -28,9 +27,7 @@ class TagPolicyController extends Controller
 
     public function store(TagPolicyRequest $request, RunTagPolicyReport $report, TagPolicyAnalyzer $analyzer, RecordRun $runs): View
     {
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
-        $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        $store = $this->resolveStore($request);
         $startDate = (string) $request->validated('start_date');
         $endDate = (string) $request->validated('end_date');
         $config = $this->config();

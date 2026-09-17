@@ -95,6 +95,16 @@ class Store extends Model
         return $this->hasMany(WebhookEvent::class);
     }
 
+    public function missingShopifyCredentials(): bool
+    {
+        return trim((string) $this->shopify_store) === '' || trim((string) $this->shopify_access_token) === '';
+    }
+
+    public function missingShipStationCredentials(): bool
+    {
+        return trim((string) $this->shipstation_api_key) === '' || trim((string) $this->shipstation_api_secret) === '';
+    }
+
     /** @return array{audit_enabled:bool,audit_min_missing:int,include_zero_audit:bool,scan_enabled:bool,scan_min_rows:int,mentions:string} */
     public function resolvedSlackRules(): array
     {

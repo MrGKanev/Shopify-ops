@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\PrintQueueRequest;
-use App\Models\Store;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -12,12 +11,12 @@ class PrintQueueController extends Controller
 {
     public function index(Request $request): View
     {
-        return view('print-queue.index', ['items' => $this->activeStore($request)->printQueueItems()->oldest()->get()]);
+        return view('print-queue.index', ['items' => $this->resolveStore($request)->printQueueItems()->oldest()->get()]);
     }
 
     public function store(PrintQueueRequest $request): RedirectResponse
     {
-        $store = $this->activeStore($request);
+        $store = $this->resolveStore($request);
         $orderNumber = (string) $request->validated('order_number');
         $store->printQueueItems()->firstOrCreate(['order_number' => $orderNumber], ['note' => (string) ($request->validated('note') ?? '')]);
         activity('operator-actions')->causedBy($request->user())->performedOn($store)
@@ -28,7 +27,7 @@ class PrintQueueController extends Controller
 
     public function destroy(Request $request, int $item): RedirectResponse
     {
-        $store = $this->activeStore($request);
+        $store = $this->resolveStore($request);
         $printQueueItem = $store->printQueueItems()->findOrFail($item);
         $orderNumber = $printQueueItem->order_number;
         $printQueueItem->delete();
@@ -40,20 +39,12 @@ class PrintQueueController extends Controller
 
     public function clear(Request $request): RedirectResponse
     {
-        $store = $this->activeStore($request);
+        $store = $this->resolveStore($request);
         $count = $store->printQueueItems()->count();
         $store->printQueueItems()->delete();
         activity('operator-actions')->causedBy($request->user())->performedOn($store)
             ->withProperties(['count' => $count])->log('pq_clear');
 
         return back()->with('status', 'Print queue cleared.');
-    }
-
-    private function activeStore(Request $request): Store
-    {
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
-
-        return $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
     }
 }

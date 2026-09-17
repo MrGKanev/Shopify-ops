@@ -9,7 +9,6 @@ use App\Application\Reports\RunAddressChangeReport;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AddressChangeRequest;
-use App\Models\Store;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
@@ -28,8 +27,7 @@ class AddressChangeController extends Controller
 
     public function store(AddressChangeRequest $request, RunAddressChangeReport $report, RecordRun $runs): View
     {
-        /** @var Store $activeStore */ $activeStore = $request->attributes->get('activeStore');
-        $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        $store = $this->resolveStore($request);
         $start = (string) $request->validated('start_date');
         $end = (string) $request->validated('end_date');
         $configurationError = trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '';
@@ -51,8 +49,7 @@ class AddressChangeController extends Controller
 
     public function export(AddressChangeRequest $request, RunAddressChangeReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
     {
-        /** @var Store $activeStore */ $activeStore = $request->attributes->get('activeStore');
-        $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        $store = $this->resolveStore($request);
         if (trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '') {
             return back()->withErrors(['export' => 'Shopify credentials are incomplete for the active store.']);
         }

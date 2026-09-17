@@ -9,7 +9,6 @@ use App\Application\Reports\ShippingMarginResult;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ShippingMarginRequest;
-use App\Models\Store;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
@@ -28,9 +27,7 @@ class ShippingMarginController extends Controller
 
     public function store(ShippingMarginRequest $request, RunShippingMarginReport $report, RecordRun $runs): View
     {
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
-        $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        $store = $this->resolveStore($request);
         $startDate = (string) $request->validated('start_date');
         $endDate = (string) $request->validated('end_date');
         $threshold = (float) $request->validated('threshold');
@@ -53,9 +50,7 @@ class ShippingMarginController extends Controller
 
     public function export(ShippingMarginRequest $request, RunShippingMarginReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
     {
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
-        $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        $store = $this->resolveStore($request);
         $startDate = (string) $request->validated('start_date');
         $endDate = (string) $request->validated('end_date');
         try {

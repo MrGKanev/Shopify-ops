@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\IgnoredOrderImportRequest;
 use App\Http\Requests\IgnoredOrderRequest;
 use App\Models\IgnoredOrder;
-use App\Models\Store;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -14,7 +13,7 @@ class IgnoredOrderController extends Controller
 {
     public function index(Request $request): View
     {
-        $store = $this->activeStore($request);
+        $store = $this->resolveStore($request);
         $recurrenceCounts = [];
         foreach ($store->auditSnapshots()->where('tool', 'run_audit')->latest('report_date')->limit(30)->get() as $snapshot) {
             foreach ((array) ($snapshot->result['missing'] ?? []) as $order) {
@@ -32,8 +31,8 @@ class IgnoredOrderController extends Controller
     {
         $number = $this->normalize((string) $request->validated('order_number'));
         $reason = trim((string) ($request->validated('reason') ?? ''));
-        $this->storeModel($request)->ignoredOrders()->updateOrCreate(['order_number' => $number], ['reason' => $reason, 'ignored_at' => today()]);
-        activity('operator-actions')->causedBy($request->user())->performedOn($this->storeModel($request))
+        $this->resolveStore($request)->ignoredOrders()->updateOrCreate(['order_number' => $number], ['reason' => $reason, 'ignored_at' => today()]);
+        activity('operator-actions')->causedBy($request->user())->performedOn($this->resolveStore($request))
             ->withProperties(['order_number' => $number, 'reason' => $reason])->log('ignore_order');
 
         return back()->with('status', "Order #{$number} is ignored.");
@@ -41,10 +40,10 @@ class IgnoredOrderController extends Controller
 
     public function destroy(Request $request, IgnoredOrder $ignoredOrder): RedirectResponse
     {
-        abort_unless($ignoredOrder->store_id === $this->storeModel($request)->getKey(), 404);
+        abort_unless($ignoredOrder->store_id === $this->resolveStore($request)->getKey(), 404);
         $orderNumber = $ignoredOrder->order_number;
         $ignoredOrder->delete();
-        activity('operator-actions')->causedBy($request->user())->performedOn($this->storeModel($request))
+        activity('operator-actions')->causedBy($request->user())->performedOn($this->resolveStore($request))
             ->withProperties(['order_number' => $orderNumber])->log('unignore_order');
 
         return back()->with('status', 'Order restored to audits.');
@@ -54,7 +53,7 @@ class IgnoredOrderController extends Controller
     {
         $validated = $request->validate(['order_numbers' => ['required', 'array', 'max:500'], 'reason' => ['nullable', 'string', 'max:255']]);
         $reason = trim((string) ($validated['reason'] ?? ''));
-        $store = $this->storeModel($request);
+        $store = $this->resolveStore($request);
         $entries = $this->buildBulkEntries($validated['order_numbers'], $reason);
         foreach ($entries as $entry) {
             $store->ignoredOrders()->updateOrCreate(['order_number' => $entry['number']], ['reason' => $entry['reason'], 'ignored_at' => today()]);
@@ -85,8 +84,8 @@ class IgnoredOrderController extends Controller
     public function bulkDestroy(Request $request): RedirectResponse
     {
         $ids = $request->validate(['ids' => ['required', 'array', 'max:500'], 'ids.*' => ['integer']])['ids'];
-        $count = $this->storeModel($request)->ignoredOrders()->whereKey($ids)->delete();
-        activity('operator-actions')->causedBy($request->user())->performedOn($this->storeModel($request))
+        $count = $this->resolveStore($request)->ignoredOrders()->whereKey($ids)->delete();
+        activity('operator-actions')->causedBy($request->user())->performedOn($this->resolveStore($request))
             ->withProperties(['count' => $count])->log('bulk_unignore_orders');
 
         return back()->with('status', "{$count} orders restored to audits.");
@@ -112,23 +111,12 @@ class IgnoredOrderController extends Controller
             }
         }
         foreach ($rows as $number => $values) {
-            $this->storeModel($request)->ignoredOrders()->updateOrCreate(['order_number' => $number], $values);
+            $this->resolveStore($request)->ignoredOrders()->updateOrCreate(['order_number' => $number], $values);
         }
-        activity('operator-actions')->causedBy($request->user())->performedOn($this->storeModel($request))
+        activity('operator-actions')->causedBy($request->user())->performedOn($this->resolveStore($request))
             ->withProperties(['count' => count($rows), 'reason' => trim((string) ($request->validated('reason') ?? ''))])->log('import_ignore_csv');
 
         return back()->with('status', count($rows).' orders imported.');
-    }
-
-    private function storeModel(Request $request): Store
-    { /** @var Store $store */ $store = $request->attributes->get('activeStore');
-
-        return $request->user()->stores()->whereKey($store->getKey())->firstOrFail();
-    }
-
-    private function activeStore(Request $request): Store
-    {
-        return $this->storeModel($request);
     }
 
     private function normalize(string $number): string

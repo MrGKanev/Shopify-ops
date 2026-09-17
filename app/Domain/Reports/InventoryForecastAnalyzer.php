@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class InventoryForecastAnalyzer
 {
+    use NormalizesText;
+
     /** @param list<array<string, mixed>> $products @param list<array<string, mixed>> $orders @return array{rows: list<array<string, mixed>>, variants: int, critical: int, warning: int} */
     public function analyze(array $products, array $orders): array
     {
@@ -60,10 +64,5 @@ class InventoryForecastAnalyzer
             'critical' => count(array_filter($rows, fn (array $row): bool => $row['days_to_zero'] !== null && $row['days_to_zero'] < 7)),
             'warning' => count(array_filter($rows, fn (array $row): bool => $row['days_to_zero'] !== null && $row['days_to_zero'] >= 7 && $row['days_to_zero'] < 14)),
         ];
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Application\Orders\CompareOrders;
 use App\Application\Orders\OrderComparisonResult;
 use App\Http\Requests\OrderComparisonRequest;
-use App\Models\Store;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
@@ -21,9 +20,7 @@ class OrderComparisonController extends Controller
         $comparisonFailed = false;
 
         if (is_string($numberA) && is_string($numberB)) {
-            /** @var Store $activeStore */
-            $activeStore = $request->attributes->get('activeStore');
-            $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+            $store = $this->resolveStore($request);
 
             try {
                 $result = $compareOrders->handle($store, $numberA, $numberB);

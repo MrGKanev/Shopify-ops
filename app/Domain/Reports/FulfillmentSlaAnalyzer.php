@@ -3,9 +3,12 @@
 namespace App\Domain\Reports;
 
 use App\Domain\Orders\OrderTypeClassifier;
+use App\Domain\Reports\Concerns\NormalizesText;
 
 class FulfillmentSlaAnalyzer
 {
+    use NormalizesText;
+
     public function __construct(private readonly OrderTypeClassifier $classifier) {}
 
     /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
@@ -48,10 +51,5 @@ class FulfillmentSlaAnalyzer
         usort($rows, fn (array $a, array $b): int => $b['days'] <=> $a['days']);
 
         return $rows;
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

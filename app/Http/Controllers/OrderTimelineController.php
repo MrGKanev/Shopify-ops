@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Application\Orders\LoadOrderTimeline;
 use App\Application\Orders\OrderTimelineResult;
 use App\Http\Requests\OrderTimelineRequest;
-use App\Models\Store;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
@@ -20,9 +19,7 @@ class OrderTimelineController extends Controller
         $timelineFailed = false;
 
         if (is_string($orderNumber)) {
-            /** @var Store $activeStore */
-            $activeStore = $request->attributes->get('activeStore');
-            $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+            $store = $this->resolveStore($request);
 
             try {
                 $result = $loadOrderTimeline->handle($store, $orderNumber);

@@ -3,9 +3,12 @@
 namespace App\Domain\Reports;
 
 use App\Domain\Orders\OrderTypeClassifier;
+use App\Domain\Reports\Concerns\NormalizesText;
 
 class BundleCheckAnalyzer
 {
+    use NormalizesText;
+
     public function __construct(private readonly OrderTypeClassifier $classifier) {}
 
     /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
@@ -36,10 +39,5 @@ class BundleCheckAnalyzer
         usort($rows, fn (array $a, array $b): int => strcmp($b['created_at'], $a['created_at']));
 
         return $rows;
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

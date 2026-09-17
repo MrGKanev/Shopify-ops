@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class ZombieProductsAnalyzer
 {
+    use NormalizesText;
+
     /** @param list<array<string, mixed>> $products @return list<array<string, mixed>> */
     public function analyze(array $products): array
     {
@@ -46,10 +50,5 @@ class ZombieProductsAnalyzer
         $id = $this->text($product['legacyResourceId'] ?? null);
 
         return ['id' => ctype_digit($id) ? $id : '', 'title' => $this->text($product['title'] ?? null), 'vendor' => $this->text($product['vendor'] ?? null), 'type' => $this->text($product['productType'] ?? null), 'reason' => $reason, 'detail' => $detail, 'stock' => $stock];
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

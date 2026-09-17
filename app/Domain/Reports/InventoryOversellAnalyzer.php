@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class InventoryOversellAnalyzer
 {
+    use NormalizesText;
+
     /**
      * @param  list<array<string, mixed>>  $products
      * @param  list<array<string, mixed>>  $orders
@@ -76,10 +80,5 @@ class InventoryOversellAnalyzer
         usort($rows, fn (array $left, array $right): int => $right['shortfall'] <=> $left['shortfall']);
 
         return $rows;
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

@@ -55,9 +55,7 @@ class OperationalIssueController extends Controller
 
     private function store(Request $request): Store
     {
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
 
-        return $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        return $this->resolveStore($request);
     }
 }

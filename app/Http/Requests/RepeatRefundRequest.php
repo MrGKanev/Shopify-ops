@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\HasDateRangeRules;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class RepeatRefundRequest extends FormRequest
 {
+    use HasDateRangeRules;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -22,6 +25,6 @@ class RepeatRefundRequest extends FormRequest
      */
     public function rules(): array
     {
-        return ['start_date' => ['required', 'date_format:Y-m-d'], 'end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:start_date'], 'minimum' => ['required', 'integer', 'min:2', 'max:100']];
+        return $this->dateRangeRules() + ['minimum' => ['required', 'integer', 'min:2', 'max:100']];
     }
 }

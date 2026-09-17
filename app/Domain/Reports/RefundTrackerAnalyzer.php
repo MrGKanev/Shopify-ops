@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class RefundTrackerAnalyzer
 {
+    use NormalizesText;
+
     /**
      * @param  list<array<string, mixed>>  $orders
      * @param  list<array<string, mixed>>  $shipStationOrders
@@ -80,10 +84,5 @@ class RefundTrackerAnalyzer
     private function orderNumber(mixed $value): string
     {
         return preg_replace('/\D+/', '', $this->text($value)) ?? '';
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

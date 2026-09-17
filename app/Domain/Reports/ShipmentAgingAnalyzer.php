@@ -3,9 +3,12 @@
 namespace App\Domain\Reports;
 
 use App\Domain\Orders\OrderTypeClassifier;
+use App\Domain\Reports\Concerns\NormalizesText;
 
 class ShipmentAgingAnalyzer
 {
+    use NormalizesText;
+
     public function __construct(private readonly OrderTypeClassifier $classifier) {}
 
     /** @param list<array<string, mixed>> $orders @return array{rows: list<array<string, mixed>>, by_sku: list<array<string, mixed>>, by_type: list<array<string, mixed>>} */
@@ -47,10 +50,5 @@ class ShipmentAgingAnalyzer
         usort($byType, $sort);
 
         return ['rows' => $rows, 'by_sku' => $bySku, 'by_type' => $byType];
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

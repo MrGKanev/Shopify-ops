@@ -2,10 +2,13 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
 use App\Integrations\Shopify\ShopifyOrderEventNormalizer;
 
 class OrderEditAnalyzer
 {
+    use NormalizesText;
+
     public function __construct(private readonly ShopifyOrderEventNormalizer $eventNormalizer) {}
 
     /** @param list<array<string, mixed>> $events @return array<string, array{latest_at: string, summary: list<string>}> */
@@ -50,10 +53,5 @@ class OrderEditAnalyzer
         usort($rows, fn (array $a, array $b): int => strcmp($b['edited_at'], $a['edited_at']));
 
         return $rows;
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

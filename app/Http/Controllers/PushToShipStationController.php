@@ -4,10 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Application\Orders\PushOrderToShipStation;
 use App\Http\Requests\PushOrderToShipStationRequest;
-use App\Models\Store;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Throwable;
@@ -22,7 +20,7 @@ class PushToShipStationController extends Controller
     public function preview(PushOrderToShipStationRequest $request, PushOrderToShipStation $push): JsonResponse
     {
         try {
-            return response()->json(['payload' => $push->preview($this->activeStore($request), (string) $request->validated('order_number'))]);
+            return response()->json(['payload' => $push->preview($this->resolveStore($request), (string) $request->validated('order_number'))]);
         } catch (Throwable $exception) {
             Log::warning('Push to ShipStation preview failed.', ['exception_type' => $exception::class]);
 
@@ -35,7 +33,7 @@ class PushToShipStationController extends Controller
         $orderNumber = (string) $request->validated('order_number');
 
         try {
-            $store = $this->activeStore($request);
+            $store = $this->resolveStore($request);
             $result = $push->handle($store, $orderNumber);
             activity('operator-actions')->causedBy($request->user())->performedOn($store)
                 ->withProperties(['order_number' => $result['order_number']])->log('push_to_shipstation');
@@ -46,13 +44,5 @@ class PushToShipStationController extends Controller
 
             return back()->withErrors(['order_number' => $exception->getMessage()]);
         }
-    }
-
-    private function activeStore(Request $request): Store
-    {
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
-
-        return $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
     }
 }

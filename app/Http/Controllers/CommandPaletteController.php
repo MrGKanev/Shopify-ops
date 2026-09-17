@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CommandPaletteRequest;
-use App\Models\Store;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -12,9 +11,7 @@ class CommandPaletteController extends Controller
 {
     public function __invoke(CommandPaletteRequest $request): JsonResponse
     {
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
-        $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        $store = $this->resolveStore($request);
         $query = Str::of((string) ($request->validated('q') ?? ''))->squish()->toString();
         $commands = collect($this->navigationCommands())
             ->when($query !== '', fn ($items) => $items->filter(fn (array $item): bool => Str::contains(Str::lower($item['label'].' '.$item['keywords']), Str::lower($query))))

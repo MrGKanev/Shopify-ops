@@ -8,7 +8,6 @@ use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RepeatRefundRequest;
-use App\Models\Store;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
@@ -25,9 +24,7 @@ class RepeatRefundController extends Controller
 
     public function store(RepeatRefundRequest $request, RunRepeatRefundReport $report, RecordRun $runs): View
     {
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
-        $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        $store = $this->resolveStore($request);
         $start = (string) $request->validated('start_date');
         $end = (string) $request->validated('end_date');
         $minimum = (int) $request->validated('minimum');

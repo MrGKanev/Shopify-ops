@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class ProductCompletenessAnalyzer
 {
+    use NormalizesText;
+
     /** @param list<array<string, mixed>> $products @return list<array<string, mixed>> */
     public function analyze(array $products): array
     {
@@ -55,10 +59,5 @@ class ProductCompletenessAnalyzer
         usort($rows, fn (array $left, array $right): int => [($left['severity'] === 'critical' ? 0 : 1), mb_strtolower($left['title']), $left['id']] <=> [($right['severity'] === 'critical' ? 0 : 1), mb_strtolower($right['title']), $right['id']]);
 
         return $rows;
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

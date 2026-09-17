@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\HasDateRangeRules;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class CustomerLtvRequest extends FormRequest
 {
+    use HasDateRangeRules;
+
     public function authorize(): bool
     {
         return $this->user()?->can('run-audits') ?? false;
@@ -15,6 +18,6 @@ class CustomerLtvRequest extends FormRequest
     /** @return array<string, ValidationRule|array<mixed>|string> */
     public function rules(): array
     {
-        return ['start_date' => ['required', 'date_format:Y-m-d'], 'end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:start_date']];
+        return $this->dateRangeRules();
     }
 }

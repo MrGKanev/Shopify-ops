@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Application\Reports\CustomerLookupResult;
 use App\Application\Reports\RunCustomerLookup;
 use App\Http\Requests\CustomerLookupRequest;
-use App\Models\Store;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -21,11 +20,9 @@ class CustomerLookupController extends Controller
 
     public function store(CustomerLookupRequest $request, RunCustomerLookup $lookup): View
     {
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
-        $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        $store = $this->resolveStore($request);
         $email = mb_strtolower(trim((string) $request->validated('email')));
-        $configurationError = trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '';
+        $configurationError = $store->missingShopifyCredentials();
         $result = null;
         $lookupFailed = false;
         if (! $configurationError) {

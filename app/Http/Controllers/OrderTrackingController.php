@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Application\Orders\LoadTrackingFeed;
 use App\Http\Requests\OrderTrackingRequest;
-use App\Models\Store;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -21,9 +20,7 @@ class OrderTrackingController extends Controller
 
     public function store(OrderTrackingRequest $request, LoadTrackingFeed $loader): View
     {
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
-        $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        $store = $this->resolveStore($request);
         $results = null;
         $lookupFailed = false;
         $configurationError = false;

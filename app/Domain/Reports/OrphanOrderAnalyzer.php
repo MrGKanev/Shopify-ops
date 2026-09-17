@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class OrphanOrderAnalyzer
 {
+    use NormalizesText;
+
     /** @param list<array<string, mixed>> $shipStationOrders @param list<array<string, mixed>> $shopifyOrders @return list<array<string, mixed>> */
     public function analyze(array $shipStationOrders, array $shopifyOrders): array
     {
@@ -50,10 +54,5 @@ class OrphanOrderAnalyzer
     private function normalize(mixed $value): string
     {
         return preg_replace('/\D+/', '', $this->text($value)) ?? '';
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

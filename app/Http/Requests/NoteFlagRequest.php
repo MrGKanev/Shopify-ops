@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\HasDateRangeRules;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class NoteFlagRequest extends FormRequest
 {
+    use HasDateRangeRules;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -22,7 +25,7 @@ class NoteFlagRequest extends FormRequest
      */
     public function rules(): array
     {
-        return ['start_date' => ['required', 'date_format:Y-m-d'], 'end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:start_date'], 'keywords' => ['required', 'string', 'max:1000', function (string $attribute, mixed $value, \Closure $fail): void {
+        return $this->dateRangeRules() + ['keywords' => ['required', 'string', 'max:1000', function (string $attribute, mixed $value, \Closure $fail): void {
             if (is_string($value) && array_filter(array_map('trim', explode(',', $value))) === []) {
                 $fail('Enter at least one keyword.');
             }

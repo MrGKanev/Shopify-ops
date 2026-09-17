@@ -16,8 +16,8 @@ class MetafieldController extends Controller
 {
     public function create(Request $request, ShopifyAdminGateway $shopify): View
     {
-        $store = $this->store($request);
-        $configurationError = trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '';
+        $store = $this->resolveStore($request);
+        $configurationError = $store->missingShopifyCredentials();
         $definitions = [];
         $loadFailed = false;
         if (! $configurationError) {
@@ -46,10 +46,10 @@ class MetafieldController extends Controller
 
     private function run(Request $request, ShopifyAdminGateway $shopify, callable $action): View
     {
-        $store = $this->store($request);
+        $store = $this->resolveStore($request);
         $definitions = [];
         $loadFailed = $operationFailed = false;
-        $configurationError = trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '';
+        $configurationError = $store->missingShopifyCredentials();
         if ($configurationError) {
             return view('metafields.index', compact('definitions', 'configurationError', 'loadFailed', 'operationFailed') + ['search' => null, 'lookup' => null]);
         }
@@ -68,12 +68,6 @@ class MetafieldController extends Controller
         }
 
         return view('metafields.index', compact('definitions', 'configurationError', 'loadFailed', 'operationFailed') + $data);
-    }
-
-    private function store(Request $request): Store
-    { /** @var Store $active */ $active = $request->attributes->get('activeStore');
-
-        return $request->user()->stores()->whereKey($active->getKey())->firstOrFail();
     }
 
     private function log(Throwable $exception, Store $store): void

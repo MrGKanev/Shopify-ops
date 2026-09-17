@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class TagUsageAnalyzer
 {
+    use NormalizesText;
+
     /** @param list<array<string, mixed>> $orders @return list<array{tag: string, count: int, last_order: string, last_date: string, orphan: bool}> */
     public function analyze(array $orders, string $orphanCutoff): array
     {
@@ -48,10 +52,5 @@ class TagUsageAnalyzer
         $date = substr($this->text($value), 0, 10);
 
         return preg_match('/\A\d{4}-\d{2}-\d{2}\z/', $date) === 1 ? $date : '';
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

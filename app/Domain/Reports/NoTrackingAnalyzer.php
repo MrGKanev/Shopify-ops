@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class NoTrackingAnalyzer
 {
+    use NormalizesText;
+
     /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
     public function analyze(array $orders, string $startDate, string $endDate, int $threshold, int $now): array
     {
@@ -30,10 +34,5 @@ class NoTrackingAnalyzer
         usort($rows, fn (array $a, array $b): int => $b['missing'][0]['hours_ago'] <=> $a['missing'][0]['hours_ago']);
 
         return $rows;
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

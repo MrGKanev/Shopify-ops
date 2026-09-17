@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class EmailCheckAnalyzer
 {
+    use NormalizesText;
+
     /** @var list<string> */
     private const array DisposableDomains = [
         'mailinator.com', 'guerrillamail.com', 'tempmail.com', 'throwam.com', 'yopmail.com', 'sharklasers.com', 'guerrillamailblock.com', 'grr.la', 'guerrillamail.info', 'trashmail.com', 'trashmail.net', 'trashmail.org', 'dispostable.com', 'maildrop.cc', 'spamgourmet.com', 'spamgourmet.net', 'mailnull.com', 'spamcorner.com', '10minutemail.com', '10minutemail.net', 'fakeinbox.com', 'mailnesia.com', 'discard.email', 'spamspot.com', 'mytemp.email', 'temp-mail.org', 'getnada.com', 'tempr.email',
@@ -54,10 +58,5 @@ class EmailCheckAnalyzer
         }
 
         return $issues;
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class ActiveShipStationConflictAnalyzer
 {
+    use NormalizesText;
+
     /** @param list<array<string, mixed>> $shopifyOrders @param list<array<string, mixed>> $shipStationOrders @return array{scanned: int, rows: list<array<string, mixed>>} */
     public function analyze(array $shopifyOrders, array $shipStationOrders): array
     {
@@ -53,10 +57,5 @@ class ActiveShipStationConflictAnalyzer
     private function normalize(mixed $value): string
     {
         return preg_replace('/\D+/', '', $this->text($value)) ?? '';
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

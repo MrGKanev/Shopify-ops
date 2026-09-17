@@ -14,7 +14,7 @@ class CheckWebhookHealth
     /** @return array{ok:bool,error:string,webhooks:list<array{id:string,topic:string,address:string,format:string,created_at:string,api_version:string,healthy:bool}>} */
     public function handle(Store $store): array
     {
-        if (trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '') {
+        if ($store->missingShopifyCredentials()) {
             return ['ok' => false, 'error' => 'Shopify credentials are incomplete.', 'webhooks' => []];
         }
 

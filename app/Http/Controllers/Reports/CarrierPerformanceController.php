@@ -8,7 +8,6 @@ use App\Application\Reports\RunCarrierPerformanceReport;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CarrierPerformanceRequest;
-use App\Models\Store;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
@@ -25,9 +24,7 @@ class CarrierPerformanceController extends Controller
 
     public function store(CarrierPerformanceRequest $request, RunCarrierPerformanceReport $report, RecordRun $runs): View
     {
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
-        $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        $store = $this->resolveStore($request);
         $startDate = (string) $request->validated('start_date');
         $endDate = (string) $request->validated('end_date');
         $configurationError = trim((string) $store->shipstation_api_key) === '' || trim((string) $store->shipstation_api_secret) === '';

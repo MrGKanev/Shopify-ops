@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class TagPolicyAnalyzer
 {
+    use NormalizesText;
+
     /** @param array<string, mixed> $config */
     public function hasRules(array $config): bool
     {
@@ -62,10 +66,5 @@ class TagPolicyAnalyzer
         }
 
         return array_values(array_filter($rules, 'is_array'));
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

@@ -2,8 +2,12 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Concerns\NormalizesText;
+
 class ShippedUnfulfilledAnalyzer
 {
+    use NormalizesText;
+
     /** @param list<array<string,mixed>> $ssOrders @param list<array<string,mixed>> $shopifyOrders @return array{shipped_total:int,rows:list<array<string,mixed>>} */
     public function analyze(array $ssOrders, array $shopifyOrders): array
     {
@@ -37,10 +41,5 @@ class ShippedUnfulfilledAnalyzer
     private function number(mixed $value): string
     {
         return preg_replace('/\D+/', '', $this->text($value)) ?? '';
-    }
-
-    private function text(mixed $value): string
-    {
-        return is_scalar($value) ? trim((string) $value) : '';
     }
 }

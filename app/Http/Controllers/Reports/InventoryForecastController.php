@@ -8,7 +8,6 @@ use App\Application\Reports\RunInventoryForecastReport;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\InventoryForecastRequest;
-use App\Models\Store;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
@@ -25,9 +24,7 @@ class InventoryForecastController extends Controller
 
     public function store(InventoryForecastRequest $request, RunInventoryForecastReport $report, RecordRun $runs): View
     {
-        /** @var Store $activeStore */
-        $activeStore = $request->attributes->get('activeStore');
-        $store = $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        $store = $this->resolveStore($request);
         $endDate = now()->toDateString();
         $startDate = now()->subDays(30)->toDateString();
         $result = null;
