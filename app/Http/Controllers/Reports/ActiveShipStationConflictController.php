@@ -56,7 +56,8 @@ class ActiveShipStationConflictController extends Controller
             $this->logFailure('Active ShipStation conflicts CSV failed.', $exception, $store);
 
             return back()->withErrors(['export' => 'The CSV export could not be completed.']);
-        }$rows = array_map(fn (array $row): array => [$row['order_number'], $row['issue'], $row['created_at'], $row['email'], $row['total'], $row['ss_status'], $row['ss_date'], $row['ss_total']], $result->rows);
+        }
+        $rows = array_map(fn (array $row): array => [$row['order_number'], $row['issue'], $row['created_at'], $row['email'], $row['total'], $row['ss_status'], $row['ss_date'], $row['ss_total']], $result->rows);
 
         return $csv->download("active-shipstation-conflicts-{$start}-to-{$end}.csv", ['Order', 'Issue', 'Shopify date', 'Email', 'Shopify total', 'ShipStation status', 'ShipStation date', 'ShipStation total'], $rows);
     }

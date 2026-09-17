@@ -56,7 +56,8 @@ class OrphanOrderController extends Controller
             $this->logFailure('Orphan order CSV failed.', $exception, $store);
 
             return back()->withErrors(['export' => 'The CSV export could not be completed.']);
-        }$rows = array_map(fn (array $row): array => [$row['order_number'], $row['order_date'], $row['customer'], $row['email'], $row['order_status'], $row['total'], $row['ss_order_id']], $result->rows);
+        }
+        $rows = array_map(fn (array $row): array => [$row['order_number'], $row['order_date'], $row['customer'], $row['email'], $row['order_status'], $row['total'], $row['ss_order_id']], $result->rows);
 
         return $csv->download("orphan-orders-{$start}-to-{$end}.csv", ['Order', 'Date', 'Customer', 'Email', 'ShipStation status', 'Total', 'ShipStation ID'], $rows);
     }

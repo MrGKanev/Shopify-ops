@@ -17,20 +17,24 @@ class ShippedUnfulfilledAnalyzer
             if ($number !== '') {
                 $index[$number] = $order;
             }
-        }$rows = [];
+        }
+        $rows = [];
         $shipped = 0;
         foreach ($ssOrders as $order) {
             if (($order['orderStatus'] ?? '') !== 'shipped') {
                 continue;
-            }$shipped++;
+            }
+            $shipped++;
             $number = $this->number($order['orderNumber'] ?? '');
             if ($number === '' || ! isset($index[$number])) {
                 continue;
-            }$shopify = $index[$number];
+            }
+            $shopify = $index[$number];
             $status = $this->text($shopify['fulfillment_status'] ?? '');
             if ($status === 'fulfilled') {
                 continue;
-            }$shipTo = is_array($order['shipTo'] ?? null) ? $order['shipTo'] : [];
+            }
+            $shipTo = is_array($order['shipTo'] ?? null) ? $order['shipTo'] : [];
             $rows[] = ['ss_order_id' => $this->text($order['orderId'] ?? ''), 'order_number' => $this->text($order['orderNumber'] ?? ''), 'order_date' => substr($this->text($order['orderDate'] ?? ''), 0, 10), 'customer' => $this->text($shipTo['name'] ?? ''), 'email' => $this->text($order['customerEmail'] ?? ''), 'total' => is_numeric($order['orderTotal'] ?? null) ? (float) $order['orderTotal'] : 0.0, 'sh_fulfillment' => $status ?: 'unfulfilled', 'sh_financial' => $this->text($shopify['financial_status'] ?? ''), 'shopify_id' => $this->text($shopify['id'] ?? '')];
         }
         usort($rows, fn (array $a, array $b): int => strcmp($b['order_date'], $a['order_date']));

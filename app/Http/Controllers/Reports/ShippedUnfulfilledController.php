@@ -56,7 +56,8 @@ class ShippedUnfulfilledController extends Controller
             $this->logFailure('Shipped/unfulfilled CSV failed.', $exception, $store);
 
             return back()->withErrors(['export' => 'The CSV export could not be completed.']);
-        }$rows = array_map(fn (array $row): array => [$row['order_number'], $row['order_date'], $row['customer'], $row['email'], 'shipped', $row['sh_fulfillment'], $row['sh_financial'], $row['total']], $result->rows);
+        }
+        $rows = array_map(fn (array $row): array => [$row['order_number'], $row['order_date'], $row['customer'], $row['email'], 'shipped', $row['sh_fulfillment'], $row['sh_financial'], $row['total']], $result->rows);
 
         return $csv->download("shipped-unfulfilled-{$start}-to-{$end}.csv", ['Order', 'Date', 'Customer', 'Email', 'ShipStation status', 'Shopify fulfillment', 'Shopify financial', 'Total'], $rows);
     }
