@@ -69,12 +69,4 @@ class BundleCheckControllerTest extends TestCase
     }
 
     /** @return array{User, Store} */
-    private function userWithStore(bool $operator = false, array $attributes = []): array
-    {
-        $user = $operator ? User::factory()->operator()->create() : User::factory()->create();
-        $store = Store::factory()->create($attributes);
-        $user->stores()->attach($store);
-
-        return [$user, $store];
-    }
 }

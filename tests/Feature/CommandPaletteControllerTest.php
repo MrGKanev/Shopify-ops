@@ -15,9 +15,9 @@ class CommandPaletteControllerTest extends TestCase
     public function test_it_requires_an_operator_and_validates_the_query(): void
     {
         $this->getJson(route('command-palette'))->assertUnauthorized();
-        [$viewer] = $this->userWithStore();
+        [$viewer] = $this->makeUserAndStore();
         $this->actingAs($viewer)->getJson(route('command-palette'))->assertForbidden();
-        [$operator] = $this->userWithStore(true);
+        [$operator] = $this->makeUserAndStore(true);
 
         $this->actingAs($operator)->getJson(route('command-palette', ['q' => str_repeat('x', 65)]))
             ->assertUnprocessable()
@@ -26,8 +26,8 @@ class CommandPaletteControllerTest extends TestCase
 
     public function test_it_searches_navigation_issues_and_runs_with_store_isolation(): void
     {
-        [$operator, $store] = $this->userWithStore(true);
-        [, $otherStore] = $this->userWithStore(true);
+        [$operator, $store] = $this->makeUserAndStore(true);
+        [, $otherStore] = $this->makeUserAndStore(true);
         $issue = OperationalIssue::factory()->for($store)->create(['title' => 'Refund needs attention', 'reference' => '#4401']);
         OperationalIssue::factory()->for($otherStore)->create(['title' => 'Refund from another store']);
         $store->runLogs()->create(['tool' => 'refund_tracker', 'status' => 'ok', 'error' => '']);
@@ -45,8 +45,8 @@ class CommandPaletteControllerTest extends TestCase
 
     public function test_admin_navigation_is_not_exposed_to_operators(): void
     {
-        [$operator] = $this->userWithStore(true);
-        [$administrator] = $this->userWithStore(true, true);
+        [$operator] = $this->makeUserAndStore(true);
+        [$administrator] = $this->makeUserAndStore(true, true);
 
         $this->actingAs($operator)->getJson(route('command-palette', ['q' => 'backup']))
             ->assertOk()
@@ -58,7 +58,7 @@ class CommandPaletteControllerTest extends TestCase
 
     public function test_layout_includes_the_keyboard_accessible_palette_for_operators(): void
     {
-        [$operator] = $this->userWithStore(true);
+        [$operator] = $this->makeUserAndStore(true);
 
         $this->actingAs($operator)->get(route('dashboard'))
             ->assertOk()
@@ -68,7 +68,7 @@ class CommandPaletteControllerTest extends TestCase
     }
 
     /** @return array{User, Store} */
-    private function userWithStore(bool $operator = false, bool $administrator = false): array
+    private function makeUserAndStore(bool $operator = false, bool $administrator = false): array
     {
         $factory = User::factory();
         if ($administrator) {

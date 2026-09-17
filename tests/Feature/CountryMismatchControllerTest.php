@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
-use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
@@ -39,14 +38,5 @@ class CountryMismatchControllerTest extends TestCase
         $shopify->shouldReceive('countryMismatchCandidates')->once()->andThrow(new RuntimeException('secret'));
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
         $this->actingAs($user)->post(route('reports.country-mismatch.store'), ['start_date' => '2026-09-01', 'end_date' => '2026-09-06'])->assertOk()->assertSeeText('could not be completed')->assertDontSeeText('secret')->assertDontSeeText('Results');
-    }
-
-    private function userWithStore(bool $operator = false): array
-    {
-        $user = $operator ? User::factory()->operator()->create() : User::factory()->create();
-        $store = Store::factory()->create();
-        $user->stores()->attach($store);
-
-        return [$user, $store];
     }
 }

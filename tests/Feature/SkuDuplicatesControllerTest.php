@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
-use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
@@ -71,14 +70,5 @@ class SkuDuplicatesControllerTest extends TestCase
         $gateway->shouldReceive('skuDuplicatesCandidates')->once()->with(Mockery::on(fn (Store $selected): bool => $selected->is($store)))->andReturn(['products' => [], 'pages' => 1, 'truncated' => false]);
         $this->app->instance(ShopifyAdminGateway::class, $gateway);
         $this->actingAs($user)->withSession(['active_store_id' => $foreign->id])->post(route('reports.sku-duplicates.store'), ['store_id' => $foreign->id])->assertOk()->assertSeeText('No duplicate SKUs found in the scanned products.');
-    }
-
-    private function userWithStore(bool $operator = false, array $attributes = []): array
-    {
-        $user = $operator ? User::factory()->operator()->create() : User::factory()->create();
-        $store = Store::factory()->create($attributes);
-        $user->stores()->attach($store);
-
-        return [$user, $store];
     }
 }

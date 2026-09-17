@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
-use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
@@ -32,14 +31,5 @@ class DuplicateAddressControllerTest extends TestCase
         $gateway->shouldReceive('addressCheckCandidates')->andThrow(new RuntimeException('secret'));
         $this->app->instance(ShopifyAdminGateway::class, $gateway);
         $this->actingAs($operator)->post('/reports/duplicate-addresses', ['start_date' => '2026-09-01', 'end_date' => '2026-09-07'])->assertOk()->assertSeeText('could not be completed')->assertDontSeeText('secret');
-    }
-
-    private function userWithStore(bool $operator = false, array $attributes = []): array
-    {
-        $user = $operator ? User::factory()->operator()->create() : User::factory()->create();
-        $store = Store::factory()->create($attributes);
-        $user->stores()->attach($store);
-
-        return [$user, $store];
     }
 }

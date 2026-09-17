@@ -28,7 +28,7 @@ class EmailRulesControllerTest extends TestCase
 
     public function test_fresh_store_page_lists_every_catalog_tool_not_just_run_audit(): void
     {
-        [$admin] = $this->userWithStore();
+        [$admin] = $this->makeUserAndStore();
 
         $response = $this->actingAs($admin)->get('/admin/email-rules')->assertOk();
 
@@ -38,7 +38,7 @@ class EmailRulesControllerTest extends TestCase
 
     public function test_admin_can_save_a_default_alert_email_used_as_fallback(): void
     {
-        [$admin, $store] = $this->userWithStore();
+        [$admin, $store] = $this->makeUserAndStore();
 
         $this->actingAs($admin)->put('/admin/email-rules', ['rules' => ['run_audit' => ['mode' => 'off', 'threshold' => 0]], 'default_alert_email' => 'ops@example.com'])->assertRedirect()->assertSessionHas('status');
 
@@ -46,7 +46,7 @@ class EmailRulesControllerTest extends TestCase
     }
 
     /** @return array{User, Store} */
-    private function userWithStore(): array
+    private function makeUserAndStore(): array
     {
         $admin = User::factory()->admin()->create();
         $store = Store::factory()->create();

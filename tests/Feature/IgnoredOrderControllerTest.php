@@ -3,8 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\IgnoredOrder;
-use App\Models\Store;
-use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
@@ -68,14 +66,5 @@ class IgnoredOrderControllerTest extends TestCase
 
         $response->assertViewHas('recurrenceCounts', fn ($counts) => $counts['1234'] === 3);
         $response->assertSeeText('Hot');
-    }
-
-    private function userWithStore(bool $operator = false): array
-    {
-        $user = $operator ? User::factory()->operator()->create() : User::factory()->create();
-        $store = Store::factory()->create();
-        $user->stores()->attach($store);
-
-        return [$user, $store];
     }
 }

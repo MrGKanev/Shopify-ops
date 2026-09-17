@@ -24,7 +24,7 @@ class OrderTimelineControllerTest extends TestCase
     public function test_initial_form_does_not_call_integrations(): void
     {
         Http::preventStrayRequests();
-        [$user] = $this->userWithStore();
+        [$user] = $this->makeUserAndStore();
         $shopify = $this->createMock(ShopifyAdminGateway::class);
         $shopify->expects($this->never())->method('findByOrderNumber');
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
@@ -40,7 +40,7 @@ class OrderTimelineControllerTest extends TestCase
     public function test_invalid_and_array_order_numbers_are_rejected_before_integrations(): void
     {
         Http::preventStrayRequests();
-        [$user] = $this->userWithStore();
+        [$user] = $this->makeUserAndStore();
         $shopify = $this->createMock(ShopifyAdminGateway::class);
         $shopify->expects($this->never())->method('findByOrderNumber');
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
@@ -63,7 +63,7 @@ class OrderTimelineControllerTest extends TestCase
     public function test_blank_order_number_is_treated_as_an_empty_search(): void
     {
         Http::preventStrayRequests();
-        [$user] = $this->userWithStore();
+        [$user] = $this->makeUserAndStore();
         $shopify = $this->createMock(ShopifyAdminGateway::class);
         $shopify->expects($this->never())->method('findByOrderNumber');
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
@@ -78,7 +78,7 @@ class OrderTimelineControllerTest extends TestCase
 
     public function test_missing_and_ambiguous_shopify_orders_do_not_load_events(): void
     {
-        [$user, $store] = $this->userWithStore();
+        [$user, $store] = $this->makeUserAndStore();
         $shopify = $this->createMock(ShopifyAdminGateway::class);
         $shopify->expects($this->exactly(2))
             ->method('findByOrderNumber')
@@ -100,7 +100,7 @@ class OrderTimelineControllerTest extends TestCase
 
     public function test_ready_timeline_combines_sources_counts_items_and_escapes_external_content(): void
     {
-        [$user, $store] = $this->userWithStore([
+        [$user, $store] = $this->makeUserAndStore([
             'shipstation_api_key' => 'key',
             'shipstation_api_secret' => 'secret',
         ]);
@@ -164,7 +164,7 @@ class OrderTimelineControllerTest extends TestCase
 
     public function test_timeline_without_shipstation_still_loads_shopify_activity(): void
     {
-        [$user, $store] = $this->userWithStore();
+        [$user, $store] = $this->makeUserAndStore();
         $shopify = $this->createMock(ShopifyAdminGateway::class);
         $shopify->method('findByOrderNumber')->willReturn([$this->order()]);
         $shopify->expects($this->once())->method('getOrderEvents')->willReturn([]);
@@ -207,7 +207,7 @@ class OrderTimelineControllerTest extends TestCase
 
     public function test_upstream_failure_returns_a_safe_error_without_leaking_details(): void
     {
-        [$user] = $this->userWithStore();
+        [$user] = $this->makeUserAndStore();
         $shopify = $this->createMock(ShopifyAdminGateway::class);
         $shopify->method('findByOrderNumber')->willThrowException(new RuntimeException('secret-token'));
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
@@ -220,7 +220,7 @@ class OrderTimelineControllerTest extends TestCase
     }
 
     /** @return array{User, Store} */
-    private function userWithStore(array $attributes = []): array
+    private function makeUserAndStore(array $attributes = []): array
     {
         $user = User::factory()->create();
         $store = Store::factory()->create([

@@ -16,7 +16,7 @@ class HealthIncidentControllerTest extends TestCase
     public function test_only_administrators_can_view_health_incidents(): void
     {
         $this->get(route('admin.health-incidents'))->assertRedirect(route('login'));
-        [$viewer] = $this->userWithStore();
+        [$viewer] = $this->makeUserAndStore();
 
         $this->actingAs($viewer)->get(route('admin.health-incidents'))->assertForbidden();
     }
@@ -24,7 +24,7 @@ class HealthIncidentControllerTest extends TestCase
     public function test_it_lists_metrics_escapes_messages_and_filters_incidents(): void
     {
         $this->travelTo(Carbon::parse('2026-09-15 12:00:00'));
-        [$admin] = $this->userWithStore(true);
+        [$admin] = $this->makeUserAndStore(true);
         HealthIncident::factory()->create([
             'check_name' => 'database',
             'check_label' => 'Database',
@@ -52,14 +52,14 @@ class HealthIncidentControllerTest extends TestCase
 
     public function test_it_rejects_unknown_filters(): void
     {
-        [$admin] = $this->userWithStore(true);
+        [$admin] = $this->makeUserAndStore(true);
 
         $this->actingAs($admin)->get(route('admin.health-incidents', ['status' => 'broken']))
             ->assertSessionHasErrors('status');
     }
 
     /** @return array{User, Store} */
-    private function userWithStore(bool $administrator = false): array
+    private function makeUserAndStore(bool $administrator = false): array
     {
         $user = $administrator ? User::factory()->admin()->create() : User::factory()->create();
         $store = Store::factory()->create();

@@ -2,8 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Store;
-use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
@@ -25,14 +23,5 @@ class GlobalSearchControllerTest extends TestCase
 
         $this->actingAs($operator)->get('/search?q=letters')->assertSessionHasErrors('q');
         $this->actingAs($operator)->get('/search?q=%231001')->assertOk()->assertSeeText('3 matches')->assertSeeText('Saved reports')->assertSeeText('Push log')->assertSeeText('Ignored orders')->assertSee(route('saved-reports.show', $report), false)->assertDontSee('<script>', false)->assertDontSee('<img>', false)->assertDontSeeText('1001-other');
-    }
-
-    private function userWithStore(bool $operator = false): array
-    {
-        $user = $operator ? User::factory()->operator()->create() : User::factory()->create();
-        $store = Store::factory()->create();
-        $user->stores()->attach($store);
-
-        return [$user, $store];
     }
 }

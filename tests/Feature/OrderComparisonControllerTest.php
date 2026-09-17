@@ -21,7 +21,7 @@ class OrderComparisonControllerTest extends TestCase
     public function test_initial_form_does_not_make_external_requests(): void
     {
         Http::preventStrayRequests();
-        [$user] = $this->userWithStore();
+        [$user] = $this->makeUserAndStore();
 
         $response = $this->actingAs($user)->get(route('orders.compare'));
 
@@ -32,7 +32,7 @@ class OrderComparisonControllerTest extends TestCase
     public function test_both_order_numbers_are_required_together_before_external_requests(): void
     {
         Http::preventStrayRequests();
-        [$user] = $this->userWithStore();
+        [$user] = $this->makeUserAndStore();
 
         $response = $this->from(route('orders.compare'))->actingAs($user)->get(route('orders.compare', [
             'order_a' => '#1001',
@@ -48,7 +48,7 @@ class OrderComparisonControllerTest extends TestCase
     public function test_injection_like_order_number_is_rejected_before_external_requests(): void
     {
         Http::preventStrayRequests();
-        [$user] = $this->userWithStore();
+        [$user] = $this->makeUserAndStore();
 
         $response = $this->from(route('orders.compare'))->actingAs($user)->get(route('orders.compare', [
             'order_a' => '1001 OR status:any',
@@ -62,7 +62,7 @@ class OrderComparisonControllerTest extends TestCase
     public function test_order_number_longer_than_the_supported_limit_is_rejected(): void
     {
         Http::preventStrayRequests();
-        [$user] = $this->userWithStore();
+        [$user] = $this->makeUserAndStore();
 
         $response = $this->from(route('orders.compare'))->actingAs($user)->get(route('orders.compare', [
             'order_a' => str_repeat('1', 65),
@@ -76,7 +76,7 @@ class OrderComparisonControllerTest extends TestCase
     public function test_array_order_number_is_rejected_without_causing_a_server_error(): void
     {
         Http::preventStrayRequests();
-        [$user] = $this->userWithStore();
+        [$user] = $this->makeUserAndStore();
 
         $response = $this->from(route('orders.compare'))->actingAs($user)->get(route('orders.compare', [
             'order_a' => ['1001'],
@@ -90,7 +90,7 @@ class OrderComparisonControllerTest extends TestCase
     public function test_viewer_compares_two_orders_with_active_store_credentials_and_escaped_output(): void
     {
         Http::preventStrayRequests();
-        [$user, $store] = $this->userWithStore();
+        [$user, $store] = $this->makeUserAndStore();
         Http::fake([
             'https://active.myshopify.com/admin/api/2026-07/graphql.json' => Http::sequence()
                 ->push($this->shopifyResponse($this->orderNode('#1001', [
@@ -136,7 +136,7 @@ class OrderComparisonControllerTest extends TestCase
     public function test_comparison_works_without_shipstation_credentials(): void
     {
         Http::preventStrayRequests();
-        [$user, $store] = $this->userWithStore([
+        [$user, $store] = $this->makeUserAndStore([
             'shipstation_api_key' => null,
             'shipstation_api_secret' => null,
         ]);
@@ -159,7 +159,7 @@ class OrderComparisonControllerTest extends TestCase
     public function test_shipstation_missing_and_multiple_matches_are_reported_without_arbitrary_selection(): void
     {
         Http::preventStrayRequests();
-        [$user, $store] = $this->userWithStore();
+        [$user, $store] = $this->makeUserAndStore();
         Http::fake([
             'https://active.myshopify.com/admin/api/2026-07/graphql.json' => Http::sequence()
                 ->push($this->shopifyResponse($this->orderNode('#1001')))
@@ -186,7 +186,7 @@ class OrderComparisonControllerTest extends TestCase
     public function test_missing_and_ambiguous_shopify_results_are_not_selected_automatically(): void
     {
         Http::preventStrayRequests();
-        [$user, $store] = $this->userWithStore([
+        [$user, $store] = $this->makeUserAndStore([
             'shipstation_api_key' => null,
             'shipstation_api_secret' => null,
         ]);
@@ -214,7 +214,7 @@ class OrderComparisonControllerTest extends TestCase
     public function test_upstream_failure_returns_a_safe_error_without_exposing_details(): void
     {
         Http::preventStrayRequests();
-        [$user, $store] = $this->userWithStore();
+        [$user, $store] = $this->makeUserAndStore();
         Http::fake([
             'https://active.myshopify.com/admin/api/2026-07/graphql.json' => Http::response([
                 'message' => 'private comparison failure',
@@ -236,7 +236,7 @@ class OrderComparisonControllerTest extends TestCase
      * @param  array<string, mixed>  $storeAttributes
      * @return array{User, Store}
      */
-    private function userWithStore(array $storeAttributes = []): array
+    private function makeUserAndStore(array $storeAttributes = []): array
     {
         $user = User::factory()->create();
         $store = Store::factory()->create([

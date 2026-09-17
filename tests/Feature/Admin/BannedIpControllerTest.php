@@ -15,13 +15,13 @@ class BannedIpControllerTest extends TestCase
     public function test_only_an_admin_can_view_and_unban(): void
     {
         $this->get(route('admin.banned-ips.index'))->assertRedirect(route('login'));
-        [$operator] = $this->userWithStore(false);
+        [$operator] = $this->makeUserAndStore(false);
         $this->actingAs($operator)->get(route('admin.banned-ips.index'))->assertForbidden();
     }
 
     public function test_admin_sees_currently_banned_ips(): void
     {
-        [$admin] = $this->userWithStore(true);
+        [$admin] = $this->makeUserAndStore(true);
         $throttle = app(LoginThrottle::class);
         $throttle->recordFailureMessage('1.2.3.4');
         $throttle->recordFailureMessage('1.2.3.4');
@@ -32,7 +32,7 @@ class BannedIpControllerTest extends TestCase
 
     public function test_admin_can_unban_an_ip(): void
     {
-        [$admin] = $this->userWithStore(true);
+        [$admin] = $this->makeUserAndStore(true);
         $throttle = app(LoginThrottle::class);
         $throttle->recordFailureMessage('1.2.3.4');
         $throttle->recordFailureMessage('1.2.3.4');
@@ -46,7 +46,7 @@ class BannedIpControllerTest extends TestCase
     }
 
     /** @return array{User, Store} */
-    private function userWithStore(bool $admin): array
+    private function makeUserAndStore(bool $admin): array
     {
         $user = $admin ? User::factory()->admin()->create() : User::factory()->operator()->create();
         $store = Store::factory()->create();

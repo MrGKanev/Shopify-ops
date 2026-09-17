@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
-use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
@@ -46,14 +45,5 @@ class ProductCompletenessControllerTest extends TestCase
         $gateway->shouldReceive('productCompletenessCandidates')->andThrow(new RuntimeException('secret'));
         $this->app->instance(ShopifyAdminGateway::class, $gateway);
         $this->actingAs($user)->post(route('reports.product-completeness.store'))->assertOk()->assertSeeText('could not be completed')->assertDontSeeText('secret')->assertDontSeeText('with issues');
-    }
-
-    private function userWithStore(bool $operator = false, array $attributes = []): array
-    {
-        $user = $operator ? User::factory()->operator()->create() : User::factory()->create();
-        $store = Store::factory()->create($attributes);
-        $user->stores()->attach($store);
-
-        return [$user, $store];
     }
 }

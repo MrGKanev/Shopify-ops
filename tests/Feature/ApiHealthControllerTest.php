@@ -19,13 +19,13 @@ class ApiHealthControllerTest extends TestCase
     public function test_only_administrators_can_access_api_health(): void
     {
         $this->get('/admin/api-health')->assertRedirect(route('login'));
-        [$operator] = $this->userWithStore(false);
+        [$operator] = $this->makeUserAndStore(false);
         $this->actingAs($operator)->get('/admin/api-health')->assertForbidden();
     }
 
     public function test_initial_page_does_not_call_external_services(): void
     {
-        [$admin] = $this->userWithStore();
+        [$admin] = $this->makeUserAndStore();
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
         $shopify->shouldNotReceive('healthCheck');
         $factory = Mockery::mock(ShipStationClientFactory::class);
@@ -38,7 +38,7 @@ class ApiHealthControllerTest extends TestCase
 
     public function test_page_summarizes_store_scoped_persisted_flow_history(): void
     {
-        [$admin, $store] = $this->userWithStore();
+        [$admin, $store] = $this->makeUserAndStore();
         $foreign = Store::factory()->create();
         $store->runLogs()->create(['tool' => 'run_audit', 'status' => 'error', 'error' => 'Old failure']);
         $store->runLogs()->create(['tool' => 'run_audit', 'status' => 'ok']);
@@ -50,7 +50,7 @@ class ApiHealthControllerTest extends TestCase
 
     public function test_health_check_reports_scopes_and_selected_store_results(): void
     {
-        [$admin, $store] = $this->userWithStore();
+        [$admin, $store] = $this->makeUserAndStore();
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
         $shopify->shouldReceive('healthCheck')->once()->with(Mockery::on(fn (Store $selected): bool => $selected->is($store)))->andReturn([
             'shop_name' => '<script>Shop</script>',
@@ -72,7 +72,7 @@ class ApiHealthControllerTest extends TestCase
 
     public function test_health_check_reports_the_returned_shopify_api_version_mismatch(): void
     {
-        [$admin] = $this->userWithStore();
+        [$admin] = $this->makeUserAndStore();
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
         $shopify->shouldReceive('healthCheck')->once()->andReturn([
             'shop_name' => 'Example Shop',
@@ -95,7 +95,7 @@ class ApiHealthControllerTest extends TestCase
 
     public function test_missing_credentials_make_no_external_requests(): void
     {
-        [$admin] = $this->userWithStore(true, ['shopify_access_token' => '', 'shipstation_api_key' => '']);
+        [$admin] = $this->makeUserAndStore(true, ['shopify_access_token' => '', 'shipstation_api_key' => '']);
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
         $shopify->shouldNotReceive('healthCheck');
         $factory = Mockery::mock(ShipStationClientFactory::class);
@@ -108,7 +108,7 @@ class ApiHealthControllerTest extends TestCase
 
     public function test_provider_errors_are_safe_and_do_not_prevent_the_other_check(): void
     {
-        [$admin] = $this->userWithStore();
+        [$admin] = $this->makeUserAndStore();
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
         $shopify->shouldReceive('healthCheck')->andThrow(new RuntimeException('shopify-secret'));
         $shipStation = Mockery::mock(ShipStationClientContract::class);
@@ -121,7 +121,7 @@ class ApiHealthControllerTest extends TestCase
         $this->actingAs($admin)->post(route('admin.api-health.check'))->assertOk()->assertSeeText('Shopify could not be reached')->assertSeeText('ShipStation could not be reached')->assertDontSeeText('shopify-secret')->assertDontSeeText('shipstation-secret');
     }
 
-    private function userWithStore(bool $admin = true, array $attributes = []): array
+    private function makeUserAndStore(bool $admin = true, array $attributes = []): array
     {
         $user = $admin ? User::factory()->admin()->create() : User::factory()->operator()->create();
         $store = Store::factory()->create($attributes);

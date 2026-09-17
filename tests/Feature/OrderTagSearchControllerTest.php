@@ -24,7 +24,7 @@ class OrderTagSearchControllerTest extends TestCase
 
     public function test_initial_form_supports_an_escaped_prefill_without_calling_shopify(): void
     {
-        [$user] = $this->userWithStore();
+        [$user] = $this->makeUserAndStore();
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
         $shopify->shouldNotReceive('searchOrdersByTag');
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
@@ -35,7 +35,7 @@ class OrderTagSearchControllerTest extends TestCase
 
     public function test_invalid_tags_and_dates_are_rejected_before_shopify_is_called(): void
     {
-        [$user] = $this->userWithStore();
+        [$user] = $this->makeUserAndStore();
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
         $shopify->shouldNotReceive('searchOrdersByTag');
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
@@ -75,7 +75,7 @@ class OrderTagSearchControllerTest extends TestCase
 
     public function test_zero_results_and_upstream_failure_have_clear_atomic_states(): void
     {
-        [$user] = $this->userWithStore();
+        [$user] = $this->makeUserAndStore();
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
         $shopify->shouldReceive('searchOrdersByTag')->once()->andReturn(['orders' => [], 'pages' => 1, 'truncated' => false]);
         $shopify->shouldReceive('searchOrdersByTag')->once()->andThrow(new RuntimeException('private-token'));
@@ -87,7 +87,7 @@ class OrderTagSearchControllerTest extends TestCase
 
     public function test_missing_shopify_configuration_stops_before_the_gateway(): void
     {
-        [$user] = $this->userWithStore(['shopify_access_token' => '']);
+        [$user] = $this->makeUserAndStore(['shopify_access_token' => '']);
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
         $shopify->shouldNotReceive('searchOrdersByTag');
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
@@ -98,7 +98,7 @@ class OrderTagSearchControllerTest extends TestCase
 
     public function test_search_is_rate_limited_per_user_and_ip(): void
     {
-        [$user] = $this->userWithStore();
+        [$user] = $this->makeUserAndStore();
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
         $shopify->shouldReceive('searchOrdersByTag')->times(10)->andReturn(['orders' => [], 'pages' => 1, 'truncated' => false]);
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
@@ -110,7 +110,7 @@ class OrderTagSearchControllerTest extends TestCase
         $this->actingAs($user)->post(route('orders.tag-search.store'), ['tag' => 'vip'])->assertTooManyRequests();
     }
 
-    private function userWithStore(array $storeAttributes = []): array
+    private function makeUserAndStore(array $storeAttributes = []): array
     {
         $user = User::factory()->create();
         $store = Store::factory()->create($storeAttributes);

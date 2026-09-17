@@ -2,8 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Store;
-use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
@@ -39,14 +37,5 @@ class PrintQueueControllerTest extends TestCase
         $item = $otherStore->printQueueItems()->create(['order_number' => 'ORD-999']);
 
         $this->actingAs($operator)->delete(route('print-queue.destroy', $item))->assertNotFound();
-    }
-
-    private function userWithStore(bool $operator = false): array
-    {
-        $user = $operator ? User::factory()->operator()->create() : User::factory()->create();
-        $store = Store::factory()->create();
-        $user->stores()->attach($store);
-
-        return [$user, $store];
     }
 }

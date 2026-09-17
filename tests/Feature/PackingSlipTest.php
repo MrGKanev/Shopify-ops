@@ -18,7 +18,7 @@ class PackingSlipTest extends TestCase
     {
         $this->get('/orders/packing-slip')->assertRedirect(route('login'));
         $this->actingAs(User::factory()->create())->get('/orders/packing-slip')->assertForbidden();
-        [$user] = $this->userWithStore();
+        [$user] = $this->makeUserAndStore();
         $this->actingAs($user)->get(route('orders.packing-slip', ['order' => '<script>x</script>']))->assertOk()->assertSee('&lt;script&gt;x&lt;/script&gt;', false)->assertDontSee('<script>', false);
         foreach ([['order_number' => '###'], ['order_number' => ['1001']], ['order_number' => str_repeat('a', 65)], ['order_number' => '1001 OR any']] as $payload) {
             $this->from(route('orders.packing-slip'))->actingAs($user)->post(route('orders.packing-slip.store'), $payload)->assertSessionHasErrors('order_number');
@@ -27,7 +27,7 @@ class PackingSlipTest extends TestCase
 
     public function test_renders_exact_match_and_rejects_zero_and_ambiguous_matches(): void
     {
-        [$user, $store] = $this->userWithStore();
+        [$user, $store] = $this->makeUserAndStore();
         $client = Mockery::mock(ShipStationClientContract::class);
         $client->shouldReceive('findByOrderNumber')->with('1001')->andReturn([['orderNumber' => 'similar'], ['orderNumber' => '1001', 'orderDate' => '2026-09-01', 'shipTo' => ['name' => '<script>x</script>'], 'items' => [['name' => 'Shirt', 'quantity' => 2, 'options' => [['name' => 'Size', 'value' => '["S","M"]']]]], 'internalNotes' => 'First<br/>Second']]);
         $client->shouldReceive('findByOrderNumber')->with('1002')->andReturn([]);
@@ -43,14 +43,14 @@ class PackingSlipTest extends TestCase
 
     public function test_missing_configuration_is_safe(): void
     {
-        [$user] = $this->userWithStore();
+        [$user] = $this->makeUserAndStore();
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->once()->andReturn(null);
         $this->app->instance(ShipStationClientFactory::class, $factory);
         $this->actingAs($user)->post(route('orders.packing-slip.store'), ['order_number' => '1001'])->assertOk()->assertSeeText('not configured completely');
     }
 
-    private function userWithStore(): array
+    private function makeUserAndStore(): array
     {
         $user = User::factory()->create();
         $store = Store::factory()->create();

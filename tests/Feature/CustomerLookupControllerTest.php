@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
-use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
@@ -32,14 +31,5 @@ class CustomerLookupControllerTest extends TestCase
         $shopify->shouldReceive('customerOrderHistory')->andThrow(new RuntimeException('secret'));
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
         $this->actingAs($user)->post('/customers/lookup', ['email' => 'jane@example.com'])->assertOk()->assertSeeText('could not be completed')->assertDontSeeText('secret');
-    }
-
-    private function userWithStore(bool $operator = false, array $attributes = []): array
-    {
-        $user = $operator ? User::factory()->operator()->create() : User::factory()->create();
-        $store = Store::factory()->create($attributes);
-        $user->stores()->attach($store);
-
-        return [$user, $store];
     }
 }

@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
-use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
@@ -52,14 +51,5 @@ class AddressChangeControllerTest extends TestCase
         $response->assertOk()->assertDownload('address-changes-2026-01-01-to-2026-01-31.csv');
         $this->assertStringContainsString("'=HYPERLINK", $content);
         $this->assertStringContainsString("'+cmd@example.com", $content);
-    }
-
-    private function userWithStore(bool $operator = false, array $attributes = []): array
-    {
-        $user = $operator ? User::factory()->operator()->create() : User::factory()->create();
-        $store = Store::factory()->create($attributes);
-        $user->stores()->attach($store);
-
-        return [$user, $store];
     }
 }

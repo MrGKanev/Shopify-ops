@@ -16,7 +16,7 @@ class AppearanceSettingsControllerTest extends TestCase
 
     public function test_admin_can_update_the_site_name_and_role_targeted_links(): void
     {
-        [$admin] = $this->userWithStore('admin');
+        [$admin] = $this->makeUserAndStore('admin');
 
         $response = $this->actingAs($admin)->from(route('admin.settings'))->put(route('admin.appearance.update'), [
             'site_name' => 'Operations HQ',
@@ -47,8 +47,8 @@ class AppearanceSettingsControllerTest extends TestCase
             ['label' => 'Operations', 'url' => 'https://example.com/operations', 'audience' => 'operator'],
             ['label' => 'Administration', 'url' => 'https://example.com/administration', 'audience' => 'admin'],
         ]]);
-        [$viewer] = $this->userWithStore('viewer');
-        [$operator] = $this->userWithStore('operator');
+        [$viewer] = $this->makeUserAndStore('viewer');
+        [$operator] = $this->makeUserAndStore('operator');
 
         $this->actingAs($viewer)->get(route('dashboard'))
             ->assertSee('<script>Shared</script>')
@@ -69,7 +69,7 @@ class AppearanceSettingsControllerTest extends TestCase
             'logo_path' => 'branding/old-logo.png',
             'login_image_path' => 'branding/old-login.jpg',
         ]);
-        [$admin] = $this->userWithStore('admin');
+        [$admin] = $this->makeUserAndStore('admin');
 
         $this->actingAs($admin)->put(route('admin.appearance.update'), [
             'site_name' => 'Operations HQ',
@@ -99,8 +99,8 @@ class AppearanceSettingsControllerTest extends TestCase
 
     public function test_appearance_settings_reject_unsafe_files_links_and_non_admins(): void
     {
-        [$admin] = $this->userWithStore('admin');
-        [$operator] = $this->userWithStore('operator');
+        [$admin] = $this->makeUserAndStore('admin');
+        [$operator] = $this->makeUserAndStore('operator');
         $payload = [
             'site_name' => 'Operations HQ',
             'custom_links' => [['label' => 'Unsafe', 'url' => 'javascript:alert(1)', 'audience' => 'all']],
@@ -119,7 +119,7 @@ class AppearanceSettingsControllerTest extends TestCase
     }
 
     /** @return array{User, Store} */
-    private function userWithStore(string $role): array
+    private function makeUserAndStore(string $role): array
     {
         $user = match ($role) {
             'admin' => User::factory()->admin()->create(),

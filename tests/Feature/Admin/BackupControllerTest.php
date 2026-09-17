@@ -20,7 +20,7 @@ class BackupControllerTest extends TestCase
         Storage::disk('backups')->put("{$folder}/2026-09-11-00-00-00.zip", 'zip-bytes');
 
         $this->get(route('admin.backups.index'))->assertRedirect(route('login'));
-        [$operator] = $this->userWithStore(false);
+        [$operator] = $this->makeUserAndStore(false);
         $this->actingAs($operator)->get(route('admin.backups.index'))->assertForbidden();
         $this->actingAs($operator)->get(route('admin.backups.download', ["{$folder}/2026-09-11-00-00-00.zip"]))->assertForbidden();
     }
@@ -30,7 +30,7 @@ class BackupControllerTest extends TestCase
         Storage::fake('backups');
         $folder = (string) config('backup.backup.name');
         Storage::disk('backups')->put("{$folder}/2026-09-11-00-00-00.zip", 'zip-bytes');
-        [$admin] = $this->userWithStore(true);
+        [$admin] = $this->makeUserAndStore(true);
 
         $this->actingAs($admin)->get(route('admin.backups.index'))
             ->assertOk()
@@ -42,7 +42,7 @@ class BackupControllerTest extends TestCase
         Storage::fake('backups');
         $folder = (string) config('backup.backup.name');
         Storage::disk('backups')->put("{$folder}/2026-09-11-00-00-00.zip", 'zip-bytes');
-        [$admin] = $this->userWithStore(true);
+        [$admin] = $this->makeUserAndStore(true);
 
         $response = $this->actingAs($admin)->get(route('admin.backups.download', ["{$folder}/2026-09-11-00-00-00.zip"]));
 
@@ -53,14 +53,14 @@ class BackupControllerTest extends TestCase
     public function test_it_refuses_to_download_a_path_outside_the_backup_listing(): void
     {
         Storage::fake('backups');
-        [$admin] = $this->userWithStore(true);
+        [$admin] = $this->makeUserAndStore(true);
 
         $this->actingAs($admin)->get(route('admin.backups.download', ['../../.env']))->assertNotFound();
     }
 
     public function test_admin_can_create_a_database_backup_on_demand(): void
     {
-        [$admin] = $this->userWithStore(true);
+        [$admin] = $this->makeUserAndStore(true);
         Artisan::shouldReceive('call')->once()->with('backup:run', ['--isolated' => true, '--disable-notifications' => true, '--only-db' => true])->andReturn(0);
 
         $this->actingAs($admin)->post(route('admin.backups.store'), ['scope' => 'database'])
@@ -68,7 +68,7 @@ class BackupControllerTest extends TestCase
     }
 
     /** @return array{User, Store} */
-    private function userWithStore(bool $admin): array
+    private function makeUserAndStore(bool $admin): array
     {
         $user = $admin ? User::factory()->admin()->create() : User::factory()->operator()->create();
         $store = Store::factory()->create();

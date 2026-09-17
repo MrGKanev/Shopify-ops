@@ -18,7 +18,7 @@ class TagAuditControllerTest extends TestCase
     {
         $this->get('/reports/tag-audit')->assertRedirect(route('login'));
 
-        [$viewer] = $this->userWithStore();
+        [$viewer] = $this->makeUserAndStore();
 
         $this->actingAs($viewer)->get('/reports/tag-audit')->assertForbidden();
     }
@@ -26,7 +26,7 @@ class TagAuditControllerTest extends TestCase
     public function test_initial_page_uses_a_ninety_day_range(): void
     {
         $this->travelTo('2026-09-06 12:00:00');
-        [$operator] = $this->userWithStore(true);
+        [$operator] = $this->makeUserAndStore(true);
 
         $this->actingAs($operator)->get(route('reports.tag-audit'))
             ->assertOk()
@@ -36,7 +36,7 @@ class TagAuditControllerTest extends TestCase
 
     public function test_invalid_date_range_returns_the_specific_validation_message(): void
     {
-        [$operator] = $this->userWithStore(true);
+        [$operator] = $this->makeUserAndStore(true);
 
         $this->actingAs($operator)->post(route('reports.tag-audit.store'), ['start_date' => '2026-09-06', 'end_date' => '2026-09-01'])
             ->assertSessionHasErrors(['end_date' => 'The end date must be on or after the start date.']);
@@ -44,7 +44,7 @@ class TagAuditControllerTest extends TestCase
 
     public function test_incomplete_shopify_configuration_does_not_run_the_report(): void
     {
-        [$operator] = $this->userWithStore(true, ['shopify_access_token' => '']);
+        [$operator] = $this->makeUserAndStore(true, ['shopify_access_token' => '']);
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
         $shopify->shouldNotReceive('tagAuditCandidates');
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
@@ -57,7 +57,7 @@ class TagAuditControllerTest extends TestCase
     public function test_selected_store_results_orphans_truncation_and_xss_are_rendered_safely(): void
     {
         $this->travelTo('2026-09-06 12:00:00');
-        [$operator, $store] = $this->userWithStore(true);
+        [$operator, $store] = $this->makeUserAndStore(true);
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
         $shopify->shouldReceive('tagAuditCandidates')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '2026-05-01', '2026-09-06')->andReturn([
             'orders' => [
@@ -82,7 +82,7 @@ class TagAuditControllerTest extends TestCase
 
     public function test_upstream_error_is_atomic_and_does_not_expose_details(): void
     {
-        [$operator] = $this->userWithStore(true);
+        [$operator] = $this->makeUserAndStore(true);
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
         $shopify->shouldReceive('tagAuditCandidates')->once()->andThrow(new RuntimeException('private-token'));
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
@@ -96,7 +96,7 @@ class TagAuditControllerTest extends TestCase
     }
 
     /** @param array<string, mixed> $storeAttributes @return array{User, Store} */
-    private function userWithStore(bool $operator = false, array $storeAttributes = []): array
+    private function makeUserAndStore(bool $operator = false, array $storeAttributes = []): array
     {
         $user = $operator ? User::factory()->operator()->create() : User::factory()->create();
         $store = Store::factory()->create($storeAttributes);

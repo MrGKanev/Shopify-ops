@@ -16,7 +16,7 @@ class WebhookHealthControllerTest extends TestCase
 
     public function test_admin_sees_normalized_live_webhooks_and_unhealthy_endpoints(): void
     {
-        [$admin, $store] = $this->userWithStore(true);
+        [$admin, $store] = $this->makeUserAndStore(true);
         $gateway = Mockery::mock(ShopifyAdminGateway::class);
         $gateway->shouldReceive('get')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), 'webhooks.json', ['limit' => 250])->andReturn(['webhooks' => [['id' => 1, 'topic' => 'orders/create', 'address' => 'https://example.test/hook', 'format' => 'json', 'created_at' => '2026-09-01T10:00:00Z', 'api_version' => '2026-07'], ['id' => 2, 'topic' => '<script>', 'address' => 'http://unsafe.test', 'api_version' => '2025-01']]]);
         $this->app->instance(ShopifyAdminGateway::class, $gateway);
@@ -26,15 +26,15 @@ class WebhookHealthControllerTest extends TestCase
 
     public function test_page_is_admin_only_and_handles_missing_credentials(): void
     {
-        [$operator] = $this->userWithStore();
+        [$operator] = $this->makeUserAndStore();
         $this->actingAs($operator)->get('/admin/webhook-health')->assertForbidden();
-        [$admin] = $this->userWithStore(true, ['shopify_access_token' => '']);
+        [$admin] = $this->makeUserAndStore(true, ['shopify_access_token' => '']);
         $this->actingAs($admin)->get('/admin/webhook-health')->assertOk()->assertSeeText('Shopify credentials are incomplete');
     }
 
     public function test_an_unexpected_response_shape_is_safe(): void
     {
-        [$admin] = $this->userWithStore(true);
+        [$admin] = $this->makeUserAndStore(true);
         $gateway = Mockery::mock(ShopifyAdminGateway::class);
         $gateway->shouldReceive('get')->once()->andReturn(['unexpected' => true]);
         $this->app->instance(ShopifyAdminGateway::class, $gateway);
@@ -44,7 +44,7 @@ class WebhookHealthControllerTest extends TestCase
 
     public function test_transport_failures_are_safe(): void
     {
-        [$admin] = $this->userWithStore(true);
+        [$admin] = $this->makeUserAndStore(true);
         $gateway = Mockery::mock(ShopifyAdminGateway::class);
         $gateway->shouldReceive('get')->andThrow(new RuntimeException('secret-token'));
         $this->app->instance(ShopifyAdminGateway::class, $gateway);
@@ -53,7 +53,7 @@ class WebhookHealthControllerTest extends TestCase
     }
 
     /** @return array{User,Store} */
-    private function userWithStore(bool $admin = false, array $attributes = []): array
+    private function makeUserAndStore(bool $admin = false, array $attributes = []): array
     {
         $user = $admin ? User::factory()->admin()->create() : User::factory()->operator()->create();
         $store = Store::factory()->create($attributes);

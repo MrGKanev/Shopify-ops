@@ -53,12 +53,4 @@ class NavigationTest extends TestCase
     }
 
     /** @return array{User, Store} */
-    private function userWithStore(bool $operator = false): array
-    {
-        $user = $operator ? User::factory()->operator()->create() : User::factory()->create();
-        $store = Store::factory()->create();
-        $user->stores()->attach($store);
-
-        return [$user, $store];
-    }
 }

@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
-use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
@@ -91,14 +90,5 @@ class InventoryAgingControllerTest extends TestCase
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
 
         $this->actingAs($user)->post(route('reports.inventory-aging.store'), ['start_date' => '2026-08-01', 'end_date' => '2026-09-01'])->assertOk()->assertSeeText('could not be completed')->assertDontSeeText('secret')->assertDontSeeText('zero-stock recent sellers');
-    }
-
-    private function userWithStore(bool $operator = false, array $attributes = []): array
-    {
-        $user = $operator ? User::factory()->operator()->create() : User::factory()->create();
-        $store = Store::factory()->create($attributes);
-        $user->stores()->attach($store);
-
-        return [$user, $store];
     }
 }

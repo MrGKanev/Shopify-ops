@@ -19,7 +19,7 @@ class BackupVerificationControllerTest extends TestCase
         Storage::fake('backups');
         $path = $this->createValidBackup();
         $this->post(route('admin.backups.verify'), ['path' => $path])->assertRedirect(route('login'));
-        [$operator] = $this->userWithStore(false);
+        [$operator] = $this->makeUserAndStore(false);
 
         $this->actingAs($operator)->post(route('admin.backups.verify'), ['path' => $path])->assertForbidden();
     }
@@ -28,7 +28,7 @@ class BackupVerificationControllerTest extends TestCase
     {
         Storage::fake('backups');
         $path = $this->createValidBackup();
-        [$admin] = $this->userWithStore(true);
+        [$admin] = $this->makeUserAndStore(true);
 
         $this->actingAs($admin)->post(route('admin.backups.verify'), ['path' => $path])
             ->assertRedirect()
@@ -44,7 +44,7 @@ class BackupVerificationControllerTest extends TestCase
     public function test_it_rejects_a_path_outside_the_backup_listing(): void
     {
         Storage::fake('backups');
-        [$admin] = $this->userWithStore(true);
+        [$admin] = $this->makeUserAndStore(true);
 
         $this->actingAs($admin)->post(route('admin.backups.verify'), ['path' => '../.env'])
             ->assertNotFound();
@@ -69,7 +69,7 @@ class BackupVerificationControllerTest extends TestCase
     }
 
     /** @return array{User, Store} */
-    private function userWithStore(bool $administrator): array
+    private function makeUserAndStore(bool $administrator): array
     {
         $user = $administrator ? User::factory()->admin()->create() : User::factory()->operator()->create();
         $store = Store::factory()->create();

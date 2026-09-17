@@ -19,7 +19,7 @@ class OrderTrackingTest extends TestCase
     {
         $this->get('/orders/tracking')->assertRedirect(route('login'));
         $this->actingAs(User::factory()->create())->get('/orders/tracking')->assertForbidden();
-        [$user] = $this->userWithStore();
+        [$user] = $this->makeUserAndStore();
         $this->actingAs($user)->get(route('orders.tracking', ['prefill' => '<script>x</script>']))->assertOk()->assertSee('&lt;script&gt;x&lt;/script&gt;', false)->assertDontSee('<script>', false);
         $this->from(route('orders.tracking'))->actingAs($user)->post(route('orders.tracking.store'), ['orders' => implode(' ', range(1, 31))])->assertSessionHasErrors(['orders' => 'Maximum 30 order numbers at once.']);
         foreach ([['orders' => '###'], ['orders' => ['1001']], ['orders' => '1001 OR status:any']] as $payload) {
@@ -29,7 +29,7 @@ class OrderTrackingTest extends TestCase
 
     public function test_tracks_unique_orders_with_real_shipments_and_escapes_upstream_text(): void
     {
-        [$user, $store] = $this->userWithStore();
+        [$user, $store] = $this->makeUserAndStore();
         $client = Mockery::mock(ShipStationClientContract::class);
         $client->shouldReceive('findByOrderNumber')->once()->with('1002')->andReturn([['orderId' => 2, 'orderStatus' => '<script>x</script>']]);
         $client->shouldReceive('getOrderShipments')->once()->with('1002')->andReturn([['orderId' => 2, 'carrierCode' => 'UPS', 'trackingNumber' => 'ABC 1', 'shipDate' => '2026-09-01T10:00:00Z'], ['orderId' => 2, 'carrierCode' => 'unknown', 'trackingNumber' => 'T2']]);
@@ -45,7 +45,7 @@ class OrderTrackingTest extends TestCase
 
     public function test_missing_configuration_and_upstream_failure_are_safe_and_atomic(): void
     {
-        [$user] = $this->userWithStore();
+        [$user] = $this->makeUserAndStore();
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->once()->andReturn(null);
         $this->app->instance(ShipStationClientFactory::class, $factory);
@@ -57,7 +57,7 @@ class OrderTrackingTest extends TestCase
         $this->actingAs($user)->post(route('orders.tracking.store'), ['orders' => '1001'])->assertOk()->assertSeeText('Tracking could not be loaded')->assertDontSeeText('private-secret');
     }
 
-    private function userWithStore(): array
+    private function makeUserAndStore(): array
     {
         $user = User::factory()->create();
         $store = Store::factory()->create();

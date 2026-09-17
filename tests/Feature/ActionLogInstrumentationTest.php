@@ -20,7 +20,7 @@ class ActionLogInstrumentationTest extends TestCase
 
     public function test_ignoring_an_order_is_logged(): void
     {
-        [$operator, $store] = $this->userWithStore(true);
+        [$operator, $store] = $this->makeUserAndStore(true);
 
         $this->actingAs($operator)->post('/ignored-orders', ['order_number' => '1234', 'reason' => 'Test'])->assertRedirect();
 
@@ -29,7 +29,7 @@ class ActionLogInstrumentationTest extends TestCase
 
     public function test_unignoring_an_order_is_logged(): void
     {
-        [$operator, $store] = $this->userWithStore(true);
+        [$operator, $store] = $this->makeUserAndStore(true);
         $ignored = $store->ignoredOrders()->create(['order_number' => '1234', 'ignored_at' => today()]);
 
         $this->actingAs($operator)->delete(route('ignored-orders.destroy', $ignored))->assertRedirect();
@@ -39,7 +39,7 @@ class ActionLogInstrumentationTest extends TestCase
 
     public function test_bulk_unignoring_orders_is_logged(): void
     {
-        [$operator, $store] = $this->userWithStore(true);
+        [$operator, $store] = $this->makeUserAndStore(true);
         $first = $store->ignoredOrders()->create(['order_number' => '1', 'ignored_at' => today()]);
         $second = $store->ignoredOrders()->create(['order_number' => '2', 'ignored_at' => today()]);
 
@@ -50,7 +50,7 @@ class ActionLogInstrumentationTest extends TestCase
 
     public function test_importing_ignore_csv_is_logged(): void
     {
-        [$operator] = $this->userWithStore(true);
+        [$operator] = $this->makeUserAndStore(true);
         $file = UploadedFile::fake()->createWithContent('orders.csv', "order_number\n1001\n1002\n");
 
         $this->actingAs($operator)->post('/ignored-orders/import', ['file' => $file, 'reason' => 'bulk'])->assertRedirect();
@@ -60,7 +60,7 @@ class ActionLogInstrumentationTest extends TestCase
 
     public function test_pushing_to_shipstation_is_logged(): void
     {
-        [$operator, $store] = $this->userWithStore(true);
+        [$operator, $store] = $this->makeUserAndStore(true);
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
         $shopify->shouldReceive('findByOrderNumber')->once()->andReturn([['id' => 42, 'name' => '#1001', 'total_price' => '10.00']]);
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
@@ -73,7 +73,7 @@ class ActionLogInstrumentationTest extends TestCase
 
     public function test_print_queue_add_remove_clear_are_logged(): void
     {
-        [$operator, $store] = $this->userWithStore(true);
+        [$operator, $store] = $this->makeUserAndStore(true);
 
         $this->actingAs($operator)->post('/print-queue', ['order_number' => 'ORD-001'])->assertRedirect();
         $this->assertLogged('pq_add', $operator, ['order_number' => 'ORD-001']);
@@ -90,7 +90,7 @@ class ActionLogInstrumentationTest extends TestCase
     public function test_queueing_an_audit_is_logged(): void
     {
         Queue::fake();
-        [$operator] = $this->userWithStore(true);
+        [$operator] = $this->makeUserAndStore(true);
 
         $this->actingAs($operator)->post('/reports/run-audit/queue', ['start_date' => '2026-06-01', 'end_date' => '2026-06-30'])->assertRedirect();
 
@@ -99,7 +99,7 @@ class ActionLogInstrumentationTest extends TestCase
 
     public function test_saving_an_order_note_is_logged(): void
     {
-        [$operator] = $this->userWithStore(true);
+        [$operator] = $this->makeUserAndStore(true);
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
         $shopify->shouldReceive('updateOrderNote')->once();
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
@@ -111,7 +111,7 @@ class ActionLogInstrumentationTest extends TestCase
 
     public function test_switching_stores_is_logged(): void
     {
-        [$user, $store] = $this->userWithStore(false);
+        [$user, $store] = $this->makeUserAndStore(false);
 
         $this->actingAs($user)->post(route('stores.active', $store))->assertRedirect();
 
@@ -120,7 +120,7 @@ class ActionLogInstrumentationTest extends TestCase
 
     public function test_unbanning_an_ip_is_logged(): void
     {
-        [$admin] = $this->userWithStore(true, admin: true);
+        [$admin] = $this->makeUserAndStore(true, admin: true);
         $throttle = app(LoginThrottle::class);
         $throttle->recordFailureMessage('1.2.3.4');
         $throttle->recordFailureMessage('1.2.3.4');
@@ -133,7 +133,7 @@ class ActionLogInstrumentationTest extends TestCase
 
     public function test_saving_slack_rules_is_logged(): void
     {
-        [$admin] = $this->userWithStore(true, admin: true);
+        [$admin] = $this->makeUserAndStore(true, admin: true);
 
         $this->actingAs($admin)->put('/admin/slack-rules', ['audit_enabled' => '1', 'audit_min_missing' => 0, 'scan_enabled' => '0', 'scan_min_rows' => 1])->assertRedirect();
 
@@ -142,7 +142,7 @@ class ActionLogInstrumentationTest extends TestCase
 
     public function test_saving_email_rules_is_logged(): void
     {
-        [$admin] = $this->userWithStore(true, admin: true);
+        [$admin] = $this->makeUserAndStore(true, admin: true);
 
         $this->actingAs($admin)->put('/admin/email-rules', ['rules' => ['run_audit' => ['mode' => 'immediate', 'threshold' => 0, 'include_zero' => '1', 'email' => 'ops@example.com']]])->assertRedirect();
 
@@ -151,7 +151,7 @@ class ActionLogInstrumentationTest extends TestCase
 
     public function test_flushing_cache_is_logged(): void
     {
-        [$admin, $store] = $this->userWithStore(true, admin: true);
+        [$admin, $store] = $this->makeUserAndStore(true, admin: true);
 
         $this->actingAs($admin)->post(route('admin.cache.flush'))->assertRedirect();
 
@@ -176,7 +176,7 @@ class ActionLogInstrumentationTest extends TestCase
     }
 
     /** @return array{User, Store} */
-    private function userWithStore(bool $operator = false, bool $admin = false): array
+    private function makeUserAndStore(bool $operator = false, bool $admin = false): array
     {
         $user = $admin ? User::factory()->admin()->create() : ($operator ? User::factory()->operator()->create() : User::factory()->create());
         $store = Store::factory()->create();

@@ -23,7 +23,7 @@ class OrderLookupControllerTest extends TestCase
     public function test_initial_form_does_not_make_external_requests(): void
     {
         Http::preventStrayRequests();
-        [$user] = $this->userWithStore();
+        [$user] = $this->makeUserAndStore();
 
         $response = $this->actingAs($user)->get(route('orders.lookup'));
 
@@ -36,7 +36,7 @@ class OrderLookupControllerTest extends TestCase
     public function test_blank_order_number_is_treated_as_an_empty_search(): void
     {
         Http::preventStrayRequests();
-        [$user] = $this->userWithStore();
+        [$user] = $this->makeUserAndStore();
 
         $response = $this->actingAs($user)->get(route('orders.lookup', [
             'order_number' => '   ',
@@ -52,7 +52,7 @@ class OrderLookupControllerTest extends TestCase
     public function test_invalid_order_number_is_rejected_before_external_requests(): void
     {
         Http::preventStrayRequests();
-        [$user] = $this->userWithStore();
+        [$user] = $this->makeUserAndStore();
 
         $response = $this->from(route('orders.lookup'))
             ->actingAs($user)
@@ -69,7 +69,7 @@ class OrderLookupControllerTest extends TestCase
     public function test_array_order_number_is_rejected_without_causing_a_server_error(): void
     {
         Http::preventStrayRequests();
-        [$user] = $this->userWithStore();
+        [$user] = $this->makeUserAndStore();
 
         $response = $this->from(route('orders.lookup'))
             ->actingAs($user)
@@ -82,7 +82,7 @@ class OrderLookupControllerTest extends TestCase
     public function test_viewer_can_lookup_an_order_in_both_integrations_with_active_store_credentials(): void
     {
         Http::preventStrayRequests();
-        [$user, $store] = $this->userWithStore();
+        [$user, $store] = $this->makeUserAndStore();
         Http::fake([
             'https://acme.myshopify.com/admin/api/2026-07/graphql.json' => Http::response($this->shopifyResponse()),
             'https://ssapi.shipstation.com/orders*' => Http::response([
@@ -130,7 +130,7 @@ class OrderLookupControllerTest extends TestCase
     public function test_order_detail_section_shows_attribution_discounts_and_custom_attributes(): void
     {
         Http::preventStrayRequests();
-        [$user, $store] = $this->userWithStore();
+        [$user, $store] = $this->makeUserAndStore();
         Http::fake([
             'https://acme.myshopify.com/admin/api/2026-07/graphql.json' => Http::response([
                 'data' => ['orders' => ['edges' => [['node' => [
@@ -202,7 +202,7 @@ class OrderLookupControllerTest extends TestCase
     public function test_lookup_explains_when_shipstation_is_not_configured(): void
     {
         Http::preventStrayRequests();
-        [$user, $store] = $this->userWithStore([
+        [$user, $store] = $this->makeUserAndStore([
             'shipstation_api_key' => null,
             'shipstation_api_secret' => null,
         ]);
@@ -224,7 +224,7 @@ class OrderLookupControllerTest extends TestCase
     public function test_matching_order_details_render_a_successful_cross_platform_comparison(): void
     {
         Http::preventStrayRequests();
-        [$user, $store] = $this->userWithStore();
+        [$user, $store] = $this->makeUserAndStore();
         Http::fake([
             'https://acme.myshopify.com/admin/api/2026-07/graphql.json' => Http::response($this->comparisonShopifyResponse()),
             'https://ssapi.shipstation.com/orders*' => Http::response([
@@ -252,7 +252,7 @@ class OrderLookupControllerTest extends TestCase
     public function test_item_and_established_status_differences_are_highlighted(): void
     {
         Http::preventStrayRequests();
-        [$user, $store] = $this->userWithStore();
+        [$user, $store] = $this->makeUserAndStore();
         $shopifyResponse = $this->comparisonShopifyResponse();
         $shopifyResponse['data']['orders']['edges'][0]['node']['displayFulfillmentStatus'] = 'UNFULFILLED';
         $shipStationOrder = $this->matchingShipStationOrder();
@@ -286,7 +286,7 @@ class OrderLookupControllerTest extends TestCase
     public function test_multiple_shipstation_matches_are_reported_without_selecting_one(): void
     {
         Http::preventStrayRequests();
-        [$user, $store] = $this->userWithStore();
+        [$user, $store] = $this->makeUserAndStore();
         $firstOrder = $this->matchingShipStationOrder();
         $secondOrder = [...$firstOrder, 'orderId' => 43];
         Http::fake([
@@ -312,7 +312,7 @@ class OrderLookupControllerTest extends TestCase
     public function test_empty_results_are_shown_without_being_treated_as_an_error(): void
     {
         Http::preventStrayRequests();
-        [$user, $store] = $this->userWithStore();
+        [$user, $store] = $this->makeUserAndStore();
         Http::fake([
             'https://acme.myshopify.com/admin/api/2026-07/graphql.json' => Http::response([
                 'data' => ['orders' => ['edges' => []]],
@@ -342,7 +342,7 @@ class OrderLookupControllerTest extends TestCase
     public function test_missing_shipstation_order_is_a_valid_comparison_state(): void
     {
         Http::preventStrayRequests();
-        [$user, $store] = $this->userWithStore();
+        [$user, $store] = $this->makeUserAndStore();
         Http::fake([
             'https://acme.myshopify.com/admin/api/2026-07/graphql.json' => Http::response($this->comparisonShopifyResponse()),
             'https://ssapi.shipstation.com/orders*' => Http::response([
@@ -366,7 +366,7 @@ class OrderLookupControllerTest extends TestCase
     public function test_incomplete_shipstation_credentials_return_a_safe_error(): void
     {
         Http::preventStrayRequests();
-        [$user, $store] = $this->userWithStore([
+        [$user, $store] = $this->makeUserAndStore([
             'shipstation_api_secret' => null,
         ]);
         Http::fake([
@@ -387,7 +387,7 @@ class OrderLookupControllerTest extends TestCase
     public function test_upstream_failure_returns_a_safe_error_after_retrying_graphql(): void
     {
         Http::preventStrayRequests();
-        [$user, $store] = $this->userWithStore();
+        [$user, $store] = $this->makeUserAndStore();
         Http::fake([
             'https://acme.myshopify.com/admin/api/2026-07/graphql.json' => Http::response([
                 'message' => 'private upstream details',
@@ -409,7 +409,7 @@ class OrderLookupControllerTest extends TestCase
      * @param  array<string, mixed>  $storeAttributes
      * @return array{User, Store}
      */
-    private function userWithStore(array $storeAttributes = []): array
+    private function makeUserAndStore(array $storeAttributes = []): array
     {
         $user = User::factory()->create();
         $store = Store::factory()->create([

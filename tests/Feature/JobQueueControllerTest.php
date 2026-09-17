@@ -88,13 +88,4 @@ class JobQueueControllerTest extends TestCase
             ->assertSeeText('4')
             ->assertSeeText('RuntimeException');
     }
-
-    private function userWithStore(bool $operator = false): array
-    {
-        $user = $operator ? User::factory()->operator()->create() : User::factory()->create();
-        $store = Store::factory()->create();
-        $user->stores()->attach($store);
-
-        return [$user, $store];
-    }
 }

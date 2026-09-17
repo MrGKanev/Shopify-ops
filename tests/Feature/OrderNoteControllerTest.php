@@ -18,13 +18,13 @@ class OrderNoteControllerTest extends TestCase
     {
         $this->post(route('orders.note.update'), ['order_id' => '123', 'order_number' => '1001', 'note' => 'x'])->assertRedirect(route('login'));
 
-        [$viewer] = $this->userWithStore(false);
+        [$viewer] = $this->makeUserAndStore(false);
         $this->actingAs($viewer)->post(route('orders.note.update'), ['order_id' => '123', 'order_number' => '1001', 'note' => 'x'])->assertForbidden();
     }
 
     public function test_saves_the_note_and_flashes_a_status_message(): void
     {
-        [$operator] = $this->userWithStore(true);
+        [$operator] = $this->makeUserAndStore(true);
         $saveOrderNote = Mockery::mock(SaveOrderNote::class);
         $saveOrderNote->shouldReceive('handle')->once()->with(Mockery::type(Store::class), '123', 'Fragile')->andReturnNull();
         $this->app->instance(SaveOrderNote::class, $saveOrderNote);
@@ -36,7 +36,7 @@ class OrderNoteControllerTest extends TestCase
 
     public function test_redirects_with_an_error_when_shopify_rejects_the_update(): void
     {
-        [$operator] = $this->userWithStore(true);
+        [$operator] = $this->makeUserAndStore(true);
         $saveOrderNote = Mockery::mock(SaveOrderNote::class);
         $saveOrderNote->shouldReceive('handle')->once()->andThrow(new ShopifyGraphqlException([], 'Shopify orderUpdate error: Note is too long.'));
         $this->app->instance(SaveOrderNote::class, $saveOrderNote);
@@ -48,7 +48,7 @@ class OrderNoteControllerTest extends TestCase
 
     public function test_allows_an_empty_note_to_clear_it(): void
     {
-        [$operator] = $this->userWithStore(true);
+        [$operator] = $this->makeUserAndStore(true);
         $saveOrderNote = Mockery::mock(SaveOrderNote::class);
         $saveOrderNote->shouldReceive('handle')->once()->with(Mockery::type(Store::class), '123', '')->andReturnNull();
         $this->app->instance(SaveOrderNote::class, $saveOrderNote);
@@ -60,14 +60,14 @@ class OrderNoteControllerTest extends TestCase
 
     public function test_order_id_must_be_numeric(): void
     {
-        [$operator] = $this->userWithStore(true);
+        [$operator] = $this->makeUserAndStore(true);
 
         $this->actingAs($operator)->post(route('orders.note.update'), ['order_id' => 'gid://shopify/Order/1', 'order_number' => '1001', 'note' => 'x'])
             ->assertSessionHasErrors('order_id');
     }
 
     /** @return array{User, Store} */
-    private function userWithStore(bool $operator): array
+    private function makeUserAndStore(bool $operator): array
     {
         $user = $operator ? User::factory()->operator()->create() : User::factory()->create();
         $store = Store::factory()->create();
