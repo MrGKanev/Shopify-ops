@@ -47,14 +47,21 @@ class AuditOrderAnalyzer
             }
             $email = mb_strtolower(trim((string) ($order['email'] ?? '')));
             $total = (float) ($order['total_price'] ?? 0);
+            $closest = null;
+            $closestDifference = null;
             foreach ($byEmail[$email] ?? [] as $candidate) {
-                if ($total > 0 && abs($total - (float) ($candidate['orderTotal'] ?? 0)) / $total < 0.01) {
-                    $order['shipstation_matches'] = [$candidate];
-                    $order['match_method'] = 'email+amount';
-                    $result['found'][] = $order;
-
-                    continue 2;
+                $difference = abs($total - (float) ($candidate['orderTotal'] ?? 0));
+                if ($total > 0 && $difference / $total < 0.01 && ($closestDifference === null || $difference < $closestDifference)) {
+                    $closest = $candidate;
+                    $closestDifference = $difference;
                 }
+            }
+            if ($closest !== null) {
+                $order['shipstation_matches'] = [$closest];
+                $order['match_method'] = 'email+amount';
+                $result['found'][] = $order;
+
+                continue;
             }
             if (isset($onHoldOrderIds[(string) ($order['id'] ?? '')])) {
                 $order['skip_reason'] = 'on_hold';

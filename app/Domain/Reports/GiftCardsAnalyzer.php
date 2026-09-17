@@ -21,9 +21,11 @@ class GiftCardsAnalyzer
             $expiresOn = $this->text($giftCard['expires_on'] ?? null);
             if ($expiresOn !== '') {
                 $expiryTimestamp = strtotime($expiresOn);
-                $daysUntilExpiry = (int) floor(((is_int($expiryTimestamp) ? $expiryTimestamp : 0) - $now) / 86400);
-                if ($daysUntilExpiry <= $days) {
-                    $reasons[] = $daysUntilExpiry < 0 ? 'Expired' : "Expiring in {$daysUntilExpiry}d";
+                if (is_int($expiryTimestamp)) {
+                    $daysUntilExpiry = (int) floor(($expiryTimestamp - $now) / 86400);
+                    if ($daysUntilExpiry <= $days) {
+                        $reasons[] = $daysUntilExpiry < 0 ? 'Expired' : "Expiring in {$daysUntilExpiry}d";
+                    }
                 }
             }
             $initialValue = (float) ($giftCard['initial_value'] ?? 0);

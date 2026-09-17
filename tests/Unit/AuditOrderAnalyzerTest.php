@@ -81,4 +81,23 @@ class AuditOrderAnalyzerTest extends TestCase
             'exceeds 1%, does not match' => [102.00, false],
         ];
     }
+
+    public function test_email_and_amount_fallback_picks_the_closest_candidate_not_the_first(): void
+    {
+        // Repeat customer with two ShipStation orders under the same email.
+        // The farther-off candidate (102.10, listed first) is within the 1%
+        // tolerance but is not the real match; the closer one (102.95) is.
+        // Picking "first satisfying" instead of "closest" would wrongly
+        // attach the distant, unrelated order and mask a genuinely missing one.
+        $orders = [['name' => '#1001', 'email' => 'buyer@example.com', 'financial_status' => 'paid', 'total_price' => 103.00]];
+        $shipstation = [
+            ['orderNumber' => 'other-1', 'customerEmail' => 'buyer@example.com', 'orderTotal' => 102.10],
+            ['orderNumber' => 'other-2', 'customerEmail' => 'buyer@example.com', 'orderTotal' => 102.95],
+        ];
+
+        $result = (new AuditOrderAnalyzer)->analyze($orders, $shipstation, []);
+
+        $this->assertCount(1, $result['found']);
+        $this->assertSame('other-2', $result['found'][0]['shipstation_matches'][0]['orderNumber']);
+    }
 }

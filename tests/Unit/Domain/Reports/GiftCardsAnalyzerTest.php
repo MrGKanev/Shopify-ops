@@ -34,6 +34,13 @@ class GiftCardsAnalyzerTest extends TestCase
         $this->assertSame([], $this->analyze([$this->card(['expires_on' => date('Y-m-d', self::NOW + 90 * 86400)])]));
     }
 
+    public function test_malformed_expires_on_is_not_treated_as_expired(): void
+    {
+        $rows = $this->analyze([$this->card(['expires_on' => 'not-a-date'])]);
+
+        $this->assertSame([], $rows);
+    }
+
     public function test_sorts_by_balance_descending(): void
     {
         $rows = $this->analyze([$this->card(['masked_code' => '****1', 'balance' => 10, 'initial_value' => 10]), $this->card(['masked_code' => '****2', 'balance' => 90, 'initial_value' => 90])]);
