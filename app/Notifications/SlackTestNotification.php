@@ -2,21 +2,16 @@
 
 namespace App\Notifications;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Channels\SlackWebhookChannel;
-use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Slack\SlackMessage;
 
-class SlackTestNotification extends Notification implements ShouldQueue
+class SlackTestNotification extends QueuedNotification
 {
-    use Queueable;
-
     public function __construct(
         public readonly string $applicationName,
         public readonly string $sentAt,
     ) {
-        $this->onQueue('notifications');
+        parent::__construct();
     }
 
     /**

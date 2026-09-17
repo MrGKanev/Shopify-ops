@@ -2,19 +2,14 @@
 
 namespace App\Notifications;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Notifications\Notification;
 
-class ReportDigestNotification extends Notification implements ShouldQueue
+class ReportDigestNotification extends QueuedNotification
 {
-    use Queueable;
-
     /** @param list<array{tool:string,rows:int}> $sections */
     public function __construct(public string $store, public array $sections)
     {
-        $this->onQueue('notifications');
+        parent::__construct();
     }
 
     public function via(object $notifiable): array

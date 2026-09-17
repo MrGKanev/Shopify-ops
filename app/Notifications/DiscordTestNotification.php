@@ -3,19 +3,14 @@
 namespace App\Notifications;
 
 use App\Notifications\Channels\DiscordWebhookChannel;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Notification;
 
-class DiscordTestNotification extends Notification implements ShouldQueue
+class DiscordTestNotification extends QueuedNotification
 {
-    use Queueable;
-
     public function __construct(
         public readonly string $applicationName,
         public readonly string $sentAt,
     ) {
-        $this->onQueue('notifications');
+        parent::__construct();
     }
 
     /** @return list<class-string> */

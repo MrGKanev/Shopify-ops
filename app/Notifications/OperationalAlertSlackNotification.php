@@ -2,19 +2,14 @@
 
 namespace App\Notifications;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Channels\SlackWebhookChannel;
-use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Slack\SlackMessage;
 
-class OperationalAlertSlackNotification extends Notification implements ShouldQueue
+class OperationalAlertSlackNotification extends QueuedNotification
 {
-    use Queueable;
-
     public function __construct(public string $category, public string $summary)
     {
-        $this->onQueue('notifications');
+        parent::__construct();
     }
 
     public function via(object $notifiable): array

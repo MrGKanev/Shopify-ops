@@ -2,15 +2,13 @@
 
 namespace App\Notifications;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use App\Notifications\Concerns\FormatsSlackMentions;
 use Illuminate\Notifications\Channels\SlackWebhookChannel;
-use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Slack\SlackMessage;
 
-class ScanSlackNotification extends Notification implements ShouldQueue
+class ScanSlackNotification extends QueuedNotification
 {
-    use Queueable;
+    use FormatsSlackMentions;
 
     public function __construct(
         public string $store,
@@ -19,7 +17,7 @@ class ScanSlackNotification extends Notification implements ShouldQueue
         public string $mentions = '',
         public float $durationSeconds = 0.0,
     ) {
-        $this->onQueue('notifications');
+        parent::__construct();
     }
 
     public function via(object $notifiable): array
@@ -29,7 +27,7 @@ class ScanSlackNotification extends Notification implements ShouldQueue
 
     public function toSlack(object $notifiable): SlackMessage
     {
-        $prefix = $this->mentions === '' ? '' : implode(' ', array_map(fn (string $id): string => "<@{$id}>", explode(' ', $this->mentions))).' ';
+        $prefix = $this->slackMentionsPrefix();
 
         return (new SlackMessage)
             ->text("{$prefix}{$this->store}: {$this->tool} found {$this->rows} rows.")

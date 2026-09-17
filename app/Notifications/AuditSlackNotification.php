@@ -2,15 +2,13 @@
 
 namespace App\Notifications;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use App\Notifications\Concerns\FormatsSlackMentions;
 use Illuminate\Notifications\Channels\SlackWebhookChannel;
-use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Slack\SlackMessage;
 
-class AuditSlackNotification extends Notification implements ShouldQueue
+class AuditSlackNotification extends QueuedNotification
 {
-    use Queueable;
+    use FormatsSlackMentions;
 
     public function __construct(
         public string $store,
@@ -25,7 +23,7 @@ class AuditSlackNotification extends Notification implements ShouldQueue
         /** @var list<array{name: string, total: float}> */
         public array $missingOrders = [],
     ) {
-        $this->onQueue('notifications');
+        parent::__construct();
     }
 
     public function via(object $notifiable): array
@@ -35,7 +33,7 @@ class AuditSlackNotification extends Notification implements ShouldQueue
 
     public function toSlack(object $notifiable): SlackMessage
     {
-        $prefix = $this->mentions === '' ? '' : implode(' ', array_map(fn (string $id): string => "<@{$id}>", explode(' ', $this->mentions))).' ';
+        $prefix = $this->slackMentionsPrefix();
         $shown = array_slice($this->missingOrders, 0, 10);
         $lines = array_map(fn (array $order): string => "{$order['name']} - \${$order['total']}", $shown);
         if (count($this->missingOrders) > 10) {

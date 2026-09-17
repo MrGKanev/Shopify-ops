@@ -3,14 +3,9 @@
 namespace App\Notifications;
 
 use App\Notifications\Channels\DiscordWebhookChannel;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Notification;
 
-class AuditDiscordNotification extends Notification implements ShouldQueue
+class AuditDiscordNotification extends QueuedNotification
 {
-    use Queueable;
-
     public function __construct(
         public string $store,
         public int $missing,
@@ -23,7 +18,7 @@ class AuditDiscordNotification extends Notification implements ShouldQueue
         /** @var list<array{name: string, total: float}> */
         public array $missingOrders = [],
     ) {
-        $this->onQueue('notifications');
+        parent::__construct();
     }
 
     public function via(object $notifiable): array

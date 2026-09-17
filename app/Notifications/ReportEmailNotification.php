@@ -3,15 +3,10 @@
 namespace App\Notifications;
 
 use App\Application\Exports\CsvExporter;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Notifications\Notification;
 
-class ReportEmailNotification extends Notification implements ShouldQueue
+class ReportEmailNotification extends QueuedNotification
 {
-    use Queueable;
-
     // ponytail: 5,000-row cap keeps the attachment memory-safe; raise via config if a report legitimately needs more.
     private const int MAX_ATTACHMENT_ROWS = 5000;
 
@@ -21,7 +16,7 @@ class ReportEmailNotification extends Notification implements ShouldQueue
      */
     public function __construct(public string $store, public string $tool, public int $rows, public ?string $start = null, public ?string $end = null, public ?array $attachmentHeaders = null, public ?array $attachmentRows = null)
     {
-        $this->onQueue('notifications');
+        parent::__construct();
     }
 
     public function via(object $notifiable): array
