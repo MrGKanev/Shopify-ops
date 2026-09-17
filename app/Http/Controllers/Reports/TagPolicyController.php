@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunTagPolicyReport;
-use App\Application\Reports\TagPolicyResult;
+use App\Application\Reports\ScanResult;
 use App\Domain\Reports\TagPolicyAnalyzer;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
@@ -49,7 +49,7 @@ class TagPolicyController extends Controller
             $this->recordReportRun($runs, $store, 'tag_policy', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
-        return view('reports.tag-policy', ['startDate' => $startDate, 'endDate' => $endDate, 'configured' => $configured, 'result' => $result instanceof TagPolicyResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.tag-policy', ['startDate' => $startDate, 'endDate' => $endDate, 'configured' => $configured, 'result' => $result instanceof ScanResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 
     /** @return array<string, mixed> */

@@ -10,10 +10,11 @@ class RunCatalogQualityReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly CatalogQualityAnalyzer $analyzer) {}
 
-    public function handle(Store $store): CatalogQualityResult
+    /** @return ScanResult<array{id: int|string, title: string, vendor: string, type: string, issues: list<string>}> */
+    public function handle(Store $store): ScanResult
     {
         $result = $this->shopify->catalogQualityCandidates($store);
 
-        return new CatalogQualityResult(count($result['products']), $this->analyzer->analyze($result['products']), $result['pages'], $result['truncated']);
+        return new ScanResult(scanned: count($result['products']), rows: $this->analyzer->analyze($result['products']), pages: $result['pages'], truncated: $result['truncated']);
     }
 }

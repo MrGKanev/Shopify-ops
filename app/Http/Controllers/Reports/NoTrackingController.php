@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
-use App\Application\Reports\NoTrackingResult;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunNoTrackingReport;
+use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\NoTrackingRequest;
@@ -88,7 +88,7 @@ class NoTrackingController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function viewData(?string $start = null, ?string $end = null, int $threshold = 24, ?NoTrackingResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
+    private function viewData(?string $start = null, ?string $end = null, int $threshold = 24, ?ScanResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
     {
         return compact('threshold', 'result', 'reportFailed', 'configurationError') + ['startDate' => $start ?? now()->subDays(30)->toDateString(), 'endDate' => $end ?? now()->toDateString()];
     }

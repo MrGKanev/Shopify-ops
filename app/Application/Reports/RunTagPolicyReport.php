@@ -10,11 +10,14 @@ class RunTagPolicyReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly TagPolicyAnalyzer $analyzer) {}
 
-    /** @param array<string, mixed> $config */
-    public function handle(Store $store, string $start, string $end, array $config): TagPolicyResult
+    /**
+     * @param  array<string, mixed>  $config
+     * @return ScanResult<array{order_number: string, created_at: string, email: string, financial: string, fulfillment: string, tags: list<string>, violations: list<string>, shopify_id: int|string}>
+     */
+    public function handle(Store $store, string $start, string $end, array $config): ScanResult
     {
         $result = $this->shopify->tagPolicyCandidates($store, $start, $end);
 
-        return new TagPolicyResult($start, $end, count($result['orders']), $this->analyzer->analyze($result['orders'], $config), $result['pages'], $result['truncated']);
+        return new ScanResult(scanned: count($result['orders']), rows: $this->analyzer->analyze($result['orders'], $config), pages: $result['pages'], truncated: $result['truncated'], startDate: $start, endDate: $end);
     }
 }

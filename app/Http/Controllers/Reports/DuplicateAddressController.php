@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\DuplicateAddressResult;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunDuplicateAddressReport;
+use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DuplicateAddressRequest;
@@ -44,6 +44,6 @@ class DuplicateAddressController extends Controller
             $this->recordReportRun($runs, $store, 'duplicate_addresses', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
-        return view('reports.duplicate-addresses', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof DuplicateAddressResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.duplicate-addresses', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof ScanResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 }

@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\DisputeResult;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunDisputeReport;
+use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Models\Store;
@@ -43,6 +43,6 @@ class DisputeController extends Controller
             $this->recordReportRun($runs, $store, 'disputes', $started, null, null, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
-        return view('reports.disputes', ['result' => $result instanceof DisputeResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.disputes', ['result' => $result instanceof ScanResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 }

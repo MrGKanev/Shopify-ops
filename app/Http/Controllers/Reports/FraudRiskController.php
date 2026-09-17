@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\FraudRiskResult;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunFraudRiskReport;
+use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\FraudRiskRequest;
@@ -45,6 +45,6 @@ class FraudRiskController extends Controller
             $this->recordReportRun($runs, $store, 'fraud_risk', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
-        return view('reports.fraud-risk', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof FraudRiskResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.fraud-risk', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof ScanResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 }

@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\GiftCardsResult;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunGiftCardsReport;
+use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\GiftCardsRequest;
@@ -44,6 +44,6 @@ class GiftCardsController extends Controller
             $this->recordReportRun($runs, $store, 'gift_cards', $started, null, null, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
-        return view('reports.gift-cards', ['days' => $days, 'result' => $result instanceof GiftCardsResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.gift-cards', ['days' => $days, 'result' => $result instanceof ScanResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 }

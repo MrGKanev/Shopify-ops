@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\CountryMismatchResult;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunCountryMismatchReport;
+use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CountryMismatchRequest;
@@ -41,6 +41,6 @@ class CountryMismatchController extends Controller
         }
         $this->recordReportRun($runs, $store, 'country_mismatch', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
 
-        return view('reports.country-mismatch', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof CountryMismatchResult ? $result : null, 'reportFailed' => $reportFailed]);
+        return view('reports.country-mismatch', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof ScanResult ? $result : null, 'reportFailed' => $reportFailed]);
     }
 }

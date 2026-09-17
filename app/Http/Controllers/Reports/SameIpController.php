@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunSameIpReport;
-use App\Application\Reports\SameIpResult;
+use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SameIpRequest;
@@ -44,6 +44,6 @@ class SameIpController extends Controller
             $this->recordReportRun($runs, $store, 'same_ip', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
-        return view('reports.same-ip', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof SameIpResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.same-ip', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof ScanResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 }

@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\CatalogQualityResult;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunCatalogQualityReport;
+use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CatalogQualityRequest;
@@ -43,6 +43,6 @@ class CatalogQualityController extends Controller
             $this->recordReportRun($runs, $store, 'catalog_quality', $started, null, null, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
-        return view('reports.catalog-quality', ['result' => $result instanceof CatalogQualityResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.catalog-quality', ['result' => $result instanceof ScanResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 }

@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
-use App\Application\Reports\BundleCheckResult;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunBundleCheckReport;
+use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CarrierPerformanceRequest;
@@ -84,7 +84,7 @@ class BundleCheckController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function viewData(?string $startDate = null, ?string $endDate = null, ?BundleCheckResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
+    private function viewData(?string $startDate = null, ?string $endDate = null, ?ScanResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
     {
         return compact('result', 'reportFailed', 'configurationError') + ['startDate' => $startDate ?? now()->subDays(30)->toDateString(), 'endDate' => $endDate ?? now()->toDateString(), 'description' => config('order-types.bundle_check_description'), 'ruleNames' => array_column(array_filter(config('order-types.rules', []), fn (mixed $rule): bool => is_array($rule) && ($rule['required_items'] ?? []) !== []), 'name')];
     }

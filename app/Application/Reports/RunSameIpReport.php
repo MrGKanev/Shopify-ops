@@ -10,10 +10,11 @@ class RunSameIpReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly SameIpAnalyzer $analyzer) {}
 
-    public function handle(Store $store, string $start, string $end): SameIpResult
+    /** @return ScanResult<array{ip: string, order_count: int, email_count: int, emails: list<string>, orders: list<array<string, mixed>>}> */
+    public function handle(Store $store, string $start, string $end): ScanResult
     {
         $result = $this->shopify->sameIpCandidates($store, $start, $end);
 
-        return new SameIpResult($start, $end, count($result['orders']), $this->analyzer->analyze($result['orders']), $result['pages'], $result['truncated']);
+        return new ScanResult(scanned: count($result['orders']), rows: $this->analyzer->analyze($result['orders']), pages: $result['pages'], truncated: $result['truncated'], startDate: $start, endDate: $end);
     }
 }

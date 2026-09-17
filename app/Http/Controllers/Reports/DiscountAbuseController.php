@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\DiscountAbuseResult;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunDiscountAbuseReport;
+use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DiscountAbuseRequest;
@@ -45,6 +45,6 @@ class DiscountAbuseController extends Controller
             $this->recordReportRun($runs, $store, 'discount_abuse', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
-        return view('reports.discount-abuse', ['startDate' => $startDate, 'endDate' => $endDate, 'minimumEmails' => $minimumEmails, 'result' => $result instanceof DiscountAbuseResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.discount-abuse', ['startDate' => $startDate, 'endDate' => $endDate, 'minimumEmails' => $minimumEmails, 'result' => $result instanceof ScanResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 }

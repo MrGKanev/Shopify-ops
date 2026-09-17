@@ -10,10 +10,11 @@ class RunDuplicateAddressReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly DuplicateAddressAnalyzer $analyzer) {}
 
-    public function handle(Store $store, string $start, string $end): DuplicateAddressResult
+    /** @return ScanResult<array{address_line: string, address_name: string, order_count: int, emails: list<string>, orders: list<array<string, mixed>>}> */
+    public function handle(Store $store, string $start, string $end): ScanResult
     {
         $result = $this->shopify->addressCheckCandidates($store, $start, $end, false);
 
-        return new DuplicateAddressResult($start, $end, count($result['orders']), $this->analyzer->analyze($result['orders']), $result['pages'], $result['truncated']);
+        return new ScanResult(scanned: count($result['orders']), rows: $this->analyzer->analyze($result['orders']), pages: $result['pages'], truncated: $result['truncated'], startDate: $start, endDate: $end);
     }
 }

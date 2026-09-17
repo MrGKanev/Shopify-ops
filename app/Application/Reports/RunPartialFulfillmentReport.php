@@ -10,10 +10,11 @@ class RunPartialFulfillmentReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly PartialFulfillmentAnalyzer $analyzer) {}
 
-    public function handle(Store $store, string $startDate, string $endDate, int $threshold): PartialFulfillmentResult
+    /** @return ScanResult<array{order_number: string, created_at: string, last_fulfilled: ?string, days_stalled: int, unfulfilled_items: list<array{name: string, sku: ?string, qty: int}>, email: string, total_price: float|string, financial: string}> */
+    public function handle(Store $store, string $startDate, string $endDate, int $threshold): ScanResult
     {
         $data = $this->shopify->partialFulfillmentCandidates($store, $startDate, $endDate);
 
-        return new PartialFulfillmentResult($startDate, $endDate, $threshold, count($data['orders']), $this->analyzer->analyze($data['orders'], $threshold, time()), $data['pages'], $data['truncated']);
+        return new ScanResult(scanned: count($data['orders']), rows: $this->analyzer->analyze($data['orders'], $threshold, time()), pages: $data['pages'], truncated: $data['truncated'], startDate: $startDate, endDate: $endDate, threshold: $threshold);
     }
 }

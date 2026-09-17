@@ -10,10 +10,11 @@ class RunOnHoldStallReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly OnHoldStallAnalyzer $analyzer) {}
 
-    public function handle(Store $store, string $startDate, string $endDate): OnHoldStallResult
+    /** @return ScanResult<array{order_number: string, created_at: string, days_waiting: int, hold_reason: string, hold_notes: string, email: string, total: float|string, financial: string, fulfillment: string}> */
+    public function handle(Store $store, string $startDate, string $endDate): ScanResult
     {
         $data = $this->shopify->onHoldFulfillmentCandidates($store, $startDate, $endDate);
 
-        return new OnHoldStallResult($startDate, $endDate, count($data['fulfillment_orders']), $this->analyzer->analyze($data['fulfillment_orders'], time()), $data['pages'], $data['truncated']);
+        return new ScanResult(scanned: count($data['fulfillment_orders']), rows: $this->analyzer->analyze($data['fulfillment_orders'], time()), pages: $data['pages'], truncated: $data['truncated'], startDate: $startDate, endDate: $endDate);
     }
 }

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunZombieProductsReport;
-use App\Application\Reports\ZombieProductsResult;
+use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ZombieProductsRequest;
@@ -43,6 +43,6 @@ class ZombieProductsController extends Controller
             $this->recordReportRun($runs, $store, 'zombie_products', $started, null, null, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
-        return view('reports.zombie-products', ['result' => $result instanceof ZombieProductsResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.zombie-products', ['result' => $result instanceof ScanResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 }

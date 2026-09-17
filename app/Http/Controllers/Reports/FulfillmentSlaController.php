@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
-use App\Application\Reports\FulfillmentSlaResult;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunFulfillmentSlaReport;
+use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\FulfillmentSlaRequest;
@@ -84,7 +84,7 @@ class FulfillmentSlaController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function viewData(?string $startDate = null, ?string $endDate = null, int $threshold = 3, ?FulfillmentSlaResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
+    private function viewData(?string $startDate = null, ?string $endDate = null, int $threshold = 3, ?ScanResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
     {
         return compact('threshold', 'result', 'reportFailed', 'configurationError') + ['startDate' => $startDate ?? now()->subDays(30)->toDateString(), 'endDate' => $endDate ?? now()->toDateString()];
     }

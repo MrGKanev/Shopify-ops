@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\ConsentAuditResult;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunConsentAuditReport;
+use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ConsentAuditRequest;
@@ -44,6 +44,6 @@ class ConsentAuditController extends Controller
             $this->recordReportRun($runs, $store, 'consent_audit', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
 
-        return view('reports.consent-audit', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof ConsentAuditResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.consent-audit', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof ScanResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 }

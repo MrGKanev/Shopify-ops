@@ -13,10 +13,11 @@ class RunRepeatRefundReport
      */
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly RepeatRefundAnalyzer $analyzer) {}
 
-    public function handle(Store $store, string $start, string $end, int $minimum): RepeatRefundResult
+    /** @return ScanResult<array{email: string, refund_count: int, total_refunded: float|string, orders: list<array<string, mixed>>}> */
+    public function handle(Store $store, string $start, string $end, int $minimum): ScanResult
     {
         $result = $this->shopify->repeatRefundCandidates($store, $start, $end);
 
-        return new RepeatRefundResult($start, $end, count($result['orders']), $minimum, $this->analyzer->analyze($result['orders'], $minimum), $result['pages'], $result['truncated']);
+        return new ScanResult(scanned: count($result['orders']), rows: $this->analyzer->analyze($result['orders'], $minimum), pages: $result['pages'], truncated: $result['truncated'], startDate: $start, endDate: $end, minimum: $minimum);
     }
 }

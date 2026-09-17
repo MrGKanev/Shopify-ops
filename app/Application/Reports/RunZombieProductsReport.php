@@ -10,10 +10,11 @@ class RunZombieProductsReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly ZombieProductsAnalyzer $analyzer) {}
 
-    public function handle(Store $store): ZombieProductsResult
+    /** @return ScanResult<array{id: int|string, title: string, vendor: string, type: string, reason: string, stock: int, detail: string}> */
+    public function handle(Store $store): ScanResult
     {
         $result = $this->shopify->zombieProductsCandidates($store);
 
-        return new ZombieProductsResult(count($result['products']), $this->analyzer->analyze($result['products']), $result['pages'], $result['truncated']);
+        return new ScanResult(scanned: count($result['products']), rows: $this->analyzer->analyze($result['products']), pages: $result['pages'], truncated: $result['truncated']);
     }
 }

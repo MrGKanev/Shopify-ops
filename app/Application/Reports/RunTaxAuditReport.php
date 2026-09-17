@@ -10,10 +10,11 @@ class RunTaxAuditReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly TaxAuditAnalyzer $analyzer) {}
 
-    public function handle(Store $store, string $start, string $end, float $minimum): TaxAuditResult
+    /** @return ScanResult<array{id: int|string, number: string, created_at: string, email: string, total: float|string, currency: string}> */
+    public function handle(Store $store, string $start, string $end, float $minimum): ScanResult
     {
         $result = $this->shopify->taxAuditCandidates($store, $start, $end);
 
-        return new TaxAuditResult($start, $end, count($result['orders']), $this->analyzer->analyze($result['orders'], $minimum), $result['pages'], $result['truncated']);
+        return new ScanResult(scanned: count($result['orders']), rows: $this->analyzer->analyze($result['orders'], $minimum), pages: $result['pages'], truncated: $result['truncated'], startDate: $start, endDate: $end);
     }
 }

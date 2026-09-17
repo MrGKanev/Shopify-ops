@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\RecordRun;
-use App\Application\Reports\ReturnedItemsResult;
 use App\Application\Reports\RunReturnedItemsReport;
+use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ReturnedItemsRequest;
@@ -88,7 +88,7 @@ class ReturnedItemsController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function viewData(?string $startDate = null, ?string $endDate = null, ?ReturnedItemsResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
+    private function viewData(?string $startDate = null, ?string $endDate = null, ?ScanResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
     {
         return compact('result', 'reportFailed', 'configurationError') + ['startDate' => $startDate ?? now()->subDays(30)->toDateString(), 'endDate' => $endDate ?? now()->toDateString()];
     }

@@ -10,10 +10,11 @@ class RunFraudRiskReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly FraudRiskAnalyzer $analyzer) {}
 
-    public function handle(Store $store, string $start, string $end): FraudRiskResult
+    /** @return ScanResult<array{id: int|string, number: string, created_at: string, email: string, total: float|string, currency: string, financial: string, risk: array{level: string, score: int, signals: list<array{label: string, points: int}>}}> */
+    public function handle(Store $store, string $start, string $end): ScanResult
     {
         $result = $this->shopify->fraudRiskCandidates($store, $start, $end);
 
-        return new FraudRiskResult($start, $end, count($result['orders']), $this->analyzer->analyze($result['orders']), $result['pages'], $result['truncated']);
+        return new ScanResult(scanned: count($result['orders']), rows: $this->analyzer->analyze($result['orders']), pages: $result['pages'], truncated: $result['truncated'], startDate: $start, endDate: $end);
     }
 }
