@@ -249,6 +249,14 @@ a:hover { text-decoration: underline; }
   font-size: .95rem;
 }
 .field input:focus { border-color: var(--accent); }
+.field select {
+  @apply border rounded-lg px-3.5 py-2.5 outline-none appearance-none transition-colors;
+  background: var(--bg);
+  border-color: var(--border);
+  color: var(--text);
+  font-size: .95rem;
+}
+.field select:focus { border-color: var(--accent); }
 
 /* ── Buttons ── */
 .btn {

@@ -26,6 +26,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GlobalSearchController;
 use App\Http\Controllers\GoogleAuthenticationController;
 use App\Http\Controllers\IgnoredOrderController;
+use App\Http\Controllers\InstallApplicationController;
 use App\Http\Controllers\JobQueueController;
 use App\Http\Controllers\MetafieldController;
 use App\Http\Controllers\MetricsController;
@@ -101,6 +102,8 @@ Route::get('/ready', ReadinessController::class)->name('ready');
 Route::get('/status', StatusController::class)->name('status');
 Route::get('/metrics', MetricsController::class)->name('metrics');
 Route::post('/webhooks/shopify/{store:slug}', ShopifyWebhookController::class)->middleware('throttle:120,1')->name('webhooks.shopify');
+Route::get('/install', [InstallApplicationController::class, 'create'])->name('install.create');
+Route::post('/install', [InstallApplicationController::class, 'store'])->middleware('throttle:installation')->name('install.store');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
