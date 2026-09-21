@@ -1885,5 +1885,4 @@ class ShopifyAdminClient implements ShopifyAdminGateway
 
         return $resource;
     }
-
 }

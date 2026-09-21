@@ -96,5 +96,4 @@ class AuditOrderAnalyzer
 
         return null;
     }
-
 }

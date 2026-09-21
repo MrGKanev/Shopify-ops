@@ -2,8 +2,8 @@
 
 namespace Tests\Unit\Application\Reports;
 
-use App\Application\Reports\ScanResult;
 use App\Application\Reports\RunScanReport;
+use App\Application\Reports\ScanResult;
 use PHPUnit\Framework\TestCase;
 
 class ScanResultTest extends TestCase

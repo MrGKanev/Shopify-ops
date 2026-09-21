@@ -31,5 +31,4 @@ class HighValueNoPhoneRequest extends FormRequest
             $this->merge(['currency' => $currency === '' || $currency === 'ALL' ? null : $currency]);
         }
     }
-
 }

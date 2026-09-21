@@ -2,8 +2,8 @@
 
 namespace App\Domain\Reports;
 
-use App\Domain\Reports\Concerns\NormalizesText;
 use App\Domain\Reports\Concerns\MatchesOrderNumbers;
+use App\Domain\Reports\Concerns\NormalizesText;
 
 class ActiveShipStationConflictAnalyzer
 {
@@ -37,5 +37,4 @@ class ActiveShipStationConflictAnalyzer
 
         return ['scanned' => count($exceptions), 'rows' => $rows];
     }
-
 }
