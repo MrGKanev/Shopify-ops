@@ -2,12 +2,12 @@
 
 namespace App\Application\Reports;
 
-readonly class RefundTrackerResult
+readonly class RefundTrackerResult extends DateRangeReportResult
 {
     /** @param list<array<string, mixed>> $rows */
     public function __construct(
-        public string $startDate,
-        public string $endDate,
+        string $startDate,
+        string $endDate,
         public int $scanned,
         public array $rows,
         public int $active,
@@ -15,5 +15,7 @@ readonly class RefundTrackerResult
         public bool $hasShipStation,
         public int $pages,
         public bool $truncated,
-    ) {}
+    ) {
+        parent::__construct($startDate, $endDate);
+    }
 }

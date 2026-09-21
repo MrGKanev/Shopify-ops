@@ -2,8 +2,23 @@
 
 namespace App\Application\Reports;
 
-readonly class InventoryForecastResult
+readonly class InventoryForecastResult extends InventoryDateRangeResult
 {
     /** @param list<array<string, mixed>> $rows */
-    public function __construct(public string $startDate, public string $endDate, public int $products, public int $variants, public int $orders, public array $rows, public int $critical, public int $warning, public int $productPages, public int $orderPages, public bool $productsTruncated, public bool $ordersTruncated) {}
+    public function __construct(
+        string $startDate,
+        string $endDate,
+        int $products,
+        int $variants,
+        int $orders,
+        array $rows,
+        public int $critical,
+        public int $warning,
+        int $productPages,
+        int $orderPages,
+        bool $productsTruncated,
+        bool $ordersTruncated,
+    ) {
+        parent::__construct($startDate, $endDate, $products, $variants, $orders, $rows, $productPages, $orderPages, $productsTruncated, $ordersTruncated);
+    }
 }
