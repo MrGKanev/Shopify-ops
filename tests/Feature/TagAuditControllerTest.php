@@ -39,7 +39,7 @@ class TagAuditControllerTest extends TestCase
         [$operator] = $this->makeUserAndStore(true);
 
         $this->actingAs($operator)->post(route('reports.tag-audit.store'), ['start_date' => '2026-09-06', 'end_date' => '2026-09-01'])
-            ->assertSessionHasErrors(['end_date' => 'The end date must be on or after the start date.']);
+            ->assertSessionHasErrors(['end_date' => 'The end date field must be a date after or equal to start date.']);
     }
 
     public function test_incomplete_shopify_configuration_does_not_run_the_report(): void
