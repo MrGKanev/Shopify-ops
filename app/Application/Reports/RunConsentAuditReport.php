@@ -6,7 +6,7 @@ use App\Domain\Reports\ConsentAuditAnalyzer;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
 
-class RunConsentAuditReport
+class RunConsentAuditReport extends RunScanReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly ConsentAuditAnalyzer $analyzer) {}
 
@@ -15,6 +15,6 @@ class RunConsentAuditReport
     {
         $result = $this->shopify->consentAuditCandidates($store, $start, $end);
 
-        return new ScanResult(scanned: count($result['orders']), rows: $this->analyzer->analyze($result['orders']), pages: $result['pages'], truncated: $result['truncated'], startDate: $start, endDate: $end);
+        return $this->scanResult($result, 'orders', $this->analyzer->analyze($result['orders']), ['startDate' => $start, 'endDate' => $end]);
     }
 }

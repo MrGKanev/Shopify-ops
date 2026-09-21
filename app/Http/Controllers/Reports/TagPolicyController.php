@@ -6,17 +6,16 @@ use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunTagPolicyReport;
 use App\Application\Reports\ScanResult;
 use App\Domain\Reports\TagPolicyAnalyzer;
+use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\TagPolicyRequest;
-use Illuminate\Http\Client\RequestException;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Throwable;
 
 class TagPolicyController extends Controller
 {
-    use RecordsReportRun;
+    use LogsReportFailure, RecordsReportRun;
 
     public function create(TagPolicyAnalyzer $analyzer): View
     {
@@ -32,7 +31,7 @@ class TagPolicyController extends Controller
         $endDate = (string) $request->validated('end_date');
         $config = $this->config();
         $configured = $analyzer->hasRules($config);
-        $configurationError = $configured && (trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '');
+        $configurationError = $configured && $store->missingShopifyCredentials();
         $result = null;
         $reportFailed = false;
         if ($configured && ! $configurationError) {
@@ -41,7 +40,7 @@ class TagPolicyController extends Controller
                 $result = $report->handle($store, $startDate, $endDate, $config);
             } catch (Throwable $exception) {
                 $reportFailed = true;
-                Log::warning('Tag policy report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
+                $this->logFailure('Tag policy report failed.', $exception, $store);
             }
             $this->recordReportRun($runs, $store, 'tag_policy', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }

@@ -6,7 +6,7 @@ use App\Domain\Reports\GiftCardsAnalyzer;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
 
-class RunGiftCardsReport
+class RunGiftCardsReport extends RunScanReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly GiftCardsAnalyzer $analyzer) {}
 
@@ -15,6 +15,6 @@ class RunGiftCardsReport
     {
         $result = $this->shopify->giftCardCandidates($store);
 
-        return new ScanResult(scanned: count($result['gift_cards']), rows: $this->analyzer->analyze($result['gift_cards'], $days, $now), pages: $result['pages'], truncated: $result['truncated'], days: $days);
+        return $this->scanResult($result, 'gift_cards', $this->analyzer->analyze($result['gift_cards'], $days, $now), ['days' => $days]);
     }
 }

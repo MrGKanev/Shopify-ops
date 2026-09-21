@@ -6,7 +6,7 @@ use App\Domain\Reports\CatalogQualityAnalyzer;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
 
-class RunCatalogQualityReport
+class RunCatalogQualityReport extends RunScanReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly CatalogQualityAnalyzer $analyzer) {}
 
@@ -15,6 +15,6 @@ class RunCatalogQualityReport
     {
         $result = $this->shopify->catalogQualityCandidates($store);
 
-        return new ScanResult(scanned: count($result['products']), rows: $this->analyzer->analyze($result['products']), pages: $result['pages'], truncated: $result['truncated']);
+        return $this->scanResult($result, 'products', $this->analyzer->analyze($result['products']));
     }
 }

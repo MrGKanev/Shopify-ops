@@ -6,19 +6,18 @@ use App\Application\Exports\CsvExporter;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunShippingMarginReport;
 use App\Application\Reports\ShippingMarginResult;
+use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ShippingMarginRequest;
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
 class ShippingMarginController extends Controller
 {
-    use RecordsReportRun;
+    use LogsReportFailure, RecordsReportRun;
 
     public function create(): View
     {
@@ -31,7 +30,7 @@ class ShippingMarginController extends Controller
         $startDate = (string) $request->validated('start_date');
         $endDate = (string) $request->validated('end_date');
         $threshold = (float) $request->validated('threshold');
-        $configurationError = trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '' || trim((string) $store->shipstation_api_key) === '' || trim((string) $store->shipstation_api_secret) === '';
+        $configurationError = $store->missingShopifyCredentials() || $store->missingShipStationCredentials();
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
@@ -40,7 +39,7 @@ class ShippingMarginController extends Controller
                 $result = $report->handle($store, $startDate, $endDate, $threshold);
             } catch (Throwable $exception) {
                 $reportFailed = true;
-                Log::warning('Shipping margin report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
+                $this->logFailure('Shipping margin report failed.', $exception, $store);
             }
             $this->recordReportRun($runs, $store, 'shipping_margin', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }
@@ -56,7 +55,7 @@ class ShippingMarginController extends Controller
         try {
             $result = $report->handle($store, $startDate, $endDate, (float) $request->validated('threshold'));
         } catch (Throwable $exception) {
-            Log::warning('Shipping margin CSV export failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
+            $this->logFailure('Shipping margin CSV export failed.', $exception, $store);
 
             return back()->withErrors(['export' => 'The CSV export could not be completed.']);
         }

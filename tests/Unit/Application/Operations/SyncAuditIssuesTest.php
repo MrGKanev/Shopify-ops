@@ -28,4 +28,20 @@ class SyncAuditIssuesTest extends TestCase
         $this->assertSame('resolved', $issue->fresh()->status);
         $this->assertNotNull($issue->fresh()->resolved_at);
     }
+
+    public function test_it_reopens_an_ignored_issue_when_the_order_is_missing_again(): void
+    {
+        $store = Store::factory()->create();
+        $sync = app(SyncAuditIssues::class);
+
+        $sync->handle($store, [['name' => '#1001']]);
+        $issue = $store->operationalIssues()->sole();
+        $issue->update(['status' => 'ignored']);
+
+        $sync->handle($store, [['name' => '#1001']]);
+
+        $this->assertSame('open', $issue->fresh()->status);
+        $this->assertNull($issue->fresh()->resolved_at);
+        $this->assertSame(2, $issue->fresh()->occurrences);
+    }
 }

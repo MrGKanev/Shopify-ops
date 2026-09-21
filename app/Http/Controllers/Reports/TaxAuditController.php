@@ -4,17 +4,16 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunTaxAuditReport;
+use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\TaxAuditRequest;
-use Illuminate\Http\Client\RequestException;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Throwable;
 
 class TaxAuditController extends Controller
 {
-    use RecordsReportRun;
+    use LogsReportFailure, RecordsReportRun;
 
     public function create(): View
     {
@@ -27,14 +26,14 @@ class TaxAuditController extends Controller
         $data = $request->validated();
         $result = null;
         $failed = false;
-        $configurationError = trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '';
+        $configurationError = $store->missingShopifyCredentials();
         if (! $configurationError) {
             $started = microtime(true);
             try {
                 $result = $report->handle($store, (string) $data['start_date'], (string) $data['end_date'], (float) $data['minimum']);
             } catch (Throwable $exception) {
                 $failed = true;
-                Log::warning('Tax audit report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
+                $this->logFailure('Tax audit report failed.', $exception, $store);
             }
             $this->recordReportRun($runs, $store, 'tax_audit', $started, (string) $data['start_date'], (string) $data['end_date'], $result->scanned ?? 0, count($result->rows ?? []), $failed);
         }

@@ -3,17 +3,18 @@
 namespace App\Domain\Reports;
 
 use App\Domain\Reports\Concerns\NormalizesText;
+use App\Domain\Reports\Concerns\MatchesOrderNumbers;
 
 class ShippedUnfulfilledAnalyzer
 {
-    use NormalizesText;
+    use MatchesOrderNumbers, NormalizesText;
 
     /** @param list<array<string,mixed>> $ssOrders @param list<array<string,mixed>> $shopifyOrders @return array{shipped_total:int,rows:list<array<string,mixed>>} */
     public function analyze(array $ssOrders, array $shopifyOrders): array
     {
         $index = [];
         foreach ($shopifyOrders as $order) {
-            $number = $this->number($order['order_number'] ?? $order['name'] ?? '');
+            $number = $this->orderNumber($order['order_number'] ?? $order['name'] ?? '');
             if ($number !== '') {
                 $index[$number] = $order;
             }
@@ -25,8 +26,8 @@ class ShippedUnfulfilledAnalyzer
                 continue;
             }
             $shipped++;
-            $number = $this->number($order['orderNumber'] ?? '');
-            if ($number === '' || ! isset($index[$number])) {
+            $number = array_find($this->orderNumberKeys($order['orderNumber'] ?? ''), fn (string $key): bool => isset($index[$key]));
+            if ($number === null) {
                 continue;
             }
             $shopify = $index[$number];
@@ -42,8 +43,4 @@ class ShippedUnfulfilledAnalyzer
         return ['shipped_total' => $shipped, 'rows' => $rows];
     }
 
-    private function number(mixed $value): string
-    {
-        return preg_replace('/\D+/', '', $this->text($value)) ?? '';
-    }
 }

@@ -6,7 +6,7 @@ use App\Domain\Reports\ReturnedItemsAnalyzer;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
 
-class RunReturnedItemsReport
+class RunReturnedItemsReport extends RunScanReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly ReturnedItemsAnalyzer $analyzer) {}
 
@@ -15,6 +15,6 @@ class RunReturnedItemsReport
     {
         $candidates = $this->shopify->returnedItemCandidates($store, $startDate);
 
-        return new ScanResult(scanned: count($candidates['orders']), rows: $this->analyzer->analyze($candidates['orders'], $startDate, $endDate), pages: $candidates['pages'], truncated: $candidates['truncated'], startDate: $startDate, endDate: $endDate);
+        return $this->scanResult($candidates, 'orders', $this->analyzer->analyze($candidates['orders'], $startDate, $endDate), ['startDate' => $startDate, 'endDate' => $endDate]);
     }
 }

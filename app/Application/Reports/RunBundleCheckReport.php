@@ -6,7 +6,7 @@ use App\Domain\Reports\BundleCheckAnalyzer;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
 
-class RunBundleCheckReport
+class RunBundleCheckReport extends RunScanReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly BundleCheckAnalyzer $analyzer) {}
 
@@ -15,6 +15,6 @@ class RunBundleCheckReport
     {
         $data = $this->shopify->fulfillmentSlaCandidates($store, $startDate, $endDate);
 
-        return new ScanResult(scanned: count($data['orders']), rows: $this->analyzer->analyze($data['orders']), pages: $data['pages'], truncated: $data['truncated'], startDate: $startDate, endDate: $endDate);
+        return $this->scanResult($data, 'orders', $this->analyzer->analyze($data['orders']), ['startDate' => $startDate, 'endDate' => $endDate]);
     }
 }

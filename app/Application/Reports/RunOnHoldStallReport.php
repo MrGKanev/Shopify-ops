@@ -6,7 +6,7 @@ use App\Domain\Reports\OnHoldStallAnalyzer;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
 
-class RunOnHoldStallReport
+class RunOnHoldStallReport extends RunScanReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly OnHoldStallAnalyzer $analyzer) {}
 
@@ -15,6 +15,6 @@ class RunOnHoldStallReport
     {
         $data = $this->shopify->onHoldFulfillmentCandidates($store, $startDate, $endDate);
 
-        return new ScanResult(scanned: count($data['fulfillment_orders']), rows: $this->analyzer->analyze($data['fulfillment_orders'], time()), pages: $data['pages'], truncated: $data['truncated'], startDate: $startDate, endDate: $endDate);
+        return $this->scanResult($data, 'fulfillment_orders', $this->analyzer->analyze($data['fulfillment_orders'], time()), ['startDate' => $startDate, 'endDate' => $endDate]);
     }
 }

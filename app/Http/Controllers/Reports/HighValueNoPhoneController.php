@@ -5,17 +5,16 @@ namespace App\Http\Controllers\Reports;
 use App\Application\Reports\HighValueNoPhoneResult;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunHighValueNoPhoneReport;
+use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\HighValueNoPhoneRequest;
-use Illuminate\Http\Client\RequestException;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Throwable;
 
 class HighValueNoPhoneController extends Controller
 {
-    use RecordsReportRun;
+    use LogsReportFailure, RecordsReportRun;
 
     public function create(): View
     {
@@ -37,7 +36,7 @@ class HighValueNoPhoneController extends Controller
             $result = $report->handle($store, $startDate, $endDate, $minimum, $currency);
         } catch (Throwable $exception) {
             $reportFailed = true;
-            Log::warning('High-value no-phone report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
+            $this->logFailure('High-value no-phone report failed.', $exception, $store);
         }
         $this->recordReportRun($runs, $store, 'high_value_no_phone', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
 

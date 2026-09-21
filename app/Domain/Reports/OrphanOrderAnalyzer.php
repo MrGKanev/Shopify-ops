@@ -3,17 +3,18 @@
 namespace App\Domain\Reports;
 
 use App\Domain\Reports\Concerns\NormalizesText;
+use App\Domain\Reports\Concerns\MatchesOrderNumbers;
 
 class OrphanOrderAnalyzer
 {
-    use NormalizesText;
+    use MatchesOrderNumbers, NormalizesText;
 
     /** @param list<array<string, mixed>> $shipStationOrders @param list<array<string, mixed>> $shopifyOrders @return list<array<string, mixed>> */
     public function analyze(array $shipStationOrders, array $shopifyOrders): array
     {
         $shopifyNumbers = [];
         foreach ($shopifyOrders as $order) {
-            $number = $this->normalize($order['order_number'] ?? $order['name'] ?? '');
+            $number = $this->orderNumber($order['order_number'] ?? $order['name'] ?? '');
             if ($number !== '') {
                 $shopifyNumbers[$number] = true;
             }
@@ -21,7 +22,7 @@ class OrphanOrderAnalyzer
         $rows = [];
         foreach ($shipStationOrders as $order) {
             $raw = $this->text($order['orderNumber'] ?? '');
-            $keys = $this->keys($raw);
+            $keys = $this->orderNumberKeys($raw);
             if ($keys === [] || array_any($keys, fn (string $key): bool => isset($shopifyNumbers[$key]))) {
                 continue;
             }
@@ -33,26 +34,4 @@ class OrphanOrderAnalyzer
         return $rows;
     }
 
-    /** @return list<string> */
-    private function keys(string $raw): array
-    {
-        $keys = [];
-        $full = $this->normalize($raw);
-        if ($full !== '') {
-            $keys[] = $full;
-        }
-        preg_match_all('/\d+/', $raw, $matches);
-        foreach ($matches[0] as $segment) {
-            if ($segment !== $full && strlen($segment) >= 4) {
-                $keys[] = $segment;
-            }
-        }
-
-        return array_values(array_unique($keys));
-    }
-
-    private function normalize(mixed $value): string
-    {
-        return preg_replace('/\D+/', '', $this->text($value)) ?? '';
-    }
 }

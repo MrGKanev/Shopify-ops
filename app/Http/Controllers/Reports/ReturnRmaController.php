@@ -5,17 +5,16 @@ namespace App\Http\Controllers\Reports;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\ReturnRmaResult;
 use App\Application\Reports\RunReturnRmaReport;
+use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ReturnRmaRequest;
-use Illuminate\Http\Client\RequestException;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Throwable;
 
 class ReturnRmaController extends Controller
 {
-    use RecordsReportRun;
+    use LogsReportFailure, RecordsReportRun;
 
     public function create(): View
     {
@@ -27,7 +26,7 @@ class ReturnRmaController extends Controller
         $store = $this->resolveStore($request);
         $startDate = (string) $request->validated('start_date');
         $endDate = (string) $request->validated('end_date');
-        $configurationError = trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '';
+        $configurationError = $store->missingShopifyCredentials();
         $result = null;
         $reportFailed = false;
 
@@ -37,7 +36,7 @@ class ReturnRmaController extends Controller
                 $result = $report->handle($store, $startDate, $endDate);
             } catch (Throwable $exception) {
                 $reportFailed = true;
-                Log::warning('Return RMA report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
+                $this->logFailure('Return RMA report failed.', $exception, $store);
             }
             $this->recordReportRun($runs, $store, 'return_rma', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }

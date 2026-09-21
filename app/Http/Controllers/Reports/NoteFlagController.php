@@ -5,17 +5,16 @@ namespace App\Http\Controllers\Reports;
 use App\Application\Reports\NoteFlagResult;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunNoteFlagReport;
+use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\NoteFlagRequest;
-use Illuminate\Http\Client\RequestException;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Throwable;
 
 class NoteFlagController extends Controller
 {
-    use RecordsReportRun;
+    use LogsReportFailure, RecordsReportRun;
 
     private const DEFAULT_KEYWORDS = 'urgent, hold, cancel, wrong, error, stop, do not ship, dont ship, wait, attention';
 
@@ -31,7 +30,7 @@ class NoteFlagController extends Controller
         $endDate = (string) $request->validated('end_date');
         $keywordsRaw = (string) $request->validated('keywords');
         $keywords = array_values(array_filter(array_map(fn (string $keyword): string => mb_strtolower(trim($keyword)), explode(',', $keywordsRaw))));
-        $configurationError = trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '';
+        $configurationError = $store->missingShopifyCredentials();
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
@@ -40,7 +39,7 @@ class NoteFlagController extends Controller
                 $result = $report->handle($store, $startDate, $endDate, $keywords);
             } catch (Throwable $exception) {
                 $reportFailed = true;
-                Log::warning('Note flags report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
+                $this->logFailure('Note flags report failed.', $exception, $store);
             }
             $this->recordReportRun($runs, $store, 'note_flags', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }

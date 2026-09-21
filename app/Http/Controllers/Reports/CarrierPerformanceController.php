@@ -5,17 +5,16 @@ namespace App\Http\Controllers\Reports;
 use App\Application\Reports\CarrierPerformanceResult;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunCarrierPerformanceReport;
+use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CarrierPerformanceRequest;
-use Illuminate\Http\Client\RequestException;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Throwable;
 
 class CarrierPerformanceController extends Controller
 {
-    use RecordsReportRun;
+    use LogsReportFailure, RecordsReportRun;
 
     public function create(): View
     {
@@ -27,7 +26,7 @@ class CarrierPerformanceController extends Controller
         $store = $this->resolveStore($request);
         $startDate = (string) $request->validated('start_date');
         $endDate = (string) $request->validated('end_date');
-        $configurationError = trim((string) $store->shipstation_api_key) === '' || trim((string) $store->shipstation_api_secret) === '';
+        $configurationError = $store->missingShipStationCredentials();
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
@@ -36,7 +35,7 @@ class CarrierPerformanceController extends Controller
                 $result = $report->handle($store, $startDate, $endDate);
             } catch (Throwable $exception) {
                 $reportFailed = true;
-                Log::warning('Carrier performance report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
+                $this->logFailure('Carrier performance report failed.', $exception, $store);
             }
             $this->recordReportRun($runs, $store, 'carrier_performance', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }

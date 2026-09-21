@@ -5,6 +5,7 @@ namespace Tests\Feature\Admin;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Spatie\Activitylog\Models\Activity;
 use Tests\TestCase;
 
 class DiscordRulesControllerTest extends TestCase
@@ -20,6 +21,7 @@ class DiscordRulesControllerTest extends TestCase
         $this->actingAs($admin)->get('/admin/discord-rules')->assertOk()->assertSeeText('Discord webhook is not configured');
         $this->actingAs($admin)->put('/admin/discord-rules', ['audit_enabled' => '1', 'audit_min_missing' => 2, 'scan_enabled' => '1', 'scan_min_rows' => 5])->assertRedirect()->assertSessionHas('status');
         $this->assertSame(['audit_enabled' => true, 'audit_min_missing' => 2, 'include_zero_audit' => false, 'scan_enabled' => true, 'scan_min_rows' => 5], $store->fresh()->discord_rules);
+        $this->assertNotNull(Activity::query()->where('log_name', 'operator-actions')->where('description', 'save_discord_rules')->where('causer_id', $admin->getKey())->first());
         $this->actingAs($admin)->put('/admin/discord-rules', ['audit_min_missing' => -1])->assertSessionHasErrors('audit_min_missing');
     }
 

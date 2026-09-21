@@ -28,7 +28,7 @@ class SyncAuditIssues
                 'title' => "Missing order {$reference}",
                 'reference' => $reference,
                 'priority' => $priority,
-                'status' => $issue->exists && $issue->status === 'resolved' ? 'open' : ($issue->status ?: 'open'),
+                'status' => $issue->exists && in_array($issue->status, ['resolved', 'ignored'], true) ? 'open' : ($issue->status ?: 'open'),
                 'occurrences' => $issue->exists ? $issue->occurrences + 1 : 1,
                 'first_seen_at' => $issue->first_seen_at ?? now(),
                 'last_seen_at' => now(),

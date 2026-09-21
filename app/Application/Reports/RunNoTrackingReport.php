@@ -6,7 +6,7 @@ use App\Domain\Reports\NoTrackingAnalyzer;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
 
-class RunNoTrackingReport
+class RunNoTrackingReport extends RunScanReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly NoTrackingAnalyzer $analyzer) {}
 
@@ -15,6 +15,6 @@ class RunNoTrackingReport
     {
         $data = $this->shopify->noTrackingCandidates($store, $startDate);
 
-        return new ScanResult(scanned: count($data['orders']), rows: $this->analyzer->analyze($data['orders'], $startDate, $endDate, $threshold, time()), pages: $data['pages'], truncated: $data['truncated'], startDate: $startDate, endDate: $endDate, threshold: $threshold);
+        return $this->scanResult($data, 'orders', $this->analyzer->analyze($data['orders'], $startDate, $endDate, $threshold, time()), ['startDate' => $startDate, 'endDate' => $endDate, 'threshold' => $threshold]);
     }
 }

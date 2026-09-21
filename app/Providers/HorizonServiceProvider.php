@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use App\Models\User;
-use App\UserRole;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Horizon\Horizon;
@@ -23,7 +22,7 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
         Horizon::auth(function (Request $request): bool {
             $user = $request->user();
 
-            return $user instanceof User && $user->role === UserRole::Admin;
+            return $user instanceof User && $user->isAdministrator();
         });
 
         if (app()->bound('csp-nonce')) {
@@ -38,6 +37,6 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
      */
     protected function gate(): void
     {
-        Gate::define('viewHorizon', fn (?User $user): bool => $user?->role === UserRole::Admin);
+        Gate::define('viewHorizon', fn (?User $user): bool => $user?->isAdministrator() ?? false);
     }
 }

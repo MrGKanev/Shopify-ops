@@ -6,7 +6,7 @@ use App\Domain\Reports\RepeatRefundAnalyzer;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
 
-class RunRepeatRefundReport
+class RunRepeatRefundReport extends RunScanReport
 {
     /**
      * Create a new class instance.
@@ -18,6 +18,6 @@ class RunRepeatRefundReport
     {
         $result = $this->shopify->repeatRefundCandidates($store, $start, $end);
 
-        return new ScanResult(scanned: count($result['orders']), rows: $this->analyzer->analyze($result['orders'], $minimum), pages: $result['pages'], truncated: $result['truncated'], startDate: $start, endDate: $end, minimum: $minimum);
+        return $this->scanResult($result, 'orders', $this->analyzer->analyze($result['orders'], $minimum), ['startDate' => $start, 'endDate' => $end, 'minimum' => $minimum]);
     }
 }

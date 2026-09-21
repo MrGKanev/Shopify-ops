@@ -20,7 +20,10 @@ class DiscordRulesController extends Controller
 
     public function update(DiscordRulesRequest $request): RedirectResponse
     {
-        $this->store($request)->update(['discord_rules' => $request->validated()]);
+        $store = $this->store($request);
+        $store->update(['discord_rules' => $request->validated()]);
+        activity('operator-actions')->causedBy($request->user())->performedOn($store)
+            ->withProperties($store->resolvedDiscordRules())->log('save_discord_rules');
 
         return back()->with('status', 'Discord rules saved.');
     }

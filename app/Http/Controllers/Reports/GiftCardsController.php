@@ -5,17 +5,16 @@ namespace App\Http\Controllers\Reports;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunGiftCardsReport;
 use App\Application\Reports\ScanResult;
+use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\GiftCardsRequest;
-use Illuminate\Http\Client\RequestException;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Throwable;
 
 class GiftCardsController extends Controller
 {
-    use RecordsReportRun;
+    use LogsReportFailure, RecordsReportRun;
 
     public function create(): View
     {
@@ -28,7 +27,7 @@ class GiftCardsController extends Controller
         $days = (int) $request->validated('days');
         $result = null;
         $reportFailed = false;
-        $configurationError = trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '';
+        $configurationError = $store->missingShopifyCredentials();
 
         if (! $configurationError) {
             $started = microtime(true);
@@ -36,7 +35,7 @@ class GiftCardsController extends Controller
                 $result = $report->handle($store, $days, now()->timestamp);
             } catch (Throwable $exception) {
                 $reportFailed = true;
-                Log::warning('Gift card report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
+                $this->logFailure('Gift card report failed.', $exception, $store);
             }
             $this->recordReportRun($runs, $store, 'gift_cards', $started, null, null, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }

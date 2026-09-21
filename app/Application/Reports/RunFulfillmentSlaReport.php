@@ -6,7 +6,7 @@ use App\Domain\Reports\FulfillmentSlaAnalyzer;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
 
-class RunFulfillmentSlaReport
+class RunFulfillmentSlaReport extends RunScanReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly FulfillmentSlaAnalyzer $analyzer) {}
 
@@ -15,6 +15,6 @@ class RunFulfillmentSlaReport
     {
         $data = $this->shopify->fulfillmentSlaCandidates($store, $startDate, $endDate);
 
-        return new ScanResult(scanned: count($data['orders']), rows: $this->analyzer->analyze($data['orders'], $threshold, time()), pages: $data['pages'], truncated: $data['truncated'], startDate: $startDate, endDate: $endDate, threshold: $threshold);
+        return $this->scanResult($data, 'orders', $this->analyzer->analyze($data['orders'], $threshold, time()), ['startDate' => $startDate, 'endDate' => $endDate, 'threshold' => $threshold]);
     }
 }

@@ -6,19 +6,18 @@ use App\Application\Exports\CsvExporter;
 use App\Application\Reports\AddressChangeResult;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunAddressChangeReport;
+use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AddressChangeRequest;
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
 class AddressChangeController extends Controller
 {
-    use RecordsReportRun;
+    use LogsReportFailure, RecordsReportRun;
 
     public function create(): View
     {
@@ -30,7 +29,7 @@ class AddressChangeController extends Controller
         $store = $this->resolveStore($request);
         $start = (string) $request->validated('start_date');
         $end = (string) $request->validated('end_date');
-        $configurationError = trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '';
+        $configurationError = $store->missingShopifyCredentials();
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
@@ -39,7 +38,7 @@ class AddressChangeController extends Controller
                 $result = $report->handle($store, $start, $end);
             } catch (Throwable $exception) {
                 $reportFailed = true;
-                Log::warning('Address change report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
+                $this->logFailure('Address change report failed.', $exception, $store);
             }
             $this->recordReportRun($runs, $store, 'address_changes', $started, $start, $end, count($result->rows ?? []), count($result->rows ?? []), $reportFailed);
         }
@@ -50,7 +49,7 @@ class AddressChangeController extends Controller
     public function export(AddressChangeRequest $request, RunAddressChangeReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
     {
         $store = $this->resolveStore($request);
-        if (trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '') {
+        if ($store->missingShopifyCredentials()) {
             return back()->withErrors(['export' => 'Shopify credentials are incomplete for the active store.']);
         }
         $start = (string) $request->validated('start_date');
@@ -58,7 +57,7 @@ class AddressChangeController extends Controller
         try {
             $result = $report->handle($store, $start, $end);
         } catch (Throwable $exception) {
-            Log::warning('Address change CSV export failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
+            $this->logFailure('Address change CSV export failed.', $exception, $store);
 
             return back()->withErrors(['export' => 'The CSV export could not be completed.']);
         }

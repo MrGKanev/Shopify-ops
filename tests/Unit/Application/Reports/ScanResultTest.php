@@ -3,6 +3,7 @@
 namespace Tests\Unit\Application\Reports;
 
 use App\Application\Reports\ScanResult;
+use App\Application\Reports\RunScanReport;
 use PHPUnit\Framework\TestCase;
 
 class ScanResultTest extends TestCase
@@ -54,5 +55,25 @@ class ScanResultTest extends TestCase
         $this->assertNull($result->skippedMissingCountry);
         $this->assertNull($result->days);
         $this->assertNull($result->totalVariants);
+    }
+
+    public function test_scan_reports_preserve_candidate_pagination_and_metadata(): void
+    {
+        $report = new class extends RunScanReport
+        {
+            /** @param array<string, mixed> $candidates @param list<array<string, mixed>> $rows */
+            public function result(array $candidates, array $rows): ScanResult
+            {
+                return $this->scanResult($candidates, 'orders', $rows, ['threshold' => 24]);
+            }
+        };
+
+        $result = $report->result(['orders' => [['id' => 1], ['id' => 2]], 'pages' => 3, 'truncated' => true], [['id' => 2]]);
+
+        $this->assertSame(2, $result->scanned);
+        $this->assertSame([['id' => 2]], $result->rows);
+        $this->assertSame(3, $result->pages);
+        $this->assertTrue($result->truncated);
+        $this->assertSame(24, $result->threshold);
     }
 }

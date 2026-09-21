@@ -6,7 +6,7 @@ use App\Domain\Reports\ZombieProductsAnalyzer;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
 
-class RunZombieProductsReport
+class RunZombieProductsReport extends RunScanReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly ZombieProductsAnalyzer $analyzer) {}
 
@@ -15,6 +15,6 @@ class RunZombieProductsReport
     {
         $result = $this->shopify->zombieProductsCandidates($store);
 
-        return new ScanResult(scanned: count($result['products']), rows: $this->analyzer->analyze($result['products']), pages: $result['pages'], truncated: $result['truncated']);
+        return $this->scanResult($result, 'products', $this->analyzer->analyze($result['products']));
     }
 }

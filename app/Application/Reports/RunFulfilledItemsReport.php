@@ -6,7 +6,7 @@ use App\Domain\Reports\FulfilledItemsAnalyzer;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
 
-class RunFulfilledItemsReport
+class RunFulfilledItemsReport extends RunScanReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly FulfilledItemsAnalyzer $analyzer) {}
 
@@ -15,6 +15,6 @@ class RunFulfilledItemsReport
     {
         $candidates = $this->shopify->fulfilledItemCandidates($store, $startDate);
 
-        return new ScanResult(scanned: count($candidates['orders']), rows: $this->analyzer->analyze($candidates['orders'], $startDate, $endDate), pages: $candidates['pages'], truncated: $candidates['truncated'], startDate: $startDate, endDate: $endDate);
+        return $this->scanResult($candidates, 'orders', $this->analyzer->analyze($candidates['orders'], $startDate, $endDate), ['startDate' => $startDate, 'endDate' => $endDate]);
     }
 }

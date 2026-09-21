@@ -4,18 +4,20 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\AuditResult;
 use App\Application\Reports\RunAudit;
+use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ItemMismatchRequest;
 use App\Jobs\RunAuditJob;
 use App\Models\AuditJob;
 use App\Models\Store;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Throwable;
 
 class RunAuditController extends Controller
 {
+    use LogsReportFailure;
+
     public function create(): View
     {
         return view('reports.run-audit', $this->viewData());
@@ -32,7 +34,7 @@ class RunAuditController extends Controller
                 $result = $audit->handle($store, $start, $end);
             } catch (Throwable $exception) {
                 $reportFailed = true;
-                Log::warning('Run audit failed.', ['exception_type' => $exception::class, 'store_id' => $store->getKey()]);
+                $this->logFailure('Run audit failed.', $exception, $store);
             }
         }
 

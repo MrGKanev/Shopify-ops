@@ -6,7 +6,7 @@ use App\Domain\Reports\FraudRiskAnalyzer;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
 
-class RunFraudRiskReport
+class RunFraudRiskReport extends RunScanReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly FraudRiskAnalyzer $analyzer) {}
 
@@ -15,6 +15,6 @@ class RunFraudRiskReport
     {
         $result = $this->shopify->fraudRiskCandidates($store, $start, $end);
 
-        return new ScanResult(scanned: count($result['orders']), rows: $this->analyzer->analyze($result['orders']), pages: $result['pages'], truncated: $result['truncated'], startDate: $start, endDate: $end);
+        return $this->scanResult($result, 'orders', $this->analyzer->analyze($result['orders']), ['startDate' => $start, 'endDate' => $end]);
     }
 }

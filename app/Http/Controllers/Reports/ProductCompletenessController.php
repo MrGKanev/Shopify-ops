@@ -5,17 +5,16 @@ namespace App\Http\Controllers\Reports;
 use App\Application\Reports\ProductCompletenessResult;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunProductCompletenessReport;
+use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProductCompletenessRequest;
-use Illuminate\Http\Client\RequestException;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Throwable;
 
 class ProductCompletenessController extends Controller
 {
-    use RecordsReportRun;
+    use LogsReportFailure, RecordsReportRun;
 
     public function create(): View
     {
@@ -27,7 +26,7 @@ class ProductCompletenessController extends Controller
         $store = $this->resolveStore($request);
         $result = null;
         $reportFailed = false;
-        $configurationError = trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '';
+        $configurationError = $store->missingShopifyCredentials();
 
         if (! $configurationError) {
             $started = microtime(true);
@@ -35,7 +34,7 @@ class ProductCompletenessController extends Controller
                 $result = $report->handle($store);
             } catch (Throwable $exception) {
                 $reportFailed = true;
-                Log::warning('Product completeness report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
+                $this->logFailure('Product completeness report failed.', $exception, $store);
             }
             $this->recordReportRun($runs, $store, 'product_completeness', $started, null, null, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }

@@ -5,17 +5,16 @@ namespace App\Http\Controllers\Reports;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunDisputeReport;
 use App\Application\Reports\ScanResult;
+use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Throwable;
 
 class DisputeController extends Controller
 {
-    use RecordsReportRun;
+    use LogsReportFailure, RecordsReportRun;
 
     public function create(): View
     {
@@ -26,7 +25,7 @@ class DisputeController extends Controller
     {
         abort_unless($request->user()?->can('run-audits'), 403);
         $store = $this->resolveStore($request);
-        $configurationError = trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '';
+        $configurationError = $store->missingShopifyCredentials();
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
@@ -35,7 +34,7 @@ class DisputeController extends Controller
                 $result = $report->handle($store, now()->getTimestamp());
             } catch (Throwable $exception) {
                 $reportFailed = true;
-                Log::warning('Dispute report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
+                $this->logFailure('Dispute report failed.', $exception, $store);
             }
             $this->recordReportRun($runs, $store, 'disputes', $started, null, null, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }

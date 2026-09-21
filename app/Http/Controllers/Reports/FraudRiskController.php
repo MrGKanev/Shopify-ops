@@ -5,17 +5,16 @@ namespace App\Http\Controllers\Reports;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunFraudRiskReport;
 use App\Application\Reports\ScanResult;
+use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\FraudRiskRequest;
-use Illuminate\Http\Client\RequestException;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Throwable;
 
 class FraudRiskController extends Controller
 {
-    use RecordsReportRun;
+    use LogsReportFailure, RecordsReportRun;
 
     public function create(): View
     {
@@ -27,7 +26,7 @@ class FraudRiskController extends Controller
         $store = $this->resolveStore($request);
         $startDate = (string) $request->validated('start_date');
         $endDate = (string) $request->validated('end_date');
-        $configurationError = trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '';
+        $configurationError = $store->missingShopifyCredentials();
         $result = null;
         $reportFailed = false;
 
@@ -37,7 +36,7 @@ class FraudRiskController extends Controller
                 $result = $report->handle($store, $startDate, $endDate);
             } catch (Throwable $exception) {
                 $reportFailed = true;
-                Log::warning('Fraud risk report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
+                $this->logFailure('Fraud risk report failed.', $exception, $store);
             }
             $this->recordReportRun($runs, $store, 'fraud_risk', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
         }

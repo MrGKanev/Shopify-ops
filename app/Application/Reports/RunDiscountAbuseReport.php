@@ -6,7 +6,7 @@ use App\Domain\Reports\DiscountAbuseAnalyzer;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
 
-class RunDiscountAbuseReport
+class RunDiscountAbuseReport extends RunScanReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly DiscountAbuseAnalyzer $analyzer) {}
 
@@ -15,6 +15,6 @@ class RunDiscountAbuseReport
     {
         $result = $this->shopify->discountAbuseCandidates($store, $start, $end);
 
-        return new ScanResult(scanned: count($result['orders']), rows: $this->analyzer->analyze($result['orders'], $minimumEmails), pages: $result['pages'], truncated: $result['truncated'], startDate: $start, endDate: $end, minimumEmails: $minimumEmails);
+        return $this->scanResult($result, 'orders', $this->analyzer->analyze($result['orders'], $minimumEmails), ['startDate' => $start, 'endDate' => $end, 'minimumEmails' => $minimumEmails]);
     }
 }

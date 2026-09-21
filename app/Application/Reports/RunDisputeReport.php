@@ -6,7 +6,7 @@ use App\Domain\Reports\DisputeAnalyzer;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
 
-class RunDisputeReport
+class RunDisputeReport extends RunScanReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly DisputeAnalyzer $analyzer) {}
 
@@ -15,6 +15,6 @@ class RunDisputeReport
     {
         $result = $this->shopify->openDisputes($store);
 
-        return new ScanResult(scanned: count($result['disputes']), rows: $this->analyzer->analyze($result['disputes'], $now), pages: $result['pages'], truncated: $result['truncated']);
+        return $this->scanResult($result, 'disputes', $this->analyzer->analyze($result['disputes'], $now));
     }
 }

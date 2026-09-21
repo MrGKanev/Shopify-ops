@@ -5,17 +5,16 @@ namespace App\Http\Controllers\Reports;
 use App\Application\Reports\OrderEditResult;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunOrderEditReport;
+use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\OrderEditRequest;
-use Illuminate\Http\Client\RequestException;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Throwable;
 
 class OrderEditController extends Controller
 {
-    use RecordsReportRun;
+    use LogsReportFailure, RecordsReportRun;
 
     public function create(): View
     {
@@ -27,7 +26,7 @@ class OrderEditController extends Controller
         $store = $this->resolveStore($request);
         $start = (string) $request->validated('start_date');
         $end = (string) $request->validated('end_date');
-        $configurationError = trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '';
+        $configurationError = $store->missingShopifyCredentials();
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
@@ -36,7 +35,7 @@ class OrderEditController extends Controller
                 $result = $report->handle($store, $start, $end);
             } catch (Throwable $exception) {
                 $reportFailed = true;
-                Log::warning('Order edit report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
+                $this->logFailure('Order edit report failed.', $exception, $store);
             }
             $this->recordReportRun($runs, $store, 'order_edits', $started, $start, $end, count($result->rows ?? []), count($result->rows ?? []), $reportFailed);
         }

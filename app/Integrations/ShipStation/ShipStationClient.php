@@ -2,9 +2,8 @@
 
 namespace App\Integrations\ShipStation;
 
-use Illuminate\Http\Client\ConnectionException;
+use App\Integrations\Concerns\RetriesTransientRequests;
 use Illuminate\Http\Client\PendingRequest;
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use SensitiveParameter;
@@ -17,7 +16,7 @@ class ShipStationClient implements ShipStationClientContract
 
     private const int PAGE_SIZE = 500;
 
-    private const array RETRY_DELAYS_IN_MILLISECONDS = [100, 500, 1000];
+    use RetriesTransientRequests;
 
     public function __construct(
         #[SensitiveParameter] private readonly string $apiKey,
@@ -200,20 +199,6 @@ class ShipStationClient implements ShipStationClientContract
             ->withBasicAuth($this->apiKey, $this->apiSecret)
             ->connectTimeout(3)
             ->timeout(10);
-    }
-
-    private function isTransientFailure(Throwable $exception): bool
-    {
-        if ($exception instanceof ConnectionException) {
-            return true;
-        }
-
-        if (! $exception instanceof RequestException) {
-            return false;
-        }
-
-        return $exception->response->status() === 429
-            || $exception->response->serverError();
     }
 
     /**

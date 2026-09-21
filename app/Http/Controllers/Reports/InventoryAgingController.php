@@ -5,17 +5,16 @@ namespace App\Http\Controllers\Reports;
 use App\Application\Reports\InventoryAgingResult;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunInventoryAgingReport;
+use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\InventoryAgingRequest;
-use Illuminate\Http\Client\RequestException;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Throwable;
 
 class InventoryAgingController extends Controller
 {
-    use RecordsReportRun;
+    use LogsReportFailure, RecordsReportRun;
 
     public function create(): View
     {
@@ -29,7 +28,7 @@ class InventoryAgingController extends Controller
         $endDate = (string) $request->validated('end_date');
         $result = null;
         $reportFailed = false;
-        $configurationError = trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '';
+        $configurationError = $store->missingShopifyCredentials();
 
         if (! $configurationError) {
             $started = microtime(true);
@@ -37,7 +36,7 @@ class InventoryAgingController extends Controller
                 $result = $report->handle($store, $startDate, $endDate);
             } catch (Throwable $exception) {
                 $reportFailed = true;
-                Log::warning('Inventory aging report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
+                $this->logFailure('Inventory aging report failed.', $exception, $store);
             }
             $this->recordReportRun($runs, $store, 'inventory_aging', $started, $startDate, $endDate, $result->orders ?? 0, count($result->rows ?? []), $reportFailed);
         }

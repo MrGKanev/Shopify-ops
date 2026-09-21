@@ -5,17 +5,16 @@ namespace App\Http\Controllers\Reports;
 use App\Application\Reports\RecordRun;
 use App\Application\Reports\RunTagAuditReport;
 use App\Application\Reports\TagAuditResult;
+use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\TagAuditRequest;
-use Illuminate\Http\Client\RequestException;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Throwable;
 
 class TagAuditController extends Controller
 {
-    use RecordsReportRun;
+    use LogsReportFailure, RecordsReportRun;
 
     public function create(): View
     {
@@ -29,7 +28,7 @@ class TagAuditController extends Controller
         $endDate = (string) $request->validated('end_date');
         $result = null;
         $reportFailed = false;
-        $configurationError = trim((string) $store->shopify_store) === '' || trim((string) $store->shopify_access_token) === '';
+        $configurationError = $store->missingShopifyCredentials();
 
         if (! $configurationError) {
             $started = microtime(true);
@@ -37,7 +36,7 @@ class TagAuditController extends Controller
                 $result = $report->handle($store, $startDate, $endDate, now()->subDays(90)->toDateString());
             } catch (Throwable $exception) {
                 $reportFailed = true;
-                Log::warning('Tag audit report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
+                $this->logFailure('Tag audit report failed.', $exception, $store);
             }
             $this->recordReportRun($runs, $store, 'tag_audit', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->tags ?? []), $reportFailed);
         }

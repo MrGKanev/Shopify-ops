@@ -4,11 +4,12 @@ namespace App\Domain\Reports;
 
 use App\Domain\Orders\OrderChannelComparator;
 use App\Domain\Orders\OrderTypeClassifier;
+use App\Domain\Reports\Concerns\MatchesOrderNumbers;
 use App\Domain\Reports\Concerns\NormalizesText;
 
 class ItemMismatchAnalyzer
 {
-    use NormalizesText;
+    use MatchesOrderNumbers, NormalizesText;
 
     public function __construct(private readonly OrderChannelComparator $comparator, private readonly OrderTypeClassifier $classifier) {}
 
@@ -17,15 +18,15 @@ class ItemMismatchAnalyzer
     {
         $shopify = [];
         foreach ($shopifyOrders as $order) {
-            $number = $this->number($order['order_number'] ?? $order['name'] ?? '');
+            $number = $this->orderNumber($order['order_number'] ?? $order['name'] ?? '');
             if ($number !== '') {
                 $shopify[$number] = $order;
             }
         }
         $rows = [];
         foreach ($shipStationOrders as $order) {
-            $number = $this->number($order['orderNumber'] ?? '');
-            if (($order['orderStatus'] ?? '') !== 'shipped' || $number === '' || ! isset($shopify[$number])) {
+            $number = array_find($this->orderNumberKeys($order['orderNumber'] ?? ''), fn (string $key): bool => isset($shopify[$key]));
+            if (($order['orderStatus'] ?? '') !== 'shipped' || $number === null) {
                 continue;
             }
             $shopifyOrder = $shopify[$number];
@@ -52,8 +53,4 @@ class ItemMismatchAnalyzer
         return $rows;
     }
 
-    private function number(mixed $value): string
-    {
-        return preg_replace('/\D+/', '', $this->text($value)) ?? '';
-    }
 }

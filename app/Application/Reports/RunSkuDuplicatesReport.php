@@ -6,7 +6,7 @@ use App\Domain\Reports\SkuDuplicatesAnalyzer;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
 
-class RunSkuDuplicatesReport
+class RunSkuDuplicatesReport extends RunScanReport
 {
     public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly SkuDuplicatesAnalyzer $analyzer) {}
 
@@ -16,6 +16,6 @@ class RunSkuDuplicatesReport
         $catalogue = $this->shopify->skuDuplicatesCandidates($store);
         $result = $this->analyzer->analyze($catalogue['products']);
 
-        return new ScanResult(scanned: count($catalogue['products']), rows: $result['rows'], pages: $catalogue['pages'], truncated: $catalogue['truncated'], totalVariants: $result['totalVariants']);
+        return $this->scanResult($catalogue, 'products', $result['rows'], ['totalVariants' => $result['totalVariants']]);
     }
 }

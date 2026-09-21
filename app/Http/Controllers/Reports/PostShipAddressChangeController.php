@@ -58,7 +58,7 @@ class PostShipAddressChangeController extends Controller
 
             return back()->withErrors(['export' => 'The CSV export could not be completed.']);
         }
-        $rows = array_map(fn (array $row): array => [$row['order_number'], $row['created_at'], $row['fulfillment_at'], $row['changed_at'], $row['mins_after_ship'], $row['email'], $row['addr_name'], $row['addr_line'], number_format($row['total'], 2, '.', ''), $row['financial'], $row['fulfillment']], $result->rows);
+        $rows = array_map(fn (array $row): array => [$row['order_number'], $row['created_at'], $row['fulfillment_at'], $row['changed_at'], $row['mins_after_ship'], $row['email'], $row['addr_name'], $row['addr_line'], number_format((float) $row['total'], 2, '.', ''), $row['financial'], $row['fulfillment']], $result->rows);
 
         return $csv->download("post-ship-address-changes-{$startDate}-to-{$endDate}.csv", ['Order', 'Placed', 'First fulfillment', 'Changed', 'Minutes after shipment', 'Email', 'Address name', 'Current shipping address', 'Total', 'Financial status', 'Fulfillment status'], $rows);
     }

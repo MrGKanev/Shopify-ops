@@ -2,19 +2,20 @@
 
 namespace App\Integrations\Shopify;
 
+use App\Integrations\Concerns\RetriesTransientRequests;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Integrations\Shopify\Exceptions\ShopifyGraphqlException;
 use App\Integrations\Shopify\Exceptions\ShopifyResponseException;
 use App\Models\Store;
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
 use Throwable;
 
 class ShopifyAdminClient implements ShopifyAdminGateway
 {
+    use RetriesTransientRequests;
+
     public const API_VERSION = '2026-07';
 
     private string $lastResponseApiVersion = '';
@@ -1719,7 +1720,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
     {
         $response = $this->request($store)
             ->retry(
-                [100, 500, 1000],
+                self::RETRY_DELAYS_IN_MILLISECONDS,
                 when: fn (Throwable $exception): bool => $this->isTransientFailure($exception),
                 throw: false,
             )
@@ -1750,7 +1751,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
         $this->lastResponseApiVersion = '';
         $response = $this->request($store)
             ->when(! str_contains($query, 'mutation'), fn (PendingRequest $request): PendingRequest => $request->retry(
-                [100, 500, 1000],
+                self::RETRY_DELAYS_IN_MILLISECONDS,
                 when: fn (Throwable $exception): bool => $this->isTransientFailure($exception),
                 throw: false,
             ))
@@ -1885,13 +1886,4 @@ class ShopifyAdminClient implements ShopifyAdminGateway
         return $resource;
     }
 
-    private function isTransientFailure(Throwable $exception): bool
-    {
-        if ($exception instanceof ConnectionException) {
-            return true;
-        }
-
-        return $exception instanceof RequestException
-            && ($exception->response->status() === 429 || $exception->response->serverError());
-    }
 }

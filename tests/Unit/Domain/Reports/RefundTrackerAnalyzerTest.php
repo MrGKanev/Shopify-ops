@@ -29,14 +29,14 @@ class RefundTrackerAnalyzerTest extends TestCase
         $this->assertSame(['shipped'], $rows[2]['shipstation_statuses']);
     }
 
-    public function test_compound_shipstation_number_does_not_match_legacy_contract(): void
+    public function test_compound_shipstation_number_matches_its_primary_order_number(): void
     {
         $rows = (new RefundTrackerAnalyzer)->analyze(
             [$this->order('#1001')],
             [['orderNumber' => '1001-B2', 'orderStatus' => 'shipped']],
         );
 
-        $this->assertSame('missing', $rows[0]['risk']);
+        $this->assertSame('ok', $rows[0]['risk']);
     }
 
     /** @param array<string, mixed> $overrides @return array<string, mixed> */

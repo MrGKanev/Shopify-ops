@@ -3,10 +3,11 @@
 namespace App\Domain\Reports;
 
 use App\Domain\Reports\Concerns\NormalizesText;
+use App\Domain\Reports\Concerns\MatchesOrderNumbers;
 
 class RefundTrackerAnalyzer
 {
-    use NormalizesText;
+    use MatchesOrderNumbers, NormalizesText;
 
     /**
      * @param  list<array<string, mixed>>  $orders
@@ -18,9 +19,7 @@ class RefundTrackerAnalyzer
         $shipStationIndex = [];
 
         foreach ($shipStationOrders as $order) {
-            $number = $this->orderNumber($order['orderNumber'] ?? '');
-
-            if ($number !== '') {
+            foreach ($this->orderNumberKeys($order['orderNumber'] ?? '') as $number) {
                 $shipStationIndex[$number][] = $order;
             }
         }
@@ -81,8 +80,4 @@ class RefundTrackerAnalyzer
         return $amount;
     }
 
-    private function orderNumber(mixed $value): string
-    {
-        return preg_replace('/\D+/', '', $this->text($value)) ?? '';
-    }
 }
