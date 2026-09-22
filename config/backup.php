@@ -65,8 +65,11 @@ return [
                  * This path is used to make directories in resulting zip-file relative
                  * Set to `null` to include complete absolute path
                  * Example: base_path()
+                 *
+                 * Kept relative to the application root so archives restore
+                 * correctly on a different path/host than where they were made.
                  */
-                'relative_path' => null,
+                'relative_path' => base_path(),
             ],
 
             /*

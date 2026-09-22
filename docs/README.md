@@ -22,10 +22,7 @@
 
 ## Engineering history
 
-Internal records from the legacy PHP → Laravel rewrite. Not needed to use or operate the app.
+Internal records from the legacy PHP → Laravel rewrite. Not needed to use or operate the app. The rewrite is complete and the legacy codebase is gone; the parity-comparison audit, UAT/cutover checklist, and old test-count audit were removed as they compared against code that no longer exists.
 
-- [Parity verification](parity-verification.md) — the parity audit and its decision log
-- [Laravel rewrite TODO](laravel-todo.md) — open follow-up items
-- [UAT and cutover checklist](laravel-uat-cutover-checklist.md)
-- [Legacy test audit](laravel-test-audit.md)
+- [Laravel rewrite TODO](laravel-todo.md) — remaining open product decisions
 - [Design consistency plan](frontend-design-consistency-plan.md)

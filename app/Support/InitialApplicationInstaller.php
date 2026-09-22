@@ -35,7 +35,7 @@ class InitialApplicationInstaller
     }
 
     /**
-     * @param  array{name:string,email:string,password:string,label:string,slug:string,shopify_store:string,shopify_access_token:string,shipstation_api_key:?string,shipstation_api_secret:?string,store_number:?string,db_connection:string,database:string,db_host:?string,db_port:?string,db_username:?string,db_password:?string}  $data
+     * @param  array{name:string,email:string,password:string,label:string,slug:string,shopify_store:string,shopify_access_token:string,shipstation_api_key:?string,shipstation_api_secret:?string,store_number:?string,db_connection:string,database:string,db_host:?string,db_port:?string,db_username:?string,db_password:?string,mail_mailer:string,mail_host:?string,mail_port:?string,mail_username:?string,mail_password:?string,mail_encryption:string,mail_from_address:?string,mail_from_name:?string,slack_webhook_url:?string,discord_webhook_url:?string}  $data
      */
     public function install(array $data): void
     {
@@ -128,7 +128,7 @@ class InitialApplicationInstaller
     }
 
     /**
-     * @param  array{db_connection:string,database:string,db_host:?string,db_port:?string,db_username:?string,db_password:?string}  $data
+     * @param  array{db_connection:string,database:string,db_host:?string,db_port:?string,db_username:?string,db_password:?string,mail_mailer:string,mail_host:?string,mail_port:?string,mail_username:?string,mail_password:?string,mail_encryption:string,mail_from_address:?string,mail_from_name:?string,slack_webhook_url:?string,discord_webhook_url:?string}  $data
      */
     private function writeEnvironment(array $data, string $applicationKey): void
     {
@@ -157,6 +157,28 @@ class InitialApplicationInstaller
                 'DB_USERNAME' => (string) $data['db_username'],
                 'DB_PASSWORD' => (string) $data['db_password'],
             ]);
+        }
+
+        $variables['MAIL_MAILER'] = $data['mail_mailer'];
+        if ($data['mail_mailer'] === 'smtp') {
+            $variables = array_merge($variables, [
+                'MAIL_HOST' => (string) $data['mail_host'],
+                'MAIL_PORT' => (string) $data['mail_port'],
+                'MAIL_USERNAME' => (string) ($data['mail_username'] ?? ''),
+                'MAIL_PASSWORD' => (string) ($data['mail_password'] ?? ''),
+                'MAIL_FROM_ADDRESS' => (string) $data['mail_from_address'],
+                'MAIL_FROM_NAME' => (string) ($data['mail_from_name'] ?? $data['label']),
+            ]);
+            if ($data['mail_encryption'] === 'tls') {
+                $variables['MAIL_SCHEME'] = 'smtps';
+            }
+        }
+
+        if ($data['slack_webhook_url'] !== null) {
+            $variables['SLACK_NOTIFICATION_WEBHOOK_URL'] = $data['slack_webhook_url'];
+        }
+        if ($data['discord_webhook_url'] !== null) {
+            $variables['DISCORD_NOTIFICATION_WEBHOOK_URL'] = $data['discord_webhook_url'];
         }
 
         foreach ($variables as $key => $value) {

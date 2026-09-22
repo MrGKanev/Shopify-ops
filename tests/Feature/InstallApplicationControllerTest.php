@@ -88,11 +88,82 @@ class InstallApplicationControllerTest extends TestCase
             ]);
     }
 
+    public function test_installation_requires_smtp_details_when_smtp_is_selected(): void
+    {
+        $payload = array_merge($this->installationPayload(), ['mail_mailer' => 'smtp']);
+
+        $response = $this
+            ->from(route('install.create'))
+            ->post(route('install.store'), $payload);
+
+        $response
+            ->assertRedirect(route('install.create'))
+            ->assertSessionHasErrors([
+                'mail_host' => 'The mail host field is required.',
+                'mail_port' => 'The mail port field is required.',
+                'mail_from_address' => 'The mail from address field is required.',
+            ]);
+        $this->assertSame(0, User::query()->count());
+    }
+
+    public function test_installation_rejects_an_invalid_webhook_url(): void
+    {
+        $payload = array_merge($this->installationPayload(), ['slack_webhook_url' => 'not-a-url']);
+
+        $response = $this
+            ->from(route('install.create'))
+            ->post(route('install.store'), $payload);
+
+        $response
+            ->assertRedirect(route('install.create'))
+            ->assertSessionHasErrors(['slack_webhook_url' => 'The slack webhook url field must be a valid URL.']);
+        $this->assertSame(0, User::query()->count());
+    }
+
     public function test_installer_is_not_available_after_an_account_exists(): void
     {
         User::factory()->create();
 
         $this->get(route('install.create'))->assertNotFound();
+    }
+
+    public function test_installation_writes_provided_smtp_and_webhook_settings_to_the_environment(): void
+    {
+        $payload = array_merge($this->installationPayload(), [
+            'mail_mailer' => 'smtp',
+            'mail_host' => 'smtp.example.com',
+            'mail_port' => '587',
+            'mail_username' => 'smtp-user',
+            'mail_password' => 'smtp-secret',
+            'mail_encryption' => 'tls',
+            'mail_from_address' => 'ops@example.com',
+            'mail_from_name' => 'Example Ops',
+            'slack_webhook_url' => 'https://hooks.slack.test/services/x',
+            'discord_webhook_url' => 'https://discord.test/api/webhooks/x',
+        ]);
+
+        $this->post(route('install.store'), $payload)->assertRedirect(route('login'));
+
+        $environment = app(Filesystem::class)->get(app()->environmentFilePath());
+        $this->assertStringContainsString('MAIL_MAILER=smtp', $environment);
+        $this->assertStringContainsString('MAIL_HOST=smtp.example.com', $environment);
+        $this->assertStringContainsString('MAIL_PORT=587', $environment);
+        $this->assertStringContainsString('MAIL_USERNAME=smtp-user', $environment);
+        $this->assertStringContainsString('MAIL_PASSWORD=smtp-secret', $environment);
+        $this->assertStringContainsString('MAIL_SCHEME=smtps', $environment);
+        $this->assertStringContainsString('MAIL_FROM_ADDRESS="ops@example.com"', $environment);
+        $this->assertStringContainsString('SLACK_NOTIFICATION_WEBHOOK_URL=https://hooks.slack.test/services/x', $environment);
+        $this->assertStringContainsString('DISCORD_NOTIFICATION_WEBHOOK_URL=https://discord.test/api/webhooks/x', $environment);
+    }
+
+    public function test_installation_defaults_to_the_log_mailer_without_notification_settings(): void
+    {
+        $this->post(route('install.store'), $this->installationPayload())->assertRedirect(route('login'));
+
+        $environment = app(Filesystem::class)->get(app()->environmentFilePath());
+        $this->assertStringContainsString('MAIL_MAILER=log', $environment);
+        $this->assertStringContainsString("SLACK_NOTIFICATION_WEBHOOK_URL=\n", $environment);
+        $this->assertStringContainsString("DISCORD_NOTIFICATION_WEBHOOK_URL=\n", $environment);
     }
 
     /** @return array<string, string> */

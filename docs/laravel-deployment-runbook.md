@@ -1,32 +1,34 @@
 # Laravel rewrite — deployment runbook
 
-Последно обновяване: **2026-09-11**.
+Последно обновяване: **2026-09-22**.
 
-Целева платформа: **самостоятелен VPS**, управляван от екипа. Приема се, че
-OS-ниво пакетите вече са инсталирани (PHP 8.5+ с нужните extensions, Composer,
-Node.js 24+/pnpm, nginx или друг reverse proxy, php-fpm, supervisor, git, и
-избраната database — SQLite или MySQL/PostgreSQL). Този документ покрива само
-application-ниво настройката и routine deploy процедурата.
-
-Свързан документ: [UAT и cutover checklist](laravel-uat-cutover-checklist.md)
-(golden fixtures, rehearsal процедура, sign-off evidence). Независимата
-feature-parity проверка (source of truth за готовност) е в
-[`docs/parity-verification.md`](parity-verification.md); отворените product
-decisions са в [`docs/laravel-todo.md`](laravel-todo.md).
+Целева платформа: **самостоятелен VPS**, управляван от екипа, без load
+balancer пред приложението (единичен сървър — ако това се промени, добави
+`TRUSTED_PROXIES` в `.env`, виж [`configuration.md`](configuration.md)).
+Приема се, че OS-ниво пакетите вече са инсталирани (PHP 8.5+ с нужните
+extensions, Composer, Node.js 24+/pnpm 11.15.1, nginx/apache + php-fpm,
+supervisor, git, и избраната database — SQLite или MySQL/MariaDB). Приложението
+живее в repo-то root ниво (няма отделна `laravel/` поддиректория). Този
+документ покрива само application-ниво настройката и routine deploy
+процедурата. Отворените product decisions са в [`docs/laravel-todo.md`](laravel-todo.md).
 
 ## Първоначална инсталация
 
-1. Клонирай repo-то на сървъра, `cd laravel`.
+1. Клонирай repo-то на сървъра.
 2. `composer install --no-dev --optimize-autoloader`
 3. `cp .env.example .env` и попълни production стойности (виж по-долу).
 4. `php artisan key:generate`
 5. `php artisan migrate --force`
-6. `npm ci && npm run build` (или `pnpm install && pnpm run build`, според lockfile-а).
+6. `pnpm install --frozen-lockfile && pnpm build`
 7. `php artisan storage:link`
-8. Създай първия administrator през наличната Artisan install команда:
-   `php artisan ops:install`.
+8. Създай първия administrator: през `php artisan ops:install` (shell достъп)
+   или `/install` в браузъра (без shell достъп — виж
+   [`installation.md`](installation.md#hostedno-shell-installation)). И двата
+   пътя приемат SMTP/Slack/Discord настройки директно при инсталацията.
 9. Настрой supervisor и cron съгласно секциите по-долу.
-10. Направи smoke checks (виж по-долу) преди да пуснеш реален трафик.
+10. Локално, преди да push-неш release commit-а: `composer ci` — прогонва
+    точно същите проверки като CI (виж [`operations.md`](operations.md#local-test-build)).
+11. Направи smoke checks (виж по-долу) преди да пуснеш реален трафик.
 
 ## .env стойности, които изискват решение при deploy
 
@@ -54,10 +56,10 @@ admin-only dashboard на `/admin/horizon`, `Schedule::command('horizon:snapshot
 на всеки 5 мин). Supervisor пази `horizon` вдигнат:
 
 ```ini
-[program:shipstation-checker-horizon]
+[program:shopify-ops-horizon]
 process_name=%(program_name)s
-command=php /path/to/laravel/artisan horizon
-directory=/path/to/laravel
+command=php /path/to/shopify-ops/artisan horizon
+directory=/path/to/shopify-ops
 autostart=true
 autorestart=true
 stopasgroup=true
@@ -65,7 +67,7 @@ killasgroup=true
 user=www-data
 numprocs=1
 redirect_stderr=true
-stdout_logfile=/path/to/laravel/storage/logs/horizon.log
+stdout_logfile=/path/to/shopify-ops/storage/logs/horizon.log
 stopwaitsecs=3600
 ```
 
@@ -84,20 +86,20 @@ stopwaitsecs=3600
 pruning, health heartbeats, backup run/monitor/clean:
 
 ```
-* * * * * cd /path/to/laravel && php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /path/to/shopify-ops && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 ## Routine deploy (след първоначалната инсталация)
 
 1. **Write freeze** (по избор, за миграции с schema промяна): спри приема
    на нови requests или пусни `php artisan down` при рискови миграции.
-2. `git pull` до release commit-а.
+2. `git pull` до release commit-а (вече минал `composer ci` локално/в CI).
 3. `composer install --no-dev --optimize-autoloader`
-4. `npm ci && npm run build`
+4. `pnpm install --frozen-lockfile && pnpm build`
 5. `php artisan migrate --force`
 6. `php artisan config:cache && php artisan route:cache && php artisan view:cache`
 7. `php artisan horizon:terminate`
-8. `supervisorctl restart shipstation-checker-horizon:*` (ако supervisor не
+8. `supervisorctl restart shopify-ops-horizon:*` (ако supervisor не
    е уловил рестарта автоматично)
 9. `php artisan up` (ако е бил спрян в стъпка 1)
 10. Smoke checks (виж по-долу).
@@ -139,33 +141,29 @@ php artisan backup:list
 php artisan backup:monitor
 ```
 
-Restore rehearsal се прави поне преди release/cutover и след промяна
-на database driver, destination или encryption. Никога не възстановявай
-директно върху production database-а:
+Restore на живо (`php artisan backup:restore {path?} {--force}`) взима
+последния архив по подразбиране (или посочен път на диска `backups`),
+възстановява database dump-а и файловете от `storage/app/private`, и пита за
+потвърждение преди да презапише текущата база. Поддържа SQLite и
+MySQL/MariaDB (изисква `mysql` client в `PATH` за последните). Виж
+[`operations.md`](operations.md#backups).
 
-1. Запиши restore owner, дата, release commit и избран backup filename.
-2. Създай изолиран rehearsal host/database без production credentials,
+Преди да разчиташ на него в реален инцидент, провери го поне веднъж в
+изолирана среда, различна от production:
+
+1. Създай изолиран rehearsal host/database без production credentials,
    workers, scheduler и outbound notification delivery.
-3. Изтегли архива от destination-а и провери списъка му с
-   `unzip -l <backup.zip>`.
-4. Разархивирай в нова temporary директория и намери database dump-а.
-   При encrypted archive въведи password-а interactive; не го пиши в
-   shell history, ticket или rehearsal log.
-5. Възстанови dump-а в празна rehearsal database: копирай SQLite
-   database файла на rehearsal path, или импортирай SQL dump-а с
-   standard `mysql`/`psql` client. Не пускай `migrate:fresh`.
-6. Насочи rehearsal `.env` към възстановената database, изпълни
-   `php artisan config:clear` и `php artisan migrate:status`.
-7. Провери login, users/stores, броя `run_logs`/`audit_snapshots`, един
+2. Копирай там `.env` с rehearsal database настройки и изтегли (или сподели
+   диска на) най-новия backup архив.
+3. Пусни `php artisan backup:restore --force` и провери изхода
+   (възстановен dump filename и брой файлове).
+4. Провери login, users/stores, броя `run_logs`/`audit_snapshots`, един
    saved report и един CSV download. Пусни `/up`; `/ready` може да е 503,
    докато rehearsal worker/scheduler са съзнателно спрени.
-8. Запази pass/fail evidence, продължителност, backup filename/hash,
-   database driver и всички отклонения. Изтрий temporary plaintext dump-а и
-   rehearsal database след sign-off.
+5. Изтрий rehearsal database/host след проверката.
 
-Репетицията е успешна само ако archive-ът се декриптира,
-database-а се отваря без migration errors, ключовите counts съвпадат
-и smoke checks минават без production side effects.
+При encrypted archive (`BACKUP_ARCHIVE_PASSWORD`) командата чете паролата от
+`config('backup.backup.password')` — не се въвежда interactive.
 
 ## Fix-forward policy
 
@@ -181,6 +179,4 @@ commit-а, не като отделна ръчна операция извън g
   `/metrics` вече са инсталирани и wired, но `SENTRY_LARAVEL_DSN` и кой получава
   `/metrics` scrape/alerting остават съзнателно отложени production решения.
   `QUEUE_CONNECTION=redis`+Horizon вече е решено (виж "Queue worker (Horizon)"
-  по-горе).
-- UAT и cutover repetition — виж [UAT и cutover checklist](laravel-uat-cutover-checklist.md)
-  и завършеността на [`docs/parity-verification.md`](parity-verification.md).
+  по-горе). Чеклист за живото пускане: [`наблюдение.md`](../наблюдение.md).

@@ -1,19 +1,19 @@
 # Laravel rewrite — отворени задачи
 
-Последно обновяване: **2026-09-15** — cutover изпълнен на repo ниво (legacy PHP
-изтрит, Laravel преместен в корена). Виж
-[`docs/parity-verification.md`](parity-verification.md#2026-09-14-cutover-decision-session-closed)
-за пълния 24/24 decision log. Оставащата "Production/infra решения" и "Процес"
-секции по-долу са реални production действия (rehearsals, TLS/proxy, SMTP),
-извън scope-а на repo restructuring-а — не са изпълнени и остават отворени.
+Последно обновяване: **2026-09-22**. Cutover-ът е завършен и потвърден:
+legacy PHP кодът (`src/`, `laravel/`, `order_types.json` на root ниво) вече не
+съществува в repo-то. Историческият parity/decision log
+(`parity-verification.md`, `laravel-test-audit.md`, UAT rehearsal чеклистът и
+`docs/superpowers/`) беше премахнат заедно с това обновяване — сравнението
+беше срещу код, който вече не съществува, и повече не носи стойност. За
+доказателство, че текущият код работи, виж [`operations.md`](operations.md#local-test-build)
+за локалния test-build процес.
 
 Списък със самостоятелни отворени product-decision задачи, всяка от които не
 изисква преработка на съседен код. По-старите self-reported "72/72 Done"
 одитни документи (`laravel-platform-audit.md`, `laravel-rewrite.md`) бяха
 премахнати на 2026-09-14 — техните твърдения не бяха доказани изпълнимо и в
-няколко реда бяха грешни (виж по-долу). Единственото място, което вече
-твърди feature parity, е [`docs/parity-verification.md`](parity-verification.md)
-(изисква линкнат, реално изпълняван тест за всеки ред) — виж прогреса там.
+няколко реда бяха грешни (виж по-долу).
 
 ## Продуктови решения (от независимия одит) — ЗАТВОРЕНИ 2026-09-14
 
@@ -94,8 +94,7 @@
       погрешно твърдеше "bulk" за този ред; коригирано на `Partial`. Нужно е
       продуктово решение: да се построи ли тази bulk-select форма в Laravel
       report изгледите, или да се приеме съзнателно отклонение (single
-      ignore + CSV import покриват повечето случаи). Виж
-      [`parity-verification.md`](parity-verification.md).
+      ignore + CSV import покриват повечето случаи).
 
 - [x] **Run Audit inline duplicates panel** — legacy `Comparator::findDuplicates()`
       (24-часово clustering, показва се на `views/run.php:87-103` като "N
@@ -105,8 +104,7 @@
       `DuplicateOrderAnalyzer` е портът; той всъщност е порт на отделния
       `dupes` инструмент. Нужно е продуктово решение: да се построи ли тази
       inline секция в Laravel, или да се приеме съзнателно отклонение (audit
-      резултатите вече показват missing/found/skipped/ignored без нея). Виж
-      [`parity-verification.md`](parity-verification.md).
+      резултатите вече показват missing/found/skipped/ignored без нея).
 
 - [x] **Slack/Discord audit & scan notification content е орязано до едно
       изречение** — legacy `SlackNotifier::auditPayload()`/`scanPayload()` и
@@ -122,8 +120,7 @@
       каквото върне `toDiscord()` verbatim, така че добавяне на `embeds` ключ
       ще проработи директно като при legacy — не е transport ограничение.
       Нужно е продуктово решение: да се разшири ли съдържанието да съвпада с
-      legacy, или да се приеме съзнателно опростяване. Виж
-      [`parity-verification.md`](parity-verification.md).
+      legacy, или да се приеме съзнателно опростяване.
 
 - [x] **Email rules нямат global fallback recipient** — legacy build-ва всеки
       `EmailNotifier` от `ALERT_EMAIL` веднъж и всеки tool-ов `recipientFor()`
@@ -138,7 +135,7 @@
       трябва отделно да получи същия адрес вместо един env var да ги покрива
       всичките. Нужно е продуктово решение: да се добави ли global default
       recipient концепция, или да се приеме изричното per-tool изискване
-      като по-ясен design избор. Виж [`parity-verification.md`](parity-verification.md).
+      като по-ясен design избор.
 
 - [x] **Fraud risk signals нямат per-signal точки** — legacy `RiskScorer::score()`
       връща `signals` като `list<{label, points}>`, и `ViewHelpers::riskBadge()`
@@ -152,7 +149,7 @@
       колко тежи*. Нужно е продуктово решение: да се разшири ли `signals`
       формата (един domain клас + 3 blade изгледа + 2 съществуващи unit
       теста) до structured points, или да се приеме съзнателно опростената
-      breakdown-по-нищо форма. Виж [`parity-verification.md`](parity-verification.md).
+      breakdown-по-нищо форма.
 
 - [x] **High-Value No Phone има currency филтър, който legacy никога не е
       имал** — `HighValueNoPhoneAnalyzer::analyze()` приема `$currency`
@@ -166,36 +163,31 @@
       скъпа поръчка, която може да не се достави). Нужно е продуктово
       решение: да се запази ли currency филтъра (и как да изглежда "всички
       валути" — опция "any", или per-currency scan), или да се премахне за
-      съответствие с legacy. Виж [`parity-verification.md`](parity-verification.md).
+      съответствие с legacy.
 
 ## Production/infra решения
 
-- [x] **Security headers/cookies/proxy code** — CSP/frame/referrer/HSTS policy,
-      secure cookie settings, explicit trusted proxies, config validation и tests.
-- [ ] **SMTP transport production setup** — реални secrets в deploy
-      конфигурацията и реален staging delivery smoke test.
+- [x] **Security headers/cookies code** — CSP/frame/referrer/HSTS policy,
+      secure cookie settings, optional trusted proxies (само ако има reverse
+      proxy пред приложението), config validation и tests.
+- [x] **SMTP и Slack/Discord setup** — всеки deployment си ги настройва сам:
+      инсталаторът (`install.create` / `resources/views/install/create.blade.php`)
+      събира SMTP credentials и webhook URLs при първоначалната инсталация и
+      ги записва в `.env`. Реалният delivery остава да се провери ръчно след
+      инсталация (изпрати си тестов email/съобщение).
 - [x] **Readiness endpoint (`/ready`) разширение** — database, cache,
       queue configuration и worker-heartbeat freshness проверки.
 - [x] **Structured application logs contract** — request/run/store/tool context,
       status/category полета, recursive redaction и URL query stripping.
 - [x] **Operational alerts разширение** — queue latency >5 min,
       scheduler heartbeat >5 min и 3 API/report failures за 15 min, с 15-min
-      deduplication и Slack/Discord delivery.
+      deduplication и Slack/Discord delivery. Реалната доставка се потвърждава
+      след като SMTP/webhooks са настроени през инсталатора (виж по-горе).
 - [x] **Audit jobs progress/terminal-state UI** — store-scoped queued/running/
       completed/failed history в Job Queue екрана.
 - [x] **Cache policy** — production Redis с unique deployment prefix, само за
       locks, unique jobs и health heartbeats; external/report reads остават fresh.
-- [x] **Configuration validation — trusted proxy** — production checks за
-      trusted proxies, secure session cookie и HSTS.
-- [ ] **Backup and restore rehearsal изпълнение** — runbook-ът вече
-      описва destination ownership, retention, safe restore и evidence; остава
-      реалната production-like репетиция.
-
-## Процес (не код)
-
-- [ ] **Production TLS/proxy verification** — потвърждаване на real client
-      IP/scheme, secure cookie и HSTS зад реалния load balancer/reverse proxy.
-
-- [ ] **UAT и cutover rehearsal изпълнение** — чеклистът е готов
-      ([`docs/laravel-uat-cutover-checklist.md`](laravel-uat-cutover-checklist.md)),
-      но двете реални production-like репетиции не са насрочени/изпълнени.
+- [x] **Backup и restore** — `backup:run`/`backup:verify-latest` вече
+      съществуваха; добавена е `backup:restore {path?} {--force}`, която
+      възстановява DB dump-а и `storage/app/private` файловете от архив
+      (по подразбиране най-новия). Виж [`operations.md`](operations.md#backups).

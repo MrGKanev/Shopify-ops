@@ -59,15 +59,38 @@ php artisan queue:failed
 php artisan backup:list
 php artisan backup:run
 php artisan backup:monitor
+php artisan backup:verify-latest
+php artisan backup:restore
 ```
 
 Backup archives use the disks in `BACKUP_DISKS`; the default local destination is `storage/app/backups`. Administrators can inspect and download available archives from **Settings → Backups**. Store at least one production copy outside the application server.
 
+### Backups {#backups}
+
+`backup:restore` restores the database dump and `storage/app/private` files
+from an archive — the latest one by default, or a specific path relative to
+the `backups` disk (`php artisan backup:restore "Shopify Ops/2026-09-22-01-15-00.zip"`).
+It prompts for confirmation before overwriting the current database; pass
+`--force` to skip the prompt in a scripted restore. It supports SQLite and
+MySQL/MariaDB (`mysql` client must be on `PATH` for the latter).
+
 Application logs are written through Laravel's configured log channel. **Settings → Action Log** shows recorded administrative and operator changes; it is not a replacement for exception logs or Sentry.
 
-## Development checks
+## Development checks {#local-test-build}
 
-Run the same core checks used by CI:
+Run the exact checks CI runs, as a single command:
+
+```bash
+composer ci
+```
+
+This chains `composer audit`, `composer test`, `composer analyse`,
+`vendor/bin/pint --test`, `pnpm install --frozen-lockfile`, `pnpm build`, and
+`pnpm audit --audit-level moderate` — the same steps as `.github/workflows/ci.yml`.
+Run it before considering a change release-ready; a passing local run is
+current evidence, historical test counts in old docs are not.
+
+Individual checks:
 
 ```bash
 composer test
@@ -94,7 +117,7 @@ At minimum, production must provide:
 - Redis for cache, queues, Horizon, locks, and health heartbeats
 - A long-running Horizon process
 - The Laravel scheduler cron entry
-- HTTPS with correct `APP_URL`, secure session cookies, trusted proxy configuration, and HSTS after proxy verification
+- HTTPS with correct `APP_URL`, secure session cookies, and HSTS (set `TRUSTED_PROXIES` only if a reverse proxy/load balancer sits in front of the app)
 - Built frontend assets and cached Laravel configuration/routes/views
 - A tested off-server backup destination
 

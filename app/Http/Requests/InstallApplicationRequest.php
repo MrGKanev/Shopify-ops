@@ -40,6 +40,16 @@ class InstallApplicationRequest extends FormRequest
             'shipstation_api_key' => ['nullable', 'string', 'max:2048'],
             'shipstation_api_secret' => ['nullable', 'string', 'max:2048'],
             'store_number' => ['nullable', 'string', 'max:255'],
+            'mail_mailer' => ['required', Rule::in(['log', 'smtp'])],
+            'mail_host' => [Rule::requiredIf(fn (): bool => $this->input('mail_mailer') === 'smtp'), 'nullable', 'string', 'max:255', 'not_regex:/[\r\n]/'],
+            'mail_port' => [Rule::requiredIf(fn (): bool => $this->input('mail_mailer') === 'smtp'), 'nullable', 'integer', 'between:1,65535'],
+            'mail_username' => ['nullable', 'string', 'max:255', 'not_regex:/[\r\n]/'],
+            'mail_password' => ['nullable', 'string', 'max:2048', 'not_regex:/[\r\n]/'],
+            'mail_encryption' => ['nullable', Rule::in(['', 'tls'])],
+            'mail_from_address' => [Rule::requiredIf(fn (): bool => $this->input('mail_mailer') === 'smtp'), 'nullable', 'email', 'max:255'],
+            'mail_from_name' => ['nullable', 'string', 'max:255'],
+            'slack_webhook_url' => ['nullable', 'url', 'max:2048'],
+            'discord_webhook_url' => ['nullable', 'url', 'max:2048'],
         ];
     }
 
@@ -56,6 +66,15 @@ class InstallApplicationRequest extends FormRequest
             'shipstation_api_key' => $this->nullableString('shipstation_api_key'),
             'shipstation_api_secret' => $this->nullableString('shipstation_api_secret'),
             'store_number' => $this->nullableString('store_number'),
+            'mail_mailer' => $this->input('mail_mailer', 'log') === 'smtp' ? 'smtp' : 'log',
+            'mail_host' => $this->nullableString('mail_host'),
+            'mail_username' => $this->nullableString('mail_username'),
+            'mail_password' => $this->nullableString('mail_password'),
+            'mail_encryption' => $this->string('mail_encryption')->trim()->toString() === 'tls' ? 'tls' : '',
+            'mail_from_address' => $this->nullableString('mail_from_address'),
+            'mail_from_name' => $this->nullableString('mail_from_name'),
+            'slack_webhook_url' => $this->nullableString('slack_webhook_url'),
+            'discord_webhook_url' => $this->nullableString('discord_webhook_url'),
         ]);
     }
 

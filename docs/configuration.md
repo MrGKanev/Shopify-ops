@@ -41,7 +41,7 @@ See `.env.example` for the full list, including AWS/S3, database, and broadcast 
 
 ## Caching
 
-Redis (`CACHE_STORE`) is used only for locks, unique-job deduplication, and health-check heartbeats — **Shopify/ShipStation API reads and report data are always fetched live, never cached.** This is a deliberate departure from the legacy PHP app, which cached API responses under `cache/` with per-endpoint TTLs; the Laravel rewrite trades that for always-current data at the cost of more API calls. See `docs/parity-verification.md` for the audit that confirmed this.
+Redis (`CACHE_STORE`) is used only for locks, unique-job deduplication, and health-check heartbeats — **Shopify/ShipStation API reads and report data are always fetched live, never cached.** This trades some API call volume for always-current data.
 
 ## Background jobs
 
@@ -61,7 +61,7 @@ In production, schedule that command (or `schedule:run` on a cron minute-tick) w
 
 ## Slack rules
 
-Set `SLACK_NOTIFICATION_WEBHOOK_URL` in `.env`, then configure thresholds in **Settings → Slack Rules**.
+Set `SLACK_NOTIFICATION_WEBHOOK_URL` during installation (Notifications step) or in `.env`, then configure thresholds in **Settings → Slack Rules**.
 
 - Audit notifications can require a minimum missing-order count.
 - All-clear audit notifications can be disabled.
@@ -70,11 +70,11 @@ Set `SLACK_NOTIFICATION_WEBHOOK_URL` in `.env`, then configure thresholds in **S
 
 ## Discord rules
 
-Set `DISCORD_NOTIFICATION_WEBHOOK_URL` in `.env`, then configure thresholds in **Settings → Discord Rules**. Same shape as Slack rules, minus mentions (Discord has no equivalent concept here).
+Set `DISCORD_NOTIFICATION_WEBHOOK_URL` during installation or in `.env`, then configure thresholds in **Settings → Discord Rules**. Same shape as Slack rules, minus mentions (Discord has no equivalent concept here).
 
 ## Email rules
 
-Set `MAIL_*` in `.env`, then configure each check individually in **Settings → Email Rules**. Every audit/scan check gets its own row:
+Set `MAIL_*` during installation (Notifications step) or in `.env`, then configure each check individually in **Settings → Email Rules**. Every audit/scan check gets its own row:
 
 - **Off** (default) - never emails.
 - **Immediate** - emails right after that check's own run, once its row/missing count clears the threshold.

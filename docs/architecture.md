@@ -13,7 +13,7 @@ resources/views/       Blade pages and shared UI components
 resources/css/         Tailwind application styles
 resources/js/          Browser behavior, including the store switcher
 routes/                 Web routes and scheduled commands
-tests/                  Feature, unit, architecture, and parity tests
+tests/                  Feature and unit tests
 ```
 
 Credentials are encrypted through Eloquent casts. Controllers obtain the active store from middleware, while database records and jobs retain their own `store_id` so data does not cross store boundaries.

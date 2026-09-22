@@ -47,9 +47,6 @@ class CheckConfiguration
         if (config('app.env') === 'production' && Str::contains((string) config('app.url'), 'localhost')) {
             $issues[] = 'APP_URL must not be the localhost default in production.';
         }
-        if (config('app.env') === 'production' && config('security.trusted_proxies') === []) {
-            $issues[] = 'TRUSTED_PROXIES must contain the production proxy addresses.';
-        }
         if (config('app.env') === 'production' && ! config('session.secure')) {
             $issues[] = 'SESSION_SECURE_COOKIE must be enabled in production.';
         }

@@ -57,6 +57,10 @@ pnpm dev
 
 In local mode the login page also provides development-role login buttons. They are unavailable outside `APP_ENV=local`.
 
+## Hosted/no-shell installation
+
+For a deployment without shell access (shared hosting, a fresh server with only the codebase deployed), visit `/install` instead of running `ops:install`. It walks through database credentials, the first administrator/store, and an optional Notifications step (SMTP, Slack webhook, Discord webhook) that writes directly to `.env` — each deployment configures its own without editing files by hand. The page locks itself permanently once the first user or store exists.
+
 ## Next steps
 
 - [Administration](administration.md) — add stores, users, and roles

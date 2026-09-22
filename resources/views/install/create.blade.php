@@ -137,6 +137,71 @@
                     </div>
                 </section>
 
+                <section class="space-y-4 border-t border-edge pt-8">
+                    <div>
+                        <h2 class="text-lg font-semibold">Notifications <span class="normal-case font-normal text-muted">(optional)</span></h2>
+                        <p class="mt-1 text-sm text-muted">Configure your own SMTP and chat webhooks now, or leave these blank and set them later in <code>.env</code>. Without SMTP, mail is only written to the log.</p>
+                    </div>
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="field sm:col-span-2">
+                            <label for="mail_mailer">Mail transport</label>
+                            <select id="mail_mailer" name="mail_mailer" required>
+                                <option value="log" @selected(old('mail_mailer', 'log') === 'log')>Log only (no real email)</option>
+                                <option value="smtp" @selected(old('mail_mailer') === 'smtp')>SMTP</option>
+                            </select>
+                            @error('mail_mailer')<p class="text-sm text-danger">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="field">
+                            <label for="mail_host">SMTP host</label>
+                            <input id="mail_host" name="mail_host" value="{{ old('mail_host') }}" autocomplete="off">
+                            @error('mail_host')<p class="text-sm text-danger">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="field">
+                            <label for="mail_port">SMTP port</label>
+                            <input id="mail_port" name="mail_port" type="number" min="1" max="65535" value="{{ old('mail_port', '587') }}">
+                            @error('mail_port')<p class="text-sm text-danger">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="field">
+                            <label for="mail_username">SMTP username</label>
+                            <input id="mail_username" name="mail_username" value="{{ old('mail_username') }}" autocomplete="off">
+                            @error('mail_username')<p class="text-sm text-danger">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="field">
+                            <label for="mail_password">SMTP password</label>
+                            <input id="mail_password" name="mail_password" type="password" autocomplete="off">
+                            @error('mail_password')<p class="text-sm text-danger">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="field">
+                            <label for="mail_encryption">SMTP encryption</label>
+                            <select id="mail_encryption" name="mail_encryption">
+                                <option value="" @selected(old('mail_encryption') === '')>Auto (STARTTLS)</option>
+                                <option value="tls" @selected(old('mail_encryption') === 'tls')>Implicit TLS (SSL)</option>
+                            </select>
+                            @error('mail_encryption')<p class="text-sm text-danger">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="field">
+                            <label for="mail_from_address">From address</label>
+                            <input id="mail_from_address" name="mail_from_address" type="email" value="{{ old('mail_from_address') }}" autocomplete="off">
+                            @error('mail_from_address')<p class="text-sm text-danger">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="field">
+                            <label for="mail_from_name">From name</label>
+                            <input id="mail_from_name" name="mail_from_name" value="{{ old('mail_from_name') }}" autocomplete="off">
+                            @error('mail_from_name')<p class="text-sm text-danger">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="field">
+                            <label for="slack_webhook_url">Slack webhook URL <span class="normal-case">(optional)</span></label>
+                            <input id="slack_webhook_url" name="slack_webhook_url" type="url" value="{{ old('slack_webhook_url') }}" placeholder="https://hooks.slack.com/services/...">
+                            @error('slack_webhook_url')<p class="text-sm text-danger">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="field">
+                            <label for="discord_webhook_url">Discord webhook URL <span class="normal-case">(optional)</span></label>
+                            <input id="discord_webhook_url" name="discord_webhook_url" type="url" value="{{ old('discord_webhook_url') }}" placeholder="https://discord.com/api/webhooks/...">
+                            @error('discord_webhook_url')<p class="text-sm text-danger">{{ $message }}</p>@enderror
+                        </div>
+                    </div>
+                </section>
+
                 <div class="flex flex-col-reverse gap-3 border-t border-edge pt-6 sm:flex-row sm:items-center sm:justify-between">
                     <p class="text-xs text-muted">Do not expose this page after setup; it is automatically disabled once the first account or store exists.</p>
                     <button class="btn" type="submit">Install application</button>

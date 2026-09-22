@@ -50,8 +50,8 @@
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
             "@php artisan key:generate",
             "@php artisan migrate --force",
-            "npm install --ignore-scripts",
-            "npm run build"
+            "pnpm install --frozen-lockfile",
+            "pnpm build"
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
@@ -63,6 +63,15 @@
         ],
         "analyse": [
             "@php vendor/bin/phpstan analyse --no-progress --memory-limit=1G"
+        ],
+        "ci": [
+            "composer audit",
+            "@test",
+            "@analyse",
+            "vendor/bin/pint --test",
+            "pnpm install --frozen-lockfile",
+            "pnpm build",
+            "pnpm audit --audit-level moderate"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",

@@ -35,13 +35,23 @@ class ConfigCheckControllerTest extends TestCase
         $this->assertContains('APP_URL must not be the localhost default in production.', $results['Application']['issues']);
         $this->assertContains('CACHE_STORE must be redis in production.', $results['Application']['issues']);
         $this->assertContains('CACHE_PREFIX must identify this deployment.', $results['Application']['issues']);
-        $this->assertContains('TRUSTED_PROXIES must contain the production proxy addresses.', $results['Application']['issues']);
         $this->assertContains('SESSION_SECURE_COOKIE must be enabled in production.', $results['Application']['issues']);
         $this->assertFalse($results['Active store']['ok']);
         $this->assertFalse($results['Order types']['ok']);
         $this->assertFalse($results['Tag policy']['ok']);
         $this->assertFalse($results['Mail']['ok']);
         $this->assertTrue($results['Notifications']['ok']);
+    }
+
+    public function test_contract_allows_production_without_a_reverse_proxy(): void
+    {
+        $store = Store::factory()->create();
+        config(['app.env' => 'production', 'app.debug' => false, 'app.url' => 'https://ops.example.com', 'security.trusted_proxies' => [], 'security.hsts' => true, 'session.secure' => true, 'cache.default' => 'redis', 'cache.prefix' => 'shopify_ops_prod:', 'queue.default' => 'redis']);
+
+        $results = collect(app(CheckConfiguration::class)->handle($store))->keyBy('name');
+
+        $this->assertTrue($results['Application']['ok']);
+        $this->assertEmpty($results['Application']['issues']);
     }
 
     public function test_contract_reports_healthy_mail_and_configured_notification_channels(): void
