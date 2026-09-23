@@ -58,4 +58,17 @@ class ActionLogControllerTest extends TestCase
 
         $this->assertStringContainsString('activitylog:clean', $commands);
     }
+
+    public function test_operator_actions_are_hidden_by_default_but_visible_via_category_filter(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $store = Store::factory()->create();
+        $admin->stores()->attach($store);
+        activity('administration')->causedBy($admin)->performedOn($store)->log('Admin change');
+        activity('operator-actions')->causedBy($admin)->performedOn($store)->log('Operator change');
+
+        $this->actingAs($admin)->get(route('admin.action-log'))->assertOk()->assertSeeText('Admin change')->assertDontSeeText('Operator change');
+        $this->actingAs($admin)->get(route('admin.action-log', ['category' => 'operator']))->assertOk()->assertSeeText('Operator change')->assertDontSeeText('Admin change');
+        $this->actingAs($admin)->get(route('admin.action-log', ['category' => 'all']))->assertOk()->assertSeeText('Admin change')->assertSeeText('Operator change');
+    }
 }

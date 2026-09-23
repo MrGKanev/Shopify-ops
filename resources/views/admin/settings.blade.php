@@ -31,9 +31,8 @@
                     </div>
                 @endforeach
                 <div class="mt-5 flex flex-wrap gap-4 text-sm font-semibold text-indigo-600 dark:text-indigo-400">
-                    <a href="{{ route('admin.slack-rules.edit') }}">Slack rules</a>
-                    <a href="{{ route('admin.discord-rules.edit') }}">Discord rules</a>
-                    <a href="{{ route('admin.email-rules.edit') }}">Email rules</a>
+                    <a href="{{ route('admin.slack-rules.edit') }}">Manage notification rules</a>
+                    <a href="{{ route('admin.webhook-health') }}">Webhook health</a>
                 </div>
             </x-card>
         </div>
@@ -116,9 +115,28 @@
         </x-card>
 
         <x-card>
-            <h2 class="text-xl font-bold">Security</h2>
-            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Login abuse is limited automatically by Laravel's per-email and per-IP throttle; there is no persistent IP ban list to maintain.</p>
-            <a class="mt-3 inline-block text-sm font-semibold text-indigo-600 dark:text-indigo-400" href="{{ route('admin.action-log') }}">View administration activity</a>
+            <div class="flex items-center justify-between gap-4">
+                <h2 class="text-xl font-bold">Security</h2>
+                <x-badge :tone="$bannedIpCount > 0 ? 'warn' : 'ok'">{{ $bannedIpCount }} banned {{ $bannedIpCount === 1 ? 'IP' : 'IPs' }}</x-badge>
+            </div>
+            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Login abuse is limited automatically by Laravel's per-email and per-IP throttle; repeat offenders are banned for 1 week.</p>
+            <div class="mt-3 flex flex-wrap gap-4 text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+                <a href="{{ route('admin.banned-ips.index') }}">Manage banned IPs</a>
+                <a href="{{ route('admin.action-log') }}">View administration activity</a>
+            </div>
+        </x-card>
+
+        <x-card>
+            <h2 class="text-xl font-bold">Operations</h2>
+            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Health, backups, and diagnostics installed in this admin.</p>
+            <div class="mt-3 flex flex-wrap gap-4 text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+                <a href="{{ route('admin.health') }}">Diagnostics</a>
+                <a href="{{ route('admin.health-incidents') }}">Incidents</a>
+                <a href="{{ route('admin.webhook-events') }}">Webhook events</a>
+                <a href="{{ route('admin.backups.index') }}">Backups</a>
+                <a href="{{ route('admin.stores.index') }}">Stores</a>
+                <a href="{{ route('admin.users.index') }}">Users</a>
+            </div>
         </x-card>
     </div>
 @endsection

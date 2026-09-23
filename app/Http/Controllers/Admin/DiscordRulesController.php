@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\BuildsNotificationRulesView;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DiscordRulesRequest;
 use App\Models\Store;
@@ -11,11 +12,13 @@ use Illuminate\View\View;
 
 class DiscordRulesController extends Controller
 {
+    use BuildsNotificationRulesView;
+
     public function edit(Request $request): View
     {
         $store = $this->store($request);
 
-        return view('admin.discord-rules', ['rules' => $store->resolvedDiscordRules(), 'configured' => trim((string) config('services.discord.notifications.webhook_url')) !== '']);
+        return view('admin.notification-rules', $this->notificationRulesViewData($store, 'discord'));
     }
 
     public function update(DiscordRulesRequest $request): RedirectResponse

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\BuildsNotificationRulesView;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SlackRulesRequest;
 use App\Models\Store;
@@ -11,11 +12,13 @@ use Illuminate\View\View;
 
 class SlackRulesController extends Controller
 {
+    use BuildsNotificationRulesView;
+
     public function edit(Request $request): View
     {
         $store = $this->store($request);
 
-        return view('admin.slack-rules', ['rules' => $store->resolvedSlackRules(), 'configured' => trim((string) config('services.slack.notifications.webhook_url')) !== '']);
+        return view('admin.notification-rules', $this->notificationRulesViewData($store, 'slack'));
     }
 
     public function update(SlackRulesRequest $request): RedirectResponse

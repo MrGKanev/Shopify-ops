@@ -18,6 +18,20 @@ class BackupOperationsTest extends TestCase
         $this->assertSame([], config('backup.notifications.notifications.'.BackupHasFailedNotification::class));
     }
 
+    public function test_an_empty_archive_password_env_value_normalizes_to_null(): void
+    {
+        $original = getenv('BACKUP_ARCHIVE_PASSWORD');
+
+        try {
+            putenv('BACKUP_ARCHIVE_PASSWORD=');
+            $config = require config_path('backup.php');
+
+            $this->assertNull($config['backup']['password']);
+        } finally {
+            putenv($original === false ? 'BACKUP_ARCHIVE_PASSWORD' : "BACKUP_ARCHIVE_PASSWORD={$original}");
+        }
+    }
+
     public function test_backup_operations_are_scheduled(): void
     {
         $commands = collect(app(Schedule::class)->events())

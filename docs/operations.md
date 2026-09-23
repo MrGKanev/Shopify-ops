@@ -107,7 +107,7 @@ For a focused test:
 php artisan test --compact tests/Feature/ActiveStoreControllerTest.php
 ```
 
-CI runs on pushes and pull requests to `master` with PHP 8.5, Node.js 24, and pnpm 11.15.1.
+CI runs on pushes and pull requests to `master` with PHP 8.5, Node.js 24, and pnpm 12.5.1.
 
 ## Production deployment
 

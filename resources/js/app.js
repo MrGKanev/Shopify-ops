@@ -15,6 +15,15 @@ syncThemeIcon();
 document.getElementById('js-theme-toggle')?.addEventListener('click', () => { const dark = document.documentElement.dataset.theme !== 'dark'; if (dark) document.documentElement.dataset.theme = 'dark'; else delete document.documentElement.dataset.theme; localStorage.setItem('theme', dark ? 'dark' : 'light'); syncThemeIcon(); });
 document.querySelector('[data-store-switcher] select')?.addEventListener('change', (event) => { event.currentTarget.form.action = event.currentTarget.value; event.currentTarget.form.submit(); });
 
+document.querySelectorAll('[data-tabs]').forEach((tabs) => {
+    tabs.querySelectorAll('[data-tab-target]').forEach((tab) => {
+        tab.addEventListener('click', () => {
+            tabs.querySelectorAll('[data-tab-target]').forEach((other) => other.setAttribute('aria-selected', other === tab ? 'true' : 'false'));
+            document.querySelectorAll('[data-tab-panel]').forEach((panel) => { panel.hidden = panel.dataset.tabPanel !== tab.dataset.tabTarget; });
+        });
+    });
+});
+
 const commandPalette = document.querySelector('[data-command-palette]');
 const commandInput = commandPalette?.querySelector('[data-command-palette-input]');
 const commandResults = commandPalette?.querySelector('[data-command-palette-results]');

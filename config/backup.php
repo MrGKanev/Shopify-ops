@@ -192,8 +192,13 @@ return [
         /*
          * The password to be used for archive encryption.
          * Set to `null` to disable encryption.
+         *
+         * Normalized to null on an empty string: Spatie only checks for
+         * null, so an unset-but-present BACKUP_ARCHIVE_PASSWORD= (the
+         * .env.example default) would otherwise enable encryption with an
+         * empty password and silently corrupt every archive on close.
          */
-        'password' => env('BACKUP_ARCHIVE_PASSWORD'),
+        'password' => env('BACKUP_ARCHIVE_PASSWORD') ?: null,
 
         /*
          * The encryption algorithm to be used for archive encryption.

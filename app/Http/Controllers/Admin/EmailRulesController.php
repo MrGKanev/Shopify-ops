@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\BuildsNotificationRulesView;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\EmailRulesRequest;
 use App\Models\Store;
@@ -11,15 +12,13 @@ use Illuminate\View\View;
 
 class EmailRulesController extends Controller
 {
+    use BuildsNotificationRulesView;
+
     public function edit(Request $request): View
     {
         $store = $this->store($request);
-        $rules = $store->resolvedEmailRules();
-        foreach (array_keys(config('tool-catalog')) as $tool) {
-            $rules[$tool] ??= ['mode' => 'off', 'threshold' => $tool === 'run_audit' ? 0 : 1, 'include_zero' => false, 'email' => ''];
-        }
 
-        return view('admin.email-rules', ['rules' => $rules, 'catalog' => config('tool-catalog'), 'defaultAlertEmail' => $store->default_alert_email]);
+        return view('admin.notification-rules', $this->notificationRulesViewData($store, 'email'));
     }
 
     public function update(EmailRulesRequest $request): RedirectResponse

@@ -5,7 +5,7 @@
 - PHP 8.5+ with `curl`, `mbstring`, `pdo_sqlite`, and the standard Laravel extensions
 - Composer
 - Node.js 24+
-- pnpm 11.15.1
+- pnpm 12.5.1
 - SQLite for the default setup
 - Redis for Horizon and the default production queue/cache configuration
 - `zip` support for backup archives

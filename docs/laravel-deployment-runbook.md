@@ -6,7 +6,7 @@
 balancer пред приложението (единичен сървър — ако това се промени, добави
 `TRUSTED_PROXIES` в `.env`, виж [`configuration.md`](configuration.md)).
 Приема се, че OS-ниво пакетите вече са инсталирани (PHP 8.5+ с нужните
-extensions, Composer, Node.js 24+/pnpm 11.15.1, nginx/apache + php-fpm,
+extensions, Composer, Node.js 24+/pnpm 12.5.1, nginx/apache + php-fpm,
 supervisor, git, и избраната database — SQLite или MySQL/MariaDB). Приложението
 живее в repo-то root ниво (няма отделна `laravel/` поддиректория). Този
 документ покрива само application-ниво настройката и routine deploy
