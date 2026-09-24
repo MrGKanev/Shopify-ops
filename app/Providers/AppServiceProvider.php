@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Application\Health\Checks\ShipStationApiHealthCheck;
+use App\Application\Health\Checks\ShopifyApiHealthCheck;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Integrations\Shopify\ShopifyAdminClient;
 use App\Listeners\AlertOnOperationalFailure;
@@ -65,6 +67,8 @@ class AppServiceProvider extends ServiceProvider
             UsedDiskSpaceCheck::new()->warnWhenUsedSpaceIsAbovePercentage(80)->failWhenUsedSpaceIsAbovePercentage(90),
             ScheduleCheck::new()->heartbeatMaxAgeInMinutes(5),
             QueueCheck::new()->failWhenHealthJobTakesLongerThanMinutes(10),
+            $this->app->make(ShopifyApiHealthCheck::class),
+            $this->app->make(ShipStationApiHealthCheck::class),
         ];
 
         if (config('queue.default') === 'redis') {

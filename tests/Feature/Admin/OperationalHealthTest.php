@@ -23,7 +23,7 @@ class OperationalHealthTest extends TestCase
 
         $this->artisan('health:check')->assertSuccessful();
 
-        $this->assertSame(['Backups', 'Cache', 'Database', 'Queue', 'Schedule', 'Used Disk Space'], HealthCheckResultHistoryItem::query()->orderBy('check_label')->pluck('check_label')->all());
+        $this->assertSame(['Backups', 'Cache', 'Database', 'Queue', 'Schedule', 'Ship Station Api Health', 'Shopify Api Health', 'Used Disk Space'], HealthCheckResultHistoryItem::query()->orderBy('check_label')->pluck('check_label')->all());
         $this->assertSame(
             [],
             HealthCheckResultHistoryItem::query()

@@ -27,7 +27,7 @@ class CheckApiHealth
     }
 
     /** @return array<string, mixed> */
-    private function checkShopify(Store $store): array
+    public function checkShopify(Store $store): array
     {
         if ($store->missingShopifyCredentials()) {
             return ['ok' => false, 'configured' => false, 'error' => 'Shopify credentials are incomplete.', 'latency_ms' => null, 'shop_name' => '', 'requested_version' => '', 'returned_version' => '', 'version_matches' => false, 'scopes' => [], 'missing_scopes' => []];
@@ -52,7 +52,7 @@ class CheckApiHealth
     }
 
     /** @return array<string, mixed> */
-    private function checkShipStation(Store $store): array
+    public function checkShipStation(Store $store): array
     {
         if ($store->missingShipStationCredentials()) {
             return ['ok' => false, 'configured' => false, 'error' => 'ShipStation credentials are incomplete.', 'latency_ms' => null];
