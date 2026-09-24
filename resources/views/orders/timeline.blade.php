@@ -11,9 +11,9 @@
         <form class="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:flex-row sm:items-end dark:border-slate-800 dark:bg-slate-900" method="GET" action="{{ route('orders.timeline') }}">
             <div class="flex flex-1 flex-col gap-2">
                 <label class="text-sm font-medium" for="order_number">Order number</label>
-                <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950" id="order_number" name="order_number" value="{{ old('order_number', $orderNumber) }}" placeholder="#100042" maxlength="64">
+                <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950" id="order_number" name="order_number" value="{{ old('order_number', $orderNumber) }}" placeholder="#100042" maxlength="64" aria-invalid="{{ $errors->has('order_number') ? 'true' : 'false' }}" @if ($errors->has('order_number')) aria-describedby="order-number-error" @endif>
                 @error('order_number')
-                    <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    <p class="text-sm text-red-600 dark:text-red-400" id="order-number-error" role="alert">{{ $message }}</p>
                 @enderror
             </div>
 

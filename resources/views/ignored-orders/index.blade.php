@@ -1,8 +1,87 @@
 @extends('layouts.app')
+
 @section('content')
-<div class="flex flex-col gap-6"><section><h1 class="text-3xl font-bold">Ignored Orders</h1><p class="mt-2 text-slate-500">{{ $orders->count() }} orders excluded from audits for this store.</p></section>
-<form class="grid gap-3 rounded-xl border bg-white p-5 sm:grid-cols-3 dark:bg-slate-900" method="POST" action="{{ route('ignored-orders.store') }}">@csrf<input class="rounded border px-3 py-2" name="order_number" placeholder="Order number"><input class="rounded border px-3 py-2" name="reason" placeholder="Reason (optional)"><button class="rounded bg-indigo-600 px-4 py-2 text-white">Ignore order</button>@error('order_number')<p class="text-red-600">{{ $message }}</p>@enderror</form>
-<form class="grid gap-3 rounded-xl border bg-white p-5 sm:grid-cols-3 dark:bg-slate-900" method="POST" enctype="multipart/form-data" action="{{ route('ignored-orders.import') }}">@csrf<input type="file" name="file" accept=".csv,text/csv"><input class="rounded border px-3 py-2" name="reason" placeholder="Import reason"><button class="rounded bg-indigo-600 px-4 py-2 text-white">Import CSV</button>@error('file')<p class="text-red-600">{{ $message }}</p>@enderror</form>
-@if($orders->isNotEmpty())<form id="bulk-unignore" method="POST" action="{{ route('ignored-orders.bulk-destroy') }}">@csrf @method('DELETE')<button class="rounded bg-red-600 px-4 py-2 text-white">Unignore selected</button></form>@endif
-<div class="overflow-x-auto rounded-xl border bg-white dark:bg-slate-900"><table class="min-w-full text-left text-sm"><thead><tr><th></th><th class="px-4 py-3">Order</th><th class="px-4 py-3">Ignored on</th><th class="px-4 py-3">Reason</th><th class="px-4 py-3">Recurrence</th><th></th></tr></thead><tbody>@forelse($orders as $order)@php($count = $recurrenceCounts[$order->order_number] ?? 0)<tr><td><input type="checkbox" name="ids[]" value="{{ $order->id }}" form="bulk-unignore"></td><td class="px-4 py-3">#{{ $order->order_number }}</td><td class="px-4 py-3">{{ $order->ignored_at->toDateString() }}</td><td class="px-4 py-3">{{ $order->reason ?: '-' }}</td><td class="px-4 py-3">@if($count >= 3)<span class="rounded bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">Hot · {{ $count }}</span>@elseif($count >= 2)<span class="rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">Recurring · {{ $count }}</span>@else—@endif</td><td><form method="POST" action="{{ route('ignored-orders.destroy', $order) }}">@csrf @method('DELETE')<button class="text-red-600">Unignore</button></form></td></tr>@empty<tr><td class="px-4 py-8 text-center text-slate-500" colspan="6">Nothing ignored yet.</td></tr>@endforelse</tbody></table></div></div>
+    <div class="flex flex-col gap-6">
+        <x-page-header title="Ignored Orders" :subtitle="$orders->count().' orders excluded from audits for this store.'" />
+
+        <x-card>
+            <form class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] sm:items-end" method="POST" action="{{ route('ignored-orders.store') }}">
+                @csrf
+                <div>
+                    <label class="text-sm font-medium" for="ignored-order-number">Order number</label>
+                    <input class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="ignored-order-number" name="order_number" value="{{ old('order_number') }}" @error('order_number') aria-invalid="true" aria-describedby="ignored-order-number-error" @enderror>
+                    @error('order_number')
+                        <p class="mt-1 text-sm text-red-600 dark:text-red-400" id="ignored-order-number-error">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div>
+                    <label class="text-sm font-medium" for="ignored-reason">Reason (optional)</label>
+                    <input class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="ignored-reason" name="reason" value="{{ old('reason') }}" @error('reason') aria-invalid="true" aria-describedby="ignored-reason-error" @enderror>
+                    @error('reason')
+                        <p class="mt-1 text-sm text-red-600 dark:text-red-400" id="ignored-reason-error">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div><x-button type="submit">Ignore order</x-button></div>
+            </form>
+        </x-card>
+
+        <x-card>
+            <form class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] sm:items-end" method="POST" enctype="multipart/form-data" action="{{ route('ignored-orders.import') }}">
+                @csrf
+                <div>
+                    <label class="text-sm font-medium" for="ignored-file">CSV file</label>
+                    <input class="mt-2 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" id="ignored-file" type="file" name="file" accept=".csv,text/csv" @error('file') aria-invalid="true" aria-describedby="ignored-file-error" @enderror>
+                    @error('file')
+                        <p class="mt-1 text-sm text-red-600 dark:text-red-400" id="ignored-file-error">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div>
+                    <label class="text-sm font-medium" for="import-reason">Import reason (optional)</label>
+                    <input class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="import-reason" name="reason" @error('reason') aria-invalid="true" aria-describedby="import-reason-error" @enderror>
+                    @error('reason')
+                        <p class="mt-1 text-sm text-red-600 dark:text-red-400" id="import-reason-error">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div><x-button type="submit">Import CSV</x-button></div>
+            </form>
+        </x-card>
+
+        @if ($orders->isNotEmpty())
+            <form id="bulk-unignore" method="POST" action="{{ route('ignored-orders.bulk-destroy') }}">
+                @csrf
+                @method('DELETE')
+                <x-button type="submit" variant="danger">Unignore selected</x-button>
+            </form>
+        @endif
+
+        <x-data-table :headers="['Select', 'Order', 'Ignored on', 'Reason', 'Recurrence', '']">
+            @forelse ($orders as $order)
+                @php($count = $recurrenceCounts[$order->order_number] ?? 0)
+                <tr>
+                    <td class="px-4 py-3"><input type="checkbox" name="ids[]" value="{{ $order->id }}" form="bulk-unignore" aria-label="Select order #{{ $order->order_number }}"></td>
+                    <td class="px-4 py-3 font-medium">#{{ $order->order_number }}</td>
+                    <td class="px-4 py-3">{{ $order->ignored_at->toDateString() }}</td>
+                    <td class="px-4 py-3">{{ $order->reason ?: '-' }}</td>
+                    <td class="px-4 py-3">
+                        @if ($count >= 3)
+                            <x-badge tone="danger">Hot · {{ $count }}</x-badge>
+                        @elseif ($count >= 2)
+                            <x-badge tone="warn">Recurring · {{ $count }}</x-badge>
+                        @else
+                            —
+                        @endif
+                    </td>
+                    <td class="px-4 py-3">
+                        <form method="POST" action="{{ route('ignored-orders.destroy', $order) }}">
+                            @csrf
+                            @method('DELETE')
+                            <x-button type="submit" size="sm" variant="danger">Unignore</x-button>
+                        </form>
+                    </td>
+                </tr>
+            @empty
+                <tr><td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="6">Nothing ignored yet.</td></tr>
+            @endforelse
+        </x-data-table>
+    </div>
 @endsection

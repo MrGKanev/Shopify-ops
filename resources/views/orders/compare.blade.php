@@ -11,17 +11,17 @@
         <form class="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:grid-cols-[1fr_1fr_auto] sm:items-end dark:border-slate-800 dark:bg-slate-900" method="GET" action="{{ route('orders.compare') }}">
             <div class="flex flex-col gap-2">
                 <label class="text-sm font-medium" for="order_a">Order A</label>
-                <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950" id="order_a" name="order_a" value="{{ old('order_a', $numberA) }}" placeholder="#100042" maxlength="64">
+                <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950" id="order_a" name="order_a" value="{{ old('order_a', $numberA) }}" placeholder="#100042" maxlength="64" aria-invalid="{{ $errors->has('order_a') ? 'true' : 'false' }}" @if ($errors->has('order_a')) aria-describedby="order-a-error" @endif>
                 @error('order_a')
-                    <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    <p class="text-sm text-red-600 dark:text-red-400" id="order-a-error" role="alert">{{ $message }}</p>
                 @enderror
             </div>
 
             <div class="flex flex-col gap-2">
                 <label class="text-sm font-medium" for="order_b">Order B</label>
-                <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950" id="order_b" name="order_b" value="{{ old('order_b', $numberB) }}" placeholder="#100043" maxlength="64">
+                <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950" id="order_b" name="order_b" value="{{ old('order_b', $numberB) }}" placeholder="#100043" maxlength="64" aria-invalid="{{ $errors->has('order_b') ? 'true' : 'false' }}" @if ($errors->has('order_b')) aria-describedby="order-b-error" @endif>
                 @error('order_b')
-                    <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    <p class="text-sm text-red-600 dark:text-red-400" id="order-b-error" role="alert">{{ $message }}</p>
                 @enderror
             </div>
 
@@ -60,17 +60,17 @@
                                 <th class="px-4 py-3 font-semibold">
                                     #{{ $result->numberA }}
                                     @if ($result->shopifyMatchCountA === 0)
-                                        <span class="font-normal text-slate-500">(not found)</span>
+                                        <span class="font-normal text-slate-500 dark:text-slate-400">(not found)</span>
                                     @elseif ($result->shopifyMatchCountA > 1)
-                                        <span class="font-normal text-amber-700">({{ $result->shopifyMatchCountA }} matches)</span>
+                                        <span class="font-normal text-amber-700 dark:text-amber-300">({{ $result->shopifyMatchCountA }} matches)</span>
                                     @endif
                                 </th>
                                 <th class="px-4 py-3 font-semibold">
                                     #{{ $result->numberB }}
                                     @if ($result->shopifyMatchCountB === 0)
-                                        <span class="font-normal text-slate-500">(not found)</span>
+                                        <span class="font-normal text-slate-500 dark:text-slate-400">(not found)</span>
                                     @elseif ($result->shopifyMatchCountB > 1)
-                                        <span class="font-normal text-amber-700">({{ $result->shopifyMatchCountB }} matches)</span>
+                                        <span class="font-normal text-amber-700 dark:text-amber-300">({{ $result->shopifyMatchCountB }} matches)</span>
                                     @endif
                                 </th>
                             </tr>

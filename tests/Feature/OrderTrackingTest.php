@@ -27,6 +27,16 @@ class OrderTrackingTest extends TestCase
         }
     }
 
+    public function test_validation_error_is_associated_with_the_orders_field(): void
+    {
+        [$user] = $this->makeUserAndStore();
+
+        $this->from(route('orders.tracking'))->actingAs($user)->followingRedirects()->post(route('orders.tracking.store'), ['orders' => '###'])
+            ->assertSee('aria-invalid="true"', false)
+            ->assertSee('aria-describedby="orders-error"', false)
+            ->assertSee('id="orders-error" role="alert"', false);
+    }
+
     public function test_tracks_unique_orders_with_real_shipments_and_escapes_upstream_text(): void
     {
         [$user, $store] = $this->makeUserAndStore();

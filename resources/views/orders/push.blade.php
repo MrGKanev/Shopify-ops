@@ -20,9 +20,9 @@
                 @csrf
                 <div class="flex grow flex-col gap-2">
                     <label class="text-sm font-medium" for="push_order_number">Order number</label>
-                    <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950" id="push_order_number" name="order_number" value="{{ old('order_number') }}" placeholder="#65075" maxlength="64">
+                    <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950" id="push_order_number" name="order_number" value="{{ old('order_number') }}" placeholder="#65075" maxlength="64" aria-invalid="{{ $errors->has('order_number') ? 'true' : 'false' }}" @if ($errors->has('order_number')) aria-describedby="push-order-number-error" @endif>
                     @error('order_number')
-                        <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                        <p class="text-sm text-red-600 dark:text-red-400" id="push-order-number-error" role="alert">{{ $message }}</p>
                     @enderror
                 </div>
                 <button class="rounded-lg border border-slate-300 px-5 py-2.5 font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800" type="button" id="push-preview-btn">Preview payload</button>
@@ -55,24 +55,24 @@
                 <div class="grid gap-3 sm:grid-cols-2">
                     <div class="flex flex-col gap-2">
                         <label class="text-sm font-medium" for="note_order_number">Order number</label>
-                        <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950" id="note_order_number" name="order_number" value="{{ old('order_number') }}" placeholder="#65075" maxlength="64">
+                        <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950" id="note_order_number" name="order_number" value="{{ old('order_number') }}" placeholder="#65075" maxlength="64" aria-invalid="{{ $errors->has('order_number') ? 'true' : 'false' }}" @if ($errors->has('order_number')) aria-describedby="note-order-number-error" @endif>
                         @error('order_number')
-                            <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                            <p class="text-sm text-red-600 dark:text-red-400" id="note-order-number-error" role="alert">{{ $message }}</p>
                         @enderror
                     </div>
                     <div class="flex flex-col gap-2">
                         <label class="text-sm font-medium" for="order_id">Shopify order ID</label>
-                        <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950" id="order_id" name="order_id" value="{{ old('order_id') }}" placeholder="65075001" maxlength="20">
+                        <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950" id="order_id" name="order_id" value="{{ old('order_id') }}" placeholder="65075001" maxlength="20" aria-invalid="{{ $errors->has('order_id') ? 'true' : 'false' }}" @if ($errors->has('order_id')) aria-describedby="order-id-error" @endif>
                         @error('order_id')
-                            <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                            <p class="text-sm text-red-600 dark:text-red-400" id="order-id-error" role="alert">{{ $message }}</p>
                         @enderror
                     </div>
                 </div>
                 <div class="flex flex-col gap-2">
                     <label class="text-sm font-medium" for="note">Note</label>
-                    <textarea class="min-h-24 rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950" id="note" name="note" maxlength="5000">{{ old('note') }}</textarea>
+                    <textarea class="min-h-24 rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950" id="note" name="note" maxlength="5000" aria-invalid="{{ $errors->has('note') ? 'true' : 'false' }}" @if ($errors->has('note')) aria-describedby="note-error" @endif>{{ old('note') }}</textarea>
                     @error('note')
-                        <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                        <p class="text-sm text-red-600 dark:text-red-400" id="note-error" role="alert">{{ $message }}</p>
                     @enderror
                 </div>
                 <div>

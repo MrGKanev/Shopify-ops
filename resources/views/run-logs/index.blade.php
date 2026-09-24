@@ -1,4 +1,36 @@
 @extends('layouts.app')
+
 @section('content')
-<div class="flex flex-col gap-6"><section><h1 class="text-3xl font-bold">Run History</h1><p class="mt-2 text-slate-500">Recent audit and scan executions for this store.</p></section><form class="flex gap-2" method="GET"><input class="rounded-lg border px-3 py-2" name="q" type="search" placeholder="Tool, status, or error" value="{{ $q }}"><button class="rounded-lg bg-indigo-600 px-4 py-2 text-white">Search</button></form><div class="overflow-x-auto rounded-xl border bg-white dark:bg-slate-900"><table class="min-w-full text-left text-sm"><thead><tr><th class="px-4 py-3">Time</th><th class="px-4 py-3">Tool</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Period</th><th class="px-4 py-3">Duration</th><th class="px-4 py-3">Rows</th><th class="px-4 py-3">Scanned</th><th class="px-4 py-3">Error / Meta</th></tr></thead><tbody>@forelse($runs as $run)<tr><td class="px-4 py-3">{{ $run->created_at->toDateTimeString() }}</td><td class="px-4 py-3">{{ $run->tool }}</td><td class="px-4 py-3">{{ $run->status }}</td><td class="px-4 py-3">{{ $run->start_date?->toDateString() ?: '-' }} → {{ $run->end_date?->toDateString() ?: '-' }}</td><td class="px-4 py-3">{{ $run->duration_seconds !== null ? $run->duration_seconds.'s' : '-' }}</td><td class="px-4 py-3">{{ $run->rows_found ?? '-' }}</td><td class="px-4 py-3">{{ $run->scanned ?? '-' }}</td><td class="px-4 py-3">{{ $run->error ?: collect($run->meta)->map(fn($value, $key) => $key.': '.(is_bool($value) ? ($value ? 'yes' : 'no') : $value))->implode(', ') ?: '-' }}</td></tr>@empty<tr><td class="px-4 py-8 text-center text-slate-500" colspan="8">No runs logged yet.</td></tr>@endforelse</tbody></table></div>{{ $runs->links() }}</div>
+    <div class="flex flex-col gap-6">
+        <x-page-header title="Run History" subtitle="Recent audit and scan executions for this store." />
+
+        <x-card>
+            <form class="flex flex-col gap-3 sm:flex-row sm:items-end" method="GET">
+                <div class="min-w-0 flex-1">
+                    <label class="text-sm font-medium" for="run-search">Tool, status, or error</label>
+                    <input class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="run-search" name="q" type="search" value="{{ $q }}">
+                </div>
+                <x-button type="submit">Search</x-button>
+            </form>
+        </x-card>
+
+        <x-data-table :headers="['Time', 'Tool', 'Status', 'Period', 'Duration', 'Rows', 'Scanned', 'Error / Meta']">
+            @forelse ($runs as $run)
+                <tr>
+                    <td class="px-4 py-3">{{ $run->created_at->toDateTimeString() }}</td>
+                    <td class="px-4 py-3">{{ $run->tool }}</td>
+                    <td class="px-4 py-3">{{ $run->status }}</td>
+                    <td class="px-4 py-3">{{ $run->start_date?->toDateString() ?: '-' }} → {{ $run->end_date?->toDateString() ?: '-' }}</td>
+                    <td class="px-4 py-3">{{ $run->duration_seconds !== null ? $run->duration_seconds.'s' : '-' }}</td>
+                    <td class="px-4 py-3">{{ $run->rows_found ?? '-' }}</td>
+                    <td class="px-4 py-3">{{ $run->scanned ?? '-' }}</td>
+                    <td class="px-4 py-3">{{ $run->error ?: collect($run->meta)->map(fn ($value, $key) => $key.': '.(is_bool($value) ? ($value ? 'yes' : 'no') : $value))->implode(', ') ?: '-' }}</td>
+                </tr>
+            @empty
+                <tr><td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="8">No runs logged yet.</td></tr>
+            @endforelse
+        </x-data-table>
+
+        {{ $runs->links() }}
+    </div>
 @endsection

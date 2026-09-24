@@ -13,24 +13,24 @@
 
             <div class="flex flex-col gap-2">
                 <label class="text-sm font-medium" for="orders">Order numbers</label>
-                <textarea class="min-h-36 rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950" id="orders" name="orders" placeholder="#100042&#10;#100043&#10;#100044" maxlength="4096">{{ old('orders', $ordersInput) }}</textarea>
+                <textarea class="min-h-36 rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950" id="orders" name="orders" placeholder="#100042&#10;#100043&#10;#100044" maxlength="4096" aria-invalid="{{ $errors->has('orders') ? 'true' : 'false' }}" @if ($errors->has('orders')) aria-describedby="orders-error" @endif>{{ old('orders', $ordersInput) }}</textarea>
                 @error('orders')
-                    <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    <p class="text-sm text-red-600 dark:text-red-400" id="orders-error" role="alert">{{ $message }}</p>
                 @enderror
             </div>
 
-            <fieldset class="flex flex-col gap-2">
+            <fieldset class="flex flex-col gap-2" @if ($errors->has('mode')) aria-describedby="mode-error" @endif>
                 <legend class="text-sm font-medium">Sources</legend>
                 <div class="flex flex-wrap gap-4 text-sm">
                     @foreach (['both' => 'Shopify & ShipStation', 'shopify' => 'Shopify only', 'shipstation' => 'ShipStation only'] as $value => $label)
                         <label class="flex items-center gap-2">
-                            <input name="mode" type="radio" value="{{ $value }}" @checked(old('mode', $mode) === $value)>
+                            <input name="mode" type="radio" aria-invalid="{{ $errors->has('mode') ? 'true' : 'false' }}" @if ($errors->has('mode')) aria-describedby="mode-error" @endif value="{{ $value }}" @checked(old('mode', $mode) === $value)>
                             <span>{{ $label }}</span>
                         </label>
                     @endforeach
                 </div>
                 @error('mode')
-                    <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    <p class="text-sm text-red-600 dark:text-red-400" id="mode-error" role="alert">{{ $message }}</p>
                 @enderror
             </fieldset>
 

@@ -18,9 +18,11 @@
                     value="{{ old('order_number', $orderNumber) }}"
                     placeholder="#65075"
                     maxlength="64"
+                    aria-invalid="{{ $errors->has('order_number') ? 'true' : 'false' }}"
+                    @if ($errors->has('order_number')) aria-describedby="order-number-error" @endif
                 >
                 @error('order_number')
-                    <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    <p class="text-sm text-red-600 dark:text-red-400" id="order-number-error" role="alert">{{ $message }}</p>
                 @enderror
             </div>
 

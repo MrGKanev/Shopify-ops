@@ -1,4 +1,64 @@
 @extends('layouts.app')
+
 @section('content')
-<div class="flex flex-col gap-6"><section><h1 class="text-3xl font-bold">Print Queue</h1><p class="mt-2 text-slate-500">Queue ShipStation orders for packing-slip printing.</p></section>@if(session('status'))<div class="rounded-xl bg-green-50 p-4">{{ session('status') }}</div>@endif<form class="flex flex-wrap gap-3 rounded-xl border p-5" method="POST">@csrf<div><label for="order_number">Order number</label><input class="block rounded-lg border px-3 py-2" id="order_number" name="order_number" required value="{{ old('order_number') }}">@error('order_number')<p class="text-red-600">{{ $message }}</p>@enderror</div><div class="flex-1"><label for="note">Note</label><input class="w-full rounded-lg border px-3 py-2" id="note" maxlength="255" name="note" value="{{ old('note') }}">@error('note')<p class="text-red-600">{{ $message }}</p>@enderror</div><button class="rounded-lg bg-indigo-600 px-5 py-2 text-white">Add</button></form><div class="flex justify-between"><h2 class="text-2xl font-bold">{{ $items->count() }} queued</h2>@if($items->isNotEmpty())<form method="POST" action="{{ route('print-queue.clear') }}">@csrf @method('DELETE')<button class="rounded-lg border px-4 py-2 text-red-600">Clear all</button></form>@endif</div><div class="overflow-x-auto rounded-xl border"><table class="min-w-full text-left"><thead><tr><th class="p-3">Order</th><th>Note</th><th>Queued</th><th>Actions</th></tr></thead><tbody>@forelse($items as $item)<tr><td class="p-3 font-semibold">{{ $item->order_number }}</td><td>{{ $item->note ?: '—' }}</td><td>{{ $item->created_at->toDateTimeString() }}</td><td class="flex gap-3 py-3"><a class="text-indigo-600" href="{{ route('orders.packing-slip',['order'=>$item->order_number]) }}" target="_blank" rel="noopener">Print</a><a class="text-indigo-600" href="{{ route('orders.spot-check',['prefill'=>$item->order_number]) }}">Spot-check</a><form method="POST" action="{{ route('print-queue.destroy',$item) }}">@csrf @method('DELETE')<button class="text-red-600">Remove</button></form></td></tr>@empty<tr><td class="p-6 text-center" colspan="4">Queue is empty.</td></tr>@endforelse</tbody></table></div></div>
+    <div class="flex flex-col gap-6">
+        <x-page-header title="Print Queue" subtitle="Queue ShipStation orders for packing-slip printing." />
+
+        <x-card>
+            <form class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] sm:items-end" method="POST">
+                @csrf
+                <div>
+                    <label class="text-sm font-medium" for="order_number">Order number</label>
+                    <input class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="order_number" name="order_number" required value="{{ old('order_number') }}" @error('order_number') aria-invalid="true" aria-describedby="order-number-error" @enderror>
+                    @error('order_number')
+                        <p class="mt-1 text-sm text-red-600 dark:text-red-400" id="order-number-error">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div>
+                    <label class="text-sm font-medium" for="note">Note</label>
+                    <input class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="note" maxlength="255" name="note" value="{{ old('note') }}" @error('note') aria-invalid="true" aria-describedby="note-error" @enderror>
+                    @error('note')
+                        <p class="mt-1 text-sm text-red-600 dark:text-red-400" id="note-error">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div><x-button type="submit">Add</x-button></div>
+            </form>
+        </x-card>
+
+        <section class="flex flex-col gap-4" aria-labelledby="queued-heading">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <h2 class="text-2xl font-bold" id="queued-heading">{{ $items->count() }} queued</h2>
+                @if ($items->isNotEmpty())
+                    <form method="POST" action="{{ route('print-queue.clear') }}">
+                        @csrf
+                        @method('DELETE')
+                        <x-button type="submit" variant="danger">Clear all</x-button>
+                    </form>
+                @endif
+            </div>
+
+            <x-data-table :headers="['Order', 'Note', 'Queued', 'Actions']">
+                @forelse ($items as $item)
+                    <tr>
+                        <td class="px-4 py-3 font-semibold">{{ $item->order_number }}</td>
+                        <td class="px-4 py-3">{{ $item->note ?: '—' }}</td>
+                        <td class="px-4 py-3">{{ $item->created_at->toDateTimeString() }}</td>
+                        <td class="px-4 py-3">
+                            <div class="flex flex-wrap items-center gap-3">
+                                <a class="font-medium text-indigo-600 hover:underline dark:text-indigo-400" href="{{ route('orders.packing-slip', ['order' => $item->order_number]) }}" target="_blank" rel="noopener noreferrer">Print</a>
+                                <a class="font-medium text-indigo-600 hover:underline dark:text-indigo-400" href="{{ route('orders.spot-check', ['prefill' => $item->order_number]) }}">Spot-check</a>
+                                <form method="POST" action="{{ route('print-queue.destroy', $item) }}">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="font-medium text-red-600 hover:underline dark:text-red-400" type="submit">Remove</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="4">Queue is empty.</td></tr>
+                @endforelse
+            </x-data-table>
+        </section>
+    </div>
 @endsection
