@@ -95,6 +95,7 @@ use App\Http\Controllers\RunLogController;
 use App\Http\Controllers\SavedReportController;
 use App\Http\Controllers\ShopifyWebhookController;
 use App\Http\Controllers\StatusController;
+use App\Http\Controllers\TwoFactorSettingsController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard');
@@ -120,6 +121,7 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/security/two-factor', TwoFactorSettingsController::class)->middleware('active.store')->name('two-factor.settings');
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::post('/stores/{store}/active', ActiveStoreController::class)->name('stores.active');
 

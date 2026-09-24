@@ -48,6 +48,11 @@ class GoogleAuthenticationController extends Controller
                 return redirect()->route('login')->withErrors(['google' => 'Your account has not been granted access.']);
             }
             $user->forceFill(['google_id' => $googleId, 'email_verified_at' => $user->email_verified_at ?? now()])->save();
+            if ($user->hasEnabledTwoFactorAuthentication()) {
+                $request->session()->put(['login.id' => $user->getKey(), 'login.remember' => false]);
+
+                return redirect()->route('two-factor.login');
+            }
             Auth::login($user);
             $request->session()->regenerate();
 

@@ -38,7 +38,7 @@ const renderCommandResults = () => {
     if (commandItems.length === 0) {
         const empty = document.createElement('p');
         empty.className = 'command-palette-empty';
-        empty.textContent = 'No matching pages, issues or runs.';
+        empty.textContent = 'No matching results.';
         commandResults.append(empty);
         return;
     }

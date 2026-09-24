@@ -3,7 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Install {{ config('app.name') }}</title>
+    <title>Install {{ config('app.name') }} · Internal Tools</title>
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-canvas text-ink">

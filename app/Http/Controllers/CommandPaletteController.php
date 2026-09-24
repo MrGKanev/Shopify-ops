@@ -42,7 +42,66 @@ class CommandPaletteController extends Controller
                     'url' => route('run-logs.index', ['q' => $run->tool]),
                     'kind' => 'Run',
                 ]);
-            $commands = $commands->concat($issues)->concat($runs)->take(15)->values();
+            $reports = $store->auditSnapshots()
+                ->whereLike('tool', "%{$query}%")
+                ->latest('report_date')
+                ->limit(5)
+                ->get(['id', 'tool', 'report_date', 'rows_found'])
+                ->map(fn ($report): array => [
+                    'label' => Str::headline($report->tool),
+                    'description' => $report->report_date->toDateString().' · '.$report->rows_found.' results',
+                    'url' => route('saved-reports.show', $report),
+                    'kind' => 'Report',
+                ]);
+            $pushedOrders = $store->pushLogs()
+                ->where(fn ($builder) => $builder->whereLike('order_number', "%{$query}%")->orWhere('shopify_id', $query)->orWhere('shipstation_order_id', $query))
+                ->latest('pushed_at')
+                ->limit(5)
+                ->get(['order_number', 'shopify_id', 'shipstation_order_id', 'pushed_at'])
+                ->map(fn ($order): array => [
+                    'label' => '#'.$order->order_number,
+                    'description' => 'Pushed order · '.$order->pushed_at->diffForHumans(),
+                    'url' => route('push-logs.index', ['q' => $order->order_number]),
+                    'kind' => 'Order',
+                ]);
+            $ignoredOrders = $store->ignoredOrders()
+                ->where(fn ($builder) => $builder->whereLike('order_number', "%{$query}%")->orWhereLike('reason', "%{$query}%"))
+                ->latest('ignored_at')
+                ->limit(5)
+                ->get(['order_number', 'reason'])
+                ->map(fn ($order): array => [
+                    'label' => '#'.$order->order_number,
+                    'description' => 'Ignored order'.($order->reason !== '' ? ' · '.$order->reason : ''),
+                    'url' => route('ignored-orders.index'),
+                    'kind' => 'Order',
+                ]);
+            $printQueue = $store->printQueueItems()
+                ->where(fn ($builder) => $builder->whereLike('order_number', "%{$query}%")->orWhereLike('note', "%{$query}%"))
+                ->oldest()
+                ->limit(5)
+                ->get(['order_number', 'note'])
+                ->map(fn ($order): array => [
+                    'label' => '#'.$order->order_number,
+                    'description' => 'Print queue'.($order->note !== '' ? ' · '.$order->note : ''),
+                    'url' => route('print-queue.index'),
+                    'kind' => 'Order',
+                ]);
+            $commands = $commands->concat($issues)->concat($runs)->concat($reports)->concat($pushedOrders)->concat($ignoredOrders)->concat($printQueue)->take(15)->values();
+        }
+
+        $orderNumber = preg_replace('/\D+/', '', $query) ?? '';
+        if ($orderNumber !== '') {
+            $commands = $commands->prepend([
+                'label' => 'Look up order #'.$orderNumber,
+                'description' => 'Search Shopify and ShipStation',
+                'url' => route('orders.lookup', ['order_number' => $orderNumber]),
+                'kind' => 'Order',
+            ])->prepend([
+                'label' => 'Search local history for #'.$orderNumber,
+                'description' => 'Saved reports, pushed and ignored orders',
+                'url' => route('global-search', ['q' => $orderNumber]),
+                'kind' => 'Order',
+            ])->take(15)->values();
         }
 
         return response()->json(['results' => $commands]);
@@ -62,13 +121,35 @@ class CommandPaletteController extends Controller
             ['label' => 'Global order search', 'description' => 'Search local order history', 'url' => route('global-search'), 'keywords' => 'global search orders търсене'],
         ];
 
+        foreach ([config('audit-hub'), config('search-hub')] as $hub) {
+            foreach ($hub as $section => $links) {
+                foreach ($links as $link) {
+                    $commands[] = [
+                        'label' => $link['label'],
+                        'description' => $section.' tool',
+                        'url' => route($link['route']),
+                        'keywords' => Str::lower($section.' '.$link['label']),
+                    ];
+                }
+            }
+        }
+
         if (Gate::allows('manage-administration')) {
             $commands = [...$commands,
                 ['label' => 'System health', 'description' => 'Check Laravel and infrastructure', 'url' => route('admin.health'), 'keywords' => 'health status system здраве'],
                 ['label' => 'Health incidents', 'description' => 'Review outages and recoveries', 'url' => route('admin.health-incidents'), 'keywords' => 'health incidents downtime outage история инциденти'],
                 ['label' => 'Backups', 'description' => 'Create and inspect backups', 'url' => route('admin.backups.index'), 'keywords' => 'backup restore архив'],
+                ['label' => 'Configuration check', 'description' => 'Validate application configuration', 'url' => route('admin.config-check'), 'keywords' => 'configuration config settings диагностика'],
+                ['label' => 'API health', 'description' => 'Check Shopify, ShipStation and notifications', 'url' => route('admin.api-health'), 'keywords' => 'api health shopify shipstation'],
+                ['label' => 'Webhook health', 'description' => 'Check webhook delivery', 'url' => route('admin.webhook-health'), 'keywords' => 'webhook health'],
                 ['label' => 'Webhook events', 'description' => 'Inspect incoming Shopify events', 'url' => route('admin.webhook-events'), 'keywords' => 'webhook shopify events събития'],
+                ['label' => 'Slack notifications', 'description' => 'Configure Slack notification rules', 'url' => route('admin.slack-rules.edit'), 'keywords' => 'slack notification rules'],
+                ['label' => 'Discord notifications', 'description' => 'Configure Discord notification rules', 'url' => route('admin.discord-rules.edit'), 'keywords' => 'discord notification rules'],
+                ['label' => 'Email notifications', 'description' => 'Configure email notification rules', 'url' => route('admin.email-rules.edit'), 'keywords' => 'email notification rules'],
                 ['label' => 'Stores', 'description' => 'Manage connected stores', 'url' => route('admin.stores.index'), 'keywords' => 'stores settings магазини'],
+                ['label' => 'Users', 'description' => 'Manage user access', 'url' => route('admin.users.index'), 'keywords' => 'users access roles'],
+                ['label' => 'Action log', 'description' => 'Review administrative actions', 'url' => route('admin.action-log'), 'keywords' => 'activity action log'],
+                ['label' => 'Banned IPs', 'description' => 'Manage blocked IP addresses', 'url' => route('admin.banned-ips.index'), 'keywords' => 'banned blocked ip security'],
                 ['label' => 'Settings', 'description' => 'Application configuration', 'url' => route('admin.settings'), 'keywords' => 'settings config настройки'],
             ];
         }

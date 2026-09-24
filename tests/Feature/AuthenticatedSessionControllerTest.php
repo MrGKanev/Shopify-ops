@@ -124,6 +124,17 @@ class AuthenticatedSessionControllerTest extends TestCase
         $response->assertRedirect(route('dashboard'));
     }
 
+    public function test_authenticated_user_with_an_active_store_can_open_two_factor_settings(): void
+    {
+        $user = User::factory()->create();
+        $store = Store::factory()->create();
+        $user->stores()->attach($store);
+
+        $this->actingAs($user)->get(route('two-factor.settings'))
+            ->assertOk()
+            ->assertSeeText('Two-factor authentication');
+    }
+
     public function test_logout_invalidates_the_authenticated_session(): void
     {
         $user = User::factory()->create();

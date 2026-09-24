@@ -35,12 +35,37 @@ class CommandPaletteControllerTest extends TestCase
 
         $response = $this->actingAs($operator)->getJson(route('command-palette', ['q' => 'refund']))
             ->assertOk()
-            ->assertJsonPath('results.0.label', 'Refund needs attention')
+            ->assertJsonFragment(['label' => 'Refund needs attention', 'kind' => 'Issue'])
             ->assertJsonFragment(['label' => 'Refund Tracker', 'kind' => 'Run'])
             ->assertJsonMissing(['label' => 'Refund from another store'])
             ->assertJsonMissing(['label' => 'Refund Other Store']);
 
-        $this->assertStringContainsString('#issue-'.$issue->getKey(), $response->json('results.0.url'));
+        $issueResult = collect($response->json('results'))->firstWhere('label', 'Refund needs attention');
+
+        $this->assertSame(route('operational-issues.index').'#issue-'.$issue->getKey(), $issueResult['url']);
+    }
+
+    public function test_it_searches_local_orders_and_reports_with_store_isolation(): void
+    {
+        [$operator, $store] = $this->makeUserAndStore(true);
+        [, $otherStore] = $this->makeUserAndStore(true);
+        $report = $store->auditSnapshots()->create(['tool' => 'refund_audit', 'report_date' => '2026-09-09', 'start_date' => '2026-09-01', 'end_date' => '2026-09-09', 'rows_found' => 1, 'result' => []]);
+        $store->pushLogs()->create(['order_number' => '4401', 'shopify_id' => '1', 'pushed_at' => now()]);
+        $store->ignoredOrders()->create(['order_number' => '4402', 'reason' => 'Refund requested', 'ignored_at' => today()]);
+        $store->printQueueItems()->create(['order_number' => '4403', 'note' => 'Refund paperwork']);
+        $otherStore->pushLogs()->create(['order_number' => '4404', 'shopify_id' => '2', 'pushed_at' => now()]);
+
+        $this->actingAs($operator)->getJson(route('command-palette', ['q' => 'refund']))
+            ->assertJsonFragment(['label' => 'Refund Audit', 'kind' => 'Report'])
+            ->assertJsonFragment(['label' => '#4402', 'kind' => 'Order'])
+            ->assertJsonFragment(['label' => '#4403', 'kind' => 'Order'])
+            ->assertJsonFragment(['url' => route('saved-reports.show', $report)])
+            ->assertJsonMissing(['label' => '#4404']);
+
+        $this->actingAs($operator)->getJson(route('command-palette', ['q' => '4401']))
+            ->assertJsonFragment(['label' => '#4401', 'kind' => 'Order'])
+            ->assertJsonFragment(['url' => route('orders.lookup', ['order_number' => '4401'])])
+            ->assertJsonFragment(['url' => route('global-search', ['q' => '4401'])]);
     }
 
     public function test_admin_navigation_is_not_exposed_to_operators(): void
@@ -54,6 +79,9 @@ class CommandPaletteControllerTest extends TestCase
         $this->actingAs($administrator)->getJson(route('command-palette', ['q' => 'backup']))
             ->assertOk()
             ->assertJsonFragment(['label' => 'Backups', 'kind' => 'Page']);
+        $this->actingAs($administrator)->getJson(route('command-palette', ['q' => 'disco']))
+            ->assertOk()
+            ->assertJsonFragment(['label' => 'Discord notifications', 'url' => route('admin.discord-rules.edit'), 'kind' => 'Page']);
     }
 
     public function test_layout_includes_the_keyboard_accessible_palette_for_operators(): void

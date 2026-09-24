@@ -33,7 +33,7 @@ class AppearanceSettingsControllerTest extends TestCase
         $this->assertSame(3, count(AppSetting::current()->custom_links));
 
         $this->actingAs($admin)->get(route('dashboard'))
-            ->assertSee('<title>Operations HQ</title>', false)
+            ->assertSee('<title>Operations HQ · Internal Tools</title>', false)
             ->assertSeeText('Handbook')
             ->assertSeeText('Runbook')
             ->assertSeeText('Admin docs')

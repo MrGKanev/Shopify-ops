@@ -67,6 +67,14 @@ class AuthenticatedSessionController extends Controller
                 ->onlyInput('email');
         }
 
+        $user = $request->user();
+        if ($user?->hasEnabledTwoFactorAuthentication()) {
+            Auth::logout();
+            $request->session()->put(['login.id' => $user->getKey(), 'login.remember' => false]);
+
+            return redirect()->route('two-factor.login');
+        }
+
         $throttle->recordSuccess($ip);
         $request->session()->regenerate();
 
