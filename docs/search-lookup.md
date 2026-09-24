@@ -1,13 +1,19 @@
 # Search & Lookup
 
-Tools for live inspection of orders, customers, and catalogue data. Most of these pages hit the API directly and bypass the cache (marked **live**); a few use cached data where noted.
+Tools for inspecting orders, customers, and catalogue data. Shopify and
+ShipStation lookups fetch fresh API data for each request; their results are
+not stored in the application cache. **Global Search** is different: it reads
+previously saved audit snapshots, push logs, and ignored orders from the local
+database, so it does not represent the current state of either external API.
+The application cache is used for operational concerns such as locks and
+health heartbeats, not search or report results.
 
 ---
 
 ## Orders
 
 ### Spot-check
-Live lookup of 1–50 order numbers across ShipStation and/or Shopify simultaneously. Never cached.
+Fresh lookup of 1–50 order numbers across ShipStation and/or Shopify simultaneously.
 
 - Three modes: both platforms (default), ShipStation only, Shopify only
 - Shows found/not-found per platform with order status and total
@@ -39,7 +45,8 @@ Looks up 1–30 order numbers in ShipStation and returns shipment details.
 - Orders not yet shipped show current ShipStation status instead
 
 ### Packing Slip Preview
-Fetches and renders a ShipStation packing slip for any order. Live call, not cached. Print-optimised (sidebar and topbar hidden in print mode).
+Fetches and renders a ShipStation packing slip for any order on each request.
+Print-optimised (sidebar and topbar hidden in print mode).
 
 - Displays: warehouse address, ship-to address, order metadata, line items with options
 - Detects and decodes a known ShipStation bug where item options are stored as a JSON string
@@ -64,7 +71,6 @@ Shows the complete order history for a customer, looked up by email address.
 - Tag cloud aggregates all tags across all orders, sorted by frequency
 - Expandable order rows: line items, shipping address, shipping method, discounts, financial summary
 - Each order links to Spot-check for ShipStation cross-reference
-- Export to CSV (`customer-[email].csv`)
 - Truncation warning shown for stores with 250+ orders per customer
 
 ### Customer LTV
@@ -85,7 +91,7 @@ Three modes on one page:
 2. **Search by value** - paginate through orders in a date range filtered by namespace + key, optionally by value. Leave value empty to find all orders that have a given metafield set at all. Scans up to 2,500 orders.
 3. **Lookup by order number** - fetch all metafields on one or more specific orders, filterable by namespace.key or value substring
 
-Live API calls, not cached.
+Each search or lookup makes a fresh API request.
 
 ### Tag Search
 Finds all Shopify orders carrying a specific tag using Shopify's native tag index (`tag:"value"` in the GraphQL query string). No full table scan - fast regardless of store size.

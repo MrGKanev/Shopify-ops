@@ -18,11 +18,15 @@
 
 - [Operations](operations.md) — queues, scheduled tasks, health, backups, dev checks
 - [Deployment runbook](laravel-deployment-runbook.md) — production provisioning and releases
+- [Production UAT checklist](laravel-uat-cutover-checklist.md) — rehearsal evidence and release sign-off
 - [Architecture](architecture.md) — project structure
 
 ## Engineering history
 
-Internal records from the legacy PHP → Laravel rewrite. Not needed to use or operate the app. The rewrite is complete and the legacy codebase is gone; the parity-comparison audit, UAT/cutover checklist, and old test-count audit were removed as they compared against code that no longer exists.
+The legacy PHP → Laravel comparison records are available at a verified Git
+revision. Their parity verdicts and test counts are historical; the current
+CI workflow and production UAT evidence determine release readiness.
 
-- [Laravel rewrite TODO](laravel-todo.md) — remaining open product decisions
+- [Migration history](migration-history.md) — archive paths, revision, and limits
+- [Laravel rewrite TODO](laravel-todo.md) — migration decisions and operational follow-up
 - [Design consistency plan](frontend-design-consistency-plan.md)

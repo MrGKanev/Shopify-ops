@@ -1,193 +1,76 @@
-# Laravel rewrite — отворени задачи
+# Активен backlog след Laravel миграцията
 
-Последно обновяване: **2026-09-22**. Cutover-ът е завършен и потвърден:
-legacy PHP кодът (`src/`, `laravel/`, `order_types.json` на root ниво) вече не
-съществува в repo-то. Историческият parity/decision log
-(`parity-verification.md`, `laravel-test-audit.md`, UAT rehearsal чеклистът и
-`docs/superpowers/`) беше премахнат заедно с това обновяване — сравнението
-беше срещу код, който вече не съществува, и повече не носи стойност. За
-доказателство, че текущият код работи, виж [`operations.md`](operations.md#local-test-build)
-за локалния test-build процес.
+Последно прегледано: **2026-09-24**. Repository cutover-ът към Laravel в root
+е приключил. Това не удостоверява production sign-off. Историческите parity
+решения и старите планове са достъпни през [архивния индекс](migration-history.md).
+„Реализирано“ по-долу означава потвърден код и намерени тестове, а не успешно
+изпълнение на текущия test suite или проверка в production.
 
-Списък със самостоятелни отворени product-decision задачи, всяка от които не
-изисква преработка на съседен код. По-старите self-reported "72/72 Done"
-одитни документи (`laravel-platform-audit.md`, `laravel-rewrite.md`) бяха
-премахнати на 2026-09-14 — техните твърдения не бяха доказани изпълнимо и в
-няколко реда бяха грешни (виж по-долу).
+## P1 — доказателства преди production sign-off
 
-## Продуктови решения (от независимия одит) — ЗАТВОРЕНИ 2026-09-14
+Следи подробните стъпки и запиши резултатите в
+[UAT checklist-а](laravel-uat-cutover-checklist.md):
 
-- [x] **Email Rules catalog за fresh store** — legacy винаги показва целия
-      `ToolRegistry::triggerCatalog()`, а Laravel извлича tool-овете от вече
-      съществуващи `run_logs` и добавя само `run_audit`. Така scan правило не
-      може да се настрои преди първото изпълнение. Нужно е едно canonical
-      Laravel tool catalog с default `off` правило за всеки entry; същият
-      catalog може да захрани и непълната Audit навигация.
+- [ ] Потвърди успешния [CI release gate](laravel-deployment-runbook.md#release-gate)
+  за точния deploy commit и запази run ID/резултатите.
+- [ ] Провери SMTP доставка в staging: изричен rule recipient, fallback към
+  store default alert email, получено съобщение и поведение при грешка.
+- [ ] Проведи backup и restore репетиция в изолирана среда: database, private
+  files, правилния `APP_KEY`, decrypt на store credentials, права и boot.
+- [ ] Провери HTTPS през реалния deployment път: scheme, client IP, secure
+  cookies, HSTS и trusted proxies, когато има reverse proxy.
+- [ ] Потвърди работещи Horizon worker, scheduler, alerts и избрания
+  observability backend/получатели в целевата среда.
+- [ ] Документирай две production-like UAT репетиции или приложи съществуващи
+  доказателства: дата, среда, commit, dataset, дефекти, owner и sign-off.
 
-- [x] **Saved Reports / Ignored Orders / Job Queue губят operational context** —
-      Saved Reports няма history chart, recurrence badges, investigation
-      actions, ignore и same-day re-audit; Ignored Orders няма `seen in
-      reports`; Job Queue не показва sanitized payload/result/error summary за
-      завършен audit. Laravel подобрява scope/pagination/retry/Horizon, но е
-      нужно да се избере кой от липсващия контекст реално трябва за cutover.
+## P2 — продуктови уточнения
 
-- [x] **Приемане на по-строгите Note Flags / Duplicate Addresses / Spot-check
-      semantics** — Laravel deduplicate-ва и Unicode-normalize-ва note
-      keywords, използва full-country fallback срещу cross-country address
-      false positives, и canonicalize/validate/deduplicate-ва Spot-check
-      входа. Това са тествани correctness подобрения; не изискват код, а
-      изрично приемане като отклонения преди cutover.
+Тези точки изискват изрично продуктово решение преди промяна на поведението:
 
-- [x] **Dashboard е по-тесен от legacy оперативния overview** — Laravel пази
-      основните audit/push/ignored числа и action queue, но няма audit cadence,
-      average resolution time, stale ignored, oldest missing, missing-by-type,
-      7-day audit история и cache freshness/flush. Да се изберат реално
-      използваните сигнали за портване или по-малкият dashboard да се приеме
-      изрично преди legacy cutover.
+- [ ] **Dashboard chart:** текущият controller показва последните седем
+  audit snapshot записа (`$recent->slice(-7)`), а UI ги обозначава като
+  „Last N audits“. Потвърди дали това покрива продуктовата нужда, или е
+  необходима агрегация по седем календарни дни, включително дни без отчет.
+- [ ] **Bulk-ignore извън Run Audit:** избор на няколко поръчки с обща причина
+  е реализиран в Run Audit. Реши дали е нужен и в други report изгледи;
+  старият legacy списък сам по себе си не е текущо изискване.
+- [ ] **Date range в log search:** Push Log и Run History имат server-side
+  `q` търсене с запазване при pagination. Реши дали е нужен отделен date-range
+  filter; текущото `q` не го предоставя.
 
-- [x] **Trends е само timeline, без legacy aggregate/repeat-offender анализа** —
-      Laravel показва date-filtered missing counts и delta, но не изчислява
-      average/worst/clear reports, unique missing или top repeat offenders.
-      Нужно е решение дали тези анализи да се върнат, или опростеният timeline
-      е достатъчен.
+## P2 — интерфейс
 
-- [x] **Settings няма Sidebar History controls** — legacy пази два toggle-а за
-      Missing Orders и Recent Activity sidebar секциите; Laravel няма нито
-      секциите, нито настройките им. Това е консистентно премахване, но трябва
-      да бъде прието изрично, ако тези бързи sidebar справки вече не трябват.
+- [ ] Изпълни [остатъчния UI план](frontend-design-consistency-plan.md):
+  browser проверка на light/dark, mobile, forms, tables и empty/error states,
+  следвана от измерен CSS usage audit преди cleanup.
 
-- [x] **Print Queue canonicalize-ва водещ `#`** — legacy пази въведения
-      `#ORD-002`, Laravel го записва като `ORD-002`. Това прави lookup-а и
-      deduplication-а по-предвидими и не е върнато назад; нужно е само изрично
-      приемане като намерено отклонение преди cutover.
+## Приключени решения — кратък запис
 
-- [x] **Audit/Search discovery навигацията е непълна** — legacy Audit hub
-      показва 46 групирани инструмента, а Laravel audit sidebar показва 12;
-      route-овете съществуват, но много отчети нямат видим вход. Search пази
-      8 от 10 legacy entries и добавя 3 полезни нови, но Customer LTV и Tag
-      Audit са преместени към audit route-ове без да присъстват и в audit
-      списъка. Нужно е пълен grouped hub/sidebar или изрично решение кои
-      инструменти могат да останат достъпни само по URL.
+- **Operator flows:** Action Log обхваща operator mutations; Job Queue показва
+  резултат/категория грешка; Saved Reports има history, recurrence и quick
+  actions; Ignored Orders показва recurrence. Търсенето `q` е реализирано за
+  Push Log и Run History.
+- **Audit и reports:** Dashboard има cadence, resolution, stale ignored,
+  oldest missing, type breakdown, chart и cache flush; Trends има агрегати и
+  repeat offenders. Run Audit има отделен 24-часов inline duplicates panel и
+  bulk-ignore по избор. High-Value No Phone има `ALL` currency option.
+- **Навигация и известия:** Audit/Search hubs са групирани; Email Rules ползва
+  tool catalog и store default alert email; Slack/Discord audit и scan
+  известията имат структурирано съдържание. Fraud risk signals включват
+  точки за всеки сигнал.
+- **Приети отклонения:** по-строгите Note Flags, Duplicate Addresses и
+  Spot-check правила, премахнатите Sidebar History controls и нормализирането
+  на водещ `#` в Print Queue остават взети продуктови решения. Възстановяването
+  на legacy поведение би било нова задача.
+- **Operational код:** security headers/cookies, optional trusted proxies,
+  readiness checks, structured logs, alerts, Redis/Horizon, backup verification
+  и `backup:restore` са реализирани. Реалната работа и доставка в deployment
+  средата се проверяват в P1 по-горе.
+- **Продуктова документация:** [audit-checks.md](audit-checks.md) изброява
+  инструментите с CSV download; [search-lookup.md](search-lookup.md) описва
+  fresh API reads и локалните данни в Global Search.
 
-- [x] **Action Log изпуска нормалните operator mutations** — Laravel
-      `administration` log покрива основно User/Store промени и няколко admin
-      събития, но не записва ignore/unignore/import, push, print queue,
-      queue audit, note save, store switch и cache flush. Да се определи кои
-      от тези действия изискват audit trail и да се логнат в общите им write
-      paths преди махането на legacy.
-
-- [x] **Push Log и Run History нямат филтър** — данните, newest-first редът,
-      cap-ът на run history и store scope са запазени/подобрени, но legacy
-      позволява моментно търсене по order/tool/status/date/error. Добавяне на
-      един server-side `q` филтър е достатъчно, ако операторите го ползват;
-      иначе pagination-only поведението трябва да се приеме изрично.
-
-- [x] **Bulk-ignore от чекбокси на report изгледи** — legacy `bulk_ignore_orders`
-      (`src/Actions.php::bulkIgnore()`) позволява да маркираш няколко избрани
-      order numbers от чекбокси на 6 различни изгледа (`missing-table.php`
-      partial, ползван от `run.php`, `refunds.php`, `emailcheck.php`,
-      `addrcheck.php`, `trends.php`, плюс собствената форма на `ignored.php`)
-      и да ги игнорираш наведнъж с една обща причина. Laravel
-      `IgnoredOrderController` има само single-ignore (`store`), CSV import
-      (`import`) и bulk *un*ignore по ID (`bulkDestroy`) — **няма bulk-ignore
-      по списък от order numbers изобщо**. `laravel-platform-audit.md`
-      погрешно твърдеше "bulk" за този ред; коригирано на `Partial`. Нужно е
-      продуктово решение: да се построи ли тази bulk-select форма в Laravel
-      report изгледите, или да се приеме съзнателно отклонение (single
-      ignore + CSV import покриват повечето случаи).
-
-- [x] **Run Audit inline duplicates panel** — legacy `Comparator::findDuplicates()`
-      (24-часово clustering, показва се на `views/run.php:87-103` като "N
-      potential duplicates detected" при всяко пускане на audit) **няма
-      Laravel порт изобщо** — `run-audit.blade.php` няма съответна секция.
-      `laravel-platform-audit.md`/`laravel-rewrite.md` погрешно твърдяха, че
-      `DuplicateOrderAnalyzer` е портът; той всъщност е порт на отделния
-      `dupes` инструмент. Нужно е продуктово решение: да се построи ли тази
-      inline секция в Laravel, или да се приеме съзнателно отклонение (audit
-      резултатите вече показват missing/found/skipped/ignored без нея).
-
-- [x] **Slack/Discord audit & scan notification content е орязано до едно
-      изречение** — legacy `SlackNotifier::auditPayload()`/`scanPayload()` и
-      `DiscordNotifier::auditPayload()`/`scanPayload()` пращат структурирано
-      съобщение: полета за store/period/missing/matched/skipped/ignored/
-      ShipStation total/duration, списък до 10 missing order имена+суми, и
-      цветово кодиране (зелено/червено). Laravel `AuditSlackNotification`/
-      `ScanSlackNotification`/`AuditDiscordNotification`/`ScanDiscordNotification`
-      връщат само едно голо изречение ("{store}: Run Audit found {N} missing
-      orders ({period})."), без нито едно от горните полета — данните вече се
-      изчисляват в `RunAudit::handle()`/`RecordRun::handle()`, просто не се
-      подават на notification конструкторите. `DiscordWebhookChannel` праща
-      каквото върне `toDiscord()` verbatim, така че добавяне на `embeds` ключ
-      ще проработи директно като при legacy — не е transport ограничение.
-      Нужно е продуктово решение: да се разшири ли съдържанието да съвпада с
-      legacy, или да се приеме съзнателно опростяване.
-
-- [x] **Email rules нямат global fallback recipient** — legacy build-ва всеки
-      `EmailNotifier` от `ALERT_EMAIL` веднъж и всеки tool-ов `recipientFor()`
-      само override-ва тази стойност; празен per-tool email нарочно означава
-      "прати на ALERT_EMAIL", не "не пращай". Затова legacy оператор може да
-      включи "immediate" на всичките ~40 tool-а в trigger catalog-а и да не
-      въвежда адрес никъде. Laravel няма никакъв еквивалент на ALERT_EMAIL —
-      `EmailRulesRequest` изисква изричен email за всеки tool с mode различен
-      от `off`, а `RecordRun::handle()` просто не пуска известие, ако е
-      празен. Не е живо счупване (формата не позволява да се запази празен
-      immediate rule), но е реална изгубена удобство: всеки от 40-те tool-а
-      трябва отделно да получи същия адрес вместо един env var да ги покрива
-      всичките. Нужно е продуктово решение: да се добави ли global default
-      recipient концепция, или да се приеме изричното per-tool изискване
-      като по-ясен design избор.
-
-- [x] **Fraud risk signals нямат per-signal точки** — legacy `RiskScorer::score()`
-      връща `signals` като `list<{label, points}>`, и `ViewHelpers::riskBadge()`
-      показва всеки сигнал с приноса му към резултата (напр. "Fraud/high-risk
-      tag +35") в expandable breakdown. Laravel `OrderRiskScorer::score()`
-      връща само `list<string>` (голи label-и, без points) — консумирано
-      директно от 3 blade изгледа (`fraud-risk`, `spot-check`,
-      `orders/timeline`). Резултатът (`score`/`level`) е коректен и на двете
-      страни (потвърдено с диференциален тест), само breakdown-ът липсва —
-      оператор вижда *че* поръчка е рискова, но не и *кой конкретен сигнал
-      колко тежи*. Нужно е продуктово решение: да се разшири ли `signals`
-      формата (един domain клас + 3 blade изгледа + 2 съществуващи unit
-      теста) до structured points, или да се приеме съзнателно опростената
-      breakdown-по-нищо форма.
-
-- [x] **High-Value No Phone има currency филтър, който legacy никога не е
-      имал** — `HighValueNoPhoneAnalyzer::analyze()` приема `$currency`
-      параметър и тихо изключва всяка поръчка, чиято `currency` не съвпада
-      точно (form поле, подразбиране `USD`, `HighValueNoPhoneRequest`
-      валидация). Legacy `buildHvOrderRows()` флагва high-value поръчки без
-      телефон независимо от валутата. За store само в USD подразбирането
-      възпроизвежда legacy точно; за multi-currency store (Shopify Markets)
-      или ако operator смени полето, отчетът тихо пропуска high-value
-      поръчки в друга валута — точно обратното на целта на отчета (хване
-      скъпа поръчка, която може да не се достави). Нужно е продуктово
-      решение: да се запази ли currency филтъра (и как да изглежда "всички
-      валути" — опция "any", или per-currency scan), или да се премахне за
-      съответствие с legacy.
-
-## Production/infra решения
-
-- [x] **Security headers/cookies code** — CSP/frame/referrer/HSTS policy,
-      secure cookie settings, optional trusted proxies (само ако има reverse
-      proxy пред приложението), config validation и tests.
-- [x] **SMTP и Slack/Discord setup** — всеки deployment си ги настройва сам:
-      инсталаторът (`install.create` / `resources/views/install/create.blade.php`)
-      събира SMTP credentials и webhook URLs при първоначалната инсталация и
-      ги записва в `.env`. Реалният delivery остава да се провери ръчно след
-      инсталация (изпрати си тестов email/съобщение).
-- [x] **Readiness endpoint (`/ready`) разширение** — database, cache,
-      queue configuration и worker-heartbeat freshness проверки.
-- [x] **Structured application logs contract** — request/run/store/tool context,
-      status/category полета, recursive redaction и URL query stripping.
-- [x] **Operational alerts разширение** — queue latency >5 min,
-      scheduler heartbeat >5 min и 3 API/report failures за 15 min, с 15-min
-      deduplication и Slack/Discord delivery. Реалната доставка се потвърждава
-      след като SMTP/webhooks са настроени през инсталатора (виж по-горе).
-- [x] **Audit jobs progress/terminal-state UI** — store-scoped queued/running/
-      completed/failed history в Job Queue екрана.
-- [x] **Cache policy** — production Redis с unique deployment prefix, само за
-      locks, unique jobs и health heartbeats; external/report reads остават fresh.
-- [x] **Backup и restore** — `backup:run`/`backup:verify-latest` вече
-      съществуваха; добавена е `backup:restore {path?} {--force}`, която
-      възстановява DB dump-а и `storage/app/private` файловете от архив
-      (по подразбиране най-новия). Виж [`operations.md`](operations.md#backups).
+Подробните исторически сравнения, приети отклонения и тогавашни бройки тестове
+са в [архивните документи](migration-history.md). Те не са текущ CI или UAT
+резултат.

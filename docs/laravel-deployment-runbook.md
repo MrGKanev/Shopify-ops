@@ -1,6 +1,6 @@
 # Laravel rewrite — deployment runbook
 
-Последно обновяване: **2026-09-22**.
+Последно обновяване: **2026-09-24**.
 
 Целева платформа: **самостоятелен VPS**, управляван от екипа, без load
 balancer пред приложението (единичен сървър — ако това се промени, добави
@@ -9,8 +9,19 @@ balancer пред приложението (единичен сървър — а
 extensions, Composer, Node.js 24+/pnpm 12.5.1, nginx/apache + php-fpm,
 supervisor, git, и избраната database — SQLite или MySQL/MariaDB). Приложението
 живее в repo-то root ниво (няма отделна `laravel/` поддиректория). Този
-документ покрива само application-ниво настройката и routine deploy
-процедурата. Отворените product decisions са в [`docs/laravel-todo.md`](laravel-todo.md).
+документ покрива application-ниво настройката и routine deploy
+процедурата. Проверимите условия за production sign-off са в
+[`laravel-uat-cutover-checklist.md`](laravel-uat-cutover-checklist.md).
+
+## Release gate
+
+Преди production deploy запиши точния release commit и резултата от CI за
+него. `.github/workflows/ci.yml` изпълнява `composer audit`, `composer test`,
+`composer analyse`, `vendor/bin/pint --test`, `pnpm install --frozen-lockfile`,
+`pnpm build` и `pnpm audit --audit-level moderate` на PHP 8.5, Node.js 24 и
+pnpm 12.5.1. Локалният `composer ci` изпълнява същите проверки, но негов
+успех на друг commit не замества CI резултата на release commit-а. В текущия
+workflow няма differential/parity test job.
 
 ## Първоначална инсталация
 
@@ -26,8 +37,7 @@ supervisor, git, и избраната database — SQLite или MySQL/MariaDB)
    [`installation.md`](installation.md#hostedno-shell-installation)). И двата
    пътя приемат SMTP/Slack/Discord настройки директно при инсталацията.
 9. Настрой supervisor и cron съгласно секциите по-долу.
-10. Локално, преди да push-неш release commit-а: `composer ci` — прогонва
-    точно същите проверки като CI (виж [`operations.md`](operations.md#local-test-build)).
+10. Потвърди release gate-а по-горе за deploy-вания commit.
 11. Направи smoke checks (виж по-долу) преди да пуснеш реален трафик.
 
 ## .env стойности, които изискват решение при deploy
@@ -39,6 +49,7 @@ supervisor, git, и избраната database — SQLite или MySQL/MariaDB)
 | Ключ | Ефект ако е празен |
 |---|---|
 | `APP_KEY`, `APP_URL` | Задължителни за всякаква работа |
+| `SESSION_SECURE_COOKIE`, `HSTS_ENABLED`, `TRUSTED_PROXIES` | За production HTTPS задай secure cookie; включи HSTS след end-to-end TLS проверка; посочи само действителните proxy IP/CIDR, ако има reverse proxy |
 | `SLACK_NOTIFICATION_WEBHOOK_URL` / `DISCORD_NOTIFICATION_WEBHOOK_URL` | Slack/Discord notifications мълчаливо се пропускат |
 | `METRICS_SCRAPE_TOKEN` | `/metrics` връща 404 (изключен endpoint) |
 | Google OAuth ключове (виж `config/services.php`) | Google sign-in бутонът остава скрит/неконфигуриран |
@@ -93,7 +104,8 @@ pruning, health heartbeats, backup run/monitor/clean:
 
 1. **Write freeze** (по избор, за миграции с schema промяна): спри приема
    на нови requests или пусни `php artisan down` при рискови миграции.
-2. `git pull` до release commit-а (вече минал `composer ci` локално/в CI).
+2. Изтегли и checkout-ни точно одобрения release commit; потвърди неговия
+   SHA и успешния CI run преди следващите стъпки.
 3. `composer install --no-dev --optimize-autoloader`
 4. `pnpm install --frozen-lockfile && pnpm build`
 5. `php artisan migrate --force`
@@ -153,14 +165,19 @@ MySQL/MariaDB (изисква `mysql` client в `PATH` за последните
 
 1. Създай изолиран rehearsal host/database без production credentials,
    workers, scheduler и outbound notification delivery.
-2. Копирай там `.env` с rehearsal database настройки и изтегли (или сподели
-   диска на) най-новия backup архив.
-3. Пусни `php artisan backup:restore --force` и провери изхода
+2. Осигури същия `APP_KEY`, с който са шифровани store credentials в архива,
+   и отделни rehearsal настройки за database, URL, queue и outbound доставки.
+   Осигури архива на диска `backups`, като запазиш нужния
+   `BACKUP_ARCHIVE_PASSWORD`, ако архивът е шифрован.
+3. Пусни `php artisan backup:restore --force` само срещу изолираната rehearsal
+   база и провери изхода
    (възстановен dump filename и брой файлове).
-4. Провери login, users/stores, броя `run_logs`/`audit_snapshots`, един
+4. Провери правата върху възстановените файлове, login, users/stores,
+   decrypt на store credentials, броя `run_logs`/`audit_snapshots`, един
    saved report и един CSV download. Пусни `/up`; `/ready` може да е 503,
    докато rehearsal worker/scheduler са съзнателно спрени.
-5. Изтрий rehearsal database/host след проверката.
+5. Запази дата, среда, commit, archive ID, резултати и отговорник в UAT
+   evidence запис; почисти rehearsal данните според политиката на средата.
 
 При encrypted archive (`BACKUP_ARCHIVE_PASSWORD`) командата чете паролата от
 `config('backup.backup.password')` — не се въвежда interactive.
@@ -179,4 +196,8 @@ commit-а, не като отделна ръчна операция извън g
   `/metrics` вече са инсталирани и wired, но `SENTRY_LARAVEL_DSN` и кой получава
   `/metrics` scrape/alerting остават съзнателно отложени production решения.
   `QUEUE_CONNECTION=redis`+Horizon вече е решено (виж "Queue worker (Horizon)"
-  по-горе). Чеклист за живото пускане: [`наблюдение.md`](../наблюдение.md).
+  по-горе). Условията за живото пускане са в
+  [UAT checklist-а](laravel-uat-cutover-checklist.md).
+- Реалните SMTP, restore, TLS/proxy, worker/scheduler и notification проверки
+  изискват доказателства от целевата среда; следи ги в
+  [UAT checklist-а](laravel-uat-cutover-checklist.md).

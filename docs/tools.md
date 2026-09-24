@@ -102,7 +102,7 @@ _Sections mirror the grouped sidebar navigation in [`config/audit-hub.php`](../c
 | **Metafields** | Browse metafield definitions, search orders by metafield value, or look up all metafields on a specific order. |
 | **Tag Search** | Find all Shopify orders with a specific tag - fast, native index, no full scan. |
 | **Tag Audit** | Build a complete tag inventory across a date range with frequency and last-seen info. |
-| **Customer Lookup** | Full order history for a customer by email, with lifetime spend summary and CSV export. |
+| **Customer Lookup** | Full order history for a customer by email, with lifetime spend summary. |
 | **Customer LTV** | Top customers by lifetime value and monthly cohort retention for the selected period. |
 | **Tracking Feed** | Live tracking details for 1–30 orders with direct links to carrier tracking pages. |
 | **Order Compare** | Side-by-side comparison of two Shopify orders with differing fields highlighted. |

@@ -1,6 +1,31 @@
 # Audit Checks
 
-Individual audit pages that surface specific order and product issues. All pages support CSV export unless noted otherwise.
+Individual audit pages that surface specific order and product issues. CSV
+download is available only for the checks listed below; the other checks on
+this page have no CSV export route. The download runs the report again with
+the submitted filters, so it requires working integration credentials.
+
+| Check | Section |
+| --- | --- |
+| Partial Fulfillment Stalls | Fulfillment & Logistics |
+| Fulfillment SLA Breaches | Fulfillment & Logistics |
+| Shipment Aging | Fulfillment & Logistics |
+| Voided Shipments | Fulfillment & Logistics |
+| Address Changes | Fulfillment & Logistics |
+| Post-Ship Address Change | Fulfillment & Logistics |
+| On-Hold Stall | Fulfillment & Logistics |
+| Fulfilled Without Tracking | Fulfillment & Logistics |
+| Shipped Item Mismatch | Fulfillment & Logistics |
+| Shipping Margin Erosion | Fulfillment & Logistics |
+| Fulfilled Items Report | Fulfillment & Logistics |
+| SS Shipped / Shopify Unfulfilled | Fulfillment & Logistics |
+| Orphan Detector | Order Quality |
+| Active SS Conflicts | Order Quality |
+| Bundle Check | Order Quality |
+| Returned Items Report | Order Quality |
+
+Saved Run Audit snapshots have a separate CSV download on the **Saved Reports**
+detail page; that export is not a CSV action on every audit check.
 
 ---
 
