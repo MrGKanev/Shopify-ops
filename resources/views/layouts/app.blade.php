@@ -36,6 +36,12 @@
             <a class="flat-nav-link {{ $group === 'manage' ? 'active' : '' }}" href="{{ route('push-logs.index') }}"><span class="flat-nav-icon">📂</span><span class="nav-label">Manage</span></a>
             @can('manage-administration')<a class="flat-nav-link {{ $group === 'settings' ? 'active' : '' }}" href="{{ route('admin.settings') }}"><span class="flat-nav-icon">⚙</span><span class="nav-label">Settings</span></a>@endcan
         </nav>
+        @if($externalSystemsDown)
+            <x-alert tone="error" class="mx-4 text-sm">
+                ⚠ Shopify or ShipStation is having issues.
+                @can('manage-administration')<a href="{{ route('admin.health-incidents') }}" class="underline">Details</a>@endcan
+            </x-alert>
+        @endif
         @if(in_array($group, ['audit', 'search'], true))
             @if($group === 'search')
                 <div class="sidebar-section">Search</div><ul class="sidebar-nav">@foreach($searchExtras as [$label,$name])@if(!in_array($name,['orders.push.create','global-search'],true) || auth()->user()->can('run-audits'))<li><a class="{{ request()->routeIs($name) ? 'active' : '' }}" href="{{ route($name) }}">{{ $label }}</a></li>@endif @endforeach</ul>

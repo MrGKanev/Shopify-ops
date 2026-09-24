@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\HealthIncident;
 use App\Models\Store;
 use App\Models\User;
 use App\UserRole;
@@ -104,6 +105,26 @@ class DashboardControllerTest extends TestCase
         $response->assertViewHas('auditsLast30Days', 4);
         $response->assertViewHas('clearAuditRate', 25.0);
         $response->assertViewHas('recurringMissingCount', 1);
+    }
+
+    public function test_sidebar_warns_when_shopify_or_shipstation_is_down(): void
+    {
+        $user = User::factory()->operator()->create();
+        $store = Store::factory()->create();
+        $user->stores()->attach($store);
+        HealthIncident::factory()->create(['check_name' => 'ShopifyApiHealth', 'check_label' => 'Shopify Api Health']);
+
+        $this->actingAs($user)->get(route('dashboard'))->assertOk()->assertSeeText('Shopify or ShipStation is having issues');
+    }
+
+    public function test_sidebar_hides_the_warning_once_resolved(): void
+    {
+        $user = User::factory()->operator()->create();
+        $store = Store::factory()->create();
+        $user->stores()->attach($store);
+        HealthIncident::factory()->resolved()->create(['check_name' => 'ShipStationApiHealth', 'check_label' => 'Ship Station Api Health']);
+
+        $this->actingAs($user)->get(route('dashboard'))->assertOk()->assertDontSeeText('Shopify or ShipStation is having issues');
     }
 
     public function test_admin_sees_a_cache_flush_button_operator_does_not(): void

@@ -2,9 +2,11 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\HealthIncident;
 use App\Models\Store;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\View;
 use Symfony\Component\HttpFoundation\Response;
@@ -40,8 +42,21 @@ class EnsureActiveStore
         View::share([
             'activeStore' => $activeStore,
             'availableStores' => $availableStores,
+            'externalSystemsDown' => $this->externalSystemsDown(),
         ]);
 
         return $next($request);
+    }
+
+    private function externalSystemsDown(): bool
+    {
+        return Cache::remember(
+            'external-systems-down',
+            30,
+            fn (): bool => HealthIncident::query()
+                ->whereIn('check_name', ['ShopifyApiHealth', 'ShipStationApiHealth'])
+                ->whereNull('resolved_at')
+                ->exists(),
+        );
     }
 }
