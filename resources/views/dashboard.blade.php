@@ -55,12 +55,22 @@
 
     @if ($sevenDayChart->isNotEmpty())
         <x-card>
-            <div class="mb-3 text-sm font-semibold">Last {{ $sevenDayChart->count() }} audits</div>
-            <div class="flex items-end gap-2" style="height:80px">
+            <div class="mb-3 flex items-center gap-3 text-sm">
+                <span class="font-semibold">Last 7 days</span>
+                <span class="text-xs text-slate-500 dark:text-slate-400">— No audit</span>
+            </div>
+            <div class="flex items-end gap-2" style="height:100px">
                 @php($max = max(1, $sevenDayChart->max('missing')))
                 @foreach ($sevenDayChart as $point)
-                    <div class="flex flex-col items-center gap-1" title="{{ $point['date'] }}: {{ $point['missing'] }} missing">
-                        <div style="width:24px;height:{{ max(4, (int) ($point['missing'] / $max * 70)) }}px;background:#6366f1;border-radius:4px 4px 0 0"></div>
+                    @php($pointLabel = $point['date'].': '.($point['missing'] === null ? 'No audit' : $point['missing'].' missing'))
+                    <div class="flex flex-col items-center gap-1" role="img" aria-label="{{ $pointLabel }}" title="{{ $pointLabel }}">
+                        <div class="flex h-[70px] w-6 items-end justify-center">
+                            @if ($point['missing'] === null)
+                                <span class="text-xs text-slate-400 dark:text-slate-500">—</span>
+                            @else
+                                <div style="width:24px;height:{{ max(4, (int) ($point['missing'] / $max * 70)) }}px;background:#6366f1;border-radius:4px 4px 0 0"></div>
+                            @endif
+                        </div>
                         <span class="text-xs text-slate-500 dark:text-slate-400">{{ substr($point['date'], 5) }}</span>
                     </div>
                 @endforeach

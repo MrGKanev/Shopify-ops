@@ -37,6 +37,7 @@ class DashboardControllerTest extends TestCase
             ->assertViewIs('dashboard')
             ->assertSeeText('Alpha Store')
             ->assertSeeText('alpha-shop.myshopify.com')
+            ->assertDontSeeText('Last 7 days')
             ->assertSessionHas('active_store_id', $firstStore->getKey());
         $this->assertSame(UserRole::Operator, $user->fresh()->role);
     }
@@ -100,11 +101,42 @@ class DashboardControllerTest extends TestCase
         $response->assertViewHas('staleIgnoredCount', 1);
         $response->assertViewHas('oldestMissingAge', 2);
         $response->assertViewHas('avgResolutionDays', 2.0);
-        $response->assertViewHas('sevenDayChart', fn ($chart) => count($chart) === 4 && $chart->last()['missing'] === 2);
+        $this->assertSame([
+            ['date' => '2026-09-04', 'missing' => null],
+            ['date' => '2026-09-05', 'missing' => 0],
+            ['date' => '2026-09-06', 'missing' => null],
+            ['date' => '2026-09-07', 'missing' => null],
+            ['date' => '2026-09-08', 'missing' => null],
+            ['date' => '2026-09-09', 'missing' => null],
+            ['date' => '2026-09-10', 'missing' => 2],
+        ], $response->viewData('sevenDayChart')->all());
+        $response->assertSeeText('Last 7 days')->assertSee('2026-09-05: 0 missing')->assertSee('2026-09-06: No audit');
         $response->assertViewHas('auditCadenceDays', fn ($days) => $days > 0);
         $response->assertViewHas('auditsLast30Days', 4);
         $response->assertViewHas('clearAuditRate', 25.0);
         $response->assertViewHas('recurringMissingCount', 1);
+    }
+
+    public function test_dashboard_shows_days_without_audits_when_the_last_snapshot_is_older_than_a_week(): void
+    {
+        $this->travelTo('2026-09-10');
+        $user = User::factory()->operator()->create();
+        $store = Store::factory()->create();
+        $user->stores()->attach($store);
+        $store->auditSnapshots()->create(['tool' => 'run_audit', 'report_date' => '2026-09-01', 'start_date' => '2026-09-01', 'end_date' => '2026-09-01', 'rows_found' => 3, 'result' => ['missing' => []]]);
+
+        $response = $this->actingAs($user)->get(route('dashboard'));
+
+        $response->assertSeeText('Last 7 days');
+        $this->assertSame([
+            ['date' => '2026-09-04', 'missing' => null],
+            ['date' => '2026-09-05', 'missing' => null],
+            ['date' => '2026-09-06', 'missing' => null],
+            ['date' => '2026-09-07', 'missing' => null],
+            ['date' => '2026-09-08', 'missing' => null],
+            ['date' => '2026-09-09', 'missing' => null],
+            ['date' => '2026-09-10', 'missing' => null],
+        ], $response->viewData('sevenDayChart')->all());
     }
 
     public function test_sidebar_warns_when_shopify_or_shipstation_is_down(): void

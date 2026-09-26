@@ -56,11 +56,25 @@ class DashboardController extends Controller
         $auditCadenceDays = $cadenceGaps === [] ? null : round(array_sum($cadenceGaps) / count($cadenceGaps), 1);
         $clearAuditRate = $recent->isEmpty() ? null : round($recent->filter(fn ($snapshot): bool => (int) $snapshot->rows_found === 0)->count() / $recent->count() * 100);
         $recurringMissingCount = count(array_filter(array_unique($latestNumbers), fn (string $number): bool => ($appearances[$number] ?? 0) >= 2));
+        $totalReports = $store->auditSnapshots()->where('tool', 'run_audit')->count();
+        $chartEndDate = today();
+        $chartStartDate = $chartEndDate->copy()->subDays(6);
+        $chartSnapshots = $store->auditSnapshots()
+            ->where('tool', 'run_audit')
+            ->where('report_date', '>=', $chartStartDate->toDateString())
+            ->where('report_date', '<', $chartEndDate->copy()->addDay()->toDateString())
+            ->get()
+            ->keyBy(fn ($snapshot): string => $snapshot->report_date->toDateString());
+        $sevenDayChart = $totalReports === 0 ? collect() : collect(range(0, 6))->map(function (int $dayOffset) use ($chartStartDate, $chartSnapshots): array {
+            $date = $chartStartDate->copy()->addDays($dayOffset)->toDateString();
+
+            return ['date' => $date, 'missing' => $chartSnapshots->get($date)?->rows_found];
+        });
 
         return view('dashboard', [
             'latest' => $latest,
             'previousMissing' => $reports->get(1)?->rows_found,
-            'totalReports' => $store->auditSnapshots()->where('tool', 'run_audit')->count(),
+            'totalReports' => $totalReports,
             'totalMissing' => (int) $store->auditSnapshots()->where('tool', 'run_audit')->sum('rows_found'),
             'ignoredCount' => $store->ignoredOrders()->count(),
             'staleIgnoredCount' => $store->ignoredOrders()->where('ignored_at', '<=', today()->subDays(30))->count(),
@@ -74,7 +88,7 @@ class DashboardController extends Controller
             'auditsLast30Days' => $store->auditSnapshots()->where('tool', 'run_audit')->where('report_date', '>=', today()->subDays(29))->count(),
             'clearAuditRate' => $clearAuditRate,
             'recurringMissingCount' => $recurringMissingCount,
-            'sevenDayChart' => $recent->slice(-7)->map(fn ($s) => ['date' => $s->report_date->toDateString(), 'missing' => $s->rows_found])->values(),
+            'sevenDayChart' => $sevenDayChart,
         ]);
     }
 }
