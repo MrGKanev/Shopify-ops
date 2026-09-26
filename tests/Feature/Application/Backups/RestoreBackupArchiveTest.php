@@ -23,20 +23,23 @@ class RestoreBackupArchiveTest extends TestCase
 
         Storage::fake('backups');
         Storage::fake('local');
+        Storage::fake('public');
         $dump = "DELETE FROM users;\nINSERT INTO users (id, name, email, password, role, created_at, updated_at) VALUES (99, 'Restored Admin', 'restored@example.com', 'hash', 'admin', '2026-01-01 00:00:00', '2026-01-01 00:00:00');";
         $path = $this->createZip('valid.zip', [
             'db-dumps/sqlite-database.sql' => $dump,
             'storage/app/private/reports/example.csv' => 'id,total\n1,2',
+            'storage/app/public/branding/logo.png' => 'logo-bytes',
         ]);
 
         $result = app(RestoreBackupArchive::class)->handle($path);
 
         $this->assertSame('db-dumps/sqlite-database.sql', $result['database_dump']);
-        $this->assertSame(1, $result['restored_files']);
+        $this->assertSame(2, $result['restored_files']);
         $this->assertSame(1, User::query()->count());
         $this->assertDatabaseHas('users', ['email' => 'restored@example.com']);
         $this->assertDatabaseMissing('users', ['email' => 'before-restore@example.com']);
         Storage::disk('local')->assertExists('reports/example.csv');
+        Storage::disk('public')->assertExists('branding/logo.png');
     }
 
     public function test_it_skips_archive_entries_that_attempt_path_traversal(): void
@@ -53,6 +56,27 @@ class RestoreBackupArchiveTest extends TestCase
 
         $this->assertSame(1, $result['restored_files']);
         Storage::disk('local')->assertExists('reports/safe.csv');
+    }
+
+    public function test_it_rejects_a_changed_archive_before_replacing_the_database_or_files(): void
+    {
+        User::factory()->create(['email' => 'before-restore@example.com']);
+        Storage::fake('backups');
+        Storage::fake('local');
+        $path = $this->createZip('changed.zip', [
+            'db-dumps/sqlite-database.sql' => 'DELETE FROM users;',
+            'storage/app/private/reports/example.csv' => 'replacement',
+        ]);
+
+        try {
+            app(RestoreBackupArchive::class)->handle($path, str_repeat('0', 64));
+            $this->fail('Expected the changed archive to be rejected.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame('The backup archive changed after it was verified.', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('users', ['email' => 'before-restore@example.com']);
+        Storage::disk('local')->assertMissing('reports/example.csv');
     }
 
     public function test_it_restores_a_mysql_dump_through_the_mysql_client(): void

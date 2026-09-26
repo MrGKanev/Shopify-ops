@@ -12,6 +12,7 @@ class BackupOperationsTest extends TestCase
     {
         $this->assertSame(['backups'], config('backup.backup.destination.disks'));
         $this->assertSame(storage_path('app/private'), config('backup.backup.source.files.include.0'));
+        $this->assertSame(storage_path('app/public'), config('backup.backup.source.files.include.1'));
         $this->assertContains(storage_path('app/backups'), config('backup.backup.source.files.exclude'));
         $this->assertTrue(config('backup.backup.verify_backup'));
         $this->assertSame('aes256', config('backup.backup.encryption'));

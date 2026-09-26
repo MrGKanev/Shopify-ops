@@ -307,6 +307,7 @@ Route::middleware('auth')->group(function (): void {
                 Route::delete('/banned-ips', [BannedIpController::class, 'destroy'])->name('banned-ips.destroy');
                 Route::get('/backups', [BackupController::class, 'index'])->name('backups.index');
                 Route::post('/backups', [BackupController::class, 'store'])->middleware('throttle:api-health')->name('backups.store');
+                Route::post('/backups/restore', [BackupController::class, 'restore'])->middleware('throttle:api-health')->name('backups.restore');
                 Route::post('/backups/verify', BackupVerificationController::class)->middleware('throttle:api-health')->name('backups.verify');
                 Route::get('/backups/download/{path}', [BackupController::class, 'download'])->where('path', '.*')->name('backups.download');
                 Route::get('/health', OperationalHealthController::class)->name('health');

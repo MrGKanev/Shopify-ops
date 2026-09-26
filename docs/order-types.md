@@ -19,6 +19,10 @@ return [
 
 Rules are evaluated top-to-bottom against each order's line items (`App\Domain\Orders\OrderTypeClassifier::classify()`). An order can match more than one rule — matched names are joined with ` + `. If no rule matches, the order is classified as the `fallback` value.
 
+## Legacy configuration
+
+`config/order-types.php` is the active source of order type rules. The old root-level `order_types.json` is ignored by Git and is not loaded by the application. Its rules and fallback were migrated to the PHP config; only the Bundle Check description differs. Update the PHP config when changing rules. Restoring a database backup does not restore or change this file-based configuration.
+
 ## Match types
 
 | Match type | Behaviour |
