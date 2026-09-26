@@ -65,5 +65,4 @@ For a deployment without shell access (shared hosting, a fresh server with only 
 
 - [Administration](administration.md) — add stores, users, and roles
 - [Configuration](configuration.md) — environment variables, notifications, security
-- [Operations](operations.md) — queues, scheduled tasks, health, backups
-- [Deployment runbook](laravel-deployment-runbook.md) — production setup
+- [Operations](operations.md) — queues, scheduled tasks, health, backups, production requirements

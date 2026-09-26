@@ -67,12 +67,17 @@ Backup archives use the disks in `BACKUP_DISKS`; the default local destination i
 
 ### Backups {#backups}
 
-`backup:restore` restores the database dump and `storage/app/private` files
-from an archive — the latest one by default, or a specific path relative to
-the `backups` disk (`php artisan backup:restore "Shopify Ops/2026-09-22-01-15-00.zip"`).
-It prompts for confirmation before overwriting the current database; pass
-`--force` to skip the prompt in a scripted restore. It supports SQLite and
-MySQL/MariaDB (`mysql` client must be on `PATH` for the latter).
+From **Settings → Backups**, an administrator can verify an archive and start a
+restore by entering its exact filename. The app rechecks its checksum, creates
+and verifies a full safety backup, then briefly enters maintenance mode while
+restoring. The operation status is stored outside the database under
+`storage/app/backup-operations`; reload the page to see the latest status.
+
+The `backup:restore` command is also available in CLI. It restores the latest
+archive by default, or a specified path relative to the `backups` disk, and
+prompts before replacing the database. It supports SQLite and MySQL/MariaDB
+(`mysql` client must be on `PATH` for the latter). Files included in the archive
+replace matching paths; files absent from the archive are left in place.
 
 Application logs are written through Laravel's configured log channel. **Settings → Action Log** shows recorded administrative and operator changes; it is not a replacement for exception logs or Sentry.
 
@@ -121,4 +126,4 @@ At minimum, production must provide:
 - Built frontend assets and cached Laravel configuration/routes/views
 - A tested off-server backup destination
 
-Use the complete [deployment runbook](laravel-deployment-runbook.md) for initial provisioning, supervisor configuration, routine deployments, smoke checks, backup restoration, and fix-forward procedure.
+These are the production requirements for the current app; use your hosting provider's process manager and deployment workflow to configure them.
