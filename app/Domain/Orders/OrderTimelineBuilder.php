@@ -12,9 +12,10 @@ class OrderTimelineBuilder
      * @param  list<array<string, mixed>>  $events
      * @param  list<array<string, mixed>>  $shipStationOrders
      * @param  list<array<string, mixed>>  $shipStationShipments
+     * @param  list<array<string, mixed>>  $integrationEvents
      * @return list<array{timestamp: string, formatted_at: string, type: string, source: string, title: string, detail: string, tracking: string, url: string}>
      */
-    public function build(array $order, array $events, array $shipStationOrders, array $shipStationShipments): array
+    public function build(array $order, array $events, array $shipStationOrders, array $shipStationShipments, array $integrationEvents = []): array
     {
         $items = [];
         $sequence = 0;
@@ -163,6 +164,18 @@ class OrderTimelineBuilder
                 'Shipped via ShipStation',
                 implode(' · ', array_filter([$carrier, $tracking], fn (string $value): bool => $value !== '')),
                 $tracking,
+            );
+        }
+
+        foreach ($integrationEvents as $event) {
+            $append(
+                $event['timestamp'] ?? null,
+                (string) ($event['type'] ?? 'integration_event'),
+                (string) ($event['source'] ?? 'integration'),
+                (string) ($event['title'] ?? 'Integration event'),
+                (string) ($event['detail'] ?? ''),
+                (string) ($event['tracking'] ?? ''),
+                (string) ($event['url'] ?? ''),
             );
         }
 

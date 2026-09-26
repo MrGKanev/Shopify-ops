@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\HealthIncident;
+use App\Models\OperationalIssue;
 use App\Models\Store;
 use App\Models\User;
 use App\UserRole;
@@ -40,6 +41,20 @@ class DashboardControllerTest extends TestCase
             ->assertDontSeeText('Last 7 days')
             ->assertSessionHas('active_store_id', $firstStore->getKey());
         $this->assertSame(UserRole::Operator, $user->fresh()->role);
+    }
+
+    public function test_dashboard_uses_bulgarian_translations_when_selected(): void
+    {
+        $user = User::factory()->operator()->create();
+        $store = Store::factory()->create();
+        $user->stores()->attach($store);
+        app()->setLocale('bg');
+
+        $this->actingAs($user)->get(route('dashboard'))
+            ->assertSeeText('Табло')
+            ->assertSeeText('Последен одит')
+            ->assertSeeText('Стартирай одит')
+            ->assertSeeText('Опашка за действие');
     }
 
     public function test_dashboard_forbids_a_user_without_store_access(): void
@@ -80,6 +95,25 @@ class DashboardControllerTest extends TestCase
         $foreign->auditSnapshots()->create(['tool' => 'run_audit', 'report_date' => '2026-09-10', 'start_date' => '2026-09-01', 'end_date' => '2026-09-10', 'rows_found' => 99, 'result' => ['missing' => [['name' => 'secret-order']]]]);
 
         $this->actingAs($user)->get(route('dashboard'))->assertOk()->assertSeeText('missing · 2026-09-10')->assertSeeText('was 3')->assertSeeText('4 total missing')->assertSeeText('buyer@example.com')->assertSeeText('42.50')->assertSeeText('Run Audit')->assertDontSee('<script>', false)->assertDontSeeText('secret-order');
+    }
+
+    public function test_dashboard_links_issue_counts_for_the_active_store(): void
+    {
+        $this->travelTo('2026-09-26 12:00:00');
+        $user = User::factory()->operator()->create();
+        $store = Store::factory()->create();
+        $user->stores()->attach($store);
+        OperationalIssue::factory()->for($store)->create(['status' => 'open', 'due_date' => '2026-09-25']);
+        OperationalIssue::factory()->for($store)->create(['status' => 'in_progress', 'source_tool' => 'delivery_watch']);
+        OperationalIssue::factory()->for($store)->create(['status' => 'resolved', 'due_date' => '2026-09-25']);
+        OperationalIssue::factory()->create(['status' => 'open', 'due_date' => '2026-09-25']);
+
+        $this->actingAs($user)->get(route('dashboard'))
+            ->assertViewHas('openIssueCount', 2)
+            ->assertViewHas('overdueIssueCount', 1)
+            ->assertViewHas('deliveryExceptionCount', 1)
+            ->assertSee(route('operational-issues.index', ['overdue' => 1]), false)
+            ->assertSee(route('operational-issues.index', ['source' => 'delivery_watch']), false);
     }
 
     public function test_dashboard_shows_cadence_resolution_stale_ignored_oldest_and_seven_day_chart(): void

@@ -19,9 +19,11 @@ class ReportDigestNotification extends QueuedNotification
 
     public function toMail(object $notifiable): MailMessage
     {
-        $mail = (new MailMessage)->subject("{$this->store}: daily report digest")->line("Daily report digest for {$this->store}:");
+        $mail = (new MailMessage)
+            ->subject(__(':store: Daily report digest', ['store' => $this->store]))
+            ->line(__('Daily report digest for :store:', ['store' => $this->store]));
         foreach ($this->sections as $section) {
-            $mail->line("{$section['tool']}: {$section['rows']} rows");
+            $mail->line(__(':tool: :rows rows', ['tool' => $section['tool'], 'rows' => $section['rows']]));
         }
 
         return $mail;

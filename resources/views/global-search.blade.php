@@ -7,13 +7,13 @@
         <x-card>
             <form class="flex flex-col gap-3 sm:flex-row sm:items-end" method="GET">
                 <div class="min-w-0 flex-1">
-                    <label class="text-sm font-medium" for="q">Order number</label>
+                    <label class="text-sm font-medium" for="q">{{ __('Order number') }}</label>
                     <input class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="q" name="q" value="{{ old('q', $query) }}" placeholder="#1001" @error('q') aria-invalid="true" aria-describedby="q-error" @enderror>
                     @error('q')
-                        <p class="mt-1 text-sm text-red-600 dark:text-red-400" id="q-error">{{ $message }}</p>
+                        <p class="mt-1 text-sm text-red-600 dark:text-red-400" id="q-error">{{ __($message) }}</p>
                     @enderror
                 </div>
-                <x-button type="submit">Search</x-button>
+                <x-button type="submit">{{ __('Search') }}</x-button>
             </form>
         </x-card>
 
@@ -23,12 +23,12 @@
 
             @if ($total === 0)
                 <x-empty-state title="Nothing found locally">
-                    <a class="font-medium text-indigo-600 hover:underline dark:text-indigo-400" href="{{ route('orders.spot-check', ['prefill' => $query]) }}">Run a live Spot-check</a>.
+                    <a class="font-medium text-indigo-600 hover:underline dark:text-indigo-400" href="{{ route('orders.spot-check', ['prefill' => $query]) }}">{{ __('Run a live Spot-check') }}</a>.
                 </x-empty-state>
             @else
                 @if ($results['reports'])
                     <section class="flex flex-col gap-3" aria-labelledby="saved-reports-heading">
-                        <h3 class="text-xl font-bold" id="saved-reports-heading">Saved reports</h3>
+                        <h3 class="text-xl font-bold" id="saved-reports-heading">{{ __('Saved reports') }}</h3>
                         @foreach ($results['reports'] as $row)
                             <x-card padding="p-3">
                                 <a class="font-medium text-indigo-600 hover:underline dark:text-indigo-400" href="{{ route('saved-reports.show', $row['id']) }}">{{ $row['order_number'] }}</a> · {{ $row['report_date'] }}
@@ -39,7 +39,7 @@
 
                 @if ($results['pushes']->isNotEmpty())
                     <section class="flex flex-col gap-3" aria-labelledby="push-log-heading">
-                        <h3 class="text-xl font-bold" id="push-log-heading">Push log</h3>
+                        <h3 class="text-xl font-bold" id="push-log-heading">{{ __('Push log') }}</h3>
                         @foreach ($results['pushes'] as $row)
                             <x-card padding="p-3">{{ $row->order_number }} · {{ $row->pushed_at->toDateTimeString() }}</x-card>
                         @endforeach

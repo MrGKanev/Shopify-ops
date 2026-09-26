@@ -24,13 +24,13 @@ class ScanDiscordNotification extends QueuedNotification
     public function toDiscord(object $notifiable): array
     {
         return [
-            'content' => "{$this->store}: {$this->tool} found {$this->rows} rows.",
+            'content' => __(':store: :tool found :rows rows.', ['store' => $this->store, 'tool' => $this->tool, 'rows' => $this->rows]),
             'embeds' => [[
-                'title' => "{$this->store} — {$this->tool}",
+                'title' => __(':store: :tool', ['store' => $this->store, 'tool' => $this->tool]),
                 'color' => $this->rows > 0 ? 0xE74C3C : 0x2ECC71,
                 'fields' => [
-                    ['name' => 'Rows', 'value' => (string) $this->rows, 'inline' => true],
-                    ['name' => 'Duration', 'value' => "{$this->durationSeconds}s", 'inline' => true],
+                    ['name' => __('Rows'), 'value' => (string) $this->rows, 'inline' => true],
+                    ['name' => __('Duration'), 'value' => "{$this->durationSeconds}s", 'inline' => true],
                 ],
             ]],
         ];

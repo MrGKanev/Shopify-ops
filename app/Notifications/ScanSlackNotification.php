@@ -30,11 +30,11 @@ class ScanSlackNotification extends QueuedNotification
         $prefix = $this->slackMentionsPrefix();
 
         return (new SlackMessage)
-            ->text("{$prefix}{$this->store}: {$this->tool} found {$this->rows} rows.")
-            ->headerBlock("{$this->store} — {$this->tool}")
+            ->text($prefix.__(':store: :tool found :rows rows.', ['store' => $this->store, 'tool' => $this->tool, 'rows' => $this->rows]))
+            ->headerBlock(__(':store: :tool', ['store' => $this->store, 'tool' => $this->tool]))
             ->sectionBlock(function ($block): void {
-                $block->field("*Rows:* {$this->rows}")->markdown();
-                $block->field("*Duration:* {$this->durationSeconds}s")->markdown();
+                $block->field('*'.__('Rows').":* {$this->rows}")->markdown();
+                $block->field('*'.__('Duration').":* {$this->durationSeconds}s")->markdown();
             });
     }
 }

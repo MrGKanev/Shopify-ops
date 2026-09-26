@@ -37,22 +37,22 @@ class AuditSlackNotification extends QueuedNotification
         $shown = array_slice($this->missingOrders, 0, 10);
         $lines = array_map(fn (array $order): string => "{$order['name']} - \${$order['total']}", $shown);
         if (count($this->missingOrders) > 10) {
-            $lines[] = 'and '.(count($this->missingOrders) - 10).' more';
+            $lines[] = __('and :count more', ['count' => count($this->missingOrders) - 10]);
         }
 
         return (new SlackMessage)
-            ->text("{$prefix}{$this->store}: Run Audit found {$this->missing} missing orders ({$this->period}).")
-            ->headerBlock("{$this->store} — Run Audit")
+            ->text($prefix.__(':store: Run Audit found :missing missing orders (:period).', ['store' => $this->store, 'missing' => $this->missing, 'period' => $this->period]))
+            ->headerBlock(__(':store: Run Audit', ['store' => $this->store]))
             ->contextBlock(function ($block): void {
-                $block->text("Period: {$this->period}");
+                $block->text(__('Period: :period', ['period' => $this->period]));
             })
             ->sectionBlock(function ($block) use ($lines): void {
-                $block->field("*Missing:* {$this->missing}")->markdown();
-                $block->field("*Matched:* {$this->found}")->markdown();
-                $block->field("*Skipped:* {$this->skipped}")->markdown();
-                $block->field("*Ignored:* {$this->ignored}")->markdown();
-                $block->field("*ShipStation total:* {$this->shipstationTotal}")->markdown();
-                $block->field("*Duration:* {$this->durationSeconds}s")->markdown();
+                $block->field('*'.__('Missing').":* {$this->missing}")->markdown();
+                $block->field('*'.__('Matched').":* {$this->found}")->markdown();
+                $block->field('*'.__('Skipped').":* {$this->skipped}")->markdown();
+                $block->field('*'.__('Ignored').":* {$this->ignored}")->markdown();
+                $block->field('*'.__('ShipStation total').":* {$this->shipstationTotal}")->markdown();
+                $block->field('*'.__('Duration').":* {$this->durationSeconds}s")->markdown();
                 if ($lines !== []) {
                     $block->field(implode("\n", $lines))->markdown();
                 }

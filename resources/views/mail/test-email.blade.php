@@ -1,5 +1,5 @@
-{{ $applicationName }} successfully connected to the configured SMTP transport.
+{{ __(':app successfully connected to the configured SMTP transport.', ['app' => $applicationName]) }}
 
-Sent at: {{ $sentAt }}
+{{ __('Sent at: :time', ['time' => $sentAt]) }}
 
-This diagnostic message contains no store credentials or order data.
+{{ __('This diagnostic message contains no store credentials or order data.') }}

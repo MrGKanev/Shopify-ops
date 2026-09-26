@@ -16,11 +16,13 @@ class DetectOperationalAnomalies extends Command
     {
         $detected = 0;
 
-        Store::query()->select('id')->chunkById(100, function ($stores) use ($detector, &$detected): void {
-            foreach ($stores as $store) {
-                $detected += $detector->handle($store);
-            }
-        });
+        Store::query()
+            ->select(['id', 'shopify_store', 'shopify_access_token', 'shipstation_api_key', 'shipstation_api_secret', 'scheduled_audit_enabled', 'scheduled_audit_time'])
+            ->chunkById(100, function ($stores) use ($detector, &$detected): void {
+                foreach ($stores as $store) {
+                    $detected += $detector->handle($store);
+                }
+            });
 
         $this->info("Detected {$detected} operational anomaly signal(s).");
 

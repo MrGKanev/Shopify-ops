@@ -7,9 +7,9 @@
         </x-page-header>
 
         <x-card>
-            <p class="text-sm font-semibold">Callback URL</p>
+            <p class="text-sm font-semibold">{{ __('Callback URL') }}</p>
             <p class="mt-2 break-all font-mono text-sm text-slate-600 dark:text-slate-300">{{ route('webhooks.shopify', $activeStore->slug) }}</p>
-            <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Configure this HTTPS address in Shopify and save the signing secret in the store settings.</p>
+            <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ __('Configure this HTTPS address in Shopify and save the signing secret in the store settings.') }}</p>
         </x-card>
 
         @if ($error)

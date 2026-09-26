@@ -5,7 +5,7 @@
         <x-page-header eyebrow="Risk report" title="Tag Policy Audit" subtitle="Check paid orders against required and forbidden tag combinations." />
 
         @unless ($configured)
-            <x-alert tone="warn">No tag policy is configured. Add required or forbidden rules in <code>config/tag-policy.php</code> to enable this audit.</x-alert>
+            <x-alert tone="warn">{{ __('No tag policy is configured. Add required or forbidden rules in') }} <code>config/tag-policy.php</code> {{ __('to enable this audit.') }}</x-alert>
         @endunless
 
         <form class="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:grid-cols-3 dark:border-slate-800 dark:bg-slate-900" method="POST" action="{{ route('reports.tag-policy.store') }}">
@@ -15,25 +15,25 @@
                     <label class="text-sm font-medium" for="{{ $field }}">{{ $label }}</label>
                     <input class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="{{ $field }}" name="{{ $field }}" type="date" value="{{ old($field, $value) }}">
                     @error($field)
-                        <p class="text-sm text-red-600">{{ $message }}</p>
+                        <p class="text-sm text-red-600">{{ __($message) }}</p>
                     @enderror
                 </div>
             @endforeach
-            <div class="flex items-end"><x-button type="submit" :disabled="! $configured">Run report</x-button></div>
+            <div class="flex items-end"><x-button type="submit" :disabled="! $configured">{{ __('Run report') }}</x-button></div>
         </form>
 
         @if ($configurationError)
-            <x-alert tone="warn">Shopify credentials are incomplete for the active store.</x-alert>
+            <x-alert tone="warn">{{ __('Shopify credentials are incomplete for the active store.') }}</x-alert>
         @endif
         @if ($reportFailed)
-            <x-alert tone="error">The report could not be completed. Check Shopify and try again.</x-alert>
+            <x-alert tone="error">{{ __('The report could not be completed. Check Shopify and try again.') }}</x-alert>
         @endif
 
         @if ($result)
             <section class="flex flex-col gap-4">
                 <h2 class="text-2xl font-bold">{{ $result->scanned }} scanned · {{ count($result->rows) }} policy violations</h2>
                 @if ($result->truncated)
-                    <x-alert tone="warn">Results are incomplete: orders truncated after {{ $result->pages }} pages.</x-alert>
+                    <x-alert tone="warn">{{ __('Results are incomplete: orders truncated after :pages pages.', ['pages' => $result->pages]) }}</x-alert>
                 @endif
 
                 <x-data-table :headers="['Order', 'Placed', 'Violations', 'Tags', 'Email', 'Status']">
@@ -52,7 +52,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td class="px-4 py-8 text-center text-slate-500" colspan="6">No scanned orders violated the configured tag policy.</td>
+                            <td class="px-4 py-8 text-center text-slate-500" colspan="6">{{ __('No scanned orders violated the configured tag policy.') }}</td>
                         </tr>
                     @endforelse
                 </x-data-table>

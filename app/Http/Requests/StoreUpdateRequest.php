@@ -32,6 +32,7 @@ class StoreUpdateRequest extends FormRequest
             'store_number' => ['nullable', 'string', 'max:255'],
             'scheduled_audit_enabled' => ['nullable', 'boolean'],
             'scheduled_audit_time' => ['nullable', 'date_format:H:i', 'required_if:scheduled_audit_enabled,1'],
+            'delivery_watch_days' => ['required', 'integer', 'between:1,90'],
         ];
     }
 

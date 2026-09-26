@@ -11,20 +11,20 @@
                     <label class="text-sm font-medium" for="{{ $field }}">{{ $label }}</label>
                     <input class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="{{ $field }}" name="{{ $field }}" type="date" value="{{ old($field, $value) }}">
                     @error($field)
-                        <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                        <p class="text-sm text-red-600 dark:text-red-400">{{ __($message) }}</p>
                     @enderror
                 </div>
             @endforeach
             <div class="flex items-end">
-                <x-button type="submit">Run report</x-button>
+                <x-button type="submit">{{ __('Run report') }}</x-button>
             </div>
         </form>
 
         @if ($configurationError)
-            <x-alert tone="warn">Shopify credentials are incomplete for the active store.</x-alert>
+            <x-alert tone="warn">{{ __('Shopify credentials are incomplete for the active store.') }}</x-alert>
         @endif
         @if ($reportFailed)
-            <x-alert tone="error">The report could not be completed. Check Shopify and try again.</x-alert>
+            <x-alert tone="error">{{ __('The report could not be completed. Check Shopify and try again.') }}</x-alert>
         @endif
 
         @if ($result)
@@ -33,15 +33,15 @@
                 <p class="text-sm text-slate-500 dark:text-slate-400">{{ count($result->rows) }} zero-stock recent sellers</p>
                 @if ($result->productsTruncated || $result->ordersTruncated)
                     <x-alert tone="warn">
-                        Results are incomplete:
+                        {{ __('Results are incomplete:') }}
                         @if ($result->productsTruncated)
-                            product catalogue truncated after {{ $result->productPages }} pages
+                            {{ __('Product catalogue truncated after :pages pages.', ['pages' => $result->productPages]) }}
                         @endif
                         @if ($result->productsTruncated && $result->ordersTruncated)
-                            and
+                            {{ __('and') }}
                         @endif
                         @if ($result->ordersTruncated)
-                            orders truncated after {{ $result->orderPages }} pages
+                            {{ __('Orders truncated after :pages pages.', ['pages' => $result->orderPages]) }}
                         @endif
                         .
                     </x-alert>
@@ -70,7 +70,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td class="px-4 py-8 text-center text-slate-500" colspan="6">No active tracked zero-stock variant had recent sales in the selected window.</td>
+                            <td class="px-4 py-8 text-center text-slate-500" colspan="6">{{ __('No active tracked zero-stock variant had recent sales in the selected window.') }}</td>
                         </tr>
                     @endforelse
                 </x-data-table>

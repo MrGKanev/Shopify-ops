@@ -11,17 +11,17 @@
                     <label class="text-sm font-medium" for="{{ $field }}">{{ $label }}</label>
                     <input class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="{{ $field }}" name="{{ $field }}" type="date" value="{{ old($field, $value) }}">
                     @error($field)
-                        <p class="text-sm text-red-600">{{ $message }}</p>
+                        <p class="text-sm text-red-600">{{ __($message) }}</p>
                     @enderror
                 </div>
             @endforeach
             <div class="flex items-end">
-                <x-button type="submit">Run report</x-button>
+                <x-button type="submit">{{ __('Run report') }}</x-button>
             </div>
         </form>
 
         @if ($reportFailed)
-            <x-alert tone="error">The report could not be completed. Check Shopify and try again.</x-alert>
+            <x-alert tone="error">{{ __('The report could not be completed. Check Shopify and try again.') }}</x-alert>
         @endif
 
         @if ($result)
@@ -31,7 +31,7 @@
                     <p class="text-sm text-slate-500 dark:text-slate-400">{{ $result->skippedMissingCountry }} skipped because an ISO country code was missing.</p>
                 @endif
                 @if ($result->truncated)
-                    <x-alert tone="warn">Results were truncated after {{ $result->pages }} pages.</x-alert>
+                    <x-alert tone="warn">{{ __('Results were truncated after :pages pages.', ['pages' => $result->pages]) }}</x-alert>
                 @endif
 
                 @forelse ($result->rows as $row)
@@ -52,7 +52,7 @@
                             <span>Shipping: {{ $row['shipping_country'] }}</span>
                             <span>{{ $row['financial'] }} · {{ $row['fulfillment'] ?: 'unfulfilled' }}</span>
                         </div>
-                        <a class="mt-3 inline-flex text-sm text-indigo-600 dark:text-indigo-400" href="{{ route('orders.spot-check', ['prefill' => ltrim($row['number'], '#')]) }}">Open in spot-check</a>
+                        <a class="mt-3 inline-flex text-sm text-indigo-600 dark:text-indigo-400" href="{{ route('orders.spot-check', ['prefill' => ltrim($row['number'], '#')]) }}">{{ __('Open in spot-check') }}</a>
                     </x-card>
                 @empty
                     <x-empty-state icon="🌍" title="No mismatches">No billing and shipping country mismatches were found.</x-empty-state>

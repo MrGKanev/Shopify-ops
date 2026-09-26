@@ -10,10 +10,10 @@
         </form>
 
         @if ($configurationError)
-            <x-alert tone="warn">Shopify credentials are incomplete for the active store.</x-alert>
+            <x-alert tone="warn">{{ __('Shopify credentials are incomplete for the active store.') }}</x-alert>
         @endif
         @if ($reportFailed)
-            <x-alert tone="error">The report could not be completed. Check Shopify and try again.</x-alert>
+            <x-alert tone="error">{{ __('The report could not be completed. Check Shopify and try again.') }}</x-alert>
         @endif
 
         @if ($result)
@@ -22,7 +22,7 @@
                 <p class="text-sm text-slate-500 dark:text-slate-400">{{ $result->critical }} critical · {{ $result->warnings }} warnings</p>
 
                 @if ($result->truncated)
-                    <x-alert tone="warn">Results were truncated after {{ $result->pages }} product pages. The report is not a complete store inventory.</x-alert>
+                    <x-alert tone="warn">{{ __('Results were truncated after :pages product pages. The report is not a complete store inventory.', ['pages' => $result->pages]) }}</x-alert>
                 @endif
 
                 <x-data-table :headers="['Product', 'Vendor / type', 'Images', 'Variants', 'Issues', 'Severity']">
@@ -49,7 +49,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td class="px-4 py-8 text-center text-slate-500" colspan="6">All scanned active products are complete.</td>
+                            <td class="px-4 py-8 text-center text-slate-500" colspan="6">{{ __('All scanned active products are complete.') }}</td>
                         </tr>
                     @endforelse
                 </x-data-table>

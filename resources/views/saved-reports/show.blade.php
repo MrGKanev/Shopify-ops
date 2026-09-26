@@ -7,7 +7,7 @@
         <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 class="text-2xl font-bold">{{ $report->rows_found }} missing</h2>
             <div class="flex flex-wrap items-center gap-2">
-                <x-button variant="ghost" :href="route('saved-reports.export', $report)">Download CSV</x-button>
+                <x-button variant="ghost" :href="route('saved-reports.export', $report)">{{ __('Download CSV') }}</x-button>
                 <form method="POST" action="{{ route('reports.run-audit.store') }}">
                     @csrf
                     <input type="hidden" name="start_date" value="{{ $report->report_date->toDateString() }}">
@@ -53,7 +53,7 @@
                         <div class="flex flex-wrap items-center gap-2 text-sm">
                             @if ($number !== '')
                                 <a class="text-indigo-600 dark:text-indigo-400" href="{{ route('orders.spot-check', ['order_number' => $number]) }}">Spot-check</a>
-                                <a class="text-indigo-600 dark:text-indigo-400" href="{{ route('orders.timeline', ['order_number' => $number]) }}">Timeline</a>
+                                <a class="text-indigo-600 dark:text-indigo-400" href="{{ route('orders.timeline', ['order_number' => $number]) }}">{{ __('Timeline') }}</a>
                             @endif
                             @if (! empty($order['id']))
                                 <a class="text-indigo-600 dark:text-indigo-400" href="https://{{ $activeStore->shopify_store }}.myshopify.com/admin/orders/{{ $order['id'] }}" target="_blank" rel="noopener noreferrer">Shopify</a>
@@ -63,7 +63,7 @@
                                 <form method="POST" action="{{ route('ignored-orders.store') }}">
                                     @csrf
                                     <input type="hidden" name="order_number" value="{{ $number }}">
-                                    <x-button type="submit" size="sm" variant="danger">Ignore</x-button>
+                                    <x-button type="submit" size="sm" variant="danger">{{ __('Ignore') }}</x-button>
                                 </form>
                             @endif
                         </div>
@@ -71,7 +71,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="6">No missing orders.</td>
+                    <td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="6">{{ __('No missing orders.') }}</td>
                 </tr>
             @endforelse
         </x-data-table>

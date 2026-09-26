@@ -22,6 +22,6 @@ class DiscordTestNotification extends QueuedNotification
     /** @return array{content: string} */
     public function toDiscord(object $notifiable): array
     {
-        return ['content' => $this->applicationName.' successfully connected to Discord at '.$this->sentAt.'. No store credentials or order data are included.'];
+        return ['content' => __(':app successfully connected to Discord at :time. No store credentials or order data are included.', ['app' => $this->applicationName, 'time' => $this->sentAt])];
     }
 }

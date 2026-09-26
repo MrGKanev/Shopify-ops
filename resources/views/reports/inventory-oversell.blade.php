@@ -10,13 +10,13 @@
         </form>
 
         @if ($shopifyConfigurationError)
-            <x-alert tone="warn">Shopify credentials are incomplete for the active store.</x-alert>
+            <x-alert tone="warn">{{ __('Shopify credentials are incomplete for the active store.') }}</x-alert>
         @endif
         @if ($shipStationConfigurationError)
-            <x-alert tone="warn">ShipStation credentials are incomplete for the active store.</x-alert>
+            <x-alert tone="warn">{{ __('ShipStation credentials are incomplete for the active store.') }}</x-alert>
         @endif
         @if ($reportFailed)
-            <x-alert tone="error">The report could not be completed. Check Shopify and ShipStation, then try again.</x-alert>
+            <x-alert tone="error">{{ __('The report could not be completed. Check Shopify and ShipStation, then try again.') }}</x-alert>
         @endif
 
         @if ($result)
@@ -24,7 +24,7 @@
                 <h2 class="text-2xl font-bold">{{ $result->products }} products · {{ $result->awaitingOrders }} awaiting orders</h2>
                 <p class="text-sm text-slate-500 dark:text-slate-400">{{ count($result->rows) }} SKUs at risk of overselling</p>
                 @if ($result->productsTruncated)
-                    <x-alert tone="warn">Results are incomplete: product catalogue truncated after {{ $result->productPages }} pages.</x-alert>
+                    <x-alert tone="warn">{{ __('Results are incomplete: product catalogue truncated after :pages pages.', ['pages' => $result->productPages]) }}</x-alert>
                 @endif
 
                 <x-data-table :headers="['Product / variant', 'SKU', 'Stock', 'Awaiting', 'Shortfall', 'Action']">
@@ -46,13 +46,13 @@
                             <td class="px-4 py-3 font-bold text-red-600 dark:text-red-400">{{ $row['shortfall'] }}</td>
                             <td class="px-4 py-3">
                                 @if ($row['duplicate_sku'])
-                                    <a class="text-indigo-600 dark:text-indigo-400" href="{{ route('reports.sku-duplicates') }}">Review duplicates</a>
+                                    <a class="text-indigo-600 dark:text-indigo-400" href="{{ route('reports.sku-duplicates') }}">{{ __('Review duplicates') }}</a>
                                 @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td class="px-4 py-8 text-center text-slate-500" colspan="6">Current tracked stock covers every SKU awaiting shipment.</td>
+                            <td class="px-4 py-8 text-center text-slate-500" colspan="6">{{ __('Current tracked stock covers every SKU awaiting shipment.') }}</td>
                         </tr>
                     @endforelse
                 </x-data-table>

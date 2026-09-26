@@ -10,7 +10,13 @@
     $classes = trim("{$base} {$sizes[$size]} {$variants[$variant]}");
 @endphp
 @if ($href)
-    <a {{ $attributes->merge(['class' => $classes, 'href' => $href]) }}>{{ $slot }}</a>
+    <a {{ $attributes->merge(['class' => $classes, 'href' => $href]) }}>
+        @php($buttonText = trim((string) $slot))
+        @if (str_contains($buttonText, '<')) {!! $slot !!} @else {{ __($buttonText) }} @endif
+    </a>
 @else
-    <button {{ $attributes->merge(['class' => $classes, 'type' => 'button']) }}>{{ $slot }}</button>
+    <button {{ $attributes->merge(['class' => $classes, 'type' => 'button']) }}>
+        @php($buttonText = trim((string) $slot))
+        @if (str_contains($buttonText, '<')) {!! $slot !!} @else {{ __($buttonText) }} @endif
+    </button>
 @endif

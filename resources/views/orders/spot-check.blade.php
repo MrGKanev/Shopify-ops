@@ -3,24 +3,24 @@
 @section('content')
     <div class="flex flex-col gap-6">
         <section class="flex flex-col gap-2">
-            <p class="text-sm font-medium text-indigo-600 dark:text-indigo-400">Read-only workflow</p>
-            <h1 class="text-3xl font-bold">Spot-check orders</h1>
-            <p class="text-slate-500 dark:text-slate-400">Look up 1–50 order numbers live in Shopify, ShipStation, or both. Separate numbers with spaces, commas, or new lines.</p>
+            <p class="text-sm font-medium text-indigo-600 dark:text-indigo-400">{{ __('Read-only workflow') }}</p>
+            <h1 class="text-3xl font-bold">{{ __('Spot-check orders') }}</h1>
+            <p class="text-slate-500 dark:text-slate-400">{{ __('Look up 1–50 order numbers live in Shopify, ShipStation, or both. Separate numbers with spaces, commas, or new lines.') }}</p>
         </section>
 
         <form class="flex flex-col gap-5 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900" method="POST" action="{{ route('orders.spot-check.store') }}">
             @csrf
 
             <div class="flex flex-col gap-2">
-                <label class="text-sm font-medium" for="orders">Order numbers</label>
+                <label class="text-sm font-medium" for="orders">{{ __('Order numbers') }}</label>
                 <textarea class="min-h-36 rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950" id="orders" name="orders" placeholder="#100042&#10;#100043&#10;#100044" maxlength="4096" aria-invalid="{{ $errors->has('orders') ? 'true' : 'false' }}" @if ($errors->has('orders')) aria-describedby="orders-error" @endif>{{ old('orders', $ordersInput) }}</textarea>
                 @error('orders')
-                    <p class="text-sm text-red-600 dark:text-red-400" id="orders-error" role="alert">{{ $message }}</p>
+                    <p class="text-sm text-red-600 dark:text-red-400" id="orders-error" role="alert">{{ __($message) }}</p>
                 @enderror
             </div>
 
             <fieldset class="flex flex-col gap-2" @if ($errors->has('mode')) aria-describedby="mode-error" @endif>
-                <legend class="text-sm font-medium">Sources</legend>
+                <legend class="text-sm font-medium">{{ __('Sources') }}</legend>
                 <div class="flex flex-wrap gap-4 text-sm">
                     @foreach (['both' => 'Shopify & ShipStation', 'shopify' => 'Shopify only', 'shipstation' => 'ShipStation only'] as $value => $label)
                         <label class="flex items-center gap-2">
@@ -30,31 +30,31 @@
                     @endforeach
                 </div>
                 @error('mode')
-                    <p class="text-sm text-red-600 dark:text-red-400" id="mode-error" role="alert">{{ $message }}</p>
+                    <p class="text-sm text-red-600 dark:text-red-400" id="mode-error" role="alert">{{ __($message) }}</p>
                 @enderror
             </fieldset>
 
             <div>
-                <button class="rounded-lg bg-indigo-600 px-5 py-2.5 font-semibold text-white hover:bg-indigo-500" type="submit">Run spot-check</button>
+                <button class="rounded-lg bg-indigo-600 px-5 py-2.5 font-semibold text-white hover:bg-indigo-500" type="submit">{{ __('Run spot-check') }}</button>
             </div>
         </form>
 
         @if ($configurationError)
             <x-alert tone="warn">
-                ShipStation is not configured completely for this store. Choose Shopify only or update the store credentials.
+                {{ __('ShipStation is not configured completely for this store. Choose Shopify only or update the store credentials.') }}
             </x-alert>
         @endif
 
         @if ($lookupFailed)
             <x-alert tone="error">
-                The spot-check could not be completed. Check the selected integrations and try again.
+                {{ __('The spot-check could not be completed. Check the selected integrations and try again.') }}
             </x-alert>
         @endif
 
         @if ($result !== null)
             <section class="flex flex-col gap-4">
                 <div class="flex flex-wrap items-center gap-3">
-                    <h2 class="text-2xl font-bold">Results</h2>
+                    <h2 class="text-2xl font-bold">{{ __('Results') }}</h2>
                     <span class="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold dark:bg-slate-800">{{ count($result->results) }} checked</span>
                     @if (in_array($result->mode, ['both', 'shopify'], true))
                         <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">Shopify: {{ $result->shopifyFoundCount }}/{{ count($result->results) }} found</span>
@@ -102,7 +102,7 @@
                                             @endif
                                         </div>
                                     @empty
-                                        <p class="text-sm text-slate-500 dark:text-slate-400">Not found in Shopify.</p>
+                                        <p class="text-sm text-slate-500 dark:text-slate-400">{{ __('Not found in Shopify.') }}</p>
                                     @endforelse
                                 </div>
                             @endif
@@ -123,13 +123,13 @@
                                             </div>
                                         </div>
                                     @empty
-                                        <p class="text-sm text-slate-500 dark:text-slate-400">Not found in ShipStation.</p>
+                                        <p class="text-sm text-slate-500 dark:text-slate-400">{{ __('Not found in ShipStation.') }}</p>
                                     @endforelse
                                 </div>
                             @endif
                         </div>
 
-                        <a class="mt-4 inline-flex text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400" href="{{ route('orders.lookup', ['order_number' => $row['number']]) }}">Open detailed comparison</a>
+                        <a class="mt-4 inline-flex text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400" href="{{ route('orders.lookup', ['order_number' => $row['number']]) }}">{{ __('Open detailed comparison') }}</a>
                     </article>
                 @endforeach
             </section>

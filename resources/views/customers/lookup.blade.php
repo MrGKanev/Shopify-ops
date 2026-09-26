@@ -8,10 +8,10 @@
             <form class="flex flex-col gap-4 sm:flex-row sm:items-end" method="POST" action="{{ route('customers.lookup.store') }}">
                 @csrf
                 <div class="min-w-0 grow">
-                    <label class="text-sm font-medium" for="email">Email</label>
+                    <label class="text-sm font-medium" for="email">{{ __('Email') }}</label>
                     <input class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950" id="email" name="email" type="email" value="{{ old('email', $email) }}" autocomplete="email" aria-invalid="{{ $errors->has('email') ? 'true' : 'false' }}" @if ($errors->has('email')) aria-describedby="email-error" @endif autofocus>
                     @error('email')
-                        <p class="mt-2 text-sm text-red-600 dark:text-red-400" id="email-error" role="alert">{{ $message }}</p>
+                        <p class="mt-2 text-sm text-red-600 dark:text-red-400" id="email-error" role="alert">{{ __($message) }}</p>
                     @enderror
                 </div>
                 <x-button type="submit">Look up</x-button>
@@ -19,11 +19,11 @@
         </x-card>
 
         @if ($configurationError)
-            <x-alert tone="warn">Shopify credentials are incomplete for the active store.</x-alert>
+            <x-alert tone="warn">{{ __('Shopify credentials are incomplete for the active store.') }}</x-alert>
         @endif
 
         @if ($lookupFailed)
-            <x-alert tone="error">The lookup could not be completed. Check Shopify and try again.</x-alert>
+            <x-alert tone="error">{{ __('The lookup could not be completed. Check Shopify and try again.') }}</x-alert>
         @endif
 
         @if ($result)
@@ -42,7 +42,7 @@
                 </x-card>
 
                 @if ($result->truncated)
-                    <x-alert tone="warn">Results are incomplete: orders truncated after {{ $result->pages }} pages.</x-alert>
+                    <x-alert tone="warn">{{ __('Results are incomplete: orders truncated after :pages pages.', ['pages' => $result->pages]) }}</x-alert>
                 @endif
 
                 <x-data-table :headers="['Order', 'Date', 'Financial', 'Fulfillment', 'Total', 'Tags']">

@@ -6,4 +6,4 @@
         'error' => 'bg-red-50 text-red-800 border-red-200 dark:bg-red-950 dark:text-red-200 dark:border-red-800',
     ];
 @endphp
-<div {{ $attributes->merge(['class' => "rounded-xl border p-4 {$tones[$tone]}"]) }} role="alert">{{ $slot }}</div>
+<div {{ $attributes->merge(['class' => "rounded-xl border p-4 {$tones[$tone]}"]) }} role="alert">{{ __((string) $slot) }}</div>

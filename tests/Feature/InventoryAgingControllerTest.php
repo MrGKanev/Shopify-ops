@@ -79,7 +79,7 @@ class InventoryAgingControllerTest extends TestCase
         ]);
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
 
-        $this->actingAs($user)->post(route('reports.inventory-aging.store'), ['start_date' => '2026-08-01', 'end_date' => '2026-09-01', 'store_id' => 999])->assertOk()->assertSeeText('1 products · 1 variants · 1 orders')->assertSeeText('product catalogue truncated after 100 pages')->assertDontSee('<script>', false)->assertDontSee('<img', false)->assertDontSee('<b>V</b>', false);
+        $this->actingAs($user)->post(route('reports.inventory-aging.store'), ['start_date' => '2026-08-01', 'end_date' => '2026-09-01', 'store_id' => 999])->assertOk()->assertSeeText('1 products · 1 variants · 1 orders')->assertSeeText('Product catalogue truncated after 100 pages')->assertDontSee('<script>', false)->assertDontSee('<img', false)->assertDontSee('<b>V</b>', false);
     }
 
     public function test_upstream_error_is_atomic_and_safe(): void

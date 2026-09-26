@@ -11,7 +11,7 @@
                     <label class="text-sm font-medium" for="{{ $field }}">{{ $label }}</label>
                     <input class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="{{ $field }}" name="{{ $field }}" type="date" value="{{ old($field, $value) }}">
                     @error($field)
-                        <p class="text-sm text-red-600">{{ $message }}</p>
+                        <p class="text-sm text-red-600">{{ __($message) }}</p>
                     @enderror
                 </div>
             @endforeach
@@ -21,10 +21,10 @@
         </form>
 
         @if ($configurationError)
-            <x-alert tone="warn">Shopify credentials are incomplete for the active store.</x-alert>
+            <x-alert tone="warn">{{ __('Shopify credentials are incomplete for the active store.') }}</x-alert>
         @endif
         @if ($reportFailed)
-            <x-alert tone="error">The report could not be completed. Check Shopify and try again.</x-alert>
+            <x-alert tone="error">{{ __('The report could not be completed. Check Shopify and try again.') }}</x-alert>
         @endif
 
         @if ($result)
@@ -32,7 +32,7 @@
                 <h2 class="text-2xl font-bold">{{ count($result->rows) }} refunds from {{ $result->scanned }} orders</h2>
 
                 @if ($result->truncated)
-                    <x-alert tone="warn">Results are incomplete: Shopify orders were truncated after {{ $result->pages }} pages.</x-alert>
+                    <x-alert tone="warn">{{ __('Results are incomplete: Shopify orders were truncated after :pages pages.', ['pages' => $result->pages]) }}</x-alert>
                 @endif
 
                 <x-data-table :headers="['Order', 'Refund date', 'Reason', 'Items returned', 'Refund total']">
@@ -45,20 +45,20 @@
                                 @forelse ($row['items'] as $item)
                                     <div>{{ $item['quantity'] }}× {{ $item['name'] }} @if ($item['sku'] !== '')<span class="font-mono text-slate-500">({{ $item['sku'] }})</span>@endif</div>
                                 @empty
-                                    <span class="text-slate-500">No line items</span>
+                                    <span class="text-slate-500">{{ __('No line items') }}</span>
                                 @endforelse
                             </td>
                             <td class="px-4 py-3">{{ number_format($row['refund_total'], 2) }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td class="px-4 py-8 text-center text-slate-500" colspan="5">No returns found.</td>
+                            <td class="px-4 py-8 text-center text-slate-500" colspan="5">{{ __('No returns found.') }}</td>
                         </tr>
                     @endforelse
                 </x-data-table>
 
                 @if ($result->skuStats !== [])
-                    <h2 class="text-2xl font-bold">Return Rate by SKU</h2>
+                    <h2 class="text-2xl font-bold">{{ __('Return Rate by SKU') }}</h2>
                     <x-data-table :headers="['SKU', 'Units returned', 'Return events', 'Revenue refunded']">
                         @foreach ($result->skuStats as $stat)
                             <tr>

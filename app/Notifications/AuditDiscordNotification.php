@@ -32,21 +32,21 @@ class AuditDiscordNotification extends QueuedNotification
         $shown = array_slice($this->missingOrders, 0, 10);
         $lines = array_map(fn (array $order): string => "{$order['name']} - \${$order['total']}", $shown);
         if (count($this->missingOrders) > 10) {
-            $lines[] = 'and '.(count($this->missingOrders) - 10).' more';
+            $lines[] = __('and :count more', ['count' => count($this->missingOrders) - 10]);
         }
 
         return [
-            'content' => "{$this->store}: Run Audit found {$this->missing} missing orders ({$this->period}).",
+            'content' => __(':store: Run Audit found :missing missing orders (:period).', ['store' => $this->store, 'missing' => $this->missing, 'period' => $this->period]),
             'embeds' => [[
-                'title' => "{$this->store} — Run Audit",
+                'title' => __(':store: Run Audit', ['store' => $this->store]),
                 'color' => $this->missing > 0 ? 0xE74C3C : 0x2ECC71,
                 'fields' => [
-                    ['name' => 'Missing', 'value' => (string) $this->missing, 'inline' => true],
-                    ['name' => 'Matched', 'value' => (string) $this->found, 'inline' => true],
-                    ['name' => 'Skipped', 'value' => (string) $this->skipped, 'inline' => true],
-                    ['name' => 'Ignored', 'value' => (string) $this->ignored, 'inline' => true],
-                    ['name' => 'ShipStation total', 'value' => (string) $this->shipstationTotal, 'inline' => true],
-                    ['name' => 'Duration', 'value' => "{$this->durationSeconds}s", 'inline' => true],
+                    ['name' => __('Missing'), 'value' => (string) $this->missing, 'inline' => true],
+                    ['name' => __('Matched'), 'value' => (string) $this->found, 'inline' => true],
+                    ['name' => __('Skipped'), 'value' => (string) $this->skipped, 'inline' => true],
+                    ['name' => __('Ignored'), 'value' => (string) $this->ignored, 'inline' => true],
+                    ['name' => __('ShipStation total'), 'value' => (string) $this->shipstationTotal, 'inline' => true],
+                    ['name' => __('Duration'), 'value' => "{$this->durationSeconds}s", 'inline' => true],
                 ],
                 'description' => implode("\n", $lines),
             ]],

@@ -10,7 +10,7 @@
                     <label class="text-sm font-medium" for="{{ $field }}">{{ $label }}</label>
                     <input class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="{{ $field }}" name="{{ $field }}" type="date" value="{{ old($field, $value) }}">
                     @error($field)
-                        <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                        <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ __($message) }}</p>
                     @enderror
                 </div>
             @endforeach
@@ -40,19 +40,19 @@
                 </tr>
             @empty
                 <tr>
-                    <td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="4">No saved audit data for this period.</td>
+                    <td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="4">{{ __('No saved audit data for this period.') }}</td>
                 </tr>
             @endforelse
         </x-data-table>
 
         @if ($repeatOffenders !== [])
             <section class="flex flex-col gap-3">
-                <h2 class="text-xl font-bold">Repeat offenders</h2>
+                <h2 class="text-xl font-bold">{{ __('Repeat offenders') }}</h2>
                 @include('partials.bulk-ignore-form')
                 <x-data-table :headers="['Select', 'Order', 'Times missing', '']">
                     @foreach ($repeatOffenders as $offender)
                         <tr>
-                            <td class="px-4 py-3"><input type="checkbox" name="order_numbers[]" value="{{ $offender['number'] }}" form="bulk-ignore" aria-label="Select order {{ $offender['number'] }}"></td>
+                            <td class="px-4 py-3"><input type="checkbox" name="order_numbers[]" value="{{ $offender['number'] }}" form="bulk-ignore" aria-label="{{ __('Select order :number', ['number' => $offender['number']]) }}"></td>
                             <td class="px-4 py-3">{{ $offender['number'] }}</td>
                             <td class="px-4 py-3">{{ $offender['count'] }}</td>
                             <td class="px-4 py-3">
@@ -60,7 +60,7 @@
                                     @csrf
                                     <input type="hidden" name="order_number" value="{{ $offender['number'] }}">
                                     <input type="hidden" name="reason" value="Repeat offender">
-                                    <x-button type="submit" size="sm" variant="danger">Ignore</x-button>
+                                    <x-button type="submit" size="sm" variant="danger">{{ __('Ignore') }}</x-button>
                                 </form>
                             </td>
                         </tr>

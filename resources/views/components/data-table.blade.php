@@ -10,7 +10,7 @@
             <tr>
                 @if ($headers)
                     @foreach ($headers as $header)
-                        <th class="px-4 py-3">{{ $header }}</th>
+                        <th class="px-4 py-3">{{ __($header) }}</th>
                     @endforeach
                 @else
                     {{ $head }}

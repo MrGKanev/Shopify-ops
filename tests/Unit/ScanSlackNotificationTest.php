@@ -4,7 +4,7 @@ namespace Tests\Unit;
 
 use App\Notifications\ScanSlackNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class ScanSlackNotificationTest extends TestCase
 {

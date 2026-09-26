@@ -9,8 +9,9 @@ class DetectOperationalAnomalies
     public function handle(Store $store): int
     {
         $triggeredFingerprints = [];
+        $scheduledAuditState = $this->scheduledAuditState($store);
 
-        foreach ($this->signals($store) as $signal) {
+        foreach ($this->signals($store, $scheduledAuditState === 'overdue') as $signal) {
             if ($signal['current'] < $signal['minimum'] || ($signal['baseline'] > 0 && $signal['current'] < $signal['baseline'] * $signal['multiplier'])) {
                 continue;
             }
@@ -38,10 +39,14 @@ class DetectOperationalAnomalies
             $issue->save();
         }
 
+        $preservedFingerprints = $scheduledAuditState === 'waiting'
+            ? [hash('sha256', 'anomaly_detection|scheduled_audit_stale')]
+            : [];
+
         $store->operationalIssues()
             ->where('source_tool', 'anomaly_detection')
             ->whereIn('status', ['open', 'in_progress'])
-            ->when($triggeredFingerprints !== [], fn ($query) => $query->whereNotIn('fingerprint', $triggeredFingerprints))
+            ->when($triggeredFingerprints !== [] || $preservedFingerprints !== [], fn ($query) => $query->whereNotIn('fingerprint', [...$triggeredFingerprints, ...$preservedFingerprints]))
             ->update(['status' => 'resolved', 'resolved_at' => now()]);
 
         return count($triggeredFingerprints);
@@ -50,13 +55,23 @@ class DetectOperationalAnomalies
     /**
      * @return list<array{key:string,title:string,priority:string,current:int,baseline:float,minimum:int,multiplier:float,window:string}>
      */
-    private function signals(Store $store): array
+    private function signals(Store $store, bool $scheduledAuditIsOverdue): array
     {
         $hourAgo = now()->subHour();
         $dayAgo = now()->subDay();
         $eightDaysAgo = now()->subDays(8);
 
         return [
+            [
+                'key' => 'scheduled_audit_stale',
+                'title' => 'Scheduled audit has not completed',
+                'priority' => 'high',
+                'current' => $scheduledAuditIsOverdue ? 1 : 0,
+                'baseline' => 0.0,
+                'minimum' => 1,
+                'multiplier' => 1.0,
+                'window' => 'since scheduled run',
+            ],
             [
                 'key' => 'webhook_failures',
                 'title' => 'Unusual spike in failed webhooks',
@@ -88,5 +103,23 @@ class DetectOperationalAnomalies
                 'window' => '24 hours',
             ],
         ];
+    }
+
+    private function scheduledAuditState(Store $store): string
+    {
+        if (! $store->scheduled_audit_enabled
+            || $store->scheduled_audit_time === null
+            || $store->missingShopifyCredentials()
+            || $store->missingShipStationCredentials()) {
+            return 'disabled';
+        }
+
+        if ($store->auditJobs()->whereDate('end_date', today())->where('status', 'completed')->exists()) {
+            return 'completed';
+        }
+
+        $scheduledAt = today()->setTimeFromTimeString($store->scheduled_audit_time->format('H:i:s'));
+
+        return $scheduledAt->lte(now()->subHour()) ? 'overdue' : 'waiting';
     }
 }

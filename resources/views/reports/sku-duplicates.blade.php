@@ -10,10 +10,10 @@
         </form>
 
         @if ($configurationError)
-            <x-alert tone="warn">Shopify credentials are incomplete for the active store.</x-alert>
+            <x-alert tone="warn">{{ __('Shopify credentials are incomplete for the active store.') }}</x-alert>
         @endif
         @if ($reportFailed)
-            <x-alert tone="error">The report could not be completed. Check Shopify and try again.</x-alert>
+            <x-alert tone="error">{{ __('The report could not be completed. Check Shopify and try again.') }}</x-alert>
         @endif
 
         @if ($result)
@@ -21,7 +21,7 @@
                 <h2 class="text-2xl font-bold">{{ $result->scanned }} scanned · {{ count($result->rows) }} duplicate SKUs</h2>
                 <p class="text-sm text-slate-500 dark:text-slate-400">{{ $result->totalVariants }} variants scanned</p>
                 @if ($result->truncated)
-                    <x-alert tone="warn">Results were truncated after {{ $result->pages }} product pages. The report is not a complete store inventory.</x-alert>
+                    <x-alert tone="warn">{{ __('Results were truncated after :pages product pages. The report is not a complete store inventory.', ['pages' => $result->pages]) }}</x-alert>
                 @endif
 
                 <x-data-table :headers="['SKU', 'Count', 'Products / variants']">
@@ -39,7 +39,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td class="px-4 py-8 text-center text-slate-500" colspan="3">No duplicate SKUs found in the scanned products.</td>
+                            <td class="px-4 py-8 text-center text-slate-500" colspan="3">{{ __('No duplicate SKUs found in the scanned products.') }}</td>
                         </tr>
                     @endforelse
                 </x-data-table>

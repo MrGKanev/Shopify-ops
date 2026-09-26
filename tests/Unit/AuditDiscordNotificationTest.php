@@ -5,7 +5,7 @@ namespace Tests\Unit;
 use App\Notifications\AuditDiscordNotification;
 use App\Notifications\Channels\DiscordWebhookChannel;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class AuditDiscordNotificationTest extends TestCase
 {

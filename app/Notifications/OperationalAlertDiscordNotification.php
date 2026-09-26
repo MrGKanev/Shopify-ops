@@ -19,6 +19,6 @@ class OperationalAlertDiscordNotification extends QueuedNotification
     /** @return array{content: string} */
     public function toDiscord(object $notifiable): array
     {
-        return ['content' => "Operational alert: {$this->category} failed ({$this->summary})."];
+        return ['content' => __('Operational alert: :category failed (:summary).', ['category' => $this->category, 'summary' => $this->summary])];
     }
 }

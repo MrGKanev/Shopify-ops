@@ -13,10 +13,11 @@ class CommandPaletteController extends Controller
     {
         $store = $this->resolveStore($request);
         $query = Str::of((string) ($request->validated('q') ?? ''))->squish()->toString();
+        $searchableText = fn (array $item): string => Str::lower(implode(' ', [$item['label'], $item['description'], $item['keywords']]));
         $commands = collect($this->navigationCommands())
-            ->when($query !== '', fn ($items) => $items->filter(fn (array $item): bool => Str::contains(Str::lower($item['label'].' '.$item['keywords']), Str::lower($query))))
+            ->when($query !== '', fn ($items) => $items->filter(fn (array $item): bool => Str::contains($searchableText($item), Str::lower($query))))
             ->take(8)
-            ->map(fn (array $item): array => [...$item, 'kind' => 'Page'])
+            ->map(fn (array $item): array => [...$item, 'label' => __($item['label']), 'description' => __($item['description']), 'kind' => 'Page'])
             ->values();
 
         if (mb_strlen($query) >= 2) {
@@ -27,7 +28,7 @@ class CommandPaletteController extends Controller
                 ->get(['id', 'title', 'reference', 'priority'])
                 ->map(fn ($issue): array => [
                     'label' => $issue->title,
-                    'description' => trim($issue->priority.' · '.($issue->reference ?: 'Operational issue')),
+                    'description' => trim(__(strtolower($issue->priority)).' · '.($issue->reference ?: __('Operational issue'))),
                     'url' => route('operational-issues.index').'#issue-'.$issue->getKey(),
                     'kind' => 'Issue',
                 ]);
@@ -38,7 +39,7 @@ class CommandPaletteController extends Controller
                 ->get(['id', 'tool', 'status', 'created_at'])
                 ->map(fn ($run): array => [
                     'label' => Str::headline($run->tool),
-                    'description' => $run->status.' · '.$run->created_at->diffForHumans(),
+                    'description' => __($run->status).' · '.$run->created_at->diffForHumans(),
                     'url' => route('run-logs.index', ['q' => $run->tool]),
                     'kind' => 'Run',
                 ]);
@@ -48,7 +49,7 @@ class CommandPaletteController extends Controller
                 ->limit(5)
                 ->get(['id', 'tool', 'report_date', 'rows_found'])
                 ->map(fn ($report): array => [
-                    'label' => Str::headline($report->tool),
+                    'label' => __(Str::headline($report->tool)),
                     'description' => $report->report_date->toDateString().' · '.$report->rows_found.' results',
                     'url' => route('saved-reports.show', $report),
                     'kind' => 'Report',
@@ -60,7 +61,7 @@ class CommandPaletteController extends Controller
                 ->get(['order_number', 'shopify_id', 'shipstation_order_id', 'pushed_at'])
                 ->map(fn ($order): array => [
                     'label' => '#'.$order->order_number,
-                    'description' => 'Pushed order · '.$order->pushed_at->diffForHumans(),
+                    'description' => __('Pushed order').' · '.$order->pushed_at->diffForHumans(),
                     'url' => route('push-logs.index', ['q' => $order->order_number]),
                     'kind' => 'Order',
                 ]);
@@ -71,7 +72,7 @@ class CommandPaletteController extends Controller
                 ->get(['order_number', 'reason'])
                 ->map(fn ($order): array => [
                     'label' => '#'.$order->order_number,
-                    'description' => 'Ignored order'.($order->reason !== '' ? ' · '.$order->reason : ''),
+                    'description' => __('Ignored order').($order->reason !== '' ? ' · '.$order->reason : ''),
                     'url' => route('ignored-orders.index'),
                     'kind' => 'Order',
                 ]);
@@ -82,7 +83,7 @@ class CommandPaletteController extends Controller
                 ->get(['order_number', 'note'])
                 ->map(fn ($order): array => [
                     'label' => '#'.$order->order_number,
-                    'description' => 'Print queue'.($order->note !== '' ? ' · '.$order->note : ''),
+                    'description' => __('Print queue').($order->note !== '' ? ' · '.$order->note : ''),
                     'url' => route('print-queue.index'),
                     'kind' => 'Order',
                 ]);
@@ -92,13 +93,13 @@ class CommandPaletteController extends Controller
         $orderNumber = preg_replace('/\D+/', '', $query) ?? '';
         if ($orderNumber !== '') {
             $commands = $commands->prepend([
-                'label' => 'Look up order #'.$orderNumber,
-                'description' => 'Search Shopify and ShipStation',
+                'label' => __('Look up order').' #'.$orderNumber,
+                'description' => __('Search Shopify and ShipStation'),
                 'url' => route('orders.lookup', ['order_number' => $orderNumber]),
                 'kind' => 'Order',
             ])->prepend([
-                'label' => 'Search local history for #'.$orderNumber,
-                'description' => 'Saved reports, pushed and ignored orders',
+                'label' => __('Search local history for').' #'.$orderNumber,
+                'description' => __('Saved reports, pushed and ignored orders'),
                 'url' => route('global-search', ['q' => $orderNumber]),
                 'kind' => 'Order',
             ])->take(15)->values();
@@ -110,6 +111,53 @@ class CommandPaletteController extends Controller
     /** @return array<int, array{label:string,description:string,url:string,keywords:string}> */
     private function navigationCommands(): array
     {
+        $featureDetails = [
+            'reports.duplicate-orders' => ['Find repeated or likely duplicate orders before fulfillment.', 'duplicate duplicates repeated order дублирани дубликат повторена поръчка'],
+            'reports.refund-tracker' => ['Find orders with refunds and compare refund activity.', 'refund refunds returned money възстановяване върнати пари'],
+            'reports.repeat-refunds' => ['Find customers or orders with repeated refunds.', 'repeat refund multiple refunds повторни възстановявания'],
+            'reports.return-rma' => ['Review returns and return merchandise authorizations.', 'return returns rma merchandise върнати стоки рекламации'],
+            'reports.orphan-orders' => ['Find orders present in one system but missing from the other.', 'orphan missing absent Shopify ShipStation липсващи несъответствие'],
+            'reports.active-shipstation-conflicts' => ['Find orders that are active in ShipStation but cancelled or otherwise conflicting in Shopify.', 'conflict cancelled active shipstation несъответствия отменени'],
+            'reports.shipped-unfulfilled' => ['Find orders shipped in ShipStation that Shopify still marks unfulfilled.', 'orders shipped but still unfulfilled shipped fulfilled unfulfilled tracking изпратени неизпълнени'],
+            'reports.order-edits' => ['Review Shopify order changes and edit history.', 'edited changed order history промени редактирани поръчки'],
+            'reports.note-flags' => ['Find orders with notes that need attention.', 'note notes flag warning бележки сигнал'],
+            'reports.address-check' => ['Check shipping addresses for incomplete or suspicious details.', 'address invalid incomplete shipping адрес невалиден непълен доставка'],
+            'reports.email-check' => ['Find malformed or suspicious customer email addresses.', 'email invalid typo имейл грешен клиент'],
+            'reports.high-value-no-phone' => ['Find expensive orders without a customer phone number.', 'high value expensive no phone телефон скъпи поръчки'],
+            'reports.address-changes' => ['Find orders whose shipping address changed after creation.', 'address changed edit адрес променен промяна'],
+            'reports.post-ship-address-changes' => ['Find address changes made after an order shipped.', 'post ship address changed след изпращане адрес'],
+            'reports.duplicate-addresses' => ['Find multiple orders shipping to the same address.', 'duplicate same address repeated fraud еднакъв адрес измама'],
+            'reports.voided-shipments' => ['Find voided or cancelled shipping labels.', 'void cancelled label shipment анулирани етикети пратки'],
+            'reports.fulfillment-sla' => ['Find orders that missed their fulfillment deadline.', 'late overdue fulfillment sla закъснели срок изпълнение'],
+            'reports.partial-fulfillment' => ['Find orders stuck with only some items fulfilled.', 'partial incomplete items fulfillment частично изпълнени артикули'],
+            'reports.on-hold-stall' => ['Find orders left on hold for too long.', 'hold stalled waiting задържани изчакващи'],
+            'reports.no-tracking' => ['Find fulfilled orders that have no tracking number.', 'tracking missing fulfilled проследяване липсва изпълнени'],
+            'reports.shipment-aging' => ['Find shipments that have been in transit for an unusually long time.', 'shipment aging delayed in transit доставка забавена пратка'],
+            'reports.item-mismatch' => ['Compare shipped items against Shopify order items.', 'wrong item mismatch sku shipped грешни артикули сравнение'],
+            'reports.carrier-performance' => ['Compare carrier delivery speed and performance.', 'carrier delivery speed performance куриер скорост доставка'],
+            'reports.shipping-margin' => ['Find orders where shipping cost exceeds the amount charged.', 'shipping cost margin profit доставка цена марж'],
+            'reports.inventory-oversell' => ['Find products at risk of selling beyond available inventory.', 'inventory stock oversell out of stock наличност изчерпване'],
+            'reports.inventory-aging' => ['Find inventory that has not moved for a long time.', 'old stock aging inventory залежала наличност'],
+            'reports.inventory-forecast' => ['Estimate when current inventory may run out.', 'forecast stock reorder inventory прогноза наличност зареждане'],
+            'reports.fraud-risk' => ['Review orders with elevated fraud risk signals.', 'fraud risk suspicious измама съмнителни риск'],
+            'reports.same-ip' => ['Find orders from the same IP address using different emails.', 'same ip different email измама един ip различни имейли'],
+            'reports.disputes' => ['Review payment disputes and chargebacks.', 'dispute chargeback payment оспорвания чарджбек плащане'],
+            'orders.compare' => ['Compare an order between Shopify and ShipStation.', 'compare mismatch difference поръчка сравнение разлика'],
+            'orders.timeline' => ['See order events, integration history, and shipment status in one timeline.', 'timeline history tracking events хронология проследяване история'],
+            'orders.tracking' => ['Search recent tracking updates and shipment status.', 'tracking shipment status проследяване статус пратка'],
+            'orders.tag-search' => ['Find orders by Shopify tags.', 'tag tags search таг етикет поръчки'],
+            'metafields.index' => ['Search Shopify order metafields.', 'metafield metadata custom fields метаполета данни'],
+        ];
+        $featureDetails += [
+            'reports.run-audit' => ['Compare Shopify and ShipStation orders to find missing or mismatched orders.', 'missing mismatch compare проверка липсващи несъответствия'],
+            'saved-reports.index' => ['Open and export previously saved audit results.', 'history saved export reports запазени резултати експорт'],
+            'report-trends.index' => ['Track audit results over time.', 'trend history changes тенденции история промени'],
+            'orders.spot-check' => ['Quickly inspect one order across connected systems.', 'lookup inspect order провери поръчка'],
+            'customers.lookup' => ['Find a customer and review their order history.', 'customer orders history клиент история поръчки'],
+            'reports.customer-ltv' => ['Review customer lifetime value and purchase history.', 'customer lifetime value revenue клиент стойност приходи'],
+            'orders.packing-slip' => ['Preview a packing slip for an order.', 'packing slip print pack лист за опаковане печат'],
+        ];
+
         $commands = [
             ['label' => 'Dashboard', 'description' => 'Store overview', 'url' => route('dashboard'), 'keywords' => 'home overview начало табло'],
             ['label' => 'Order lookup', 'description' => 'Find an order in Shopify', 'url' => route('orders.lookup'), 'keywords' => 'search order поръчка търсене'],
@@ -126,9 +174,9 @@ class CommandPaletteController extends Controller
                 foreach ($links as $link) {
                     $commands[] = [
                         'label' => $link['label'],
-                        'description' => $section.' tool',
+                        'description' => $featureDetails[$link['route']][0] ?? $section.' · '.$link['label'],
                         'url' => route($link['route']),
-                        'keywords' => Str::lower($section.' '.$link['label']),
+                        'keywords' => Str::lower($section.' '.$link['label'].' '.($featureDetails[$link['route']][1] ?? '')),
                     ];
                 }
             }

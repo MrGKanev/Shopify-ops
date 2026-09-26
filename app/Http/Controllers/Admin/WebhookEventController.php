@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessShopifyWebhookEvent;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -26,5 +28,26 @@ class WebhookEventController extends Controller
             ->withQueryString();
 
         return view('admin.webhook-events', compact('events', 'topic', 'status'));
+    }
+
+    public function retry(Request $request, int $event): RedirectResponse
+    {
+        $store = $this->resolveStore($request);
+        $webhookEvent = $store->webhookEvents()->findOrFail($event);
+        if ($webhookEvent->status !== 'failed') {
+            return back()->withErrors(['webhook_event' => 'Only failed webhook events can be retried.']);
+        }
+
+        $updated = $store->webhookEvents()
+            ->whereKey($webhookEvent->getKey())
+            ->where('status', 'failed')
+            ->update(['status' => 'received', 'processed_at' => null, 'error_category' => null]);
+        if ($updated !== 1) {
+            return back()->withErrors(['webhook_event' => 'Only failed webhook events can be retried.']);
+        }
+
+        ProcessShopifyWebhookEvent::dispatch((int) $webhookEvent->getKey());
+
+        return back()->with('status', 'Webhook retry queued.');
     }
 }

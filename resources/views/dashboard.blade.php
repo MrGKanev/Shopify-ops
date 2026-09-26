@@ -3,66 +3,69 @@
 <div class="flex flex-col gap-6">
     <x-page-header title="Dashboard" :subtitle="$activeStore->label.' · '.$activeStore->shopify_store.'.myshopify.com'">
         @can('run-audits')
-            <x-button size="sm" :href="route('reports.run-audit')">Run Audit</x-button>
+            <x-button size="sm" :href="route('reports.run-audit')">{{ __('Run Audit') }}</x-button>
         @endcan
         @can('manage-administration')
             <form method="POST" action="{{ route('admin.cache.flush') }}">
                 @csrf
-                <x-button variant="ghost" size="sm" type="submit">Flush cache</x-button>
+                <x-button variant="ghost" size="sm" type="submit">{{ __('Flush cache') }}</x-button>
             </form>
         @endcan
     </x-page-header>
 
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+        <x-stat-tile label="Open issues" :value="$openIssueCount" :tone="$openIssueCount > 0 ? 'warn' : 'ok'"><x-slot:sub><a href="{{ route('operational-issues.index') }}" class="text-indigo-600 dark:text-indigo-400">{{ __('View issue triage') }}</a></x-slot:sub></x-stat-tile>
+        <x-stat-tile label="Overdue issues" :value="$overdueIssueCount" :tone="$overdueIssueCount > 0 ? 'warn' : 'ok'"><x-slot:sub><a href="{{ route('operational-issues.index', ['overdue' => 1]) }}" class="text-indigo-600 dark:text-indigo-400">{{ __('Review overdue') }}</a></x-slot:sub></x-stat-tile>
+        <x-stat-tile label="Delivery exceptions" :value="$deliveryExceptionCount" :tone="$deliveryExceptionCount > 0 ? 'warn' : 'ok'"><x-slot:sub><a href="{{ route('operational-issues.index', ['source' => 'delivery_watch']) }}" class="text-indigo-600 dark:text-indigo-400">{{ __('Review shipments') }}</a></x-slot:sub></x-stat-tile>
         <x-stat-tile label="Latest audit" :value="$latest?->rows_found ?? '—'" :tone="($latest?->rows_found ?? 0) > 0 ? 'warn' : 'ok'">
             <x-slot:sub>
                 @if ($latest)
-                    missing · {{ $latest->report_date->toDateString() }}
-                    @if ($previousMissing !== null) · was {{ $previousMissing }} @endif
+                    {{ __('missing') }} · {{ $latest->report_date->toDateString() }}
+                    @if ($previousMissing !== null) · {{ __('was') }} {{ $previousMissing }} @endif
                 @else
                     No audits yet
                 @endif
             </x-slot:sub>
         </x-stat-tile>
         <x-stat-tile label="All-time audits" :value="$totalReports">
-            <x-slot:sub>{{ $totalMissing }} total missing</x-slot:sub>
+            <x-slot:sub>{{ $totalMissing }} {{ __('total missing') }}</x-slot:sub>
         </x-stat-tile>
         <x-stat-tile label="30-day audits" :value="$auditsLast30Days">
-            <x-slot:sub>runs in the last 30 days</x-slot:sub>
+            <x-slot:sub>{{ __('runs in the last 30 days') }}</x-slot:sub>
         </x-stat-tile>
         <x-stat-tile label="Clear rate" :value="$clearAuditRate === null ? '—' : $clearAuditRate.'%'" :tone="($clearAuditRate ?? 0) >= 75 ? 'ok' : 'default'">
-            <x-slot:sub>clear runs in the last 30 audits</x-slot:sub>
+            <x-slot:sub>{{ __('clear runs in the last 30 audits') }}</x-slot:sub>
         </x-stat-tile>
         <x-stat-tile label="Pushes" :value="$pushesToday">
-            <x-slot:sub>today · {{ $pushesMonth }} in 30 days</x-slot:sub>
+            <x-slot:sub>{{ __('today') }} · {{ $pushesMonth }} {{ __('in 30 days') }}</x-slot:sub>
         </x-stat-tile>
         <x-stat-tile label="Ignored orders" :value="$ignoredCount" :tone="$ignoredCount > 0 ? 'warn' : 'default'">
-            <x-slot:sub><a href="{{ route('ignored-orders.index') }}" class="text-indigo-600 dark:text-indigo-400">Manage ignored orders</a> · {{ $staleIgnoredCount }} stale (30d+)</x-slot:sub>
+            <x-slot:sub><a href="{{ route('ignored-orders.index') }}" class="text-indigo-600 dark:text-indigo-400">{{ __('Manage ignored orders') }}</a> · {{ $staleIgnoredCount }} {{ __('stale (30d+)') }}</x-slot:sub>
         </x-stat-tile>
         <x-stat-tile label="Audit cadence" :value="$auditCadenceDays ?? '—'">
-            <x-slot:sub>avg days between audits</x-slot:sub>
+            <x-slot:sub>{{ __('avg days between audits') }}</x-slot:sub>
         </x-stat-tile>
         <x-stat-tile label="Avg resolution" :value="$avgResolutionDays ?? '—'">
-            <x-slot:sub>days to clear a missing order</x-slot:sub>
+            <x-slot:sub>{{ __('days to clear a missing order') }}</x-slot:sub>
         </x-stat-tile>
         <x-stat-tile label="Oldest missing" :value="$oldestMissingAge ?? '—'" :tone="($oldestMissingAge ?? 0) > 7 ? 'warn' : 'default'">
-            <x-slot:sub>days since placed</x-slot:sub>
+            <x-slot:sub>{{ __('days since placed') }}</x-slot:sub>
         </x-stat-tile>
         <x-stat-tile label="Recurring missing" :value="$recurringMissingCount" :tone="$recurringMissingCount > 0 ? 'warn' : 'ok'">
-            <x-slot:sub>current orders seen in 2+ audits</x-slot:sub>
+            <x-slot:sub>{{ __('current orders seen in 2+ audits') }}</x-slot:sub>
         </x-stat-tile>
     </div>
 
     @if ($sevenDayChart->isNotEmpty())
         <x-card>
             <div class="mb-3 flex items-center gap-3 text-sm">
-                <span class="font-semibold">Last 7 days</span>
-                <span class="text-xs text-slate-500 dark:text-slate-400">— No audit</span>
+                <span class="font-semibold">{{ __('Last 7 days') }}</span>
+                <span class="text-xs text-slate-500 dark:text-slate-400">— {{ __('No audit') }}</span>
             </div>
             <div class="flex items-end gap-2" style="height:100px">
                 @php($max = max(1, $sevenDayChart->max('missing')))
                 @foreach ($sevenDayChart as $point)
-                    @php($pointLabel = $point['date'].': '.($point['missing'] === null ? 'No audit' : $point['missing'].' missing'))
+                    @php($pointLabel = $point['date'].': '.($point['missing'] === null ? __('No audit') : $point['missing'].' '.__('missing')))
                     <div class="flex flex-col items-center gap-1" role="img" aria-label="{{ $pointLabel }}" title="{{ $pointLabel }}">
                         <div class="flex h-[70px] w-6 items-end justify-center">
                             @if ($point['missing'] === null)
@@ -80,7 +83,7 @@
 
     @if ($missingByType !== [])
         <x-card>
-            <div class="mb-3 text-sm font-semibold">Missing by type</div>
+            <div class="mb-3 text-sm font-semibold">{{ __('Missing by type') }}</div>
             <ul class="flex flex-wrap gap-3 text-sm text-slate-600 dark:text-slate-300">
                 @foreach ($missingByType as $type => $count)
                     <li class="rounded-lg bg-slate-100 px-3 py-1.5 dark:bg-slate-800">{{ $type }}: {{ $count }}</li>
@@ -92,17 +95,17 @@
     <section class="flex flex-col gap-4">
         <div class="flex items-center justify-between">
             <div>
-                <h2 class="text-xl font-bold">Action queue</h2>
-                <p class="text-sm text-slate-500 dark:text-slate-400">Missing orders from the latest audit.</p>
+                <h2 class="text-xl font-bold">{{ __('Action queue') }}</h2>
+                <p class="text-sm text-slate-500 dark:text-slate-400">{{ __('Missing orders from the latest audit.') }}</p>
             </div>
             @if ($latest)
-                <a class="text-sm font-medium text-indigo-600 dark:text-indigo-400" href="{{ route('saved-reports.show', $latest) }}">Full snapshot</a>
+                <a class="text-sm font-medium text-indigo-600 dark:text-indigo-400" href="{{ route('saved-reports.show', $latest) }}">{{ __('Full snapshot') }}</a>
             @endif
         </div>
         @if (! $latest)
             <x-empty-state icon="📋" title="No audits yet">Run the first audit to build the queue.</x-empty-state>
         @elseif ($missingOrders === [])
-            <x-empty-state icon="✓" title="All clear">No missing orders.</x-empty-state>
+            <x-empty-state icon="✓" title="All clear">{{ __('No missing orders.') }}</x-empty-state>
         @else
             <x-data-table :headers="['Order', 'Date', 'Email', 'Total']">
                 @foreach ($missingOrders as $order)
@@ -120,8 +123,8 @@
     @can('run-audits')
         <x-card>
             <div class="mb-3 flex items-center justify-between">
-                <div class="text-sm font-semibold">Quick actions</div>
-                <a class="text-sm font-medium text-indigo-600 dark:text-indigo-400" href="{{ route('audits.index') }}">Browse all audits →</a>
+                <div class="text-sm font-semibold">{{ __('Quick actions') }}</div>
+                <a class="text-sm font-medium text-indigo-600 dark:text-indigo-400" href="{{ route('audits.index') }}">{{ __('Browse all audits →') }}</a>
             </div>
             <div class="flex flex-wrap gap-2">
                 @foreach ([['📋', 'Run Audit', 'reports.run-audit'], ['🏠', 'Address Check', 'reports.address-check'], ['✉', 'Email Check', 'reports.email-check'], ['📦', 'Bundle Check', 'reports.bundle-check'], ['⏳', 'Partial Stalls', 'reports.partial-fulfillment'], ['🔎', 'Orphan Orders', 'reports.orphan-orders']] as [$icon, $label, $name])

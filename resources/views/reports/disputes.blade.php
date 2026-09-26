@@ -10,10 +10,10 @@
         </form>
 
         @if ($configurationError)
-            <x-alert tone="warn">Shopify credentials are incomplete for the active store.</x-alert>
+            <x-alert tone="warn">{{ __('Shopify credentials are incomplete for the active store.') }}</x-alert>
         @endif
         @if ($reportFailed)
-            <x-alert tone="error">The report could not be completed. Check Shopify and try again.</x-alert>
+            <x-alert tone="error">{{ __('The report could not be completed. Check Shopify and try again.') }}</x-alert>
         @endif
 
         @if ($result)
@@ -21,7 +21,7 @@
                 <h2 class="text-2xl font-bold">{{ $result->scanned }} open disputes</h2>
 
                 @if ($result->truncated)
-                    <x-alert tone="warn">Results are incomplete: disputes truncated after {{ $result->pages }} pages.</x-alert>
+                    <x-alert tone="warn">{{ __('Results are incomplete: disputes truncated after :pages pages.', ['pages' => $result->pages]) }}</x-alert>
                 @endif
 
                 <x-data-table :headers="['Order', 'Status', 'Reason', 'Amount', 'Initiated', 'Days until due']">
@@ -36,7 +36,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td class="px-4 py-8 text-center text-slate-500" colspan="6">No open disputes need a response.</td>
+                            <td class="px-4 py-8 text-center text-slate-500" colspan="6">{{ __('No open disputes need a response.') }}</td>
                         </tr>
                     @endforelse
                 </x-data-table>

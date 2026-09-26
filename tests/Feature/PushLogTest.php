@@ -6,6 +6,7 @@ use App\Application\Orders\RecordPush;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use RuntimeException;
 use Tests\TestCase;
 
 class PushLogTest extends TestCase
@@ -46,5 +47,20 @@ class PushLogTest extends TestCase
 
         $this->actingAs($user)->get('/push-logs?q=1001')->assertOk()->assertSeeText('#1001')->assertDontSeeText('#2002');
         $this->actingAs($user)->get('/push-logs?q=43')->assertOk()->assertSeeText('#2002')->assertDontSeeText('#1001');
+    }
+
+    public function test_failed_attempts_show_a_safe_error_category_without_an_external_link(): void
+    {
+        $store = Store::factory()->create();
+        $user = User::factory()->create();
+        $user->stores()->attach($store);
+        app(RecordPush::class)->failed($store, '#1001', '42', new RuntimeException('secret token'));
+
+        $this->actingAs($user)->get('/push-logs')
+            ->assertOk()
+            ->assertSeeText('Failed')
+            ->assertSeeText(RuntimeException::class)
+            ->assertDontSeeText('secret token')
+            ->assertDontSeeText('View in SS');
     }
 }

@@ -26,10 +26,12 @@ class ReportEmailNotification extends QueuedNotification
 
     public function toMail(object $notifiable): MailMessage
     {
-        $mail = (new MailMessage)->subject("{$this->store}: {$this->tool} found {$this->rows} rows")->line("{$this->tool} found {$this->rows} rows for {$this->store}.");
+        $mail = (new MailMessage)
+            ->subject(__(':store: :tool found :rows rows', ['store' => $this->store, 'tool' => $this->tool, 'rows' => $this->rows]))
+            ->line(__(':tool found :rows rows for :store.', ['tool' => $this->tool, 'rows' => $this->rows, 'store' => $this->store]));
 
         if ($this->start || $this->end) {
-            $mail = $mail->line("Period: {$this->start} → {$this->end}");
+            $mail = $mail->line(__('Period: :start → :end', ['start' => $this->start, 'end' => $this->end]));
         }
 
         if ($this->attachmentHeaders !== null && $this->attachmentRows !== [] && $this->attachmentRows !== null) {

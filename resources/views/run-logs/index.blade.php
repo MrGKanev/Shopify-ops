@@ -7,10 +7,10 @@
         <x-card>
             <form class="flex flex-col gap-3 sm:flex-row sm:items-end" method="GET">
                 <div class="min-w-0 flex-1">
-                    <label class="text-sm font-medium" for="run-search">Tool, status, or error</label>
+                    <label class="text-sm font-medium" for="run-search">{{ __('Tool, status, or error') }}</label>
                     <input class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="run-search" name="q" type="search" value="{{ $q }}">
                 </div>
-                <x-button type="submit">Search</x-button>
+                <x-button type="submit">{{ __('Search') }}</x-button>
             </form>
         </x-card>
 
@@ -27,7 +27,7 @@
                     <td class="px-4 py-3">{{ $run->error ?: collect($run->meta)->map(fn ($value, $key) => $key.': '.(is_bool($value) ? ($value ? 'yes' : 'no') : $value))->implode(', ') ?: '-' }}</td>
                 </tr>
             @empty
-                <tr><td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="8">No runs logged yet.</td></tr>
+                <tr><td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="8">{{ __('No runs logged yet.') }}</td></tr>
             @endforelse
         </x-data-table>
 

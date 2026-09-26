@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Integrations\ShipStation\ShipStationClientContract;
 use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Models\PushLog;
 use App\Models\Store;
 use App\Models\User;
+use App\Models\WebhookEvent;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -145,6 +147,29 @@ class OrderTimelineControllerTest extends TestCase
             ->with($this->callback(fn (Store $received): bool => $received->is($store)))
             ->willReturn($shipStation);
         $this->app->instance(ShipStationClientFactory::class, $factory);
+        WebhookEvent::factory()->for($store)->create([
+            'subject_id' => '123',
+            'status' => 'failed',
+            'error_category' => 'RuntimeException',
+            'occurred_at' => '2026-06-04 11:00:00',
+            'processed_at' => '2026-06-04 11:01:00',
+        ]);
+        PushLog::query()->create([
+            'store_id' => $store->getKey(),
+            'order_number' => '#65075',
+            'shopify_id' => '123',
+            'shipstation_order_id' => '99',
+            'pushed_at' => '2026-06-02 09:00:00',
+        ]);
+        PushLog::query()->create([
+            'store_id' => $store->getKey(),
+            'order_number' => '65075',
+            'shopify_id' => '123',
+            'shipstation_order_id' => null,
+            'pushed_at' => '2026-06-04 12:00:00',
+            'status' => 'failed',
+            'error_category' => 'RuntimeException',
+        ]);
 
         $response = $this->actingAs($user)
             ->withSession(['active_store_id' => $store->getKey()])
@@ -155,6 +180,11 @@ class OrderTimelineControllerTest extends TestCase
             ->assertSeeText('3 days')
             ->assertSeeText('2 items · UPS')
             ->assertSeeText('Shipped via ShipStation')
+            ->assertSeeText('Shopify webhook: orders/updated')
+            ->assertSeeText('Order pushed to ShipStation')
+            ->assertSeeText('ShipStation order ID 99')
+            ->assertSeeText('ShipStation push failed')
+            ->assertSeeText('Failure: RuntimeException')
             ->assertSeeText('<img src=x onerror=alert(1)>')
             ->assertDontSee('<img src=x onerror=alert(1)>', false)
             ->assertSeeText('<script>alert("tracking")</script>')

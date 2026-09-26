@@ -30,8 +30,8 @@ class SlackTestNotification extends QueuedNotification
     public function toSlack(object $notifiable): SlackMessage
     {
         return (new SlackMessage)
-            ->text($this->applicationName.' successfully connected to Slack at '.$this->sentAt.'. No store credentials or order data are included.')
-            ->headerBlock($this->applicationName.' Slack delivery test')
+            ->text(__(':app successfully connected to Slack at :time. No store credentials or order data are included.', ['app' => $this->applicationName, 'time' => $this->sentAt]))
+            ->headerBlock(__(':app Slack delivery test', ['app' => $this->applicationName]))
             ->unfurlLinks(false)
             ->unfurlMedia(false);
     }

@@ -2,10 +2,12 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Jobs\ProcessShopifyWebhookEvent;
 use App\Models\Store;
 use App\Models\User;
 use App\Models\WebhookEvent;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class WebhookEventControllerTest extends TestCase
@@ -45,5 +47,37 @@ class WebhookEventControllerTest extends TestCase
             ->assertSeeText('orders/updated')
             ->assertDontSeeText('refunds/create');
         $this->actingAs($admin)->get(route('admin.webhook-events', ['status' => 'invalid']))->assertSessionHasErrors('status');
+    }
+
+    public function test_admin_can_retry_a_failed_webhook_from_the_active_store(): void
+    {
+        $store = Store::factory()->create();
+        $admin = User::factory()->admin()->create();
+        $admin->stores()->attach($store);
+        $event = WebhookEvent::factory()->for($store)->create(['status' => 'failed', 'error_category' => 'RuntimeException']);
+        Queue::fake([ProcessShopifyWebhookEvent::class]);
+
+        $this->actingAs($admin)->post(route('admin.webhook-events.retry', $event))
+            ->assertSessionHas('status', 'Webhook retry queued.');
+
+        $this->assertDatabaseHas('webhook_events', ['id' => $event->getKey(), 'status' => 'received', 'error_category' => null]);
+        Queue::assertPushed(ProcessShopifyWebhookEvent::class, fn (ProcessShopifyWebhookEvent $job): bool => $job->eventId === $event->getKey());
+    }
+
+    public function test_admin_cannot_retry_another_stores_event_or_a_non_failed_event(): void
+    {
+        $store = Store::factory()->create();
+        $otherStore = Store::factory()->create();
+        $admin = User::factory()->admin()->create();
+        $admin->stores()->attach($store);
+        $otherEvent = WebhookEvent::factory()->for($otherStore)->create(['status' => 'failed']);
+        $processedEvent = WebhookEvent::factory()->for($store)->create(['status' => 'processed']);
+        Queue::fake([ProcessShopifyWebhookEvent::class]);
+
+        $this->actingAs($admin)->post(route('admin.webhook-events.retry', $otherEvent))->assertNotFound();
+        $this->actingAs($admin)->post(route('admin.webhook-events.retry', $processedEvent))
+            ->assertSessionHasErrors('webhook_event');
+
+        Queue::assertNothingPushed();
     }
 }

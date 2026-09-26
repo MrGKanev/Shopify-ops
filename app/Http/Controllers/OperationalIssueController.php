@@ -14,9 +14,15 @@ class OperationalIssueController extends Controller
     {
         $store = $this->store($request);
         $status = $request->string('status')->toString();
+        $mine = $request->boolean('mine');
+        $overdue = $request->boolean('overdue');
+        $source = $request->string('source')->toString();
         $issues = $store->operationalIssues()
             ->with('owner:id,name')
             ->when(in_array($status, ['open', 'in_progress', 'resolved', 'ignored'], true), fn ($query) => $query->where('status', $status))
+            ->when($mine, fn ($query) => $query->where('owner_user_id', $request->user()->getKey()))
+            ->when($overdue, fn ($query) => $query->whereIn('status', ['open', 'in_progress'])->whereNotNull('due_date')->whereDate('due_date', '<', today()))
+            ->when($source === 'delivery_watch', fn ($query) => $query->where('source_tool', $source))
             ->orderByRaw("case priority when 'urgent' then 1 when 'high' then 2 when 'normal' then 3 else 4 end")
             ->latest('last_seen_at')
             ->paginate(50)
@@ -25,6 +31,9 @@ class OperationalIssueController extends Controller
         return view('operational-issues.index', [
             'issues' => $issues,
             'status' => $status,
+            'mine' => $mine,
+            'overdue' => $overdue,
+            'source' => $source,
             'owners' => $store->users()->orderBy('name')->get(['users.id', 'users.name']),
             'openCount' => $store->operationalIssues()->whereIn('status', ['open', 'in_progress'])->count(),
         ]);

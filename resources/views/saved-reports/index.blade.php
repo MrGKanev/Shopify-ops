@@ -11,11 +11,11 @@
                     <td class="px-4 py-3">{{ $report->tool }}</td>
                     <td class="px-4 py-3">{{ $report->start_date->toDateString() }} → {{ $report->end_date->toDateString() }}</td>
                     <td class="px-4 py-3">{{ $report->rows_found }}</td>
-                    <td class="px-4 py-3"><a class="font-medium text-indigo-600 dark:text-indigo-400" href="{{ route('saved-reports.show', $report) }}">Open</a></td>
+                    <td class="px-4 py-3"><a class="font-medium text-indigo-600 dark:text-indigo-400" href="{{ route('saved-reports.show', $report) }}">{{ __('Open') }}</a></td>
                 </tr>
             @empty
                 <tr>
-                    <td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="5">No saved reports yet.</td>
+                    <td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="5">{{ __('No saved reports yet.') }}</td>
                 </tr>
             @endforelse
         </x-data-table>

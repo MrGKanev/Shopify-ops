@@ -20,7 +20,7 @@ class TestEmail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: $this->applicationName.' email delivery test',
+            subject: __(':app email delivery test', ['app' => $this->applicationName]),
         );
     }
 

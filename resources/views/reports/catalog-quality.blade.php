@@ -6,9 +6,9 @@
 
         <x-card>
             <ul class="list-disc space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-300">
-                <li>Checks publication to the Online Store channel.</li>
-                <li>Checks custom SEO title and description.</li>
-                <li>Checks whether the product belongs to at least one collection.</li>
+                <li>{{ __('Checks publication to the Online Store channel.') }}</li>
+                <li>{{ __('Checks custom SEO title and description.') }}</li>
+                <li>{{ __('Checks whether the product belongs to at least one collection.') }}</li>
             </ul>
         </x-card>
 
@@ -18,17 +18,17 @@
         </form>
 
         @if ($configurationError)
-            <x-alert tone="warn">Shopify credentials are incomplete for the active store.</x-alert>
+            <x-alert tone="warn">{{ __('Shopify credentials are incomplete for the active store.') }}</x-alert>
         @endif
         @if ($reportFailed)
-            <x-alert tone="error">The report could not be completed. Check Shopify and try again.</x-alert>
+            <x-alert tone="error">{{ __('The report could not be completed. Check Shopify and try again.') }}</x-alert>
         @endif
 
         @if ($result)
             <section class="flex flex-col gap-4">
                 <h2 class="text-2xl font-bold">{{ $result->scanned }} active products · {{ count($result->rows) }} with quality issues</h2>
                 @if ($result->truncated)
-                    <x-alert tone="warn">Results were truncated after {{ $result->pages }} product pages.</x-alert>
+                    <x-alert tone="warn">{{ __('Results were truncated after :pages product pages.', ['pages' => $result->pages]) }}</x-alert>
                 @endif
                 <x-data-table :headers="['Product', 'Vendor / type', 'Issues']">
                     @forelse ($result->rows as $row)
@@ -51,7 +51,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td class="px-4 py-8 text-center text-slate-500" colspan="3">All scanned active products are published, have SEO fields, and belong to a collection.</td>
+                            <td class="px-4 py-8 text-center text-slate-500" colspan="3">{{ __('All scanned active products are published, have SEO fields, and belong to a collection.') }}</td>
                         </tr>
                     @endforelse
                 </x-data-table>

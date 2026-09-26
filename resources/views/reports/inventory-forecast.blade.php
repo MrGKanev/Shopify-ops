@@ -6,9 +6,9 @@
 
         <x-card>
             <ul class="list-disc space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-300">
-                <li>Only tracked variants with overselling disabled are included.</li>
-                <li>Daily rate equals units sold in 30 days divided by 30.</li>
-                <li>Critical means fewer than 7 days; low stock means 7–13 days.</li>
+                <li>{{ __('Only tracked variants with overselling disabled are included.') }}</li>
+                <li>{{ __('Daily rate equals units sold in 30 days divided by 30.') }}</li>
+                <li>{{ __('Critical means fewer than 7 days; low stock means 7–13 days.') }}</li>
             </ul>
         </x-card>
 
@@ -18,10 +18,10 @@
         </form>
 
         @if ($configurationError)
-            <x-alert tone="warn">Shopify credentials are incomplete for the active store.</x-alert>
+            <x-alert tone="warn">{{ __('Shopify credentials are incomplete for the active store.') }}</x-alert>
         @endif
         @if ($reportFailed)
-            <x-alert tone="error">The forecast could not be completed. Check Shopify and try again.</x-alert>
+            <x-alert tone="error">{{ __('The forecast could not be completed. Check Shopify and try again.') }}</x-alert>
         @endif
 
         @if ($result)
@@ -38,12 +38,12 @@
                 </div>
                 @if ($result->productsTruncated || $result->ordersTruncated)
                     <x-alert tone="warn">
-                        Results are incomplete.
+                        {{ __('Results are incomplete.') }}
                         @if ($result->productsTruncated)
-                            Product catalogue stopped after {{ $result->productPages }} pages.
+                            {{ __('Product catalogue stopped after :pages pages.', ['pages' => $result->productPages]) }}
                         @endif
                         @if ($result->ordersTruncated)
-                            Orders stopped after {{ $result->orderPages }} pages.
+                            {{ __('Orders stopped after :pages pages.', ['pages' => $result->orderPages]) }}
                         @endif
                     </x-alert>
                 @endif
@@ -75,7 +75,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td class="px-4 py-8 text-center text-slate-500" colspan="6">No stock-out risk was detected.</td>
+                            <td class="px-4 py-8 text-center text-slate-500" colspan="6">{{ __('No stock-out risk was detected.') }}</td>
                         </tr>
                     @endforelse
                 </x-data-table>

@@ -65,6 +65,7 @@ class StoreControllerTest extends TestCase
             'shipstation_api_key' => 'shipstation-key',
             'shipstation_api_secret' => 'shipstation-secret',
             'store_number' => '10001',
+            'delivery_watch_days' => 9,
             'unexpected' => 'must-not-be-saved',
         ]);
 
@@ -74,6 +75,7 @@ class StoreControllerTest extends TestCase
             ->assertSessionHas('status', 'Store created.');
         $this->assertSame('new-shop', $store->shopify_store);
         $this->assertSame('shopify-token', $store->shopify_access_token);
+        $this->assertSame(9, $store->delivery_watch_days);
         $this->assertTrue($admin->stores()->whereKey($store)->exists());
         $this->assertArrayNotHasKey('unexpected', $store->getAttributes());
     }
@@ -143,6 +145,7 @@ class StoreControllerTest extends TestCase
             'shipstation_api_key' => 'replacement-key',
             'shipstation_api_secret' => '',
             'store_number' => '',
+            'delivery_watch_days' => 12,
         ]);
 
         $response
@@ -154,5 +157,6 @@ class StoreControllerTest extends TestCase
         $this->assertSame('replacement-key', $store->shipstation_api_key);
         $this->assertSame('original-secret', $store->shipstation_api_secret);
         $this->assertNull($store->store_number);
+        $this->assertSame(12, $store->delivery_watch_days);
     }
 }

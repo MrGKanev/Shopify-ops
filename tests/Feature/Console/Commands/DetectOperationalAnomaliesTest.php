@@ -76,4 +76,38 @@ class DetectOperationalAnomaliesTest extends TestCase
         $this->assertSame('10 * * * *', $event->expression);
         $this->assertTrue($event->withoutOverlapping);
     }
+
+    public function test_it_flags_a_missed_scheduled_audit_and_resolves_it_after_success(): void
+    {
+        $this->travelTo(Carbon::parse('2026-09-15 11:05:00'));
+        $store = Store::factory()->create(['scheduled_audit_enabled' => true, 'scheduled_audit_time' => '09:00']);
+        $this->artisan('operations:detect-anomalies')->assertSuccessful();
+
+        $issue = $store->operationalIssues()->where('reference', 'scheduled_audit_stale')->sole();
+        $this->assertSame('open', $issue->status);
+        $this->assertSame('Scheduled audit has not completed', $issue->title);
+
+        $this->travelTo(Carbon::parse('2026-09-16 01:05:00'));
+        $this->artisan('operations:detect-anomalies')->assertSuccessful();
+        $this->assertSame('open', $issue->fresh()->status);
+
+        $this->travelTo(Carbon::parse('2026-09-16 10:05:00'));
+        $store->auditJobs()->create(['status' => 'completed', 'start_date' => today()->subDays(30), 'end_date' => today(), 'finished_at' => now()]);
+        $this->artisan('operations:detect-anomalies')->assertSuccessful();
+
+        $this->assertSame('resolved', $issue->fresh()->status);
+    }
+
+    public function test_it_does_not_flag_an_early_morning_audit_before_its_scheduled_time(): void
+    {
+        $this->travelTo(Carbon::parse('2026-09-15 00:05:00'));
+        $store = Store::factory()->create(['scheduled_audit_enabled' => true, 'scheduled_audit_time' => '00:30']);
+
+        $this->artisan('operations:detect-anomalies')->assertSuccessful();
+        $this->assertFalse($store->operationalIssues()->where('reference', 'scheduled_audit_stale')->exists());
+
+        $this->travelTo(Carbon::parse('2026-09-15 01:35:00'));
+        $this->artisan('operations:detect-anomalies')->assertSuccessful();
+        $this->assertTrue($store->operationalIssues()->where('reference', 'scheduled_audit_stale')->exists());
+    }
 }

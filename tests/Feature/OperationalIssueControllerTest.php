@@ -27,6 +27,8 @@ class OperationalIssueControllerTest extends TestCase
             'status' => 'in_progress',
             'priority' => 'high',
             'owner_user_id' => $operator->getKey(),
+            'due_date' => '2026-10-01',
+            'resolution_note' => 'Waiting for carrier confirmation.',
         ])->assertSessionHas('status', 'Issue updated.');
 
         $this->assertDatabaseHas('operational_issues', [
@@ -34,7 +36,13 @@ class OperationalIssueControllerTest extends TestCase
             'status' => 'in_progress',
             'priority' => 'high',
             'owner_user_id' => $operator->getKey(),
+            'resolution_note' => 'Waiting for carrier confirmation.',
         ]);
+        $this->assertSame('2026-10-01', $issue->fresh()->due_date->toDateString());
+
+        $this->actingAs($operator)->get(route('operational-issues.index'))
+            ->assertSeeText('2026-10-01')
+            ->assertSeeText('Waiting for carrier confirmation.');
 
         $this->actingAs($operator)->put(route('operational-issues.update', $otherIssue), [
             'status' => 'resolved',
@@ -49,6 +57,28 @@ class OperationalIssueControllerTest extends TestCase
         $viewer->stores()->attach($store);
 
         $this->actingAs($viewer)->get(route('operational-issues.index'))->assertForbidden();
+    }
+
+    public function test_operator_can_filter_owned_and_overdue_issues(): void
+    {
+        $this->travelTo('2026-09-26 12:00:00');
+        [$operator, $store] = $this->operatorWithStore();
+        $ownedOverdue = OperationalIssue::factory()->for($store)->create(['title' => 'My overdue issue', 'owner_user_id' => $operator->id, 'due_date' => '2026-09-25']);
+        OperationalIssue::factory()->for($store)->create(['title' => 'My future issue', 'owner_user_id' => $operator->id, 'due_date' => '2026-09-27']);
+        OperationalIssue::factory()->for($store)->create(['title' => 'Other overdue issue', 'due_date' => '2026-09-25']);
+        OperationalIssue::factory()->for($store)->create(['title' => 'Resolved overdue issue', 'status' => 'resolved', 'due_date' => '2026-09-25']);
+
+        $this->actingAs($operator)->get(route('operational-issues.index', ['mine' => 1]))
+            ->assertSeeText('My overdue issue')
+            ->assertSeeText('My future issue')
+            ->assertDontSeeText('Other overdue issue');
+
+        $this->actingAs($operator)->get(route('operational-issues.index', ['overdue' => 1]))
+            ->assertSeeText('My overdue issue')
+            ->assertSeeText('Other overdue issue')
+            ->assertSeeText('Overdue')
+            ->assertDontSeeText('My future issue')
+            ->assertDontSeeText('Resolved overdue issue');
     }
 
     /** @return array{User, Store} */

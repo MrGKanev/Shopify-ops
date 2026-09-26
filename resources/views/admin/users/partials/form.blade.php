@@ -2,13 +2,13 @@
     <div class="flex flex-col gap-2">
         <label class="text-sm font-medium" for="name">Name</label>
         <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="name" name="name" value="{{ old('name', $user?->name) }}" required>
-        @error('name') <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
+        @error('name') <p class="text-sm text-red-600 dark:text-red-400">{{ __($message) }}</p> @enderror
     </div>
 
     <div class="flex flex-col gap-2">
-        <label class="text-sm font-medium" for="email">Email</label>
+        <label class="text-sm font-medium" for="email">{{ __('Email') }}</label>
         <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="email" name="email" type="email" value="{{ old('email', $user?->email) }}" autocomplete="username" required>
-        @error('email') <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
+        @error('email') <p class="text-sm text-red-600 dark:text-red-400">{{ __($message) }}</p> @enderror
     </div>
 
     <div class="flex flex-col gap-2 sm:col-span-2">
@@ -18,23 +18,23 @@
                 <option value="{{ $role->value }}" @selected(old('role', $user?->role?->value) === $role->value)>{{ ucfirst($role->value) }}</option>
             @endforeach
         </select>
-        @error('role') <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
+        @error('role') <p class="text-sm text-red-600 dark:text-red-400">{{ __($message) }}</p> @enderror
     </div>
 
     <div class="flex flex-col gap-2">
-        <label class="text-sm font-medium" for="password">Password</label>
+        <label class="text-sm font-medium" for="password">{{ __('Password') }}</label>
         <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="password" name="password" type="password" minlength="12" autocomplete="new-password" {{ $user === null ? 'required' : '' }}>
-        @if ($user !== null) <p class="text-xs text-slate-500 dark:text-slate-400">Leave blank to keep the current password.</p> @endif
-        @error('password') <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
+        @if ($user !== null) <p class="text-xs text-slate-500 dark:text-slate-400">{{ __('Leave blank to keep the current password.') }}</p> @endif
+        @error('password') <p class="text-sm text-red-600 dark:text-red-400">{{ __($message) }}</p> @enderror
     </div>
 
     <div class="flex flex-col gap-2">
-        <label class="text-sm font-medium" for="password_confirmation">Confirm password</label>
+        <label class="text-sm font-medium" for="password_confirmation">{{ __('Confirm password') }}</label>
         <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="password_confirmation" name="password_confirmation" type="password" minlength="12" autocomplete="new-password" {{ $user === null ? 'required' : '' }}>
     </div>
 
     <fieldset class="flex flex-col gap-3 sm:col-span-2">
-        <legend class="text-sm font-medium">Store access</legend>
+        <legend class="text-sm font-medium">{{ __('Store access') }}</legend>
         @php($selectedStores = old('store_ids', $user?->stores->modelKeys() ?? []))
         <div class="grid gap-3 sm:grid-cols-2">
             @foreach ($stores as $store)
@@ -44,8 +44,8 @@
                 </label>
             @endforeach
         </div>
-        @error('store_ids') <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
-        @error('store_ids.*') <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
+        @error('store_ids') <p class="text-sm text-red-600 dark:text-red-400">{{ __($message) }}</p> @enderror
+        @error('store_ids.*') <p class="text-sm text-red-600 dark:text-red-400">{{ __($message) }}</p> @enderror
     </fieldset>
 </div>
 

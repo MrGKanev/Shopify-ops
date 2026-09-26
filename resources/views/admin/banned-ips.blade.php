@@ -20,7 +20,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="4">No banned IPs.</td></tr>
+                <tr><td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="4">{{ __('No banned IPs.') }}</td></tr>
             @endforelse
         </x-data-table>
     </div>

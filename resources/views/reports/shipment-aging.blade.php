@@ -7,23 +7,23 @@
         <form class="flex flex-wrap items-end gap-4 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900" method="POST" action="{{ route('reports.shipment-aging.store') }}">
             @csrf
             <div>
-                <label class="text-sm font-medium" for="threshold">Older than days</label>
+                <label class="text-sm font-medium" for="threshold">{{ __('Older than days') }}</label>
                 <input class="mt-2 block rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="threshold" name="threshold" type="number" min="1" max="365" value="{{ old('threshold', $threshold) }}">
                 @error('threshold')
-                    <p class="text-sm text-red-600">{{ $message }}</p>
+                    <p class="text-sm text-red-600">{{ __($message) }}</p>
                 @enderror
             </div>
-            <x-button type="submit">Run report</x-button>
+            <x-button type="submit">{{ __('Run report') }}</x-button>
         </form>
 
         @error('export')
-            <x-alert tone="error">{{ $message }}</x-alert>
+            <x-alert tone="error">{{ __($message) }}</x-alert>
         @enderror
         @if ($configurationError)
-            <x-alert tone="warn">ShipStation credentials are incomplete for the active store.</x-alert>
+            <x-alert tone="warn">{{ __('ShipStation credentials are incomplete for the active store.') }}</x-alert>
         @endif
         @if ($reportFailed)
-            <x-alert tone="error">The report could not be completed. Check ShipStation and try again.</x-alert>
+            <x-alert tone="error">{{ __('The report could not be completed. Check ShipStation and try again.') }}</x-alert>
         @endif
 
         @if ($result)
@@ -33,19 +33,19 @@
                     <form method="POST" action="{{ route('reports.shipment-aging.export') }}">
                         @csrf
                         <input type="hidden" name="threshold" value="{{ $result->threshold }}">
-                        <x-button type="submit" variant="ghost">Download CSV</x-button>
+                        <x-button type="submit" variant="ghost">{{ __('Download CSV') }}</x-button>
                     </form>
                 </div>
 
                 <div class="grid gap-4 md:grid-cols-2">
                     <x-card padding="p-4">
-                        <h3 class="font-bold">By SKU</h3>
+                        <h3 class="font-bold">{{ __('By SKU') }}</h3>
                         @foreach (array_slice($result->bySku, 0, 8) as $row)
                             <p>{{ $row['sku'] }} · {{ $row['orders'] }} orders · {{ $row['qty'] }} qty · oldest {{ $row['oldest_days'] }}d</p>
                         @endforeach
                     </x-card>
                     <x-card padding="p-4">
-                        <h3 class="font-bold">By type</h3>
+                        <h3 class="font-bold">{{ __('By type') }}</h3>
                         @foreach (array_slice($result->byType, 0, 8) as $row)
                             <p>{{ $row['type'] }} · {{ $row['orders'] }} orders · oldest {{ $row['oldest_days'] }}d</p>
                         @endforeach
@@ -69,7 +69,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td class="px-4 py-8 text-center text-slate-500" colspan="7">No aging shipments.</td>
+                            <td class="px-4 py-8 text-center text-slate-500" colspan="7">{{ __('No aging shipments.') }}</td>
                         </tr>
                     @endforelse
                 </x-data-table>

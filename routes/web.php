@@ -296,6 +296,7 @@ Route::middleware('auth')->group(function (): void {
                 Route::get('/config-check', ConfigCheckController::class)->name('config-check');
                 Route::get('/webhook-health', WebhookHealthController::class)->name('webhook-health');
                 Route::get('/webhook-events', WebhookEventController::class)->name('webhook-events');
+                Route::post('/webhook-events/{event}/retry', [WebhookEventController::class, 'retry'])->whereNumber('event')->name('webhook-events.retry');
                 Route::get('/slack-rules', [SlackRulesController::class, 'edit'])->name('slack-rules.edit');
                 Route::put('/slack-rules', [SlackRulesController::class, 'update'])->name('slack-rules.update');
                 Route::get('/discord-rules', [DiscordRulesController::class, 'edit'])->name('discord-rules.edit');

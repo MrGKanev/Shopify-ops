@@ -3,14 +3,14 @@
 @section('content')
     <div class="flex flex-col gap-6">
         <section class="flex flex-col gap-2">
-            <p class="text-sm font-medium text-indigo-600 dark:text-indigo-400">Read-only workflow</p>
-            <h1 class="text-3xl font-bold">Order lookup</h1>
-            <p class="text-slate-500 dark:text-slate-400">Search the active store in Shopify and ShipStation without changing either system.</p>
+            <p class="text-sm font-medium text-indigo-600 dark:text-indigo-400">{{ __('Read-only workflow') }}</p>
+            <h1 class="text-3xl font-bold">{{ __('Order lookup') }}</h1>
+            <p class="text-slate-500 dark:text-slate-400">{{ __('Search the active store in Shopify and ShipStation without changing either system.') }}</p>
         </section>
 
         <form class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 sm:flex-row sm:items-end dark:border-slate-800 dark:bg-slate-900" method="GET" action="{{ route('orders.lookup') }}">
             <div class="flex grow flex-col gap-2">
-                <label class="text-sm font-medium" for="order_number">Order number</label>
+                <label class="text-sm font-medium" for="order_number">{{ __('Order number') }}</label>
                 <input
                     class="rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950"
                     id="order_number"
@@ -22,16 +22,16 @@
                     @if ($errors->has('order_number')) aria-describedby="order-number-error" @endif
                 >
                 @error('order_number')
-                    <p class="text-sm text-red-600 dark:text-red-400" id="order-number-error" role="alert">{{ $message }}</p>
+                    <p class="text-sm text-red-600 dark:text-red-400" id="order-number-error" role="alert">{{ __($message) }}</p>
                 @enderror
             </div>
 
-            <button class="rounded-lg bg-indigo-600 px-5 py-2.5 font-semibold text-white hover:bg-indigo-500" type="submit">Search</button>
+            <button class="rounded-lg bg-indigo-600 px-5 py-2.5 font-semibold text-white hover:bg-indigo-500" type="submit">{{ __('Search') }}</button>
         </form>
 
         @if ($lookupFailed)
             <x-alert tone="error">
-                The order lookup could not be completed. Check the store integrations and try again.
+                {{ __('The order lookup could not be completed. Check the store integrations and try again.') }}
             </x-alert>
         @endif
 
@@ -60,21 +60,21 @@
                                     <summary class="cursor-pointer font-medium text-slate-600 dark:text-slate-300">Details</summary>
                                     <dl class="mt-3 grid gap-2 sm:grid-cols-2">
                                         @if (($order['source_name'] ?? '') !== '')
-                                            <div><dt class="text-slate-500 dark:text-slate-400">Channel</dt><dd>{{ $order['source_name'] }}@if(($order['app_name'] ?? '') !== '') via {{ $order['app_name'] }}@endif</dd></div>
+                                            <div><dt class="text-slate-500 dark:text-slate-400">{{ __('Channel') }}</dt><dd>{{ $order['source_name'] }}@if(($order['app_name'] ?? '') !== '') via {{ $order['app_name'] }}@endif</dd></div>
                                         @endif
                                         @if (($order['customer_journey']['first_visit']['source'] ?? '') !== '')
-                                            <div><dt class="text-slate-500 dark:text-slate-400">Attribution</dt><dd>{{ $order['customer_journey']['first_visit']['source'] }}@if(($order['customer_journey']['first_visit']['utm']['campaign'] ?? '') !== '') · {{ $order['customer_journey']['first_visit']['utm']['campaign'] }}@endif</dd></div>
+                                            <div><dt class="text-slate-500 dark:text-slate-400">{{ __('Attribution') }}</dt><dd>{{ $order['customer_journey']['first_visit']['source'] }}@if(($order['customer_journey']['first_visit']['utm']['campaign'] ?? '') !== '') · {{ $order['customer_journey']['first_visit']['utm']['campaign'] }}@endif</dd></div>
                                         @endif
                                         @if (($order['po_number'] ?? '') !== '')
-                                            <div><dt class="text-slate-500 dark:text-slate-400">PO number</dt><dd>{{ $order['po_number'] }}</dd></div>
+                                            <div><dt class="text-slate-500 dark:text-slate-400">{{ __('PO number') }}</dt><dd>{{ $order['po_number'] }}</dd></div>
                                         @endif
                                         @if (($order['confirmation_number'] ?? '') !== '')
-                                            <div><dt class="text-slate-500 dark:text-slate-400">Confirmation number</dt><dd>{{ $order['confirmation_number'] }}</dd></div>
+                                            <div><dt class="text-slate-500 dark:text-slate-400">{{ __('Confirmation number') }}</dt><dd>{{ $order['confirmation_number'] }}</dd></div>
                                         @endif
                                     </dl>
                                     @if (($order['discount_codes'] ?? []) !== [])
                                         <div class="mt-3">
-                                            <p class="font-medium text-slate-600 dark:text-slate-300">Discount codes</p>
+                                            <p class="font-medium text-slate-600 dark:text-slate-300">{{ __('Discount codes') }}</p>
                                             @foreach ($order['discount_codes'] as $discount)
                                                 <p class="text-slate-600 dark:text-slate-300">{{ $discount['code'] }} — {{ $discount['type'] === 'percentage' ? $discount['amount'].'%' : '$'.$discount['amount'] }}</p>
                                             @endforeach
@@ -82,7 +82,7 @@
                                     @endif
                                     @if (($order['note_attributes'] ?? []) !== [])
                                         <div class="mt-3">
-                                            <p class="font-medium text-slate-600 dark:text-slate-300">Custom attributes</p>
+                                            <p class="font-medium text-slate-600 dark:text-slate-300">{{ __('Custom attributes') }}</p>
                                             @foreach ($order['note_attributes'] as $attribute)
                                                 <p class="text-slate-600 dark:text-slate-300">{{ $attribute['key'] }}: {{ $attribute['value'] }}</p>
                                             @endforeach
@@ -92,7 +92,7 @@
                             @endif
                         </article>
                     @empty
-                        <div class="rounded-xl border border-slate-200 bg-white p-5 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">No Shopify order found.</div>
+                        <div class="rounded-xl border border-slate-200 bg-white p-5 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">{{ __('No Shopify order found.') }}</div>
                     @endforelse
                 </div>
 
@@ -105,7 +105,7 @@
                     </div>
 
                     @if (! $result->shipStationConfigured)
-                        <x-alert tone="warn">ShipStation credentials are not configured for this store.</x-alert>
+                        <x-alert tone="warn">{{ __('ShipStation credentials are not configured for this store.') }}</x-alert>
                     @else
                         @forelse ($result->shipStationOrders as $order)
                             <article class="grid gap-3 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
@@ -117,7 +117,7 @@
                                 <p class="text-sm">Total: {{ $order['total'] ?? '—' }}</p>
                             </article>
                         @empty
-                            <div class="rounded-xl border border-slate-200 bg-white p-5 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">No ShipStation order found.</div>
+                            <div class="rounded-xl border border-slate-200 bg-white p-5 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">{{ __('No ShipStation order found.') }}</div>
                         @endforelse
 
                         @if ($result->shipStationShipments !== [])
@@ -136,19 +136,19 @@
 
             <section class="flex flex-col gap-4">
                 <div>
-                    <p class="text-sm font-medium text-indigo-600 dark:text-indigo-400">Cross-platform checks</p>
-                    <h2 class="text-2xl font-bold">Detailed comparison</h2>
-                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Items compare Shopify ordered quantities with ShipStation order items. Statuses remain separate and only established unsafe combinations are flagged.</p>
+                    <p class="text-sm font-medium text-indigo-600 dark:text-indigo-400">{{ __('Cross-platform checks') }}</p>
+                    <h2 class="text-2xl font-bold">{{ __('Detailed comparison') }}</h2>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ __('Items compare Shopify ordered quantities with ShipStation order items. Statuses remain separate and only established unsafe combinations are flagged.') }}</p>
                 </div>
 
                 @if ($result->comparisonState === 'not_configured')
-                    <div class="rounded-xl border border-slate-200 bg-white p-5 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">Configure ShipStation to enable detailed comparison.</div>
+                    <div class="rounded-xl border border-slate-200 bg-white p-5 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">{{ __('Configure ShipStation to enable detailed comparison.') }}</div>
                 @elseif ($result->comparisonState === 'shopify_missing')
-                    <x-alert tone="warn">Comparison unavailable because the order was not found in Shopify.</x-alert>
+                    <x-alert tone="warn">{{ __('Comparison unavailable because the order was not found in Shopify.') }}</x-alert>
                 @elseif ($result->comparisonState === 'shipstation_missing')
-                    <x-alert tone="warn">Comparison unavailable because the order was not found in ShipStation.</x-alert>
+                    <x-alert tone="warn">{{ __('Comparison unavailable because the order was not found in ShipStation.') }}</x-alert>
                 @elseif ($result->comparisonState === 'ambiguous')
-                    <x-alert tone="warn">Multiple matching records were found. No record was selected automatically.</x-alert>
+                    <x-alert tone="warn">{{ __('Multiple matching records were found. No record was selected automatically.') }}</x-alert>
                 @elseif ($result->comparison !== null)
                     @foreach ($result->comparison['warnings'] as $warning)
                         <x-alert tone="error">
@@ -160,7 +160,7 @@
                         <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
                             <thead>
                                 <tr class="text-left">
-                                    <th class="px-4 py-3 font-semibold">Field</th>
+                                    <th class="px-4 py-3 font-semibold">{{ __('Field') }}</th>
                                     <th class="px-4 py-3 font-semibold">Shopify</th>
                                     <th class="px-4 py-3 font-semibold">ShipStation</th>
                                     <th class="px-4 py-3 font-semibold">Result</th>
@@ -181,22 +181,22 @@
 
                     <div class="grid gap-4 lg:grid-cols-2">
                         <article class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-                            <h3 class="font-semibold">Shopify ordered SKU quantities</h3>
+                            <h3 class="font-semibold">{{ __('Shopify ordered SKU quantities') }}</h3>
                             <div class="mt-3 flex flex-col gap-1 text-sm">
                                 @forelse ($result->comparison['items']['shopify'] as $sku => $quantity)
                                     <p><span class="font-mono">{{ $sku }}</span> · {{ $quantity }}</p>
                                 @empty
-                                    <p class="text-slate-500 dark:text-slate-400">No comparable SKU values.</p>
+                                    <p class="text-slate-500 dark:text-slate-400">{{ __('No comparable SKU values.') }}</p>
                                 @endforelse
                             </div>
                         </article>
                         <article class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-                            <h3 class="font-semibold">ShipStation order SKU quantities</h3>
+                            <h3 class="font-semibold">{{ __('ShipStation order SKU quantities') }}</h3>
                             <div class="mt-3 flex flex-col gap-1 text-sm">
                                 @forelse ($result->comparison['items']['shipstation'] as $sku => $quantity)
                                     <p><span class="font-mono">{{ $sku }}</span> · {{ $quantity }}</p>
                                 @empty
-                                    <p class="text-slate-500 dark:text-slate-400">No comparable SKU values.</p>
+                                    <p class="text-slate-500 dark:text-slate-400">{{ __('No comparable SKU values.') }}</p>
                                 @endforelse
                             </div>
                         </article>
@@ -205,24 +205,24 @@
                     @if ($result->comparison['items']['state'] === 'different')
                         <div class="grid gap-4 sm:grid-cols-2">
                             <x-alert tone="error">
-                                <h3 class="font-semibold text-red-800 dark:text-red-200">Missing from ShipStation</h3>
+                                <h3 class="font-semibold text-red-800 dark:text-red-200">{{ __('Missing from ShipStation') }}</h3>
                                 @forelse ($result->comparison['items']['missing'] as $sku => $quantity)
                                     <p class="mt-2 text-sm text-red-700 dark:text-red-300"><span class="font-mono">{{ $sku }}</span> · {{ $quantity }}</p>
                                 @empty
-                                    <p class="mt-2 text-sm text-red-700 dark:text-red-300">None</p>
+                                    <p class="mt-2 text-sm text-red-700 dark:text-red-300">{{ __('None') }}</p>
                                 @endforelse
                             </x-alert>
                             <x-alert tone="warn">
-                                <h3 class="font-semibold text-amber-800 dark:text-amber-200">Extra in ShipStation</h3>
+                                <h3 class="font-semibold text-amber-800 dark:text-amber-200">{{ __('Extra in ShipStation') }}</h3>
                                 @forelse ($result->comparison['items']['extra'] as $sku => $quantity)
                                     <p class="mt-2 text-sm text-amber-700 dark:text-amber-300"><span class="font-mono">{{ $sku }}</span> · {{ $quantity }}</p>
                                 @empty
-                                    <p class="mt-2 text-sm text-amber-700 dark:text-amber-300">None</p>
+                                    <p class="mt-2 text-sm text-amber-700 dark:text-amber-300">{{ __('None') }}</p>
                                 @endforelse
                             </x-alert>
                         </div>
                     @else
-                        <x-alert tone="ok">SKU quantities match.</x-alert>
+                        <x-alert tone="ok">{{ __('SKU quantities match.') }}</x-alert>
                     @endif
                 @endif
             </section>

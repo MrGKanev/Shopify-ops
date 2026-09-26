@@ -19,6 +19,6 @@ class OperationalAlertSlackNotification extends QueuedNotification
 
     public function toSlack(object $notifiable): SlackMessage
     {
-        return (new SlackMessage)->text("Operational alert: {$this->category} failed ({$this->summary}).");
+        return (new SlackMessage)->text(__('Operational alert: :category failed (:summary).', ['category' => $this->category, 'summary' => $this->summary]));
     }
 }

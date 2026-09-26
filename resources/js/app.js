@@ -28,6 +28,7 @@ const commandPalette = document.querySelector('[data-command-palette]');
 const commandInput = commandPalette?.querySelector('[data-command-palette-input]');
 const commandResults = commandPalette?.querySelector('[data-command-palette-results]');
 let commandItems = [];
+let commandSearchFailed = false;
 let activeCommandIndex = 0;
 let commandRequest;
 let commandSearchTimer;
@@ -38,7 +39,9 @@ const renderCommandResults = () => {
     if (commandItems.length === 0) {
         const empty = document.createElement('p');
         empty.className = 'command-palette-empty';
-        empty.textContent = 'No matching results.';
+        empty.textContent = commandSearchFailed
+            ? (commandInput?.dataset.searchFailed ?? 'Search failed.')
+            : (commandInput?.dataset.noResults ?? 'No matching results.');
         commandResults.append(empty);
         return;
     }
@@ -73,11 +76,13 @@ const loadCommandResults = async () => {
         });
         if (!response.ok) throw new Error('Search failed');
         commandItems = (await response.json()).results;
+        commandSearchFailed = false;
         activeCommandIndex = 0;
         renderCommandResults();
     } catch (error) {
         if (error.name !== 'AbortError') {
             commandItems = [];
+            commandSearchFailed = true;
             renderCommandResults();
         }
     }

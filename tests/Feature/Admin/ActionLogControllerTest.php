@@ -29,7 +29,7 @@ class ActionLogControllerTest extends TestCase
         $store = Store::factory()->create(['label' => 'Original', 'shopify_access_token' => 'old-secret']);
         $admin->stores()->attach($store);
 
-        $this->actingAs($admin)->put(route('admin.stores.update', $store), ['slug' => $store->slug, 'label' => 'Updated', 'shopify_store' => $store->shopify_store, 'shopify_access_token' => 'new-secret', 'shipstation_api_key' => '', 'shipstation_api_secret' => '', 'store_number' => '']);
+        $this->actingAs($admin)->put(route('admin.stores.update', $store), ['slug' => $store->slug, 'label' => 'Updated', 'shopify_store' => $store->shopify_store, 'shopify_access_token' => 'new-secret', 'shipstation_api_key' => '', 'shipstation_api_secret' => '', 'store_number' => '', 'delivery_watch_days' => 5]);
 
         $activities = Activity::query()->inLog('administration')->latest('id')->get();
         $this->assertTrue($activities->contains(fn (Activity $activity): bool => $activity->event === 'updated' && $activity->subject_id === $store->id));

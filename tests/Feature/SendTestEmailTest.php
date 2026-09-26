@@ -52,6 +52,12 @@ class SendTestEmailTest extends TestCase
 
         $this->assertStringContainsString('successfully connected', $rendered);
         $this->assertStringContainsString('contains no store credentials or order data', $rendered);
+
+        app()->setLocale('bg');
+        $renderedInBulgarian = $mail->render();
+
+        $this->assertStringContainsString('се свърза успешно', $renderedInBulgarian);
+        $this->assertStringContainsString('не съдържа данни за достъп', $renderedInBulgarian);
     }
 
     private function configureSmtp(): void

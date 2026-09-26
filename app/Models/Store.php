@@ -27,6 +27,7 @@ use Spatie\Activitylog\Support\LogOptions;
     'default_alert_email',
     'scheduled_audit_enabled',
     'scheduled_audit_time',
+    'delivery_watch_days',
 ])]
 #[Hidden(['shopify_access_token', 'shopify_webhook_secret', 'shipstation_api_key', 'shipstation_api_secret'])]
 class Store extends Model
@@ -151,6 +152,7 @@ class Store extends Model
             'email_rules' => 'array',
             'discord_rules' => 'array',
             'scheduled_audit_enabled' => 'boolean',
+            'delivery_watch_days' => 'integer',
             'scheduled_audit_time' => 'datetime:H:i',
         ];
     }

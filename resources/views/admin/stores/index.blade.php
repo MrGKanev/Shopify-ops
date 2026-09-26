@@ -18,7 +18,7 @@
                     <td class="px-4 py-3 text-right"><x-button :href="route('admin.stores.edit', $store)" size="sm" variant="ghost">Edit</x-button></td>
                 </tr>
             @empty
-                <tr><td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="4">No stores configured.</td></tr>
+                <tr><td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="4">{{ __('No stores configured.') }}</td></tr>
             @endforelse
         </x-data-table>
 

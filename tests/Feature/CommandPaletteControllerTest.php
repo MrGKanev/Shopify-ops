@@ -84,6 +84,32 @@ class CommandPaletteControllerTest extends TestCase
             ->assertJsonFragment(['label' => 'Discord notifications', 'url' => route('admin.discord-rules.edit'), 'kind' => 'Page']);
     }
 
+    public function test_it_finds_audit_tools_by_what_they_check(): void
+    {
+        [$operator] = $this->makeUserAndStore(true);
+
+        $this->actingAs($operator)->getJson(route('command-palette', ['q' => 'still unfulfilled']))
+            ->assertOk()
+            ->assertJsonFragment(['label' => 'SS Shipped / Shopify Unfulfilled', 'kind' => 'Page']);
+
+        $this->actingAs($operator)->getJson(route('command-palette', ['q' => 'wrong item mismatch']))
+            ->assertOk()
+            ->assertJsonFragment(['label' => 'Shipped Item Mismatch', 'kind' => 'Page']);
+    }
+
+    public function test_it_translates_search_results_into_bulgarian(): void
+    {
+        [$operator] = $this->makeUserAndStore(true);
+        app()->setLocale('bg');
+
+        $this->actingAs($operator)->getJson(route('command-palette', ['q' => 'still unfulfilled']))
+            ->assertJsonFragment([
+                'label' => 'Изпратени в SS / неизпълнени в Shopify',
+                'description' => 'Открива поръчки, изпратени от ShipStation, които Shopify все още отбелязва като неизпълнени.',
+                'kind' => 'Page',
+            ]);
+    }
+
     public function test_layout_includes_the_keyboard_accessible_palette_for_operators(): void
     {
         [$operator] = $this->makeUserAndStore(true);

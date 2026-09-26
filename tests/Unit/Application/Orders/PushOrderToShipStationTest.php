@@ -103,4 +103,22 @@ class PushOrderToShipStationTest extends TestCase
 
         $this->assertSame('1001', $result['order_number']);
     }
+
+    public function test_handle_records_a_failed_push_before_rethrowing_the_error(): void
+    {
+        $store = new Store;
+        $order = ['id' => 1, 'name' => '#1001'];
+        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify->shouldReceive('findByOrderNumber')->once()->with($store, '1001')->andReturn([$order]);
+        $client = Mockery::mock(ShipStationClientContract::class);
+        $client->shouldReceive('createOrder')->once()->with($order)->andThrow(new RuntimeException('API secret must not be persisted'));
+        $factory = Mockery::mock(ShipStationClientFactory::class);
+        $factory->shouldReceive('forStore')->once()->with($store)->andReturn($client);
+        $recordPush = Mockery::mock(RecordPush::class);
+        $recordPush->shouldReceive('failed')->once()->with($store, '1001', '1', Mockery::type(RuntimeException::class));
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('API secret must not be persisted');
+
+        (new PushOrderToShipStation($shopify, $factory, $recordPush))->handle($store, '1001');
+    }
 }

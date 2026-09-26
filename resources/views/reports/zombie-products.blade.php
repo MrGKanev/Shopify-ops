@@ -6,9 +6,9 @@
 
         <x-card>
             <ul class="list-disc space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-300">
-                <li>Products without variants are always reported.</li>
-                <li>Zero-stock checks include only tracked variants with overselling disabled.</li>
-                <li>Untracked and continue-selling variants do not make a product a zombie.</li>
+                <li>{{ __('Products without variants are always reported.') }}</li>
+                <li>{{ __('Zero-stock checks include only tracked variants with overselling disabled.') }}</li>
+                <li>{{ __('Untracked and continue-selling variants do not make a product a zombie.') }}</li>
             </ul>
         </x-card>
 
@@ -18,17 +18,17 @@
         </form>
 
         @if ($configurationError)
-            <x-alert tone="warn">Shopify credentials are incomplete for the active store.</x-alert>
+            <x-alert tone="warn">{{ __('Shopify credentials are incomplete for the active store.') }}</x-alert>
         @endif
         @if ($reportFailed)
-            <x-alert tone="error">The report could not be completed. Check Shopify and try again.</x-alert>
+            <x-alert tone="error">{{ __('The report could not be completed. Check Shopify and try again.') }}</x-alert>
         @endif
 
         @if ($result)
             <section class="flex flex-col gap-4">
                 <h2 class="text-2xl font-bold">{{ $result->scanned }} active products · {{ count($result->rows) }} zombies</h2>
                 @if ($result->truncated)
-                    <x-alert tone="warn">Results were truncated after {{ $result->pages }} product pages.</x-alert>
+                    <x-alert tone="warn">{{ __('Results were truncated after :pages product pages.', ['pages' => $result->pages]) }}</x-alert>
                 @endif
 
                 <x-data-table :headers="['Product', 'Vendor / type', 'Reason', 'Detail']">
@@ -41,7 +41,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td class="px-4 py-8 text-center text-slate-500" colspan="4">All scanned active products have at least one purchasable variant.</td>
+                            <td class="px-4 py-8 text-center text-slate-500" colspan="4">{{ __('All scanned active products have at least one purchasable variant.') }}</td>
                         </tr>
                     @endforelse
                 </x-data-table>

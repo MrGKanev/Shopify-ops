@@ -11,23 +11,23 @@
                     <label class="text-sm font-medium" for="{{ $field }}">{{ $label }}</label>
                     <input class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="{{ $field }}" name="{{ $field }}" type="date" value="{{ old($field, $value) }}">
                     @error($field)
-                        <p class="text-sm text-red-600">{{ $message }}</p>
+                        <p class="text-sm text-red-600">{{ __($message) }}</p>
                     @enderror
                 </div>
             @endforeach
             <div class="flex items-end">
-                <x-button type="submit">Run report</x-button>
+                <x-button type="submit">{{ __('Run report') }}</x-button>
             </div>
         </form>
 
         @error('export')
-            <x-alert tone="error">{{ $message }}</x-alert>
+            <x-alert tone="error">{{ __($message) }}</x-alert>
         @enderror
         @if ($configurationError)
-            <x-alert tone="warn">Shopify credentials are incomplete for the active store.</x-alert>
+            <x-alert tone="warn">{{ __('Shopify credentials are incomplete for the active store.') }}</x-alert>
         @endif
         @if ($reportFailed)
-            <x-alert tone="error">The report could not be completed. Check Shopify and try again.</x-alert>
+            <x-alert tone="error">{{ __('The report could not be completed. Check Shopify and try again.') }}</x-alert>
         @endif
 
         @if ($result)
@@ -38,12 +38,12 @@
                         @csrf
                         <input type="hidden" name="start_date" value="{{ $result->startDate }}">
                         <input type="hidden" name="end_date" value="{{ $result->endDate }}">
-                        <x-button type="submit" variant="ghost">Download CSV</x-button>
+                        <x-button type="submit" variant="ghost">{{ __('Download CSV') }}</x-button>
                     </form>
                 </div>
 
                 @if ($result->truncated)
-                    <x-alert tone="warn">Results are incomplete: Shopify orders were truncated after {{ $result->pages }} pages.</x-alert>
+                    <x-alert tone="warn">{{ __('Results are incomplete: Shopify orders were truncated after :pages pages.', ['pages' => $result->pages]) }}</x-alert>
                 @endif
 
                 <x-data-table :headers="['Product', 'Quantity']">
@@ -54,7 +54,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td class="px-4 py-8 text-center text-slate-500" colspan="2">No returned items found.</td>
+                            <td class="px-4 py-8 text-center text-slate-500" colspan="2">{{ __('No returned items found.') }}</td>
                         </tr>
                     @endforelse
                 </x-data-table>

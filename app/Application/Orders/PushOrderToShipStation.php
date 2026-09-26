@@ -8,6 +8,7 @@ use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
 use LogicException;
 use RuntimeException;
+use Throwable;
 
 class PushOrderToShipStation
 {
@@ -28,8 +29,16 @@ class PushOrderToShipStation
     /** @return array{order_number: string, shopify_order_number: string, ss_order_id: mixed} */
     public function handle(Store $store, string $orderNumber): array
     {
-        $order = $this->findOrder($store, $orderNumber);
-        $created = $this->client($store)->createOrder($order);
+        $order = [];
+        try {
+            $order = $this->findOrder($store, $orderNumber);
+            $created = $this->client($store)->createOrder($order);
+        } catch (Throwable $exception) {
+            $this->recordPush->failed($store, $orderNumber, (string) ($order['id'] ?? ''), $exception);
+
+            throw $exception;
+        }
+
         $ssOrderId = $created['orderId'] ?? null;
         $createdOrderNumber = (string) ($created['orderNumber'] ?? $orderNumber);
 

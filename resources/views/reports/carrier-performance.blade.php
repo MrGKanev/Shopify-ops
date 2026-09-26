@@ -11,7 +11,7 @@
                     <label class="text-sm font-medium" for="{{ $field }}">{{ $label }}</label>
                     <input class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="{{ $field }}" name="{{ $field }}" type="date" value="{{ old($field, $value) }}">
                     @error($field)
-                        <p class="text-sm text-red-600">{{ $message }}</p>
+                        <p class="text-sm text-red-600">{{ __($message) }}</p>
                     @enderror
                 </div>
             @endforeach
@@ -21,10 +21,10 @@
         </form>
 
         @if ($configurationError)
-            <x-alert tone="warn">ShipStation credentials are incomplete for the active store.</x-alert>
+            <x-alert tone="warn">{{ __('ShipStation credentials are incomplete for the active store.') }}</x-alert>
         @endif
         @if ($reportFailed)
-            <x-alert tone="error">The audit could not be completed. Check ShipStation and try again.</x-alert>
+            <x-alert tone="error">{{ __('The audit could not be completed. Check ShipStation and try again.') }}</x-alert>
         @endif
 
         @if ($result)
@@ -42,7 +42,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td class="px-4 py-8 text-center text-slate-500" colspan="6">No shipments found.</td>
+                            <td class="px-4 py-8 text-center text-slate-500" colspan="6">{{ __('No shipments found.') }}</td>
                         </tr>
                     @endforelse
                 </x-data-table>
