@@ -35,9 +35,14 @@
                     <x-alert tone="warn">Results are incomplete: orders truncated after {{ $result->pages }} pages.</x-alert>
                 @endif
 
-                <x-data-table :headers="['Severity', 'Order', 'Date', 'Email', 'Issues']">
+                @if ($result->rows !== [])
+                    @include('partials.bulk-ignore-form')
+                @endif
+
+                <x-data-table :headers="['Select', 'Severity', 'Order', 'Date', 'Email', 'Issues']">
                     @forelse ($result->rows as $row)
                         <tr class="align-top">
+                            <td class="px-4 py-3"><input type="checkbox" name="order_numbers[]" value="{{ $row['number'] }}" form="bulk-ignore" aria-label="Select order {{ $row['number'] }}"></td>
                             <td class="px-4 py-3 font-semibold">{{ ucfirst($row['severity']) }}</td>
                             <td class="px-4 py-3">@if ($row['id'])<a class="text-indigo-600" href="https://{{ $activeStore->shopify_store }}.myshopify.com/admin/orders/{{ $row['id'] }}" target="_blank" rel="noopener noreferrer">{{ $row['number'] }}</a>@else{{ $row['number'] }}@endif</td>
                             <td class="px-4 py-3">{{ $row['created_at'] }}</td>
@@ -52,7 +57,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td class="px-4 py-8 text-center text-slate-500" colspan="5">No email issues were found in this range.</td>
+                            <td class="px-4 py-8 text-center text-slate-500" colspan="6">No email issues were found in this range.</td>
                         </tr>
                     @endforelse
                 </x-data-table>

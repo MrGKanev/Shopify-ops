@@ -54,9 +54,14 @@
                     <x-alert tone="warn">Results are incomplete: Shopify orders were truncated after {{ $result->pages }} pages.</x-alert>
                 @endif
 
-                <x-data-table :headers="['Order', 'Date', 'Email', 'Refunded', 'ShipStation', 'Risk']">
+                @if ($result->rows !== [])
+                    @include('partials.bulk-ignore-form')
+                @endif
+
+                <x-data-table :headers="['Select', 'Order', 'Date', 'Email', 'Refunded', 'ShipStation', 'Risk']">
                     @forelse ($result->rows as $row)
                         <tr>
+                            <td class="px-4 py-3"><input type="checkbox" name="order_numbers[]" value="{{ $row['order_number'] }}" form="bulk-ignore" aria-label="Select order {{ $row['order_number'] }}"></td>
                             <td class="px-4 py-3">{{ $row['order_number'] }}</td>
                             <td class="px-4 py-3">{{ $row['created_at'] }}</td>
                             <td class="px-4 py-3">{{ $row['email'] }}</td>
@@ -66,7 +71,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td class="px-4 py-8 text-center text-slate-500" colspan="6">No refunded orders found.</td>
+                            <td class="px-4 py-8 text-center text-slate-500" colspan="7">No refunded orders found.</td>
                         </tr>
                     @endforelse
                 </x-data-table>

@@ -52,6 +52,8 @@ class RefundTrackerControllerTest extends TestCase
             ->assertOk()
             ->assertSeeText('Still active in ShipStation')
             ->assertSeeText('truncated after 100 pages')
+            ->assertSee('form="bulk-ignore"', false)
+            ->assertSee('name="order_numbers[]" value="#&lt;script&gt;"', false)
             ->assertDontSee('<script>', false)
             ->assertDontSee('<img>', false);
     }

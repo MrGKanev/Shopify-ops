@@ -114,7 +114,7 @@ _Sections mirror the grouped sidebar navigation in [`config/audit-hub.php`](../c
 
 | Page | What it does |
 | --- | --- |
-| **Ignored Orders** | View and manage all ignored orders. Single ignore, checkbox bulk-ignore (Run Audit), bulk-unignore, and CSV import. Recurrence badges show orders that keep coming back missing. |
+| **Ignored Orders** | View and manage all ignored orders. Single ignore, checkbox bulk-ignore from Run Audit, Refunds Tracker, Email Checker, Address Scanner, and Audit Trends; bulk-unignore and CSV import. Ignoring excludes orders from Run Audit, not from the source reports. Recurrence badges show orders that keep coming back missing. |
 | **Push Log** | Full history of every order pushed to ShipStation from the dashboard, filterable by order/Shopify ID. |
 | **Run History** | Recent audit and scan executions with status, duration, scanned count, issue count, and errors, filterable by tool/status/error. |
 | **Job Queue** | Store-scoped queued/running/completed/failed audit jobs processed by the Laravel queue worker (`php artisan queue:work`), plus generic queue diagnostics (Horizon when Redis-backed). |

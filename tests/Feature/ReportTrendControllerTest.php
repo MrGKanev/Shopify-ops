@@ -42,6 +42,8 @@ class ReportTrendControllerTest extends TestCase
         $response->assertViewHas('worstReport', fn ($worst) => $worst->rows_found === 2);
         $response->assertViewHas('repeatOffenders', fn ($offenders) => $offenders[0]['number'] === '#1001' && $offenders[0]['count'] === 2);
         $response->assertSeeText('#1001');
+        $response->assertSee('form="bulk-ignore"', false);
+        $response->assertSee('name="order_numbers[]" value="#1001"', false);
     }
 
     private function snapshot(Store $store, string $date, int $missing, array $missingOrders = []): mixed

@@ -32,7 +32,7 @@ class EmailCheckControllerTest extends TestCase
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
         $shopify->shouldReceive('emailCheckCandidates')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '2026-09-01', '2026-09-07')->andReturn(['orders' => [['id' => '42', 'name' => '#1<script>', 'created_at' => '2026-09-02', 'email' => '<img src=x>'], ['id' => '43', 'name' => '#2', 'created_at' => '2026-09-03', 'email' => 'ab@example.com']], 'pages' => 100, 'truncated' => true]);
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
-        $this->actingAs($operator)->post('/reports/email-check', ['start_date' => '2026-09-01', 'end_date' => '2026-09-07'])->assertOk()->assertSeeText('2 scanned · 1 critical · 1 warnings')->assertSeeText('truncated after 100 pages')->assertDontSee('<script>', false)->assertDontSee('<img', false);
+        $this->actingAs($operator)->post('/reports/email-check', ['start_date' => '2026-09-01', 'end_date' => '2026-09-07'])->assertOk()->assertSeeText('2 scanned · 1 critical · 1 warnings')->assertSeeText('truncated after 100 pages')->assertSee('form="bulk-ignore"', false)->assertSee('name="order_numbers[]" value="#2"', false)->assertDontSee('<script>', false)->assertDontSee('<img', false);
 
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
         $shopify->shouldReceive('emailCheckCandidates')->andThrow(new RuntimeException('secret'));

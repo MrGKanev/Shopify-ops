@@ -1,6 +1,7 @@
-{{-- Include once above the missing-orders table; each row's checkbox uses form="bulk-ignore" to submit here. --}}
 <form id="bulk-ignore" method="POST" action="{{ route('ignored-orders.bulk-store') }}" class="flex flex-wrap items-center gap-2">
     @csrf
-    <input class="rounded border px-3 py-2" name="reason" placeholder="Reason for ignoring selected orders">
-    <button class="rounded bg-indigo-600 px-4 py-2 text-white">Ignore selected</button>
+    <label class="sr-only" for="bulk-ignore-reason">Reason for ignoring selected orders</label>
+    <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="bulk-ignore-reason" name="reason" placeholder="Reason (optional)">
+    <x-button type="submit">Ignore selected</x-button>
+    <span class="text-sm text-slate-500 dark:text-slate-400">Excludes selected orders from Run Audit.</span>
 </form>

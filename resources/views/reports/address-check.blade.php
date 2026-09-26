@@ -35,9 +35,14 @@
                 @if ($result->truncated)
                     <x-alert tone="warn">Results are incomplete: orders truncated after {{ $result->pages }} pages.</x-alert>
                 @endif
-                <x-data-table :headers="['Severity', 'Order', 'Email', 'Address', 'Issues']">
+                @if ($result->rows !== [])
+                    @include('partials.bulk-ignore-form')
+                @endif
+
+                <x-data-table :headers="['Select', 'Severity', 'Order', 'Email', 'Address', 'Issues']">
                     @forelse ($result->rows as $row)
                         <tr class="align-top">
+                            <td class="px-4 py-3"><input type="checkbox" name="order_numbers[]" value="{{ $row['number'] }}" form="bulk-ignore" aria-label="Select order {{ $row['number'] }}"></td>
                             <td class="px-4 py-3 font-semibold">{{ ucfirst($row['severity']) }}</td>
                             <td class="px-4 py-3">
                                 @if ($row['id'])
@@ -59,7 +64,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td class="px-4 py-8 text-center text-slate-500" colspan="5">No address issues were found.</td>
+                            <td class="px-4 py-8 text-center text-slate-500" colspan="6">No address issues were found.</td>
                         </tr>
                     @endforelse
                 </x-data-table>
