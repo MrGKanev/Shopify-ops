@@ -183,8 +183,8 @@ importers:
         version: 8.3.0(jiti@2.7.0)
     optionalDependencies:
       '@laravel/multiplex':
-        specifier: ^0.4.1
-        version: 0.4.3
+        specifier: ^0.4.4
+        version: 0.4.4
 
 packages:
 
@@ -208,8 +208,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@laravel/multiplex@0.4.3':
-    resolution: {integrity: sha512-jJTZGgKl6sK0ETYmqiPqeAwmErvqjxgDRLfzqsmqiWiupc5dfjaoVVrrdXZwb6eGylSg99WwHLibCPJs8F0bGw==}
+  '@laravel/multiplex@0.4.4':
+    resolution: {integrity: sha512-+pPLI4n3n75PPQLqjy4pBrKeugsBhHWtOfY4pDX2WXoAgPpgnxL+xiG9F9YUFjzuzlrzxDnEn4vOG5w1gRaGUg==}
     engines: {node: '>=22.13.0'}
     os: [darwin, linux]
     hasBin: true
@@ -421,6 +421,10 @@ packages:
   ansi-styles@6.2.3:
     resolution: {integrity: sha512-4Dj6M28JB+oAH8kFkTLUo+a2jwOFkuqb3yucU0CANcRRUbxS0cP0nZYCGjcc3BNXwRIsUVmDGgzawme7zvJHvg==}
     engines: {node: '>=12'}
+
+  ansi-styles@7.0.0:
+    resolution: {integrity: sha512-kKvt3m4uwzqL0wlkPd09CmljPJGOZZ4D0fP65sqFSvPkMRKhNi+74MgIJ5QxE6SxqB4t4KyUFGg8+n5zjo6hew==}
+    engines: {node: '>=22'}
 
   auto-bind@5.0.1:
     resolution: {integrity: sha512-ooviqdwwgfIfNmDwo94wlshcdzfO64XV0Cg6oDsDYBJfITDz1EngD2z7DkbvCWn+XIMsIqW27sEVF6qcpJrRcg==}
@@ -940,9 +944,9 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@laravel/multiplex@0.4.3':
+  '@laravel/multiplex@0.4.4':
     dependencies:
-      ansi-styles: 6.2.3
+      ansi-styles: 7.0.0
       commander: 15.0.0
       ink: 7.1.1(react@19.3.0)
       react: 19.3.0
@@ -1080,6 +1084,9 @@ snapshots:
   ansi-regex@6.3.0: {}
 
   ansi-styles@6.2.3: {}
+
+  ansi-styles@7.0.0:
+    optional: true
 
   auto-bind@5.0.1:
     optional: true
