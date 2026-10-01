@@ -9,7 +9,7 @@ use App\Application\Reports\RunPostShipAddressChangeReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\AddressChangeRequest;
+use App\Http\Requests\DateRangeReportRequest;
 use App\Models\Store;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -25,7 +25,7 @@ class PostShipAddressChangeController extends Controller
         return view('reports.post-ship-address-changes', $this->viewData());
     }
 
-    public function store(AddressChangeRequest $request, RunPostShipAddressChangeReport $report, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunPostShipAddressChangeReport $report, RecordRun $runs): View
     {
         [$store, $startDate, $endDate] = $this->context($request);
         $configurationError = $this->configurationError($store);
@@ -45,7 +45,7 @@ class PostShipAddressChangeController extends Controller
         return view('reports.post-ship-address-changes', $this->viewData($startDate, $endDate, $result, $reportFailed, $configurationError));
     }
 
-    public function export(AddressChangeRequest $request, RunPostShipAddressChangeReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
+    public function export(DateRangeReportRequest $request, RunPostShipAddressChangeReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
     {
         [$store, $startDate, $endDate] = $this->context($request);
         if ($this->configurationError($store)) {
@@ -64,7 +64,7 @@ class PostShipAddressChangeController extends Controller
     }
 
     /** @return array{Store, string, string} */
-    private function context(AddressChangeRequest $request): array
+    private function context(DateRangeReportRequest $request): array
     {
 
         return [$this->resolveStore($request), (string) $request->validated('start_date'), (string) $request->validated('end_date')];

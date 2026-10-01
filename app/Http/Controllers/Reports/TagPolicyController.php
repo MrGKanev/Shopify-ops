@@ -9,7 +9,7 @@ use App\Domain\Reports\TagPolicyAnalyzer;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\TagPolicyRequest;
+use App\Http\Requests\DateRangeReportRequest;
 use Illuminate\View\View;
 use Throwable;
 
@@ -24,7 +24,7 @@ class TagPolicyController extends Controller
         return view('reports.tag-policy', ['startDate' => now()->subDays(30)->toDateString(), 'endDate' => now()->toDateString(), 'configured' => $analyzer->hasRules($config), 'result' => null, 'reportFailed' => false, 'configurationError' => false]);
     }
 
-    public function store(TagPolicyRequest $request, RunTagPolicyReport $report, TagPolicyAnalyzer $analyzer, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunTagPolicyReport $report, TagPolicyAnalyzer $analyzer, RecordRun $runs): View
     {
         $store = $this->resolveStore($request);
         $startDate = (string) $request->validated('start_date');

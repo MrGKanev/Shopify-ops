@@ -6,7 +6,7 @@ use App\Application\Reports\AuditResult;
 use App\Application\Reports\RunAudit;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\ItemMismatchRequest;
+use App\Http\Requests\DateRangeReportRequest;
 use App\Jobs\RunAuditJob;
 use App\Models\AuditJob;
 use App\Models\Store;
@@ -23,7 +23,7 @@ class RunAuditController extends Controller
         return view('reports.run-audit', $this->viewData());
     }
 
-    public function store(ItemMismatchRequest $request, RunAudit $audit): View
+    public function store(DateRangeReportRequest $request, RunAudit $audit): View
     {
         [$store, $start, $end] = $this->context($request);
         $configurationError = $this->configurationError($store);
@@ -41,7 +41,7 @@ class RunAuditController extends Controller
         return view('reports.run-audit', $this->viewData($start, $end, $result, $reportFailed, $configurationError));
     }
 
-    public function queue(ItemMismatchRequest $request): RedirectResponse
+    public function queue(DateRangeReportRequest $request): RedirectResponse
     {
         [$store, $start, $end] = $this->context($request);
         if ($this->configurationError($store)) {
@@ -60,7 +60,7 @@ class RunAuditController extends Controller
     }
 
     /** @return array{Store,string,string} */
-    private function context(ItemMismatchRequest $request): array
+    private function context(DateRangeReportRequest $request): array
     {
 
         return [$this->resolveStore($request), (string) $request->validated('start_date'), (string) $request->validated('end_date')];

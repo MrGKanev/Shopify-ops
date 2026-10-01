@@ -8,7 +8,7 @@ use App\Application\Reports\RunCustomerLtvReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\CustomerLtvRequest;
+use App\Http\Requests\DateRangeReportRequest;
 use Illuminate\View\View;
 use Throwable;
 
@@ -21,7 +21,7 @@ class CustomerLtvController extends Controller
         return view('reports.customer-ltv', ['startDate' => now()->subYear()->toDateString(), 'endDate' => now()->toDateString(), 'result' => null, 'reportFailed' => false, 'configurationError' => false]);
     }
 
-    public function store(CustomerLtvRequest $request, RunCustomerLtvReport $report, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunCustomerLtvReport $report, RecordRun $runs): View
     {
         $store = $this->resolveStore($request);
         $startDate = (string) $request->validated('start_date');

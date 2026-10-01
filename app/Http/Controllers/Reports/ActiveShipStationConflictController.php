@@ -9,7 +9,7 @@ use App\Application\Reports\RunActiveShipStationConflictReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\ActiveShipStationConflictRequest;
+use App\Http\Requests\DateRangeReportRequest;
 use App\Models\Store;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -25,7 +25,7 @@ class ActiveShipStationConflictController extends Controller
         return view('reports.active-shipstation-conflicts', $this->viewData());
     }
 
-    public function store(ActiveShipStationConflictRequest $request, RunActiveShipStationConflictReport $report, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunActiveShipStationConflictReport $report, RecordRun $runs): View
     {
         [$store,$start,$end] = $this->context($request);
         $configurationError = $this->configurationError($store);
@@ -45,7 +45,7 @@ class ActiveShipStationConflictController extends Controller
         return view('reports.active-shipstation-conflicts', $this->viewData($start, $end, $result, $reportFailed, $configurationError));
     }
 
-    public function export(ActiveShipStationConflictRequest $request, RunActiveShipStationConflictReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
+    public function export(DateRangeReportRequest $request, RunActiveShipStationConflictReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
     {
         [$store,$start,$end] = $this->context($request);
         if ($this->configurationError($store)) {
@@ -63,7 +63,7 @@ class ActiveShipStationConflictController extends Controller
     }
 
     /** @return array{Store,string,string} */
-    private function context(ActiveShipStationConflictRequest $request): array
+    private function context(DateRangeReportRequest $request): array
     {
 
         return [$this->resolveStore($request), (string) $request->validated('start_date'), (string) $request->validated('end_date')];

@@ -9,7 +9,7 @@ use App\Application\Reports\RunOrphanOrderReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\OrphanOrderRequest;
+use App\Http\Requests\DateRangeReportRequest;
 use App\Models\Store;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -25,7 +25,7 @@ class OrphanOrderController extends Controller
         return view('reports.orphan-orders', $this->viewData());
     }
 
-    public function store(OrphanOrderRequest $request, RunOrphanOrderReport $report, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunOrphanOrderReport $report, RecordRun $runs): View
     {
         [$store,$start,$end] = $this->context($request);
         $configurationError = $this->configurationError($store);
@@ -45,7 +45,7 @@ class OrphanOrderController extends Controller
         return view('reports.orphan-orders', $this->viewData($start, $end, $result, $reportFailed, $configurationError));
     }
 
-    public function export(OrphanOrderRequest $request, RunOrphanOrderReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
+    public function export(DateRangeReportRequest $request, RunOrphanOrderReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
     {
         [$store,$start,$end] = $this->context($request);
         if ($this->configurationError($store)) {
@@ -63,7 +63,7 @@ class OrphanOrderController extends Controller
     }
 
     /** @return array{Store,string,string} */
-    private function context(OrphanOrderRequest $request): array
+    private function context(DateRangeReportRequest $request): array
     {
 
         return [$this->resolveStore($request), (string) $request->validated('start_date'), (string) $request->validated('end_date')];

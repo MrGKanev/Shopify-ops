@@ -9,7 +9,7 @@ use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\OnHoldStallRequest;
+use App\Http\Requests\DateRangeReportRequest;
 use App\Models\Store;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -25,7 +25,7 @@ class OnHoldStallController extends Controller
         return view('reports.on-hold-stall', $this->viewData());
     }
 
-    public function store(OnHoldStallRequest $request, RunOnHoldStallReport $report, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunOnHoldStallReport $report, RecordRun $runs): View
     {
         [$store, $startDate, $endDate] = $this->context($request);
         $configurationError = $this->configurationError($store);
@@ -45,7 +45,7 @@ class OnHoldStallController extends Controller
         return view('reports.on-hold-stall', $this->viewData($startDate, $endDate, $result, $reportFailed, $configurationError));
     }
 
-    public function export(OnHoldStallRequest $request, RunOnHoldStallReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
+    public function export(DateRangeReportRequest $request, RunOnHoldStallReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
     {
         [$store, $startDate, $endDate] = $this->context($request);
         if ($this->configurationError($store)) {
@@ -64,7 +64,7 @@ class OnHoldStallController extends Controller
     }
 
     /** @return array{Store, string, string} */
-    private function context(OnHoldStallRequest $request): array
+    private function context(DateRangeReportRequest $request): array
     {
 
         return [$this->resolveStore($request), (string) $request->validated('start_date'), (string) $request->validated('end_date')];
