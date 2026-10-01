@@ -8,7 +8,7 @@ use App\Application\Reports\RunCarrierPerformanceReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\CarrierPerformanceRequest;
+use App\Http\Requests\DateRangeReportRequest;
 use Illuminate\View\View;
 use Throwable;
 
@@ -21,7 +21,7 @@ class CarrierPerformanceController extends Controller
         return view('reports.carrier-performance', $this->viewData());
     }
 
-    public function store(CarrierPerformanceRequest $request, RunCarrierPerformanceReport $report, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunCarrierPerformanceReport $report, RecordRun $runs): View
     {
         $store = $this->resolveStore($request);
         $startDate = (string) $request->validated('start_date');

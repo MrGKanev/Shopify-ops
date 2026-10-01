@@ -8,7 +8,7 @@ use App\Application\Reports\RunRefundTrackerReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\RefundTrackerRequest;
+use App\Http\Requests\DateRangeReportRequest;
 use Illuminate\View\View;
 use Throwable;
 
@@ -21,7 +21,7 @@ class RefundTrackerController extends Controller
         return view('reports.refund-tracker', $this->viewData());
     }
 
-    public function store(RefundTrackerRequest $request, RunRefundTrackerReport $report, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunRefundTrackerReport $report, RecordRun $runs): View
     {
         $store = $this->resolveStore($request);
         $startDate = (string) $request->validated('start_date');

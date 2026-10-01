@@ -9,7 +9,7 @@ use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\FulfilledItemsRequest;
+use App\Http\Requests\DateRangeReportRequest;
 use App\Models\Store;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -25,7 +25,7 @@ class FulfilledItemsController extends Controller
         return view('reports.fulfilled-items', $this->viewData());
     }
 
-    public function store(FulfilledItemsRequest $request, RunFulfilledItemsReport $report, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunFulfilledItemsReport $report, RecordRun $runs): View
     {
         [$store, $startDate, $endDate] = $this->context($request);
         $configurationError = $this->configurationError($store);
@@ -45,7 +45,7 @@ class FulfilledItemsController extends Controller
         return view('reports.fulfilled-items', $this->viewData($startDate, $endDate, $result, $reportFailed, $configurationError));
     }
 
-    public function export(FulfilledItemsRequest $request, RunFulfilledItemsReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
+    public function export(DateRangeReportRequest $request, RunFulfilledItemsReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
     {
         [$store, $startDate, $endDate] = $this->context($request);
         if ($this->configurationError($store)) {
@@ -63,7 +63,7 @@ class FulfilledItemsController extends Controller
     }
 
     /** @return array{Store, string, string} */
-    private function context(FulfilledItemsRequest $request): array
+    private function context(DateRangeReportRequest $request): array
     {
         $store = $this->resolveStore($request);
 

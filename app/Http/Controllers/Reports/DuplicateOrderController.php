@@ -8,7 +8,7 @@ use App\Application\Reports\RunDuplicateOrderReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\DuplicateOrderRequest;
+use App\Http\Requests\DateRangeReportRequest;
 use Illuminate\View\View;
 use Throwable;
 
@@ -21,7 +21,7 @@ class DuplicateOrderController extends Controller
         return view('reports.duplicate-orders', ['startDate' => now()->subDays(30)->toDateString(), 'endDate' => now()->toDateString(), 'result' => null, 'reportFailed' => false, 'configurationError' => false]);
     }
 
-    public function store(DuplicateOrderRequest $request, RunDuplicateOrderReport $report, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunDuplicateOrderReport $report, RecordRun $runs): View
     {
         $store = $this->resolveStore($request);
         $startDate = (string) $request->validated('start_date');

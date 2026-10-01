@@ -8,7 +8,7 @@ use App\Application\Reports\RunReturnRmaReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\ReturnRmaRequest;
+use App\Http\Requests\DateRangeReportRequest;
 use Illuminate\View\View;
 use Throwable;
 
@@ -21,7 +21,7 @@ class ReturnRmaController extends Controller
         return view('reports.return-rma', $this->viewData());
     }
 
-    public function store(ReturnRmaRequest $request, RunReturnRmaReport $report, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunReturnRmaReport $report, RecordRun $runs): View
     {
         $store = $this->resolveStore($request);
         $startDate = (string) $request->validated('start_date');

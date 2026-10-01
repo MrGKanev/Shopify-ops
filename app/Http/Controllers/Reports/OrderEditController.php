@@ -8,7 +8,7 @@ use App\Application\Reports\RunOrderEditReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\OrderEditRequest;
+use App\Http\Requests\DateRangeReportRequest;
 use Illuminate\View\View;
 use Throwable;
 
@@ -21,7 +21,7 @@ class OrderEditController extends Controller
         return view('reports.order-edits', ['startDate' => now()->subDays(30)->toDateString(), 'endDate' => now()->toDateString(), 'result' => null, 'configurationError' => false, 'reportFailed' => false]);
     }
 
-    public function store(OrderEditRequest $request, RunOrderEditReport $report, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunOrderEditReport $report, RecordRun $runs): View
     {
         $store = $this->resolveStore($request);
         $start = (string) $request->validated('start_date');

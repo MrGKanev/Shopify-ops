@@ -9,7 +9,7 @@ use App\Application\Reports\RunAddressChangeReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\AddressChangeRequest;
+use App\Http\Requests\DateRangeReportRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -24,7 +24,7 @@ class AddressChangeController extends Controller
         return view('reports.address-changes', ['startDate' => now()->subDays(30)->toDateString(), 'endDate' => now()->toDateString(), 'result' => null, 'configurationError' => false, 'reportFailed' => false]);
     }
 
-    public function store(AddressChangeRequest $request, RunAddressChangeReport $report, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunAddressChangeReport $report, RecordRun $runs): View
     {
         $store = $this->resolveStore($request);
         $start = (string) $request->validated('start_date');
@@ -46,7 +46,7 @@ class AddressChangeController extends Controller
         return view('reports.address-changes', ['startDate' => $start, 'endDate' => $end, 'result' => $result instanceof AddressChangeResult ? $result : null, 'configurationError' => $configurationError, 'reportFailed' => $reportFailed]);
     }
 
-    public function export(AddressChangeRequest $request, RunAddressChangeReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
+    public function export(DateRangeReportRequest $request, RunAddressChangeReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
     {
         $store = $this->resolveStore($request);
         if ($store->missingShopifyCredentials()) {
