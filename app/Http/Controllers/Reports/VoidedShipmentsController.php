@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
-use App\Application\Reports\RecordRun;
+use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\RunVoidedShipmentsReport;
 use App\Application\Reports\VoidedShipmentsResult;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
 use App\Models\Store;
@@ -18,41 +17,39 @@ use Throwable;
 
 class VoidedShipmentsController extends Controller
 {
-    use LogsReportFailure, RecordsReportRun;
+    use LogsReportFailure;
 
     public function create(): View
     {
         return view('reports.voided-shipments', $this->viewData());
     }
 
-    public function store(DateRangeReportRequest $request, RunVoidedShipmentsReport $report, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunVoidedShipmentsReport $report, QueuedReportRunner $reports): View|RedirectResponse
     {
         [$store, $startDate, $endDate] = $this->context($request);
         $configurationError = $this->configurationError($store);
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $started = microtime(true);
-            try {
-                $result = $report->handle($store, $startDate, $endDate);
-            } catch (Throwable $exception) {
-                $reportFailed = true;
-                $this->logFailure('Voided shipments report failed.', $exception, $store);
+            $run = $reports->run($request, $store, 'voided_shipments', $report::class, [$startDate, $endDate], $startDate, $endDate, 'count:rows', 'count:rows');
+            if ($reports->shouldRedirect($request, $run)) {
+                return $reports->redirectToResult($request);
             }
-            $this->recordReportRun($runs, $store, 'voided_shipments', $started, $startDate, $endDate, count($result->rows ?? []), count($result->rows ?? []), $reportFailed);
+            $result = $run->result();
+            $reportFailed = $run->hasFailed();
         }
 
         return view('reports.voided-shipments', $this->viewData($startDate, $endDate, $result, $reportFailed, $configurationError));
     }
 
-    public function export(DateRangeReportRequest $request, RunVoidedShipmentsReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
+    public function export(DateRangeReportRequest $request, RunVoidedShipmentsReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse
     {
         [$store, $startDate, $endDate] = $this->context($request);
         if ($this->configurationError($store)) {
             return back()->withErrors(['export' => 'ShipStation credentials are incomplete for the active store.']);
         }
         try {
-            $result = $report->handle($store, $startDate, $endDate);
+            $result = $reports->completedResult($store, 'voided_shipments', $report::class, [$startDate, $endDate]) ?? $report->handle($store, $startDate, $endDate);
         } catch (Throwable $exception) {
             $this->logFailure('Voided shipments CSV export failed.', $exception, $store);
 

@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
-use App\Application\Reports\RecordRun;
+use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\RunShippingMarginReport;
 use App\Application\Reports\ShippingMarginResult;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ShippingMarginRequest;
 use Illuminate\Http\RedirectResponse;
@@ -17,14 +16,14 @@ use Throwable;
 
 class ShippingMarginController extends Controller
 {
-    use LogsReportFailure, RecordsReportRun;
+    use LogsReportFailure;
 
     public function create(): View
     {
         return view('reports.shipping-margin', $this->viewData());
     }
 
-    public function store(ShippingMarginRequest $request, RunShippingMarginReport $report, RecordRun $runs): View
+    public function store(ShippingMarginRequest $request, RunShippingMarginReport $report, QueuedReportRunner $reports): View|RedirectResponse
     {
         $store = $this->resolveStore($request);
         $startDate = (string) $request->validated('start_date');
@@ -34,26 +33,24 @@ class ShippingMarginController extends Controller
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $started = microtime(true);
-            try {
-                $result = $report->handle($store, $startDate, $endDate, $threshold);
-            } catch (Throwable $exception) {
-                $reportFailed = true;
-                $this->logFailure('Shipping margin report failed.', $exception, $store);
+            $run = $reports->run($request, $store, 'shipping_margin', $report::class, [$startDate, $endDate, $threshold], $startDate, $endDate, 'scanned', 'count:rows');
+            if ($reports->shouldRedirect($request, $run)) {
+                return $reports->redirectToResult($request);
             }
-            $this->recordReportRun($runs, $store, 'shipping_margin', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
+            $result = $run->result();
+            $reportFailed = $run->hasFailed();
         }
 
         return view('reports.shipping-margin', $this->viewData($startDate, $endDate, $threshold, $result, $reportFailed, $configurationError));
     }
 
-    public function export(ShippingMarginRequest $request, RunShippingMarginReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
+    public function export(ShippingMarginRequest $request, RunShippingMarginReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse
     {
         $store = $this->resolveStore($request);
         $startDate = (string) $request->validated('start_date');
         $endDate = (string) $request->validated('end_date');
         try {
-            $result = $report->handle($store, $startDate, $endDate, (float) $request->validated('threshold'));
+            $result = $reports->completedResult($store, 'shipping_margin', $report::class, [$startDate, $endDate, (float) $request->validated('threshold')]) ?? $report->handle($store, $startDate, $endDate, (float) $request->validated('threshold'));
         } catch (Throwable $exception) {
             $this->logFailure('Shipping margin CSV export failed.', $exception, $store);
 

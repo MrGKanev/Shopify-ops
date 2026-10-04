@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
-use App\Application\Reports\RecordRun;
+use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\RunShippedUnfulfilledReport;
 use App\Application\Reports\ShippedUnfulfilledResult;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
 use App\Models\Store;
@@ -18,40 +17,38 @@ use Throwable;
 
 class ShippedUnfulfilledController extends Controller
 {
-    use LogsReportFailure, RecordsReportRun;
+    use LogsReportFailure;
 
     public function create(): View
     {
         return view('reports.shipped-unfulfilled', $this->viewData());
     }
 
-    public function store(DateRangeReportRequest $request, RunShippedUnfulfilledReport $report, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunShippedUnfulfilledReport $report, QueuedReportRunner $reports): View|RedirectResponse
     {
         [$store,$start,$end] = $this->context($request);
         $configurationError = $this->configurationError($store);
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $started = microtime(true);
-            try {
-                $result = $report->handle($store, $start, $end);
-            } catch (Throwable $exception) {
-                $reportFailed = true;
-                $this->logFailure('Shipped/unfulfilled report failed.', $exception, $store);
+            $run = $reports->run($request, $store, 'shipped_unfulfilled', $report::class, [$start, $end], $start, $end, 'shippedTotal', 'count:rows');
+            if ($reports->shouldRedirect($request, $run)) {
+                return $reports->redirectToResult($request);
             }
-            $this->recordReportRun($runs, $store, 'shipped_unfulfilled', $started, $start, $end, $result->shippedTotal ?? 0, count($result->rows ?? []), $reportFailed);
+            $result = $run->result();
+            $reportFailed = $run->hasFailed();
         }
 
         return view('reports.shipped-unfulfilled', $this->viewData($start, $end, $result, $reportFailed, $configurationError));
     }
 
-    public function export(DateRangeReportRequest $request, RunShippedUnfulfilledReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
+    public function export(DateRangeReportRequest $request, RunShippedUnfulfilledReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse
     {
         [$store,$start,$end] = $this->context($request);
         if ($this->configurationError($store)) {
             return back()->withErrors(['export' => 'Shopify and ShipStation credentials are required.']);
         }try {
-            $result = $report->handle($store, $start, $end);
+            $result = $reports->completedResult($store, 'shipped_unfulfilled', $report::class, [$start, $end]) ?? $report->handle($store, $start, $end);
         } catch (Throwable $exception) {
             $this->logFailure('Shipped/unfulfilled CSV failed.', $exception, $store);
 

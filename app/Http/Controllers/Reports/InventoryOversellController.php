@@ -3,25 +3,21 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\InventoryOversellResult;
-use App\Application\Reports\RecordRun;
+use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\RunInventoryOversellReport;
-use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\InventoryOversellRequest;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
-use Throwable;
 
 class InventoryOversellController extends Controller
 {
-    use LogsReportFailure, RecordsReportRun;
-
     public function create(): View
     {
         return view('reports.inventory-oversell', ['result' => null, 'reportFailed' => false, 'shopifyConfigurationError' => false, 'shipStationConfigurationError' => false]);
     }
 
-    public function store(InventoryOversellRequest $request, RunInventoryOversellReport $report, RecordRun $runs): View
+    public function store(InventoryOversellRequest $request, RunInventoryOversellReport $report, QueuedReportRunner $reports): View|RedirectResponse
     {
         $store = $this->resolveStore($request);
         $result = null;
@@ -30,14 +26,12 @@ class InventoryOversellController extends Controller
         $shipStationConfigurationError = $store->missingShipStationCredentials();
 
         if (! $shopifyConfigurationError && ! $shipStationConfigurationError) {
-            $started = microtime(true);
-            try {
-                $result = $report->handle($store);
-            } catch (Throwable $exception) {
-                $reportFailed = true;
-                $this->logFailure('Inventory oversell report failed.', $exception, $store);
+            $run = $reports->run($request, $store, 'inventory_oversell', $report::class, [], null, null, 'products', 'count:rows');
+            if ($reports->shouldRedirect($request, $run)) {
+                return $reports->redirectToResult($request);
             }
-            $this->recordReportRun($runs, $store, 'inventory_oversell', $started, null, null, $result->products ?? 0, count($result->rows ?? []), $reportFailed);
+            $result = $run->result();
+            $reportFailed = $run->hasFailed();
         }
 
         return view('reports.inventory-oversell', [

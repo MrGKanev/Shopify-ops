@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
-use App\Application\Reports\RecordRun;
+use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\RunNoTrackingReport;
 use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\NoTrackingRequest;
 use App\Models\Store;
@@ -18,41 +17,39 @@ use Throwable;
 
 class NoTrackingController extends Controller
 {
-    use LogsReportFailure, RecordsReportRun;
+    use LogsReportFailure;
 
     public function create(): View
     {
         return view('reports.no-tracking', $this->viewData());
     }
 
-    public function store(NoTrackingRequest $request, RunNoTrackingReport $report, RecordRun $runs): View
+    public function store(NoTrackingRequest $request, RunNoTrackingReport $report, QueuedReportRunner $reports): View|RedirectResponse
     {
         [$store, $start, $end, $threshold] = $this->context($request);
         $configurationError = $this->configurationError($store);
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $started = microtime(true);
-            try {
-                $result = $report->handle($store, $start, $end, $threshold);
-            } catch (Throwable $exception) {
-                $reportFailed = true;
-                $this->logFailure('No-tracking report failed.', $exception, $store);
+            $run = $reports->run($request, $store, 'no_tracking', $report::class, [$start, $end, $threshold], $start, $end, 'scanned', 'count:rows');
+            if ($reports->shouldRedirect($request, $run)) {
+                return $reports->redirectToResult($request);
             }
-            $this->recordReportRun($runs, $store, 'no_tracking', $started, $start, $end, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
+            $result = $run->result();
+            $reportFailed = $run->hasFailed();
         }
 
         return view('reports.no-tracking', $this->viewData($start, $end, $threshold, $result, $reportFailed, $configurationError));
     }
 
-    public function export(NoTrackingRequest $request, RunNoTrackingReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
+    public function export(NoTrackingRequest $request, RunNoTrackingReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse
     {
         [$store, $start, $end, $threshold] = $this->context($request);
         if ($this->configurationError($store)) {
             return back()->withErrors(['export' => 'Shopify credentials are incomplete for the active store.']);
         }
         try {
-            $result = $report->handle($store, $start, $end, $threshold);
+            $result = $reports->completedResult($store, 'no_tracking', $report::class, [$start, $end, $threshold]) ?? $report->handle($store, $start, $end, $threshold);
         } catch (Throwable $exception) {
             $this->logFailure('No-tracking CSV export failed.', $exception, $store);
 

@@ -5,6 +5,7 @@
     <title>{{ $appSettings->displayName() }} · {{ __('Internal Tools') }}</title>
     <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @if($pendingReportRun)<meta http-equiv="refresh" content="3">@endif
 </head>
 <body>
 @php
@@ -57,7 +58,7 @@
         @can('run-audits')<div class="sidebar-search"><button class="command-palette-trigger" type="button" data-command-palette-open><span>{{ __('Quick search') }}</span><kbd>⌘ K</kbd></button></div>@endcan
         <div class="sidebar-footer"><div class="flex items-center gap-2">@unless(auth()->user()->hasEnabledTwoFactorAuthentication())<a class="sidebar-version" href="{{ route('two-factor.settings') }}">{{ __('Two-factor authentication') }}</a>@endunless<form class="grow" method="POST" action="{{ route('logout') }}">@csrf<button class="btn btn-ghost btn-sm btn-full sidebar-signout-btn" type="submit">{{ __('Sign out') }}</button></form></div><a class="sidebar-version" href="{{ config('app.repository_url') }}" target="_blank" rel="noopener noreferrer">v{{ config('app.version') }} · GitHub</a><div class="sidebar-footer-row"><span class="sidebar-github">{{ auth()->user()->name }} · {{ __(auth()->user()->role->value) }}</span><button class="sidebar-collapse-btn" id="js-sidebar-collapse" type="button" title="{{ __('Collapse sidebar') }}" aria-label="{{ __('Collapse sidebar') }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg></button></div></div>
     </aside>
-    <main class="main">@if($customLinks !== [])<nav class="custom-links" aria-label="{{ __('Custom links') }}">@foreach($customLinks as $link)<a href="{{ $link['url'] }}" target="_blank" rel="noopener noreferrer">{{ $link['label'] }}</a>@endforeach</nav>@endif @if(session('status'))<x-alert class="toast">{{ session('status') }}</x-alert>@endif @yield('content')</main>
+    <main class="main">@if($customLinks !== [])<nav class="custom-links" aria-label="{{ __('Custom links') }}">@foreach($customLinks as $link)<a href="{{ $link['url'] }}" target="_blank" rel="noopener noreferrer">{{ $link['label'] }}</a>@endforeach</nav>@endif @if(session('status'))<x-alert class="toast">{{ session('status') }}</x-alert>@endif @if($pendingReportRun)<x-alert tone="warn" class="mb-4">{{ __('The report is running in the background. This page refreshes automatically until the results are ready.') }}</x-alert>@endif @yield('content')</main>
 </div>
 @can('run-audits')
 <div class="command-palette" data-command-palette hidden>

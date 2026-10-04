@@ -4,12 +4,14 @@ namespace App\Application\Operations;
 
 use App\Models\LoginAttempt;
 use App\Models\NotificationDelivery;
+use App\Models\ReportRun;
 use App\Models\RunLog;
 use App\Models\WebhookEvent;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Removes operational history that is no longer needed and strips customer data from old webhook payloads.
+ * Removes operational history that is no longer needed and strips customer data from old webhook payloads
+ * and stored report results.
  *
  * Webhook events keep their row (topic, status, timestamps) so delivery history stays auditable;
  * only the payload, which holds names, emails, addresses and phone numbers, is cleared.
@@ -17,8 +19,8 @@ use Illuminate\Database\Eloquent\Builder;
 class PruneOperationalData
 {
     /**
-     * @param  array{webhook_payload_days: int, login_attempt_days: int, notification_delivery_days: int, run_log_days: int}  $retentionDays
-     * @return array{webhook_payloads: int, login_attempts: int, notification_deliveries: int, run_logs: int}
+     * @param  array{webhook_payload_days: int, login_attempt_days: int, notification_delivery_days: int, run_log_days: int, report_run_days: int}  $retentionDays
+     * @return array{webhook_payloads: int, login_attempts: int, notification_deliveries: int, run_logs: int, report_runs: int}
      */
     public function handle(array $retentionDays, bool $dryRun = false): array
     {
@@ -33,6 +35,8 @@ class PruneOperationalData
                 ->where('created_at', '<', now()->subDays($retentionDays['notification_delivery_days'])),
             'run_logs' => RunLog::query()
                 ->where('created_at', '<', now()->subDays($retentionDays['run_log_days'])),
+            'report_runs' => ReportRun::query()
+                ->where('created_at', '<', now()->subDays($retentionDays['report_run_days'])),
         ];
 
         if ($dryRun) {
@@ -47,6 +51,7 @@ class PruneOperationalData
             'login_attempts' => $queries['login_attempts']->delete(),
             'notification_deliveries' => $queries['notification_deliveries']->delete(),
             'run_logs' => $queries['run_logs']->delete(),
+            'report_runs' => $queries['report_runs']->delete(),
         ];
     }
 }

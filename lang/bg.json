@@ -1109,5 +1109,6 @@
     "Low": "Нисък",
     "Normal": "Нормален",
     "High": "Висок",
-    "Urgent": "Спешен"
+    "Urgent": "Спешен",
+    "The report is running in the background. This page refreshes automatically until the results are ready.": "Отчетът се изпълнява във фонов режим. Страницата се опреснява автоматично, докато резултатите станат готови."
 }

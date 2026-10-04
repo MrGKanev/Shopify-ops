@@ -4,6 +4,7 @@ namespace Tests\Feature\Console\Commands;
 
 use App\Models\LoginAttempt;
 use App\Models\NotificationDelivery;
+use App\Models\ReportRun;
 use App\Models\RunLog;
 use App\Models\Store;
 use App\Models\WebhookEvent;
@@ -34,6 +35,8 @@ class PruneOperationalDataTest extends TestCase
         $oldDelivery = $this->delivery(now()->subDays(91));
         $recentDelivery = $this->delivery(now()->subDays(10));
         $oldRun = $this->runLog($store, now()->subDays(181));
+        $oldReportRun = $this->reportRun($store, now()->subDays(8));
+        $recentReportRun = $this->reportRun($store, now()->subDays(2));
         $recentRun = $this->runLog($store, now()->subDays(20));
 
         $this->artisan('ops:prune-data')->assertSuccessful();
@@ -48,6 +51,8 @@ class PruneOperationalDataTest extends TestCase
         $this->assertNotNull($recentDelivery->fresh());
         $this->assertNull($oldRun->fresh());
         $this->assertNotNull($recentRun->fresh());
+        $this->assertNull($oldReportRun->fresh());
+        $this->assertNotNull($recentReportRun->fresh());
     }
 
     public function test_dry_run_only_counts_and_custom_periods_apply(): void
@@ -85,6 +90,14 @@ class PruneOperationalDataTest extends TestCase
         $delivery->forceFill(['created_at' => $createdAt])->saveQuietly();
 
         return $delivery;
+    }
+
+    private function reportRun(Store $store, Carbon $createdAt): ReportRun
+    {
+        $run = $store->reportRuns()->create(['tool' => 'address_check', 'report' => 'App\\Application\\Reports\\RunAddressCheckReport', 'arguments' => [], 'arguments_hash' => hash('sha256', 'x'), 'status' => 'completed']);
+        $run->forceFill(['created_at' => $createdAt])->saveQuietly();
+
+        return $run;
     }
 
     private function runLog(Store $store, Carbon $createdAt): RunLog

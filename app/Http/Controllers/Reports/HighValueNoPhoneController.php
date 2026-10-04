@@ -3,25 +3,21 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\HighValueNoPhoneResult;
-use App\Application\Reports\RecordRun;
+use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\RunHighValueNoPhoneReport;
-use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\HighValueNoPhoneRequest;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
-use Throwable;
 
 class HighValueNoPhoneController extends Controller
 {
-    use LogsReportFailure, RecordsReportRun;
-
     public function create(): View
     {
         return view('reports.high-value-no-phone', ['startDate' => now()->subDays(30)->toDateString(), 'endDate' => now()->toDateString(), 'minimum' => 200, 'currency' => 'USD', 'result' => null, 'reportFailed' => false]);
     }
 
-    public function store(HighValueNoPhoneRequest $request, RunHighValueNoPhoneReport $report, RecordRun $runs): View
+    public function store(HighValueNoPhoneRequest $request, RunHighValueNoPhoneReport $report, QueuedReportRunner $reports): View|RedirectResponse
     {
         $store = $this->resolveStore($request);
         $startDate = (string) $request->validated('start_date');
@@ -31,14 +27,12 @@ class HighValueNoPhoneController extends Controller
         $result = null;
         $reportFailed = false;
 
-        $started = microtime(true);
-        try {
-            $result = $report->handle($store, $startDate, $endDate, $minimum, $currency);
-        } catch (Throwable $exception) {
-            $reportFailed = true;
-            $this->logFailure('High-value no-phone report failed.', $exception, $store);
+        $run = $reports->run($request, $store, 'high_value_no_phone', $report::class, [$startDate, $endDate, $minimum, $currency], $startDate, $endDate, 'scanned', 'count:rows');
+        if ($reports->shouldRedirect($request, $run)) {
+            return $reports->redirectToResult($request);
         }
-        $this->recordReportRun($runs, $store, 'high_value_no_phone', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
+        $result = $run->result();
+        $reportFailed = $run->hasFailed();
 
         return view('reports.high-value-no-phone', ['startDate' => $startDate, 'endDate' => $endDate, 'minimum' => $minimum, 'currency' => $currency, 'result' => $result instanceof HighValueNoPhoneResult ? $result : null, 'reportFailed' => $reportFailed]);
     }

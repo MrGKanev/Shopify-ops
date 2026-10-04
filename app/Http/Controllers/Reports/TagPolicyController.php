@@ -2,21 +2,17 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\RecordRun;
+use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\RunTagPolicyReport;
 use App\Application\Reports\ScanResult;
 use App\Domain\Reports\TagPolicyAnalyzer;
-use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
-use Throwable;
 
 class TagPolicyController extends Controller
 {
-    use LogsReportFailure, RecordsReportRun;
-
     public function create(TagPolicyAnalyzer $analyzer): View
     {
         $config = $this->config();
@@ -24,7 +20,7 @@ class TagPolicyController extends Controller
         return view('reports.tag-policy', ['startDate' => now()->subDays(30)->toDateString(), 'endDate' => now()->toDateString(), 'configured' => $analyzer->hasRules($config), 'result' => null, 'reportFailed' => false, 'configurationError' => false]);
     }
 
-    public function store(DateRangeReportRequest $request, RunTagPolicyReport $report, TagPolicyAnalyzer $analyzer, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunTagPolicyReport $report, TagPolicyAnalyzer $analyzer, QueuedReportRunner $reports): View|RedirectResponse
     {
         $store = $this->resolveStore($request);
         $startDate = (string) $request->validated('start_date');
@@ -35,14 +31,12 @@ class TagPolicyController extends Controller
         $result = null;
         $reportFailed = false;
         if ($configured && ! $configurationError) {
-            $started = microtime(true);
-            try {
-                $result = $report->handle($store, $startDate, $endDate, $config);
-            } catch (Throwable $exception) {
-                $reportFailed = true;
-                $this->logFailure('Tag policy report failed.', $exception, $store);
+            $run = $reports->run($request, $store, 'tag_policy', $report::class, [$startDate, $endDate, $config], $startDate, $endDate, 'scanned', 'count:rows');
+            if ($reports->shouldRedirect($request, $run)) {
+                return $reports->redirectToResult($request);
             }
-            $this->recordReportRun($runs, $store, 'tag_policy', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
+            $result = $run->result();
+            $reportFailed = $run->hasFailed();
         }
 
         return view('reports.tag-policy', ['startDate' => $startDate, 'endDate' => $endDate, 'configured' => $configured, 'result' => $result instanceof ScanResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);

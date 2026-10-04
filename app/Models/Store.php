@@ -70,6 +70,12 @@ class Store extends Model
         return $this->hasMany(PushLog::class);
     }
 
+    /** @return HasMany<ReportRun, $this> */
+    public function reportRuns(): HasMany
+    {
+        return $this->hasMany(ReportRun::class);
+    }
+
     /** @return HasMany<RunLog, $this> */
     public function runLogs(): HasMany
     {

@@ -12,6 +12,7 @@ use Illuminate\Console\Command;
     {--login-days=90 : Delete login attempt records older than this many days (active bans are kept)}
     {--delivery-days=90 : Delete notification delivery records older than this many days}
     {--run-log-days=180 : Delete run history older than this many days}
+    {--report-run-days=7 : Delete queued report runs and their stored results older than this many days}
     {--dry-run : Only count what would be removed}')]
 #[Description('Remove old operational history and strip customer data from old webhook payloads. Run manually.')]
 class PruneOperationalData extends Command
@@ -23,6 +24,7 @@ class PruneOperationalData extends Command
             'login_attempt_days' => (int) $this->option('login-days'),
             'notification_delivery_days' => (int) $this->option('delivery-days'),
             'run_log_days' => (int) $this->option('run-log-days'),
+            'report_run_days' => (int) $this->option('report-run-days'),
         ];
 
         if (min($retentionDays) < 1) {
@@ -41,6 +43,7 @@ class PruneOperationalData extends Command
                 ['Login attempts', $counts['login_attempts'], $retentionDays['login_attempt_days'].' days'],
                 ['Notification deliveries', $counts['notification_deliveries'], $retentionDays['notification_delivery_days'].' days'],
                 ['Run history', $counts['run_logs'], $retentionDays['run_log_days'].' days'],
+                ['Report results', $counts['report_runs'], $retentionDays['report_run_days'].' days'],
             ],
         );
 

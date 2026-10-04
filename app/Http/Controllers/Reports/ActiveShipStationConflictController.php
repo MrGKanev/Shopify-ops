@@ -4,10 +4,9 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\ActiveShipStationConflictResult;
-use App\Application\Reports\RecordRun;
+use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\RunActiveShipStationConflictReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
 use App\Models\Store;
@@ -18,40 +17,38 @@ use Throwable;
 
 class ActiveShipStationConflictController extends Controller
 {
-    use LogsReportFailure, RecordsReportRun;
+    use LogsReportFailure;
 
     public function create(): View
     {
         return view('reports.active-shipstation-conflicts', $this->viewData());
     }
 
-    public function store(DateRangeReportRequest $request, RunActiveShipStationConflictReport $report, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunActiveShipStationConflictReport $report, QueuedReportRunner $reports): View|RedirectResponse
     {
         [$store,$start,$end] = $this->context($request);
         $configurationError = $this->configurationError($store);
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $started = microtime(true);
-            try {
-                $result = $report->handle($store, $start, $end);
-            } catch (Throwable $exception) {
-                $reportFailed = true;
-                $this->logFailure('Active ShipStation conflicts report failed.', $exception, $store);
+            $run = $reports->run($request, $store, 'active_shipstation_conflicts', $report::class, [$start, $end], $start, $end, 'scanned', 'count:rows');
+            if ($reports->shouldRedirect($request, $run)) {
+                return $reports->redirectToResult($request);
             }
-            $this->recordReportRun($runs, $store, 'active_shipstation_conflicts', $started, $start, $end, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
+            $result = $run->result();
+            $reportFailed = $run->hasFailed();
         }
 
         return view('reports.active-shipstation-conflicts', $this->viewData($start, $end, $result, $reportFailed, $configurationError));
     }
 
-    public function export(DateRangeReportRequest $request, RunActiveShipStationConflictReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
+    public function export(DateRangeReportRequest $request, RunActiveShipStationConflictReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse
     {
         [$store,$start,$end] = $this->context($request);
         if ($this->configurationError($store)) {
             return back()->withErrors(['export' => 'Shopify and ShipStation credentials are required.']);
         }try {
-            $result = $report->handle($store, $start, $end);
+            $result = $reports->completedResult($store, 'active_shipstation_conflicts', $report::class, [$start, $end]) ?? $report->handle($store, $start, $end);
         } catch (Throwable $exception) {
             $this->logFailure('Active ShipStation conflicts CSV failed.', $exception, $store);
 

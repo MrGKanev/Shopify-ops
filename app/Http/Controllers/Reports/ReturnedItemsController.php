@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
-use App\Application\Reports\RecordRun;
+use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\RunReturnedItemsReport;
 use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
 use App\Models\Store;
@@ -18,14 +17,14 @@ use Throwable;
 
 class ReturnedItemsController extends Controller
 {
-    use LogsReportFailure, RecordsReportRun;
+    use LogsReportFailure;
 
     public function create(): View
     {
         return view('reports.returned-items', $this->viewData());
     }
 
-    public function store(DateRangeReportRequest $request, RunReturnedItemsReport $report, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunReturnedItemsReport $report, QueuedReportRunner $reports): View|RedirectResponse
     {
         [$store, $startDate, $endDate] = $this->context($request);
         $configurationError = $this->configurationError($store);
@@ -33,20 +32,18 @@ class ReturnedItemsController extends Controller
         $reportFailed = false;
 
         if (! $configurationError) {
-            $started = microtime(true);
-            try {
-                $result = $report->handle($store, $startDate, $endDate);
-            } catch (Throwable $exception) {
-                $reportFailed = true;
-                $this->logFailure('Returned items report failed.', $exception, $store);
+            $run = $reports->run($request, $store, 'returned_items', $report::class, [$startDate, $endDate], $startDate, $endDate, 'scanned', 'count:rows');
+            if ($reports->shouldRedirect($request, $run)) {
+                return $reports->redirectToResult($request);
             }
-            $this->recordReportRun($runs, $store, 'returned_items', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
+            $result = $run->result();
+            $reportFailed = $run->hasFailed();
         }
 
         return view('reports.returned-items', $this->viewData($startDate, $endDate, $result, $reportFailed, $configurationError));
     }
 
-    public function export(DateRangeReportRequest $request, RunReturnedItemsReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
+    public function export(DateRangeReportRequest $request, RunReturnedItemsReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse
     {
         [$store, $startDate, $endDate] = $this->context($request);
         if ($this->configurationError($store)) {
@@ -54,7 +51,7 @@ class ReturnedItemsController extends Controller
         }
 
         try {
-            $result = $report->handle($store, $startDate, $endDate);
+            $result = $reports->completedResult($store, 'returned_items', $report::class, [$startDate, $endDate]) ?? $report->handle($store, $startDate, $endDate);
         } catch (Throwable $exception) {
             $this->logFailure('Returned items CSV export failed.', $exception, $store);
 

@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
-use App\Application\Reports\RecordRun;
+use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\RunPartialFulfillmentReport;
 use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PartialFulfillmentRequest;
 use App\Models\Store;
@@ -18,41 +17,39 @@ use Throwable;
 
 class PartialFulfillmentController extends Controller
 {
-    use LogsReportFailure, RecordsReportRun;
+    use LogsReportFailure;
 
     public function create(): View
     {
         return view('reports.partial-fulfillment', $this->viewData());
     }
 
-    public function store(PartialFulfillmentRequest $request, RunPartialFulfillmentReport $report, RecordRun $runs): View
+    public function store(PartialFulfillmentRequest $request, RunPartialFulfillmentReport $report, QueuedReportRunner $reports): View|RedirectResponse
     {
         [$store, $startDate, $endDate, $threshold] = $this->context($request);
         $configurationError = $this->configurationError($store);
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $started = microtime(true);
-            try {
-                $result = $report->handle($store, $startDate, $endDate, $threshold);
-            } catch (Throwable $exception) {
-                $reportFailed = true;
-                $this->logFailure('Partial fulfillment report failed.', $exception, $store);
+            $run = $reports->run($request, $store, 'partial_fulfillment', $report::class, [$startDate, $endDate, $threshold], $startDate, $endDate, 'scanned', 'count:rows');
+            if ($reports->shouldRedirect($request, $run)) {
+                return $reports->redirectToResult($request);
             }
-            $this->recordReportRun($runs, $store, 'partial_fulfillment', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
+            $result = $run->result();
+            $reportFailed = $run->hasFailed();
         }
 
         return view('reports.partial-fulfillment', $this->viewData($startDate, $endDate, $threshold, $result, $reportFailed, $configurationError));
     }
 
-    public function export(PartialFulfillmentRequest $request, RunPartialFulfillmentReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
+    public function export(PartialFulfillmentRequest $request, RunPartialFulfillmentReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse
     {
         [$store, $startDate, $endDate, $threshold] = $this->context($request);
         if ($this->configurationError($store)) {
             return back()->withErrors(['export' => 'Shopify credentials are incomplete for the active store.']);
         }
         try {
-            $result = $report->handle($store, $startDate, $endDate, $threshold);
+            $result = $reports->completedResult($store, 'partial_fulfillment', $report::class, [$startDate, $endDate, $threshold]) ?? $report->handle($store, $startDate, $endDate, $threshold);
         } catch (Throwable $exception) {
             $this->logFailure('Partial fulfillment CSV export failed.', $exception, $store);
 

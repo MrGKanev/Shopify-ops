@@ -58,6 +58,10 @@ class AppServiceProvider extends ServiceProvider
             $view->with('appSettings', $appSettings);
         });
 
+        View::composer('layouts.app', function (ViewContract $view): void {
+            $view->with('pendingReportRun', request()->attributes->get('pendingReportRun'));
+        });
+
         $healthChecks = [
             DatabaseCheck::new(),
             CacheCheck::new(),

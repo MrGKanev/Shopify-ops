@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
-use App\Application\Reports\RecordRun;
+use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\RunBundleCheckReport;
 use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
 use App\Models\Store;
@@ -18,41 +17,39 @@ use Throwable;
 
 class BundleCheckController extends Controller
 {
-    use LogsReportFailure, RecordsReportRun;
+    use LogsReportFailure;
 
     public function create(): View
     {
         return view('reports.bundle-check', $this->viewData());
     }
 
-    public function store(DateRangeReportRequest $request, RunBundleCheckReport $report, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunBundleCheckReport $report, QueuedReportRunner $reports): View|RedirectResponse
     {
         [$store, $startDate, $endDate] = $this->context($request);
         $configurationError = $this->configurationError($store);
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $started = microtime(true);
-            try {
-                $result = $report->handle($store, $startDate, $endDate);
-            } catch (Throwable $exception) {
-                $reportFailed = true;
-                $this->logFailure('Bundle check report failed.', $exception, $store);
+            $run = $reports->run($request, $store, 'bundle_check', $report::class, [$startDate, $endDate], $startDate, $endDate, 'scanned', 'count:rows');
+            if ($reports->shouldRedirect($request, $run)) {
+                return $reports->redirectToResult($request);
             }
-            $this->recordReportRun($runs, $store, 'bundle_check', $started, $startDate, $endDate, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
+            $result = $run->result();
+            $reportFailed = $run->hasFailed();
         }
 
         return view('reports.bundle-check', $this->viewData($startDate, $endDate, $result, $reportFailed, $configurationError));
     }
 
-    public function export(DateRangeReportRequest $request, RunBundleCheckReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
+    public function export(DateRangeReportRequest $request, RunBundleCheckReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse
     {
         [$store, $startDate, $endDate] = $this->context($request);
         if ($this->configurationError($store)) {
             return back()->withErrors(['export' => 'Shopify credentials are incomplete for the active store.']);
         }
         try {
-            $result = $report->handle($store, $startDate, $endDate);
+            $result = $reports->completedResult($store, 'bundle_check', $report::class, [$startDate, $endDate]) ?? $report->handle($store, $startDate, $endDate);
         } catch (Throwable $exception) {
             $this->logFailure('Bundle check CSV export failed.', $exception, $store);
 

@@ -97,6 +97,7 @@ php artisan ops:prune-data --webhook-days=14 --run-log-days=365
 | Login attempts | 90 days | Deleted, except IPs that are still banned |
 | Notification deliveries | 90 days | Deleted |
 | Run history | 180 days | Deleted |
+| Report results | 7 days | Queued report runs and their stored (encrypted) results are deleted |
 
 ### Store timezone {#store-timezone}
 

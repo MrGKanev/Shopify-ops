@@ -178,8 +178,8 @@ Route::middleware('auth')->group(function (): void {
             Route::post('/reports/run-audit', [RunAuditController::class, 'store'])->middleware('throttle:audit-report')->name('reports.run-audit.store');
             Route::post('/reports/run-audit/queue', [RunAuditController::class, 'queue'])->middleware('throttle:audit-report')->name('reports.run-audit.queue');
             /**
-             * Every report exposes the same create/store pair, plus an export endpoint when the
-             * controller implements one.
+             * Every report exposes the same create/store pair, a GET result URL that shows a queued
+             * run by its parameters, plus an export endpoint when the controller implements one.
              *
              * @var array<string, class-string> $reportControllers
              */
@@ -233,6 +233,7 @@ Route::middleware('auth')->group(function (): void {
             foreach ($reportControllers as $slug => $controller) {
                 Route::get("/reports/{$slug}", [$controller, 'create'])->name("reports.{$slug}");
                 Route::post("/reports/{$slug}", [$controller, 'store'])->middleware('throttle:audit-report')->name("reports.{$slug}.store");
+                Route::get("/reports/{$slug}/result", [$controller, 'store'])->name("reports.{$slug}.result");
                 if (method_exists($controller, 'export')) {
                     Route::post("/reports/{$slug}/export", [$controller, 'export'])->middleware('throttle:audit-report')->name("reports.{$slug}.export");
                 }

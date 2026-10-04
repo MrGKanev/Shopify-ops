@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
-use App\Application\Reports\RecordRun;
+use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\RunShipmentAgingReport;
 use App\Application\Reports\ShipmentAgingResult;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ShipmentAgingRequest;
 use App\Models\Store;
@@ -18,41 +17,39 @@ use Throwable;
 
 class ShipmentAgingController extends Controller
 {
-    use LogsReportFailure, RecordsReportRun;
+    use LogsReportFailure;
 
     public function create(): View
     {
         return view('reports.shipment-aging', $this->viewData());
     }
 
-    public function store(ShipmentAgingRequest $request, RunShipmentAgingReport $report, RecordRun $runs): View
+    public function store(ShipmentAgingRequest $request, RunShipmentAgingReport $report, QueuedReportRunner $reports): View|RedirectResponse
     {
         [$store,$threshold] = $this->context($request);
         $configurationError = $this->configurationError($store);
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $started = microtime(true);
-            try {
-                $result = $report->handle($store, $threshold);
-            } catch (Throwable $exception) {
-                $reportFailed = true;
-                $this->logFailure('Shipment aging report failed.', $exception, $store);
+            $run = $reports->run($request, $store, 'shipment_aging', $report::class, [$threshold], null, null, 'scanned', 'count:rows');
+            if ($reports->shouldRedirect($request, $run)) {
+                return $reports->redirectToResult($request);
             }
-            $this->recordReportRun($runs, $store, 'shipment_aging', $started, null, null, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
+            $result = $run->result();
+            $reportFailed = $run->hasFailed();
         }
 
         return view('reports.shipment-aging', $this->viewData($threshold, $result, $reportFailed, $configurationError));
     }
 
-    public function export(ShipmentAgingRequest $request, RunShipmentAgingReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
+    public function export(ShipmentAgingRequest $request, RunShipmentAgingReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse
     {
         [$store,$threshold] = $this->context($request);
         if ($this->configurationError($store)) {
             return back()->withErrors(['export' => 'ShipStation credentials are incomplete for the active store.']);
         }
         try {
-            $result = $report->handle($store, $threshold);
+            $result = $reports->completedResult($store, 'shipment_aging', $report::class, [$threshold]) ?? $report->handle($store, $threshold);
         } catch (Throwable $exception) {
             $this->logFailure('Shipment aging CSV export failed.', $exception, $store);
 

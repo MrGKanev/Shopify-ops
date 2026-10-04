@@ -2,25 +2,21 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\RecordRun;
+use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\RunTaxAuditReport;
-use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\TaxAuditRequest;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
-use Throwable;
 
 class TaxAuditController extends Controller
 {
-    use LogsReportFailure, RecordsReportRun;
-
     public function create(): View
     {
         return view('reports.tax-audit', ['startDate' => now()->subDays(30)->toDateString(), 'endDate' => now()->toDateString(), 'minimum' => 5, 'result' => null, 'reportFailed' => false, 'configurationError' => false]);
     }
 
-    public function store(TaxAuditRequest $request, RunTaxAuditReport $report, RecordRun $runs): View
+    public function store(TaxAuditRequest $request, RunTaxAuditReport $report, QueuedReportRunner $reports): View|RedirectResponse
     {
         $store = $this->resolveStore($request);
         $data = $request->validated();
@@ -28,14 +24,12 @@ class TaxAuditController extends Controller
         $failed = false;
         $configurationError = $store->missingShopifyCredentials();
         if (! $configurationError) {
-            $started = microtime(true);
-            try {
-                $result = $report->handle($store, (string) $data['start_date'], (string) $data['end_date'], (float) $data['minimum']);
-            } catch (Throwable $exception) {
-                $failed = true;
-                $this->logFailure('Tax audit report failed.', $exception, $store);
+            $run = $reports->run($request, $store, 'tax_audit', $report::class, [(string) $data['start_date'], (string) $data['end_date'], (float) $data['minimum']], (string) $data['start_date'], (string) $data['end_date'], 'scanned', 'count:rows');
+            if ($reports->shouldRedirect($request, $run)) {
+                return $reports->redirectToResult($request);
             }
-            $this->recordReportRun($runs, $store, 'tax_audit', $started, (string) $data['start_date'], (string) $data['end_date'], $result->scanned ?? 0, count($result->rows ?? []), $failed);
+            $result = $run->result();
+            $failed = $run->hasFailed();
         }
 
         return view('reports.tax-audit', ['startDate' => $data['start_date'], 'endDate' => $data['end_date'], 'minimum' => $data['minimum'], 'result' => $result, 'reportFailed' => $failed, 'configurationError' => $configurationError]);

@@ -2,26 +2,22 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\RecordRun;
+use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\RunZombieProductsReport;
 use App\Application\Reports\ScanResult;
-use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ZombieProductsRequest;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
-use Throwable;
 
 class ZombieProductsController extends Controller
 {
-    use LogsReportFailure, RecordsReportRun;
-
     public function create(): View
     {
         return view('reports.zombie-products', ['result' => null, 'reportFailed' => false, 'configurationError' => false]);
     }
 
-    public function store(ZombieProductsRequest $request, RunZombieProductsReport $report, RecordRun $runs): View
+    public function store(ZombieProductsRequest $request, RunZombieProductsReport $report, QueuedReportRunner $reports): View|RedirectResponse
     {
         $store = $this->resolveStore($request);
         $result = null;
@@ -29,14 +25,12 @@ class ZombieProductsController extends Controller
         $configurationError = $store->missingShopifyCredentials();
 
         if (! $configurationError) {
-            $started = microtime(true);
-            try {
-                $result = $report->handle($store);
-            } catch (Throwable $exception) {
-                $reportFailed = true;
-                $this->logFailure('Zombie products report failed.', $exception, $store);
+            $run = $reports->run($request, $store, 'zombie_products', $report::class, [], null, null, 'scanned', 'count:rows');
+            if ($reports->shouldRedirect($request, $run)) {
+                return $reports->redirectToResult($request);
             }
-            $this->recordReportRun($runs, $store, 'zombie_products', $started, null, null, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
+            $result = $run->result();
+            $reportFailed = $run->hasFailed();
         }
 
         return view('reports.zombie-products', ['result' => $result instanceof ScanResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);

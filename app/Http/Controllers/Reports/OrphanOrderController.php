@@ -4,10 +4,9 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\OrphanOrderResult;
-use App\Application\Reports\RecordRun;
+use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\RunOrphanOrderReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
 use App\Models\Store;
@@ -18,40 +17,38 @@ use Throwable;
 
 class OrphanOrderController extends Controller
 {
-    use LogsReportFailure, RecordsReportRun;
+    use LogsReportFailure;
 
     public function create(): View
     {
         return view('reports.orphan-orders', $this->viewData());
     }
 
-    public function store(DateRangeReportRequest $request, RunOrphanOrderReport $report, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunOrphanOrderReport $report, QueuedReportRunner $reports): View|RedirectResponse
     {
         [$store,$start,$end] = $this->context($request);
         $configurationError = $this->configurationError($store);
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $started = microtime(true);
-            try {
-                $result = $report->handle($store, $start, $end);
-            } catch (Throwable $exception) {
-                $reportFailed = true;
-                $this->logFailure('Orphan order report failed.', $exception, $store);
+            $run = $reports->run($request, $store, 'orphan_orders', $report::class, [$start, $end], $start, $end, 'shopifyTotal', 'count:rows');
+            if ($reports->shouldRedirect($request, $run)) {
+                return $reports->redirectToResult($request);
             }
-            $this->recordReportRun($runs, $store, 'orphan_orders', $started, $start, $end, $result->shopifyTotal ?? 0, count($result->rows ?? []), $reportFailed);
+            $result = $run->result();
+            $reportFailed = $run->hasFailed();
         }
 
         return view('reports.orphan-orders', $this->viewData($start, $end, $result, $reportFailed, $configurationError));
     }
 
-    public function export(DateRangeReportRequest $request, RunOrphanOrderReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
+    public function export(DateRangeReportRequest $request, RunOrphanOrderReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse
     {
         [$store,$start,$end] = $this->context($request);
         if ($this->configurationError($store)) {
             return back()->withErrors(['export' => 'Shopify and ShipStation credentials are required.']);
         }try {
-            $result = $report->handle($store, $start, $end);
+            $result = $reports->completedResult($store, 'orphan_orders', $report::class, [$start, $end]) ?? $report->handle($store, $start, $end);
         } catch (Throwable $exception) {
             $this->logFailure('Orphan order CSV failed.', $exception, $store);
 

@@ -3,25 +3,21 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\InventoryAgingResult;
-use App\Application\Reports\RecordRun;
+use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\RunInventoryAgingReport;
-use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
-use Throwable;
 
 class InventoryAgingController extends Controller
 {
-    use LogsReportFailure, RecordsReportRun;
-
     public function create(): View
     {
         return view('reports.inventory-aging', ['startDate' => now()->subDays(30)->toDateString(), 'endDate' => now()->toDateString(), 'result' => null, 'reportFailed' => false, 'configurationError' => false]);
     }
 
-    public function store(DateRangeReportRequest $request, RunInventoryAgingReport $report, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunInventoryAgingReport $report, QueuedReportRunner $reports): View|RedirectResponse
     {
         $store = $this->resolveStore($request);
         $startDate = (string) $request->validated('start_date');
@@ -31,14 +27,12 @@ class InventoryAgingController extends Controller
         $configurationError = $store->missingShopifyCredentials();
 
         if (! $configurationError) {
-            $started = microtime(true);
-            try {
-                $result = $report->handle($store, $startDate, $endDate);
-            } catch (Throwable $exception) {
-                $reportFailed = true;
-                $this->logFailure('Inventory aging report failed.', $exception, $store);
+            $run = $reports->run($request, $store, 'inventory_aging', $report::class, [$startDate, $endDate], $startDate, $endDate, 'orders', 'count:rows');
+            if ($reports->shouldRedirect($request, $run)) {
+                return $reports->redirectToResult($request);
             }
-            $this->recordReportRun($runs, $store, 'inventory_aging', $started, $startDate, $endDate, $result->orders ?? 0, count($result->rows ?? []), $reportFailed);
+            $result = $run->result();
+            $reportFailed = $run->hasFailed();
         }
 
         return view('reports.inventory-aging', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof InventoryAgingResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);

@@ -2,26 +2,22 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\RecordRun;
+use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\RunGiftCardsReport;
 use App\Application\Reports\ScanResult;
-use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\GiftCardsRequest;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
-use Throwable;
 
 class GiftCardsController extends Controller
 {
-    use LogsReportFailure, RecordsReportRun;
-
     public function create(): View
     {
         return view('reports.gift-cards', ['days' => 30, 'result' => null, 'reportFailed' => false, 'configurationError' => false]);
     }
 
-    public function store(GiftCardsRequest $request, RunGiftCardsReport $report, RecordRun $runs): View
+    public function store(GiftCardsRequest $request, RunGiftCardsReport $report, QueuedReportRunner $reports): View|RedirectResponse
     {
         $store = $this->resolveStore($request);
         $days = (int) $request->validated('days');
@@ -30,14 +26,12 @@ class GiftCardsController extends Controller
         $configurationError = $store->missingShopifyCredentials();
 
         if (! $configurationError) {
-            $started = microtime(true);
-            try {
-                $result = $report->handle($store, $days, now()->timestamp);
-            } catch (Throwable $exception) {
-                $reportFailed = true;
-                $this->logFailure('Gift card report failed.', $exception, $store);
+            $run = $reports->run($request, $store, 'gift_cards', $report::class, [$days, now()->timestamp], null, null, 'scanned', 'count:rows');
+            if ($reports->shouldRedirect($request, $run)) {
+                return $reports->redirectToResult($request);
             }
-            $this->recordReportRun($runs, $store, 'gift_cards', $started, null, null, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
+            $result = $run->result();
+            $reportFailed = $run->hasFailed();
         }
 
         return view('reports.gift-cards', ['days' => $days, 'result' => $result instanceof ScanResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);

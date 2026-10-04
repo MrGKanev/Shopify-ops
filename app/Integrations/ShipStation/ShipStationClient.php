@@ -4,6 +4,7 @@ namespace App\Integrations\ShipStation;
 
 use App\Domain\Orders\PhoneNumberValidator;
 use App\Integrations\Concerns\RetriesTransientRequests;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -18,12 +19,16 @@ class ShipStationClient implements ShipStationClientContract
 
     private const int PAGE_SIZE = 500;
 
+    /** ShipStation API V1 reads and returns every date-time in Pacific time. */
+    private const string API_TIMEZONE = 'America/Los_Angeles';
+
     use RetriesTransientRequests;
 
     public function __construct(
         #[SensitiveParameter] private readonly string $apiKey,
         #[SensitiveParameter] private readonly string $apiSecret,
         private readonly PhoneNumberValidator $phones = new PhoneNumberValidator,
+        private readonly string $shopTimezone = 'UTC',
     ) {}
 
     public function healthCheck(): void
@@ -55,8 +60,8 @@ class ShipStationClient implements ShipStationClientContract
     public function fetchAllOrders(string $startDate, string $endDate): array
     {
         $filters = [
-            'createDateStart' => $startDate.' 00:00:00',
-            'createDateEnd' => $endDate.' 23:59:59',
+            'createDateStart' => $this->dayStart($startDate),
+            'createDateEnd' => $this->dayEnd($endDate),
             'sortBy' => 'OrderDate',
             'sortDir' => 'ASC',
         ];
@@ -86,8 +91,8 @@ class ShipStationClient implements ShipStationClientContract
     public function fetchShipmentsByDate(string $startDate, string $endDate): array
     {
         return $this->paginate('/shipments', [
-            'shipDateStart' => $startDate.' 00:00:00',
-            'shipDateEnd' => $endDate.' 23:59:59',
+            'shipDateStart' => $this->dayStart($startDate),
+            'shipDateEnd' => $this->dayEnd($endDate),
             'sortBy' => 'ShipDate',
             'sortDir' => 'ASC',
         ], 'shipments');
@@ -96,8 +101,8 @@ class ShipStationClient implements ShipStationClientContract
     public function fetchVoidedShipments(string $startDate, string $endDate): array
     {
         return $this->paginate('/shipments', [
-            'voidDate_start' => $startDate.' 00:00:00',
-            'voidDate_end' => $endDate.' 23:59:59',
+            'voidDate_start' => $this->dayStart($startDate),
+            'voidDate_end' => $this->dayEnd($endDate),
         ], 'shipments');
     }
 
@@ -213,6 +218,22 @@ class ShipStationClient implements ShipStationClientContract
         if ($seconds !== null) {
             Sleep::for($seconds)->seconds();
         }
+    }
+
+    /**
+     * The first second of a calendar day in the shop's timezone, as ShipStation's Pacific time.
+     */
+    private function dayStart(string $date): string
+    {
+        return CarbonImmutable::parse($date, $this->shopTimezone)->startOfDay()->setTimezone(self::API_TIMEZONE)->format('Y-m-d H:i:s');
+    }
+
+    /**
+     * The last second of a calendar day in the shop's timezone, as ShipStation's Pacific time.
+     */
+    private function dayEnd(string $date): string
+    {
+        return CarbonImmutable::parse($date, $this->shopTimezone)->endOfDay()->setTimezone(self::API_TIMEZONE)->format('Y-m-d H:i:s');
     }
 
     private function request(): PendingRequest

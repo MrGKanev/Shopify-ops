@@ -2,26 +2,22 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\RecordRun;
+use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\RunCatalogQualityReport;
 use App\Application\Reports\ScanResult;
-use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CatalogQualityRequest;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
-use Throwable;
 
 class CatalogQualityController extends Controller
 {
-    use LogsReportFailure, RecordsReportRun;
-
     public function create(): View
     {
         return view('reports.catalog-quality', ['result' => null, 'reportFailed' => false, 'configurationError' => false]);
     }
 
-    public function store(CatalogQualityRequest $request, RunCatalogQualityReport $report, RecordRun $runs): View
+    public function store(CatalogQualityRequest $request, RunCatalogQualityReport $report, QueuedReportRunner $reports): View|RedirectResponse
     {
         $store = $this->resolveStore($request);
         $result = null;
@@ -29,14 +25,12 @@ class CatalogQualityController extends Controller
         $configurationError = $store->missingShopifyCredentials();
 
         if (! $configurationError) {
-            $started = microtime(true);
-            try {
-                $result = $report->handle($store);
-            } catch (Throwable $exception) {
-                $reportFailed = true;
-                $this->logFailure('Catalog quality report failed.', $exception, $store);
+            $run = $reports->run($request, $store, 'catalog_quality', $report::class, [], null, null, 'scanned', 'count:rows');
+            if ($reports->shouldRedirect($request, $run)) {
+                return $reports->redirectToResult($request);
             }
-            $this->recordReportRun($runs, $store, 'catalog_quality', $started, null, null, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
+            $result = $run->result();
+            $reportFailed = $run->hasFailed();
         }
 
         return view('reports.catalog-quality', ['result' => $result instanceof ScanResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);

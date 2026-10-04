@@ -4,10 +4,9 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\AddressChangeResult;
-use App\Application\Reports\RecordRun;
+use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\RunAddressChangeReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
 use Illuminate\Http\RedirectResponse;
@@ -17,14 +16,14 @@ use Throwable;
 
 class AddressChangeController extends Controller
 {
-    use LogsReportFailure, RecordsReportRun;
+    use LogsReportFailure;
 
     public function create(): View
     {
         return view('reports.address-changes', ['startDate' => now()->subDays(30)->toDateString(), 'endDate' => now()->toDateString(), 'result' => null, 'configurationError' => false, 'reportFailed' => false]);
     }
 
-    public function store(DateRangeReportRequest $request, RunAddressChangeReport $report, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunAddressChangeReport $report, QueuedReportRunner $reports): View|RedirectResponse
     {
         $store = $this->resolveStore($request);
         $start = (string) $request->validated('start_date');
@@ -33,20 +32,18 @@ class AddressChangeController extends Controller
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $started = microtime(true);
-            try {
-                $result = $report->handle($store, $start, $end);
-            } catch (Throwable $exception) {
-                $reportFailed = true;
-                $this->logFailure('Address change report failed.', $exception, $store);
+            $run = $reports->run($request, $store, 'address_changes', $report::class, [$start, $end], $start, $end, 'count:rows', 'count:rows');
+            if ($reports->shouldRedirect($request, $run)) {
+                return $reports->redirectToResult($request);
             }
-            $this->recordReportRun($runs, $store, 'address_changes', $started, $start, $end, count($result->rows ?? []), count($result->rows ?? []), $reportFailed);
+            $result = $run->result();
+            $reportFailed = $run->hasFailed();
         }
 
         return view('reports.address-changes', ['startDate' => $start, 'endDate' => $end, 'result' => $result instanceof AddressChangeResult ? $result : null, 'configurationError' => $configurationError, 'reportFailed' => $reportFailed]);
     }
 
-    public function export(DateRangeReportRequest $request, RunAddressChangeReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
+    public function export(DateRangeReportRequest $request, RunAddressChangeReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse
     {
         $store = $this->resolveStore($request);
         if ($store->missingShopifyCredentials()) {
@@ -55,7 +52,7 @@ class AddressChangeController extends Controller
         $start = (string) $request->validated('start_date');
         $end = (string) $request->validated('end_date');
         try {
-            $result = $report->handle($store, $start, $end);
+            $result = $reports->completedResult($store, 'address_changes', $report::class, [$start, $end]) ?? $report->handle($store, $start, $end);
         } catch (Throwable $exception) {
             $this->logFailure('Address change CSV export failed.', $exception, $store);
 

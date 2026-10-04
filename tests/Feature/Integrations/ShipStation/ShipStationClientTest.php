@@ -3,6 +3,8 @@
 namespace Tests\Feature\Integrations\ShipStation;
 
 use App\Integrations\ShipStation\ShipStationClient;
+use App\Integrations\ShipStation\ShipStationClientFactory;
+use App\Models\Store;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
@@ -97,8 +99,8 @@ class ShipStationClientTest extends TestCase
             parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
 
             return $query === [
-                'createDateStart' => '2026-08-01 00:00:00',
-                'createDateEnd' => '2026-08-02 23:59:59',
+                'createDateStart' => '2026-07-31 17:00:00',
+                'createDateEnd' => '2026-08-02 16:59:59',
                 'sortBy' => 'OrderDate',
                 'sortDir' => 'ASC',
                 'pageSize' => '500',
@@ -112,6 +114,35 @@ class ShipStationClientTest extends TestCase
         });
     }
 
+    public function test_date_bounds_are_the_shops_calendar_days_sent_in_pacific_time(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['https://ssapi.shipstation.com/orders*' => Http::response(['orders' => [], 'pages' => 1])]);
+
+        (new ShipStationClient('api-key', 'api-secret', shopTimezone: 'Europe/Sofia'))->fetchAllOrders('2026-10-24', '2026-10-25');
+
+        Http::assertSent(function (Request $request): bool {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+            return $query['createDateStart'] === '2026-10-23 14:00:00' && $query['createDateEnd'] === '2026-10-25 14:59:59';
+        });
+    }
+
+    public function test_the_factory_uses_the_stores_recorded_timezone(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['https://ssapi.shipstation.com/orders*' => Http::response(['orders' => [], 'pages' => 1])]);
+        $store = new Store(['shipstation_api_key' => 'key', 'shipstation_api_secret' => 'secret', 'shopify_timezone' => 'America/New_York']);
+
+        app(ShipStationClientFactory::class)->forStore($store)?->fetchAllOrders('2026-08-01', '2026-08-01');
+
+        Http::assertSent(function (Request $request): bool {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+            return $query['createDateStart'] === '2026-07-31 21:00:00' && $query['createDateEnd'] === '2026-08-01 20:59:59';
+        });
+    }
+
     public function test_shipment_date_range_fetch_uses_ship_dates_and_paginates(): void
     {
         Http::preventStrayRequests();
@@ -121,7 +152,7 @@ class ShipStationClientTest extends TestCase
         Http::assertSent(function (Request $request): bool {
             parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
 
-            return $query === ['shipDateStart' => '2026-06-01 00:00:00', 'shipDateEnd' => '2026-06-30 23:59:59', 'sortBy' => 'ShipDate', 'sortDir' => 'ASC', 'pageSize' => '500', 'page' => '1'];
+            return $query === ['shipDateStart' => '2026-05-31 17:00:00', 'shipDateEnd' => '2026-06-30 16:59:59', 'sortBy' => 'ShipDate', 'sortDir' => 'ASC', 'pageSize' => '500', 'page' => '1'];
         });
     }
 
@@ -136,7 +167,7 @@ class ShipStationClientTest extends TestCase
         Http::assertSent(function (Request $request): bool {
             parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
 
-            return $query === ['voidDate_start' => '2026-06-01 00:00:00', 'voidDate_end' => '2026-06-30 23:59:59', 'pageSize' => '500', 'page' => '1'];
+            return $query === ['voidDate_start' => '2026-05-31 17:00:00', 'voidDate_end' => '2026-06-30 16:59:59', 'pageSize' => '500', 'page' => '1'];
         });
         Http::assertSent(fn (Request $request): bool => str_contains($request->url(), 'page=2'));
     }

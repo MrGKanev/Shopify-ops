@@ -4,10 +4,9 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\ItemMismatchResult;
-use App\Application\Reports\RecordRun;
+use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\RunItemMismatchReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Concerns\RecordsReportRun;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
 use App\Models\Store;
@@ -18,40 +17,38 @@ use Throwable;
 
 class ItemMismatchController extends Controller
 {
-    use LogsReportFailure, RecordsReportRun;
+    use LogsReportFailure;
 
     public function create(): View
     {
         return view('reports.item-mismatch', $this->viewData());
     }
 
-    public function store(DateRangeReportRequest $request, RunItemMismatchReport $report, RecordRun $runs): View
+    public function store(DateRangeReportRequest $request, RunItemMismatchReport $report, QueuedReportRunner $reports): View|RedirectResponse
     {
         [$store,$start,$end] = $this->context($request);
         $configurationError = $this->configurationError($store);
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $started = microtime(true);
-            try {
-                $result = $report->handle($store, $start, $end);
-            } catch (Throwable $exception) {
-                $reportFailed = true;
-                $this->logFailure('Item mismatch report failed.', $exception, $store);
+            $run = $reports->run($request, $store, 'item_mismatch', $report::class, [$start, $end], $start, $end, 'scanned', 'count:rows');
+            if ($reports->shouldRedirect($request, $run)) {
+                return $reports->redirectToResult($request);
             }
-            $this->recordReportRun($runs, $store, 'item_mismatch', $started, $start, $end, $result->scanned ?? 0, count($result->rows ?? []), $reportFailed);
+            $result = $run->result();
+            $reportFailed = $run->hasFailed();
         }
 
         return view('reports.item-mismatch', $this->viewData($start, $end, $result, $reportFailed, $configurationError));
     }
 
-    public function export(DateRangeReportRequest $request, RunItemMismatchReport $report, CsvExporter $csv): StreamedResponse|RedirectResponse
+    public function export(DateRangeReportRequest $request, RunItemMismatchReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse
     {
         [$store,$start,$end] = $this->context($request);
         if ($this->configurationError($store)) {
             return back()->withErrors(['export' => 'Shopify and ShipStation credentials are required.']);
         }try {
-            $result = $report->handle($store, $start, $end);
+            $result = $reports->completedResult($store, 'item_mismatch', $report::class, [$start, $end]) ?? $report->handle($store, $start, $end);
         } catch (Throwable $exception) {
             $this->logFailure('Item mismatch CSV failed.', $exception, $store);
 
