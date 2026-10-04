@@ -1,0 +1,6 @@
+query ShippingMarginCandidates($search: String!, $after: String) {
+  orders(first: 250, after: $after, sortKey: UPDATED_AT, reverse: true, query: $search) {
+    pageInfo { hasNextPage endCursor }
+    edges { node { legacyResourceId name createdAt email displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } shippingLines(first: 250) { nodes { id title code originalPriceSet { shopMoney { amount currencyCode } } } } } }
+  }
+}

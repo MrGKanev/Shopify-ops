@@ -26,9 +26,9 @@ class EmailRulesController extends Controller
         $store = $this->store($request);
         $store->update(['email_rules' => $request->validated('rules'), 'default_alert_email' => $request->validated('default_alert_email')]);
         activity('operator-actions')->causedBy($request->user())->performedOn($store)
-            ->withProperties($store->resolvedEmailRules())->log('save_email_rules');
+            ->withProperties($store->email_rules->toArray())->log('save_email_rules');
 
-        return back()->with('status', 'Email rules saved.');
+        return back()->with('status', __('Email rules saved.'));
     }
 
     private function store(Request $request): Store

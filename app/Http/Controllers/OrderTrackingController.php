@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Application\Orders\LoadTrackingFeed;
 use App\Http\Requests\OrderTrackingRequest;
+use App\Integrations\Exceptions\IntegrationException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -31,7 +32,7 @@ class OrderTrackingController extends Controller
             $configurationError = true;
         } catch (Throwable $exception) {
             $lookupFailed = true;
-            Log::warning('Tracking lookup failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null]);
+            Log::warning('Tracking lookup failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof IntegrationException ? $exception->status : ($exception instanceof RequestException ? $exception->response->status() : null)]);
         }
 
         return view('orders.tracking', ['ordersInput' => (string) $request->validated('orders'), 'results' => $results, 'lookupFailed' => $lookupFailed, 'configurationError' => $configurationError]);

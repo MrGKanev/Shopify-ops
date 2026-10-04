@@ -47,7 +47,10 @@ class BuildOperationalHealth
         ];
     }
 
-    /** @param callable(): string $operation @return array{label:string,ok:bool,detail:string} */
+    /**
+     * @param  callable(): string  $operation
+     * @return array{label:string,ok:bool,detail:string}
+     */
     private function check(string $label, callable $operation): array
     {
         try {
@@ -79,7 +82,7 @@ class BuildOperationalHealth
     {
         return $this->check($label, function () use ($key): string {
             $timestamp = Cache::get($key);
-            if (! is_numeric($timestamp) || now()->timestamp - (int) $timestamp > 300) {
+            if (! is_numeric($timestamp) || now()->getTimestamp() - (int) $timestamp > 300) {
                 throw new \RuntimeException('No heartbeat was recorded in the last five minutes.');
             }
 

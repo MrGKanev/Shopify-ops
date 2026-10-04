@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
-use App\Application\Reports\OrphanOrderResult;
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunOrphanOrderReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Controller;
@@ -31,7 +31,7 @@ class OrphanOrderController extends Controller
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'orphan_orders', $report::class, [$start, $end], $start, $end, 'shopifyTotal', 'count:rows');
+            $run = $reports->run($request, $store, 'orphan_orders', $report::class, [$start, $end], $start, $end);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -46,13 +46,13 @@ class OrphanOrderController extends Controller
     {
         [$store,$start,$end] = $this->context($request);
         if ($this->configurationError($store)) {
-            return back()->withErrors(['export' => 'Shopify and ShipStation credentials are required.']);
+            return back()->withErrors(['export' => __('reports.integration_credentials_required')]);
         }try {
             $result = $reports->completedResult($store, 'orphan_orders', $report::class, [$start, $end]) ?? $report->handle($store, $start, $end);
         } catch (Throwable $exception) {
             $this->logFailure('Orphan order CSV failed.', $exception, $store);
 
-            return back()->withErrors(['export' => 'The CSV export could not be completed.']);
+            return back()->withErrors(['export' => __('reports.export_failed')]);
         }
         $rows = array_map(fn (array $row): array => [$row['order_number'], $row['order_date'], $row['customer'], $row['email'], $row['order_status'], $row['total'], $row['ss_order_id']], $result->rows);
 
@@ -71,8 +71,12 @@ class OrphanOrderController extends Controller
         return $store->missingShopifyCredentials() || $store->missingShipStationCredentials();
     }
 
-    /** @return array<string,mixed> */
-    private function viewData(?string $start = null, ?string $end = null, ?OrphanOrderResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
+    /**
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @return array<string,mixed>
+     */
+    private function viewData(?string $start = null, ?string $end = null, ?ReportResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
     {
         return compact('result', 'reportFailed', 'configurationError') + ['startDate' => $start ?? now()->subDays(30)->toDateString(), 'endDate' => $end ?? now()->toDateString()];
     }

@@ -60,7 +60,7 @@ class OperationalIssueController extends Controller
             ->withProperties(['status' => $validated['status'], 'priority' => $validated['priority']])
             ->log('update_operational_issue');
 
-        return back()->with('status', 'Issue updated.');
+        return back()->with('status', __('Issue updated.'));
     }
 
     private function store(Request $request): Store

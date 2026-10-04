@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunNoTrackingReport;
-use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\NoTrackingRequest;
@@ -31,7 +31,7 @@ class NoTrackingController extends Controller
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'no_tracking', $report::class, [$start, $end, $threshold], $start, $end, 'scanned', 'count:rows');
+            $run = $reports->run($request, $store, 'no_tracking', $report::class, [$start, $end, $threshold], $start, $end);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -46,14 +46,14 @@ class NoTrackingController extends Controller
     {
         [$store, $start, $end, $threshold] = $this->context($request);
         if ($this->configurationError($store)) {
-            return back()->withErrors(['export' => 'Shopify credentials are incomplete for the active store.']);
+            return back()->withErrors(['export' => __('reports.shopify_credentials_incomplete')]);
         }
         try {
             $result = $reports->completedResult($store, 'no_tracking', $report::class, [$start, $end, $threshold]) ?? $report->handle($store, $start, $end, $threshold);
         } catch (Throwable $exception) {
             $this->logFailure('No-tracking CSV export failed.', $exception, $store);
 
-            return back()->withErrors(['export' => 'The CSV export could not be completed.']);
+            return back()->withErrors(['export' => __('reports.export_failed')]);
         }
         $rows = [];
         foreach ($result->rows as $row) {
@@ -77,8 +77,12 @@ class NoTrackingController extends Controller
         return $store->missingShopifyCredentials();
     }
 
-    /** @return array<string, mixed> */
-    private function viewData(?string $start = null, ?string $end = null, int $threshold = 24, ?ScanResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
+    /**
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @return array<string, mixed>
+     */
+    private function viewData(?string $start = null, ?string $end = null, int $threshold = 24, ?ReportResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
     {
         return compact('threshold', 'result', 'reportFailed', 'configurationError') + ['startDate' => $start ?? now()->subDays(30)->toDateString(), 'endDate' => $end ?? now()->toDateString()];
     }

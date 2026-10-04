@@ -1,0 +1,6 @@
+query CountryMismatchCandidates($search: String!, $after: String) {
+  orders(first: 250, after: $after, sortKey: CREATED_AT, reverse: true, query: $search) {
+    pageInfo { hasNextPage endCursor }
+    edges { node { id legacyResourceId name createdAt cancelledAt email displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } billingAddress { firstName lastName country countryCodeV2 } shippingAddress { country countryCodeV2 } } }
+  }
+}

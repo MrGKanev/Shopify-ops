@@ -3,15 +3,15 @@
 namespace App\Application\Reports;
 
 use App\Domain\Reports\ReturnedItemsAnalyzer;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyPayments;
 use App\Models\Store;
 
 class RunReturnedItemsReport extends RunScanReport
 {
-    public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly ReturnedItemsAnalyzer $analyzer) {}
+    public function __construct(private readonly ShopifyPayments $shopify, private readonly ReturnedItemsAnalyzer $analyzer) {}
 
-    /** @return ScanResult<array{product: string, quantity: int}> */
-    public function handle(Store $store, string $startDate, string $endDate): ScanResult
+    /** @return ReportResult<array{product: string, quantity: int}> */
+    public function handle(Store $store, string $startDate, string $endDate): ReportResult
     {
         $candidates = $this->shopify->returnedItemCandidates($store, $startDate);
 

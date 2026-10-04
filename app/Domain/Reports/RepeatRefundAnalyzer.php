@@ -8,7 +8,10 @@ class RepeatRefundAnalyzer
 {
     use NormalizesText;
 
-    /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $orders
+     * @return list<array{email: string, refund_count: int, total_refunded: float|string, orders: list<array<string, mixed>>}>
+     */
     public function analyze(array $orders, int $minimum): array
     {
         $groups = [];

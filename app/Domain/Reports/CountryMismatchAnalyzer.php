@@ -8,7 +8,10 @@ class CountryMismatchAnalyzer
 {
     use NormalizesText;
 
-    /** @param list<array<string, mixed>> $orders @return array{rows: list<array<string, mixed>>, skipped_missing_country: int} */
+    /**
+     * @param  list<array<string, mixed>>  $orders
+     * @return array{rows: list<array{id: int|string, number: string, created_at: string, email: string, total: float|string, currency: string, financial: string, fulfillment: string, billing_name: string, billing_country: string, shipping_country: string}>, skipped_missing_country: int}
+     */
     public function analyze(array $orders): array
     {
         $rows = [];

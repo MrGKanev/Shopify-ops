@@ -2,12 +2,12 @@
 
 namespace App\Application\Orders;
 
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 
 class UseMetafields
 {
-    public function __construct(private readonly ShopifyAdminGateway $shopify) {}
+    public function __construct(private readonly ShopifyOrders $shopify) {}
 
     /** @return array<string, mixed> */
     public function search(Store $store, string $namespace, string $key, string $value, ?string $start, ?string $end): array
@@ -15,7 +15,10 @@ class UseMetafields
         return $this->shopify->searchOrdersByMetafield($store, $namespace, $key, $value, $start, $end);
     }
 
-    /** @param list<string> $numbers @return list<array<string, mixed>> */
+    /**
+     * @param  list<string>  $numbers
+     * @return list<array<string, mixed>>
+     */
     public function lookup(Store $store, array $numbers, string $filter): array
     {
         $ordersByNumber = $this->shopify->findByOrderNumbers($store, $numbers);

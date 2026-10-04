@@ -37,7 +37,7 @@ class JobQueueController extends Controller
         abort_unless(DB::table('failed_jobs')->where('uuid', $uuid)->exists(), 404);
         Artisan::call('queue:retry', ['id' => [$uuid]]);
 
-        return back()->with('status', 'Failed job queued for retry.');
+        return back()->with('status', __('Failed job queued for retry.'));
     }
 
     public function destroy(string $uuid): RedirectResponse
@@ -45,6 +45,6 @@ class JobQueueController extends Controller
         abort_unless(DB::table('failed_jobs')->where('uuid', $uuid)->exists(), 404);
         Artisan::call('queue:forget', ['id' => $uuid]);
 
-        return back()->with('status', 'Failed job removed.');
+        return back()->with('status', __('Failed job removed.'));
     }
 }

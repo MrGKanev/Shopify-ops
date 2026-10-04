@@ -11,7 +11,10 @@ class FraudRiskAnalyzer
 
     public function __construct(private readonly OrderRiskScorer $scorer) {}
 
-    /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $orders
+     * @return list<array{id: int|string, number: string, created_at: string, email: string, total: float|string, currency: string, financial: string, risk: array{level: string, score: int, signals: list<array{label: string, points: int}>}}>
+     */
     public function analyze(array $orders): array
     {
         $rows = [];

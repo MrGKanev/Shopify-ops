@@ -28,9 +28,9 @@ class CheckReadiness
 
         $queue = trim((string) config('queue.default'));
         $heartbeat = $cache ? Cache::get('health:checks:queue:latestHeartbeatAt.default') : null;
-        $worker = $queue === 'sync' || (is_numeric($heartbeat) && now()->timestamp - (int) $heartbeat <= (int) config('security.worker_max_age_seconds'));
+        $worker = $queue === 'sync' || (is_numeric($heartbeat) && now()->getTimestamp() - (int) $heartbeat <= (int) config('security.worker_max_age_seconds'));
         $scheduleHeartbeat = $cache ? Cache::get('health:checks:schedule:latestHeartbeatAt') : null;
-        $scheduler = is_numeric($scheduleHeartbeat) && now()->timestamp - (int) $scheduleHeartbeat <= 300;
+        $scheduler = is_numeric($scheduleHeartbeat) && now()->getTimestamp() - (int) $scheduleHeartbeat <= 300;
         $checks = ['database' => $database, 'cache' => $cache, 'queue' => $queue !== '', 'worker' => $worker, 'scheduler' => $scheduler];
 
         return ['ready' => ! in_array(false, $checks, true), 'checks' => $checks];

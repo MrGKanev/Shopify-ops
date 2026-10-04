@@ -1110,5 +1110,15 @@
     "Normal": "Нормален",
     "High": "Висок",
     "Urgent": "Спешен",
-    "The report is running in the background. This page refreshes automatically until the results are ready.": "Отчетът се изпълнява във фонов режим. Страницата се опреснява автоматично, докато резултатите станат готови."
+    "The report is running in the background. This page refreshes automatically until the results are ready.": "Отчетът се изпълнява във фонов режим. Страницата се опреснява автоматично, докато резултатите станат готови.",
+    "reports.export_failed": "CSV експортът не можа да бъде завършен.",
+    "reports.shopify_credentials_incomplete": "Данните за достъп до Shopify за активния магазин са непълни.",
+    "reports.shipstation_credentials_incomplete": "Данните за достъп до ShipStation за активния магазин са непълни.",
+    "reports.integration_credentials_required": "Необходими са данни за достъп до Shopify и ShipStation.",
+    "reports.audit_already_queued": "Одитът вече е в опашката.",
+    "reports.audit_queued": "Одитът е добавен в опашката.",
+    "Order #:number is ignored.": "Поръчка №:number е изключена от одитите.",
+    ":count orders restored to audits.": ":count поръчки отново са включени в одитите.",
+    "Pushed order #:number to ShipStation.": "Поръчка №:number е изпратена към ShipStation.",
+    "Note saved for order #:number.": "Бележката за поръчка №:number е запазена."
 }

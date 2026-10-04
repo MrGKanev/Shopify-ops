@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyCatalog;
 use App\Models\Store;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
@@ -23,9 +23,9 @@ class ZombieProductsControllerTest extends TestCase
     public function test_form_does_not_fetch_shopify(): void
     {
         [$user] = $this->userWithStore(true);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyCatalog::class);
         $shopify->shouldNotReceive('zombieProductsCandidates');
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyCatalog::class, $shopify);
 
         $this->actingAs($user)->get(route('reports.zombie-products'))->assertOk()->assertSeeText('Scan active products');
     }
@@ -33,9 +33,9 @@ class ZombieProductsControllerTest extends TestCase
     public function test_configuration_error_prevents_call(): void
     {
         [$user] = $this->userWithStore(true, ['shopify_access_token' => '']);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyCatalog::class);
         $shopify->shouldNotReceive('zombieProductsCandidates');
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyCatalog::class, $shopify);
 
         $this->actingAs($user)->post(route('reports.zombie-products.store'))->assertOk()->assertSeeText('credentials are incomplete');
     }
@@ -44,13 +44,13 @@ class ZombieProductsControllerTest extends TestCase
     {
         [$user, $store] = $this->userWithStore(true);
         Store::factory()->create();
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyCatalog::class);
         $shopify->shouldReceive('zombieProductsCandidates')->once()->with(Mockery::on(fn (Store $selected): bool => $selected->is($store)))->andReturn([
             'products' => [['legacyResourceId' => '42', 'title' => '<script>x</script>', 'vendor' => '<img src=x>', 'productType' => '<b>Type</b>', 'variants' => []]],
             'pages' => 100,
             'truncated' => true,
         ]);
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyCatalog::class, $shopify);
 
         $this->actingAs($user)->post(route('reports.zombie-products.store'), ['store_id' => 999])->assertOk()->assertSeeText('1 active products · 1 zombies')->assertSeeText('truncated after 100 product pages')->assertDontSee('<script>', false)->assertDontSee('<img', false)->assertDontSee('<b>Type</b>', false);
     }
@@ -58,9 +58,9 @@ class ZombieProductsControllerTest extends TestCase
     public function test_empty_result_and_upstream_failure_are_safe(): void
     {
         [$user] = $this->userWithStore(true);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyCatalog::class);
         $shopify->shouldReceive('zombieProductsCandidates')->once()->andReturn(['products' => [], 'pages' => 1, 'truncated' => false]);
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyCatalog::class, $shopify);
 
         $this->actingAs($user)->post(route('reports.zombie-products.store'))->assertOk()->assertSeeText('All scanned active products have at least one purchasable variant.');
     }
@@ -68,9 +68,9 @@ class ZombieProductsControllerTest extends TestCase
     public function test_upstream_error_is_atomic_and_does_not_expose_message(): void
     {
         [$user] = $this->userWithStore(true);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyCatalog::class);
         $shopify->shouldReceive('zombieProductsCandidates')->andThrow(new RuntimeException('secret'));
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyCatalog::class, $shopify);
 
         $this->actingAs($user)->post(route('reports.zombie-products.store'))->assertOk()->assertSeeText('could not be completed')->assertDontSeeText('secret')->assertDontSeeText('active products ·');
     }

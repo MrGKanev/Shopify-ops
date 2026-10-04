@@ -8,7 +8,10 @@ class GiftCardsAnalyzer
 {
     use NormalizesText;
 
-    /** @param list<array<string, mixed>> $giftCards @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $giftCards
+     * @return list<array{masked_code: string, customer_email: string, initial_value: float|string, balance: float|string, currency: string, expires_on: ?string, reasons: list<string>}>
+     */
     public function analyze(array $giftCards, int $days, int $now): array
     {
         $rows = [];

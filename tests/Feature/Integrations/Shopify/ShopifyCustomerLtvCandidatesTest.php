@@ -3,8 +3,6 @@
 namespace Tests\Feature\Integrations\Shopify;
 
 use App\Integrations\Shopify\ShopifyAdminClient;
-use App\Integrations\Shopify\ShopifyOrderEventNormalizer;
-use App\Integrations\Shopify\ShopifyOrderNormalizer;
 use App\Models\Store;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -20,7 +18,7 @@ class ShopifyCustomerLtvCandidatesTest extends TestCase
         Http::fake(['*' => Http::sequence()
             ->push(['data' => ['orders' => ['pageInfo' => ['hasNextPage' => true, 'endCursor' => 'next'], 'edges' => [['node' => $first]]]]])
             ->push(['data' => ['orders' => ['pageInfo' => ['hasNextPage' => false, 'endCursor' => null], 'edges' => [['node' => $second]]]]])]);
-        $client = new ShopifyAdminClient(new ShopifyOrderNormalizer, new ShopifyOrderEventNormalizer);
+        $client = app(ShopifyAdminClient::class);
 
         $result = $client->customerLtvCandidates(new Store(['shopify_store' => 'acme', 'shopify_access_token' => 'token']), '2026-09-01', '2026-09-07');
 

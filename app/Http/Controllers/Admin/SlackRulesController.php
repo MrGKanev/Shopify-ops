@@ -26,9 +26,9 @@ class SlackRulesController extends Controller
         $store = $this->store($request);
         $store->update(['slack_rules' => $request->validated()]);
         activity('operator-actions')->causedBy($request->user())->performedOn($store)
-            ->withProperties($store->resolvedSlackRules())->log('save_slack_rules');
+            ->withProperties($store->slack_rules->toArray())->log('save_slack_rules');
 
-        return back()->with('status', 'Slack rules saved.');
+        return back()->with('status', __('Slack rules saved.'));
     }
 
     private function store(Request $request): Store

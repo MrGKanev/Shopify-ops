@@ -3,15 +3,15 @@
 namespace App\Application\Reports;
 
 use App\Domain\Reports\DisputeAnalyzer;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyPayments;
 use App\Models\Store;
 
 class RunDisputeReport extends RunScanReport
 {
-    public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly DisputeAnalyzer $analyzer) {}
+    public function __construct(private readonly ShopifyPayments $shopify, private readonly DisputeAnalyzer $analyzer) {}
 
-    /** @return ScanResult<array{order_id: int|string, order_name: string, amount: float|string, currency: string, reason: string, status: string, initiated_at: string, days_until_due: int}> */
-    public function handle(Store $store, int $now): ScanResult
+    /** @return ReportResult<array<string, mixed>> */
+    public function handle(Store $store, int $now): ReportResult
     {
         $result = $this->shopify->openDisputes($store);
 

@@ -10,6 +10,7 @@ class PushOrderToShipStationRequest extends FormRequest
 {
     use AuthorizesRunAudits, HasOrderNumberRules;
 
+    /** @return array<string, list<string>> */
     public function rules(): array
     {
         return [

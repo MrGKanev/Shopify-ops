@@ -11,12 +11,13 @@ class RunShipmentAgingReport
 {
     public function __construct(private readonly ShipStationClientFactory $factory, private readonly ShipmentAgingAnalyzer $analyzer) {}
 
-    public function handle(Store $store, int $threshold): ShipmentAgingResult
+    /** @return ReportResult<array<string, mixed>> */
+    public function handle(Store $store, int $threshold): ReportResult
     {
         $client = $this->factory->forStore($store) ?? throw new LogicException('ShipStation credentials are required for shipment aging.');
         $orders = $client->fetchAwaitingOrders();
         $data = $this->analyzer->analyze($orders, $threshold, time());
 
-        return new ShipmentAgingResult($threshold, count($orders), $data['rows'], $data['by_sku'], $data['by_type']);
+        return new ReportResult(rows: $data['rows'], scanned: count($orders), pages: 0, truncated: false, params: ['threshold' => $threshold], meta: ['bySku' => $data['by_sku'], 'byType' => $data['by_type']]);
     }
 }

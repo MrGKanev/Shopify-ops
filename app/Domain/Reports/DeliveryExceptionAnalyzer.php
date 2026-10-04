@@ -4,7 +4,10 @@ namespace App\Domain\Reports;
 
 class DeliveryExceptionAnalyzer
 {
-    /** @param list<array<string, mixed>> $shipments @return list<array{fingerprint:string,reference:string,title:string,priority:string,days:int,resolved:bool,payload:array<string,mixed>}> */
+    /**
+     * @param  list<array<string, mixed>>  $shipments
+     * @return list<array{fingerprint:string,reference:string,title:string,priority:string,days:int,resolved:bool,payload:array<string,mixed>}>
+     */
     public function analyze(array $shipments, int $threshold, int $now): array
     {
         $rows = [];

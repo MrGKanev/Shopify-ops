@@ -39,8 +39,8 @@ class CollectMetrics
      * @param  list<string>  $columns
      * @return Collection<int, stdClass>
      */
-    private function countBy(string $table, array $columns)
+    private function countBy(string $table, array $columns): Collection
     {
-        return DB::table($table)->selectRaw(implode(', ', $columns).', count(*) as total')->groupBy($columns)->get();
+        return DB::table($table)->select($columns)->selectRaw('count(*) as total')->groupBy($columns)->get();
     }
 }

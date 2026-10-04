@@ -1,0 +1,3 @@
+query OrderMetafieldDefinitions {
+  metafieldDefinitions(first: 250, ownerType: ORDER) { edges { node { namespace key name description type { name } } } }
+}

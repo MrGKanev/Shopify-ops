@@ -4,7 +4,10 @@ namespace App\Domain\Reports;
 
 class FulfilledItemsAnalyzer
 {
-    /** @param list<array<string, mixed>> $orders @return list<array{product: string, quantity: int}> */
+    /**
+     * @param  list<array<string, mixed>>  $orders
+     * @return list<array{product: string, quantity: int}>
+     */
     public function analyze(array $orders, string $startDate, string $endDate): array
     {
         $start = $startDate.'T00:00:00Z';

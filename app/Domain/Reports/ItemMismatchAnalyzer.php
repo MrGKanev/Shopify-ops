@@ -13,7 +13,11 @@ class ItemMismatchAnalyzer
 
     public function __construct(private readonly OrderChannelComparator $comparator, private readonly OrderTypeClassifier $classifier) {}
 
-    /** @param list<array<string, mixed>> $shipStationOrders @param list<array<string, mixed>> $shopifyOrders @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $shipStationOrders
+     * @param  list<array<string, mixed>>  $shopifyOrders
+     * @return list<array<string, mixed>>
+     */
     public function analyze(array $shipStationOrders, array $shopifyOrders): array
     {
         $shopify = [];

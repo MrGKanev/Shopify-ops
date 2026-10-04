@@ -49,7 +49,7 @@ class StoreController extends Controller
 
         return redirect()
             ->route('admin.stores.edit', $store)
-            ->with('status', 'Store created.');
+            ->with('status', __('Store created.'));
     }
 
     /**
@@ -85,6 +85,6 @@ class StoreController extends Controller
             activity('administration')->causedBy($request->user())->performedOn($store)->event('credentials_rotated')->withProperties(['store_id' => $store->getKey(), 'credential_fields' => $rotatedCredentials])->log('Store credentials rotated');
         }
 
-        return back()->with('status', 'Store updated.');
+        return back()->with('status', __('Store updated.'));
     }
 }

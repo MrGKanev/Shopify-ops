@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyCatalog;
 use App\Models\Store;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
@@ -23,9 +23,9 @@ class InventoryForecastControllerTest extends TestCase
     public function test_form_does_not_fetch_shopify(): void
     {
         [$user] = $this->userWithStore(true);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyCatalog::class);
         $shopify->shouldNotReceive('inventoryForecastCandidates');
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyCatalog::class, $shopify);
 
         $this->actingAs($user)->get(route('reports.inventory-forecast'))->assertOk()->assertSeeText('Run forecast');
     }
@@ -33,9 +33,9 @@ class InventoryForecastControllerTest extends TestCase
     public function test_configuration_error_prevents_call(): void
     {
         [$user] = $this->userWithStore(true, ['shopify_access_token' => '']);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyCatalog::class);
         $shopify->shouldNotReceive('inventoryForecastCandidates');
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyCatalog::class, $shopify);
 
         $this->actingAs($user)->post(route('reports.inventory-forecast.store'))->assertOk()->assertSeeText('credentials are incomplete');
     }
@@ -45,7 +45,7 @@ class InventoryForecastControllerTest extends TestCase
         $this->travelTo('2026-09-07');
         [$user, $store] = $this->userWithStore(true);
         Store::factory()->create();
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyCatalog::class);
         $shopify->shouldReceive('inventoryForecastCandidates')->once()->with(Mockery::on(fn (Store $selected): bool => $selected->is($store)), '2026-08-08', '2026-09-07')->andReturn([
             'products' => [[
                 'legacyResourceId' => '42',
@@ -64,7 +64,7 @@ class InventoryForecastControllerTest extends TestCase
             'products_truncated' => true,
             'orders_truncated' => true,
         ]);
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyCatalog::class, $shopify);
 
         $this->actingAs($user)->post(route('reports.inventory-forecast.store'), ['store_id' => 999])->assertOk()->assertSeeText('1 products · 1 variants · 1 orders')->assertSeeText('1 critical')->assertSeeText('Product catalogue stopped after 100 pages')->assertSeeText('Orders stopped after 100 pages')->assertDontSee('<script>', false)->assertDontSee('<img', false)->assertDontSee('<b>V</b>', false);
     }
@@ -72,9 +72,9 @@ class InventoryForecastControllerTest extends TestCase
     public function test_upstream_error_is_atomic_and_safe(): void
     {
         [$user] = $this->userWithStore(true);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyCatalog::class);
         $shopify->shouldReceive('inventoryForecastCandidates')->andThrow(new RuntimeException('secret'));
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyCatalog::class, $shopify);
 
         $this->actingAs($user)->post(route('reports.inventory-forecast.store'))->assertOk()->assertSeeText('could not be completed')->assertDontSeeText('secret')->assertDontSeeText('products ·');
     }

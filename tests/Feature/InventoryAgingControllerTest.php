@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyCatalog;
 use App\Models\Store;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
@@ -24,9 +24,9 @@ class InventoryAgingControllerTest extends TestCase
     {
         $this->travelTo('2026-09-07');
         [$user] = $this->userWithStore(true);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyCatalog::class);
         $shopify->shouldNotReceive('inventoryAgingCandidates');
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyCatalog::class, $shopify);
 
         $this->actingAs($user)->get(route('reports.inventory-aging'))->assertOk()->assertSee('2026-08-08')->assertSee('2026-09-07');
     }
@@ -48,9 +48,9 @@ class InventoryAgingControllerTest extends TestCase
     public function test_configuration_error_prevents_call(): void
     {
         [$user] = $this->userWithStore(true, ['shopify_access_token' => '']);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyCatalog::class);
         $shopify->shouldNotReceive('inventoryAgingCandidates');
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyCatalog::class, $shopify);
 
         $this->actingAs($user)->post(route('reports.inventory-aging.store'), ['start_date' => '2026-08-01', 'end_date' => '2026-09-01'])->assertOk()->assertSeeText('credentials are incomplete');
     }
@@ -58,7 +58,7 @@ class InventoryAgingControllerTest extends TestCase
     public function test_selected_store_results_truncation_and_xss_render_safely(): void
     {
         [$user, $store] = $this->userWithStore(true);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyCatalog::class);
         $shopify->shouldReceive('inventoryAgingCandidates')->once()->with(Mockery::on(fn (Store $selected): bool => $selected->is($store)), '2026-08-01', '2026-09-01')->andReturn([
             'products' => [[
                 'legacyResourceId' => '42',
@@ -77,7 +77,7 @@ class InventoryAgingControllerTest extends TestCase
             'products_truncated' => true,
             'orders_truncated' => false,
         ]);
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyCatalog::class, $shopify);
 
         $this->actingAs($user)->post(route('reports.inventory-aging.store'), ['start_date' => '2026-08-01', 'end_date' => '2026-09-01', 'store_id' => 999])->assertOk()->assertSeeText('1 products · 1 variants · 1 orders')->assertSeeText('Product catalogue truncated after 100 pages')->assertDontSee('<script>', false)->assertDontSee('<img', false)->assertDontSee('<b>V</b>', false);
     }
@@ -85,9 +85,9 @@ class InventoryAgingControllerTest extends TestCase
     public function test_upstream_error_is_atomic_and_safe(): void
     {
         [$user] = $this->userWithStore(true);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyCatalog::class);
         $shopify->shouldReceive('inventoryAgingCandidates')->andThrow(new RuntimeException('secret'));
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyCatalog::class, $shopify);
 
         $this->actingAs($user)->post(route('reports.inventory-aging.store'), ['start_date' => '2026-08-01', 'end_date' => '2026-09-01'])->assertOk()->assertSeeText('could not be completed')->assertDontSeeText('secret')->assertDontSeeText('zero-stock recent sellers');
     }

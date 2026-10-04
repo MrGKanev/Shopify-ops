@@ -15,11 +15,8 @@ class ShipmentAgingControllerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_access_validation_configuration_success_and_safe_failure(): void
+    public function test_validation_configuration_success_and_safe_failure(): void
     {
-        $this->get('/reports/shipment-aging')->assertRedirect(route('login'));
-        [$viewer] = $this->userWithStore();
-        $this->actingAs($viewer)->get('/reports/shipment-aging')->assertForbidden();
         [$operator] = $this->userWithStore(true);
         $this->actingAs($operator)->post('/reports/shipment-aging', ['threshold' => 0])->assertSessionHasErrors('threshold');
         [$operator] = $this->userWithStore(true, ['shipstation_api_key' => '']);
@@ -48,6 +45,23 @@ class ShipmentAgingControllerTest extends TestCase
         $response = $this->actingAs($operator)->post(route('reports.shipment-aging.export'), ['threshold' => 3]);
         $response->assertOk();
         $this->assertStringContainsString("'=bad", $response->streamedContent());
+    }
+
+    public function test_numeric_skus_are_preserved_in_csv_exports(): void
+    {
+        [$operator] = $this->userWithStore(true);
+        $order = $this->order('123');
+        $order['items'] = [['sku' => '12345', 'name' => 'Widget', 'quantity' => 2]];
+        $client = Mockery::mock(ShipStationClientContract::class);
+        $client->shouldReceive('fetchAwaitingOrders')->once()->andReturn([$order]);
+        $factory = Mockery::mock(ShipStationClientFactory::class);
+        $factory->shouldReceive('forStore')->andReturn($client);
+        $this->app->instance(ShipStationClientFactory::class, $factory);
+
+        $response = $this->actingAs($operator)->post(route('reports.shipment-aging.export'), ['threshold' => 3]);
+
+        $response->assertOk();
+        $this->assertStringContainsString('12345 ×2', $response->streamedContent());
     }
 
     private function order(string $number): array

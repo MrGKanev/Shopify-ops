@@ -1,0 +1,6 @@
+query NoteFlagCandidates($search: String!, $after: String) {
+  orders(first: 250, after: $after, sortKey: CREATED_AT, reverse: true, query: $search) {
+    pageInfo { hasNextPage endCursor }
+    edges { node { legacyResourceId name createdAt email note displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } } }
+  }
+}

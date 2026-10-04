@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Application\Reports\CustomerLookupResult;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunCustomerLookup;
 use App\Http\Requests\CustomerLookupRequest;
+use App\Integrations\Exceptions\IntegrationException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -30,10 +31,10 @@ class CustomerLookupController extends Controller
                 $result = $lookup->handle($store, $email);
             } catch (Throwable $exception) {
                 $lookupFailed = true;
-                Log::warning('Customer lookup failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $store->getKey()]);
+                Log::warning('Customer lookup failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof IntegrationException ? $exception->status : ($exception instanceof RequestException ? $exception->response->status() : null), 'store_id' => $store->getKey()]);
             }
         }
 
-        return view('customers.lookup', ['email' => $email, 'result' => $result instanceof CustomerLookupResult ? $result : null, 'lookupFailed' => $lookupFailed, 'configurationError' => $configurationError]);
+        return view('customers.lookup', ['email' => $email, 'result' => $result instanceof ReportResult ? $result : null, 'lookupFailed' => $lookupFailed, 'configurationError' => $configurationError]);
     }
 }

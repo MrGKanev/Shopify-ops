@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Integrations\ShipStation\ShipStationClientContract;
 use App\Integrations\ShipStation\ShipStationClientFactory;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -34,9 +34,9 @@ class OrderBatchLookupControllerTest extends TestCase
     {
         Http::preventStrayRequests();
         [$user] = $this->makeUserAndStore();
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldNotReceive('findByOrderNumbers');
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyOrders::class, $shopify);
 
         $this->actingAs($user)
             ->get(route('orders.spot-check', ['prefill' => '<script>alert(1)</script>']))
@@ -83,12 +83,12 @@ class OrderBatchLookupControllerTest extends TestCase
     {
         [$user, $store] = $this->makeUserAndStore();
         $numbers = array_map(strval(...), range(1001, 1050));
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumbers')
             ->once()
             ->with(Mockery::on(fn (Store $received): bool => $received->is($store)), $numbers)
             ->andReturn(array_fill_keys($numbers, []));
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyOrders::class, $shopify);
 
         $this->actingAs($user)->post(route('orders.spot-check.store'), [
             'orders' => implode("\n", $numbers),
@@ -99,12 +99,12 @@ class OrderBatchLookupControllerTest extends TestCase
     public function test_normalized_duplicate_inputs_are_looked_up_and_displayed_once_in_first_seen_order(): void
     {
         [$user, $store] = $this->makeUserAndStore();
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumbers')
             ->once()
             ->with(Mockery::on(fn (Store $received): bool => $received->is($store)), ['1002', '1001'])
             ->andReturn(['1002' => [], '1001' => []]);
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyOrders::class, $shopify);
 
         $response = $this->actingAs($user)->post(route('orders.spot-check.store'), [
             'orders' => "#1002, 1002\n#1001",
@@ -123,9 +123,9 @@ class OrderBatchLookupControllerTest extends TestCase
             '1003' => [$this->shopifyOrder(3, '#1003'), $this->shopifyOrder(33, '#1003-copy')],
             '1004' => [],
         ];
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumbers')->once()->andReturn($shopifyOrders);
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyOrders::class, $shopify);
 
         $shipStation = Mockery::mock(ShipStationClientContract::class);
         $shipStation->shouldReceive('findByOrderNumber')->once()->with('1001')->andReturn([]);
@@ -171,9 +171,9 @@ class OrderBatchLookupControllerTest extends TestCase
     public function test_shopify_only_does_not_resolve_or_call_shipstation_and_retains_the_mode(): void
     {
         [$user] = $this->makeUserAndStore(['shipstation_api_key' => null, 'shipstation_api_secret' => null]);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumbers')->once()->andReturn(['1001' => []]);
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyOrders::class, $shopify);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldNotReceive('forStore');
         $this->app->instance(ShipStationClientFactory::class, $factory);
@@ -187,9 +187,9 @@ class OrderBatchLookupControllerTest extends TestCase
     public function test_shipstation_only_does_not_call_shopify(): void
     {
         [$user] = $this->makeUserAndStore();
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldNotReceive('findByOrderNumbers');
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyOrders::class, $shopify);
         $shipStation = Mockery::mock(ShipStationClientContract::class);
         $shipStation->shouldReceive('findByOrderNumber')->once()->with('1001')->andReturn([]);
         $factory = Mockery::mock(ShipStationClientFactory::class);
@@ -209,9 +209,9 @@ class OrderBatchLookupControllerTest extends TestCase
             ['shopify_store' => 'incomplete-ss', 'shipstation_api_key' => 'key', 'shipstation_api_secret' => null],
         ] as $credentials) {
             [$user] = $this->makeUserAndStore($credentials);
-            $shopify = Mockery::mock(ShopifyAdminGateway::class);
+            $shopify = Mockery::mock(ShopifyOrders::class);
             $shopify->shouldNotReceive('findByOrderNumbers');
-            $this->app->instance(ShopifyAdminGateway::class, $shopify);
+            $this->app->instance(ShopifyOrders::class, $shopify);
 
             $this->actingAs($user)->post(route('orders.spot-check.store'), [
                 'orders' => '1001',
@@ -226,12 +226,12 @@ class OrderBatchLookupControllerTest extends TestCase
         $otherStore = Store::factory()->create();
         $selectedStore = Store::factory()->create();
         $user->stores()->attach([$otherStore->getKey(), $selectedStore->getKey()]);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumbers')
             ->once()
             ->with(Mockery::on(fn (Store $received): bool => $received->is($selectedStore)), ['1001'])
             ->andReturn(['1001' => []]);
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyOrders::class, $shopify);
         $shipStation = Mockery::mock(ShipStationClientContract::class);
         $shipStation->shouldReceive('findByOrderNumber')->once()->andReturn([]);
         $factory = Mockery::mock(ShipStationClientFactory::class);
@@ -250,9 +250,9 @@ class OrderBatchLookupControllerTest extends TestCase
     public function test_upstream_failure_returns_an_atomic_safe_error_without_leaking_secrets(): void
     {
         [$user] = $this->makeUserAndStore();
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumbers')->once()->andThrow(new RuntimeException('private-token'));
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyOrders::class, $shopify);
 
         $this->actingAs($user)->post(route('orders.spot-check.store'), [
             'orders' => '1001',
@@ -283,9 +283,9 @@ class OrderBatchLookupControllerTest extends TestCase
     public function test_later_shipstation_failure_does_not_render_partial_rows(): void
     {
         [$user] = $this->makeUserAndStore();
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldNotReceive('findByOrderNumbers');
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyOrders::class, $shopify);
         $shipStation = Mockery::mock(ShipStationClientContract::class);
         $shipStation->shouldReceive('findByOrderNumber')->once()->with('1001')->andReturn([[
             'orderId' => 1,

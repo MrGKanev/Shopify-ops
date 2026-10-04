@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunOnHoldStallReport;
-use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
@@ -31,7 +31,7 @@ class OnHoldStallController extends Controller
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'on_hold_stall', $report::class, [$startDate, $endDate], $startDate, $endDate, 'scanned', 'count:rows');
+            $run = $reports->run($request, $store, 'on_hold_stall', $report::class, [$startDate, $endDate], $startDate, $endDate);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -46,14 +46,14 @@ class OnHoldStallController extends Controller
     {
         [$store, $startDate, $endDate] = $this->context($request);
         if ($this->configurationError($store)) {
-            return back()->withErrors(['export' => 'Shopify credentials are incomplete for the active store.']);
+            return back()->withErrors(['export' => __('reports.shopify_credentials_incomplete')]);
         }
         try {
             $result = $reports->completedResult($store, 'on_hold_stall', $report::class, [$startDate, $endDate]) ?? $report->handle($store, $startDate, $endDate);
         } catch (Throwable $exception) {
             $this->logFailure('On-hold stall CSV export failed.', $exception, $store);
 
-            return back()->withErrors(['export' => 'The CSV export could not be completed.']);
+            return back()->withErrors(['export' => __('reports.export_failed')]);
         }
         $rows = array_map(fn (array $row): array => [$row['order_number'], $row['created_at'], $row['days_waiting'], $row['hold_reason'], $row['hold_notes'], $row['email'], $row['total'], $row['financial'], $row['fulfillment']], $result->rows);
 
@@ -72,8 +72,12 @@ class OnHoldStallController extends Controller
         return $store->missingShopifyCredentials();
     }
 
-    /** @return array<string, mixed> */
-    private function viewData(?string $startDate = null, ?string $endDate = null, ?ScanResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
+    /**
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @return array<string, mixed>
+     */
+    private function viewData(?string $startDate = null, ?string $endDate = null, ?ReportResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
     {
         return compact('result', 'reportFailed', 'configurationError') + ['startDate' => $startDate ?? now()->subDays(90)->toDateString(), 'endDate' => $endDate ?? now()->toDateString()];
     }

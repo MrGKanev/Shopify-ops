@@ -3,8 +3,6 @@
 namespace Tests\Feature\Integrations\Shopify;
 
 use App\Integrations\Shopify\ShopifyAdminClient;
-use App\Integrations\Shopify\ShopifyOrderEventNormalizer;
-use App\Integrations\Shopify\ShopifyOrderNormalizer;
 use App\Models\Store;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -57,7 +55,7 @@ class ShopifyMetafieldsTest extends TestCase
 
     private function client(): ShopifyAdminClient
     {
-        return new ShopifyAdminClient(new ShopifyOrderNormalizer, new ShopifyOrderEventNormalizer);
+        return app(ShopifyAdminClient::class);
     }
 
     private function store(): Store

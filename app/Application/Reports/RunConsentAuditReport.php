@@ -3,15 +3,15 @@
 namespace App\Application\Reports;
 
 use App\Domain\Reports\ConsentAuditAnalyzer;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyCustomers;
 use App\Models\Store;
 
 class RunConsentAuditReport extends RunScanReport
 {
-    public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly ConsentAuditAnalyzer $analyzer) {}
+    public function __construct(private readonly ShopifyCustomers $shopify, private readonly ConsentAuditAnalyzer $analyzer) {}
 
-    /** @return ScanResult<array{id: int|string, number: string, created_at: string, email: string, total: float|string, currency: string, email_consent: bool, sms_consent: bool}> */
-    public function handle(Store $store, string $start, string $end): ScanResult
+    /** @return ReportResult<array{id: int|string, number: string, created_at: string, email: string, total: float|string, currency: string, email_consent: string, sms_consent: string}> */
+    public function handle(Store $store, string $start, string $end): ReportResult
     {
         $result = $this->shopify->consentAuditCandidates($store, $start, $end);
 

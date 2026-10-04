@@ -1,0 +1,4 @@
+query ShopifyHealth {
+  shop { name ianaTimezone }
+  currentAppInstallation { accessScopes { handle } }
+}

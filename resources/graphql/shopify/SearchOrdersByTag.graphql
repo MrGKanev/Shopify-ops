@@ -1,0 +1,18 @@
+query SearchOrdersByTag($search: String!, $after: String) {
+  orders(first: 250, after: $after, sortKey: CREATED_AT, reverse: true, query: $search) {
+    pageInfo { hasNextPage endCursor }
+    edges {
+      node {
+        id
+        legacyResourceId
+        name
+        createdAt
+        email
+        tags
+        displayFinancialStatus
+        displayFulfillmentStatus
+        totalPriceSet { shopMoney { amount currencyCode } }
+      }
+    }
+  }
+}

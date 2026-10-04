@@ -15,7 +15,7 @@ class AppearanceSettingsRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, array<int, ValidationRule|string>>
+     * @return array<string, array<int, ValidationRule|\Illuminate\Contracts\Validation\Rule|string>>
      */
     public function rules(): array
     {
@@ -43,7 +43,8 @@ class AppearanceSettingsRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $links = collect($this->input('custom_links', []))
+        $inputLinks = $this->input('custom_links', []);
+        $links = collect(is_array($inputLinks) ? $inputLinks : [])
             ->filter(fn (mixed $link): bool => is_array($link))
             ->map(fn (array $link): array => [
                 'label' => trim((string) ($link['label'] ?? '')),

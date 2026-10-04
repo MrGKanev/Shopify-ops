@@ -10,6 +10,7 @@ class PrintQueueRequest extends FormRequest
 {
     use AuthorizesRunAudits, HasOrderNumberRules;
 
+    /** @return array<string, list<string>> */
     public function rules(): array
     {
         return ['order_number' => ['required', 'string', 'max:64', $this->orderNumberRule()], 'note' => ['nullable', 'string', 'max:255']];

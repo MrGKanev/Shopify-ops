@@ -4,7 +4,10 @@ namespace App\Domain\Reports;
 
 class CustomerOrderSummaryAnalyzer
 {
-    /** @param list<array<string, mixed>> $orders @return array{total_spent: float, currency: string, paid: int, cancelled: int, tags: array<string, int>} */
+    /**
+     * @param  list<array<string, mixed>>  $orders
+     * @return array{total_spent: float, currency: string, paid: int, cancelled: int, tags: array<string, int>}
+     */
     public function analyze(array $orders): array
     {
         $total = 0.0;

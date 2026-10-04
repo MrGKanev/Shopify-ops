@@ -14,7 +14,10 @@ class LoadTrackingFeed
         private readonly TrackingFeedBuilder $builder,
     ) {}
 
-    /** @param list<string> $numbers @return list<array<string, mixed>> */
+    /**
+     * @param  list<string>  $numbers
+     * @return list<array<string, mixed>>
+     */
     public function handle(Store $store, array $numbers): array
     {
         $client = $this->clients->forStore($store);

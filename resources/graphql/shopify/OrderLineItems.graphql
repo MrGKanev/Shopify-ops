@@ -1,0 +1,16 @@
+query OrderLineItems($id: ID!, $after: String!) {
+  order(id: $id) {
+    lineItems(first: 250, after: $after) {
+      nodes {
+        id
+        title
+        name
+        sku
+        quantity
+        variantTitle
+        originalUnitPriceSet { shopMoney { amount currencyCode } }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}

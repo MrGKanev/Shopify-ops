@@ -35,7 +35,7 @@ class IgnoredOrderController extends Controller
         activity('operator-actions')->causedBy($request->user())->performedOn($this->resolveStore($request))
             ->withProperties(['order_number' => $number, 'reason' => $reason])->log('ignore_order');
 
-        return back()->with('status', "Order #{$number} is ignored.");
+        return back()->with('status', __('Order #:number is ignored.', ['number' => $number]));
     }
 
     public function destroy(Request $request, IgnoredOrder $ignoredOrder): RedirectResponse
@@ -46,7 +46,7 @@ class IgnoredOrderController extends Controller
         activity('operator-actions')->causedBy($request->user())->performedOn($this->resolveStore($request))
             ->withProperties(['order_number' => $orderNumber])->log('unignore_order');
 
-        return back()->with('status', 'Order restored to audits.');
+        return back()->with('status', __('Order restored to audits.'));
     }
 
     public function bulkStore(Request $request): RedirectResponse
@@ -88,7 +88,7 @@ class IgnoredOrderController extends Controller
         activity('operator-actions')->causedBy($request->user())->performedOn($this->resolveStore($request))
             ->withProperties(['count' => $count])->log('bulk_unignore_orders');
 
-        return back()->with('status', "{$count} orders restored to audits.");
+        return back()->with('status', __(':count orders restored to audits.', ['count' => $count]));
     }
 
     public function import(IgnoredOrderImportRequest $request): RedirectResponse

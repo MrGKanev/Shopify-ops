@@ -3,15 +3,17 @@
 namespace App\Integrations\ShipStation;
 
 use App\Domain\Orders\PhoneNumberValidator;
+use App\Integrations\Concerns\ConfiguresIntegrationRequests;
 use App\Integrations\Concerns\RetriesTransientRequests;
+use App\Integrations\Exceptions\UnexpectedResponse;
+use App\Integrations\IntegrationThrottle;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Sleep;
 use SensitiveParameter;
 use Throwable;
-use UnexpectedValueException;
 
 class ShipStationClient implements ShipStationClientContract
 {
@@ -22,6 +24,7 @@ class ShipStationClient implements ShipStationClientContract
     /** ShipStation API V1 reads and returns every date-time in Pacific time. */
     private const string API_TIMEZONE = 'America/Los_Angeles';
 
+    use ConfiguresIntegrationRequests;
     use RetriesTransientRequests;
 
     public function __construct(
@@ -29,6 +32,7 @@ class ShipStationClient implements ShipStationClientContract
         #[SensitiveParameter] private readonly string $apiSecret,
         private readonly PhoneNumberValidator $phones = new PhoneNumberValidator,
         private readonly string $shopTimezone = 'UTC',
+        private readonly ?int $storeId = null,
     ) {}
 
     public function healthCheck(): void
@@ -181,9 +185,10 @@ class ShipStationClient implements ShipStationClientContract
                 $this->retryAttempts(),
                 fn (int $attempt, mixed $exception): int => $this->retryDelayInMilliseconds($attempt, $exception),
                 when: fn (Throwable $exception, PendingRequest $request, ?string $method): bool => $method === 'GET' && $this->isTransientFailure($exception),
+                throw: false,
             )
-            ->get($path, $query)
-            ->throw();
+            ->get($path, $query);
+        $this->checkedResponse($response);
         $this->pauseWhenRateLimitIsExhausted($response);
 
         return $this->decode($response);
@@ -198,7 +203,8 @@ class ShipStationClient implements ShipStationClientContract
         // ponytail: no retry on POST — a retried createorder after a transient
         // failure risks creating the order twice; a failed push should surface
         // to the operator to retry manually, not double-create silently.
-        $response = $this->request()->post($path, $body)->throw();
+        $response = $this->request()->post($path, $body);
+        $this->checkedResponse($response);
         $this->pauseWhenRateLimitIsExhausted($response);
 
         return $this->decode($response);
@@ -238,12 +244,11 @@ class ShipStationClient implements ShipStationClientContract
 
     private function request(): PendingRequest
     {
-        return Http::baseUrl(self::BASE_URL)
-            ->acceptJson()
-            ->asJson()
+        Context::add('store_id', $this->storeId);
+
+        return $this->integrationRequest(self::BASE_URL)
             ->withBasicAuth($this->apiKey, $this->apiSecret)
-            ->connectTimeout(3)
-            ->timeout(10);
+            ->beforeSending(fn () => app(IntegrationThrottle::class)->shipStation($this->apiKey));
     }
 
     /**
@@ -279,7 +284,7 @@ class ShipStationClient implements ShipStationClientContract
         $payload = $response->json();
 
         if (! is_array($payload)) {
-            throw new UnexpectedValueException('ShipStation returned an invalid JSON payload.');
+            throw new UnexpectedResponse('ShipStation returned an invalid JSON payload.');
         }
 
         return $payload;
@@ -294,12 +299,12 @@ class ShipStationClient implements ShipStationClientContract
         $items = $payload[$key] ?? [];
 
         if (! is_array($items)) {
-            throw new UnexpectedValueException("ShipStation returned an invalid {$key} collection.");
+            throw new UnexpectedResponse("ShipStation returned an invalid {$key} collection.");
         }
 
         foreach ($items as $item) {
             if (! is_array($item)) {
-                throw new UnexpectedValueException("ShipStation returned an invalid {$key} collection.");
+                throw new UnexpectedResponse("ShipStation returned an invalid {$key} collection.");
             }
         }
 

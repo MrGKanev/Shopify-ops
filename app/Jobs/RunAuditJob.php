@@ -3,11 +3,15 @@
 namespace App\Jobs;
 
 use App\Application\Reports\RunAudit;
+use App\Integrations\Exceptions\IntegrationException;
+use App\Integrations\Exceptions\RateLimited;
 use App\Models\AuditJob;
 use App\Models\Store;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Queue\Middleware\ThrottlesExceptions;
 use Illuminate\Support\Facades\Context;
 use Throwable;
 
@@ -22,6 +26,15 @@ class RunAuditJob implements ShouldBeUnique, ShouldQueue
     public int $backoff = 30;
 
     public function __construct(public int $storeId, public string $startDate, public string $endDate, public ?int $auditJobId = null) {}
+
+    /** @return list<ThrottlesExceptions> */
+    public function middleware(): array
+    {
+        return [(new ThrottlesExceptions(3, 60))
+            ->by('scheduled-audit:'.$this->storeId)
+            ->backoff(1)
+            ->when(fn (Throwable $exception): bool => $exception instanceof ConnectionException || $exception instanceof RateLimited || ($exception instanceof IntegrationException && ($exception->status ?? 0) >= 500))];
+    }
 
     public function handle(RunAudit $audit): void
     {

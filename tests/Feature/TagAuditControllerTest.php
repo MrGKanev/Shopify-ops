@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -45,9 +45,9 @@ class TagAuditControllerTest extends TestCase
     public function test_incomplete_shopify_configuration_does_not_run_the_report(): void
     {
         [$operator] = $this->makeUserAndStore(true, ['shopify_access_token' => '']);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldNotReceive('tagAuditCandidates');
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyOrders::class, $shopify);
 
         $this->actingAs($operator)->post(route('reports.tag-audit.store'), ['start_date' => '2026-09-01', 'end_date' => '2026-09-06'])
             ->assertOk()
@@ -58,7 +58,7 @@ class TagAuditControllerTest extends TestCase
     {
         $this->travelTo('2026-09-06 12:00:00');
         [$operator, $store] = $this->makeUserAndStore(true);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('tagAuditCandidates')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '2026-05-01', '2026-09-06')->andReturn([
             'orders' => [
                 ['name' => '#1<script>x</script>', 'createdAt' => '2026-05-01T10:00:00Z', 'tags' => ['VIP<img src=x>']],
@@ -67,7 +67,7 @@ class TagAuditControllerTest extends TestCase
             'pages' => 100,
             'truncated' => true,
         ]);
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyOrders::class, $shopify);
 
         $this->actingAs($operator)->post(route('reports.tag-audit.store'), ['start_date' => '2026-05-01', 'end_date' => '2026-09-06'])
             ->assertOk()
@@ -83,9 +83,9 @@ class TagAuditControllerTest extends TestCase
     public function test_upstream_error_is_atomic_and_does_not_expose_details(): void
     {
         [$operator] = $this->makeUserAndStore(true);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('tagAuditCandidates')->once()->andThrow(new RuntimeException('private-token'));
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyOrders::class, $shopify);
 
         $this->actingAs($operator)->post(route('reports.tag-audit.store'), ['start_date' => '2026-09-01', 'end_date' => '2026-09-06'])
             ->assertOk()

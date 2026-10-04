@@ -8,7 +8,11 @@ class NoteFlagAnalyzer
 {
     use NormalizesText;
 
-    /** @param list<array<string, mixed>> $orders @param list<string> $keywords @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $orders
+     * @param  list<string>  $keywords
+     * @return list<array<string, mixed>>
+     */
     public function analyze(array $orders, array $keywords): array
     {
         $keywords = array_values(array_unique(array_filter(array_map(fn (string $keyword): string => mb_strtolower(trim($keyword)), $keywords))));

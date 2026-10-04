@@ -1,5 +1,6 @@
 <?php
 
+use App\Application\Reports\ReportRegistry;
 use App\Http\Controllers\ActiveStoreController;
 use App\Http\Controllers\Admin\ActionLogController;
 use App\Http\Controllers\Admin\ApiHealthController;
@@ -44,52 +45,7 @@ use App\Http\Controllers\PrintQueueController;
 use App\Http\Controllers\PushLogController;
 use App\Http\Controllers\PushToShipStationController;
 use App\Http\Controllers\ReadinessController;
-use App\Http\Controllers\Reports\ActiveShipStationConflictController;
-use App\Http\Controllers\Reports\AddressChangeController;
-use App\Http\Controllers\Reports\AddressCheckController;
-use App\Http\Controllers\Reports\BundleCheckController;
-use App\Http\Controllers\Reports\CarrierPerformanceController;
-use App\Http\Controllers\Reports\CatalogQualityController;
-use App\Http\Controllers\Reports\ConsentAuditController;
-use App\Http\Controllers\Reports\CountryMismatchController;
-use App\Http\Controllers\Reports\CustomerLtvController;
-use App\Http\Controllers\Reports\DiscountAbuseController;
-use App\Http\Controllers\Reports\DisputeController;
-use App\Http\Controllers\Reports\DuplicateAddressController;
-use App\Http\Controllers\Reports\DuplicateOrderController;
-use App\Http\Controllers\Reports\EmailCheckController;
-use App\Http\Controllers\Reports\FraudRiskController;
-use App\Http\Controllers\Reports\FulfilledItemsController;
-use App\Http\Controllers\Reports\FulfillmentSlaController;
-use App\Http\Controllers\Reports\GiftCardsController;
-use App\Http\Controllers\Reports\HighValueNoPhoneController;
-use App\Http\Controllers\Reports\InventoryAgingController;
-use App\Http\Controllers\Reports\InventoryForecastController;
-use App\Http\Controllers\Reports\InventoryOversellController;
-use App\Http\Controllers\Reports\ItemMismatchController;
-use App\Http\Controllers\Reports\NoteFlagController;
-use App\Http\Controllers\Reports\NoTrackingController;
-use App\Http\Controllers\Reports\OnHoldStallController;
-use App\Http\Controllers\Reports\OrderEditController;
-use App\Http\Controllers\Reports\OrphanOrderController;
-use App\Http\Controllers\Reports\PartialFulfillmentController;
-use App\Http\Controllers\Reports\PostShipAddressChangeController;
-use App\Http\Controllers\Reports\ProductCompletenessController;
-use App\Http\Controllers\Reports\RefundTrackerController;
-use App\Http\Controllers\Reports\RepeatRefundController;
-use App\Http\Controllers\Reports\ReturnedItemsController;
-use App\Http\Controllers\Reports\ReturnRmaController;
 use App\Http\Controllers\Reports\RunAuditController;
-use App\Http\Controllers\Reports\SameIpController;
-use App\Http\Controllers\Reports\ShipmentAgingController;
-use App\Http\Controllers\Reports\ShippedUnfulfilledController;
-use App\Http\Controllers\Reports\ShippingMarginController;
-use App\Http\Controllers\Reports\SkuDuplicatesController;
-use App\Http\Controllers\Reports\TagAuditController;
-use App\Http\Controllers\Reports\TagPolicyController;
-use App\Http\Controllers\Reports\TaxAuditController;
-use App\Http\Controllers\Reports\VoidedShipmentsController;
-use App\Http\Controllers\Reports\ZombieProductsController;
 use App\Http\Controllers\ReportTrendController;
 use App\Http\Controllers\RunLogController;
 use App\Http\Controllers\SavedReportController;
@@ -178,63 +134,17 @@ Route::middleware('auth')->group(function (): void {
             Route::post('/reports/run-audit', [RunAuditController::class, 'store'])->middleware('throttle:audit-report')->name('reports.run-audit.store');
             Route::post('/reports/run-audit/queue', [RunAuditController::class, 'queue'])->middleware('throttle:audit-report')->name('reports.run-audit.queue');
             /**
-             * Every report exposes the same create/store pair, a GET result URL that shows a queued
-             * run by its parameters, plus an export endpoint when the controller implements one.
-             *
-             * @var array<string, class-string> $reportControllers
+             * Every report in the tool registry (config/reports.php) exposes the same create/store pair,
+             * a GET result URL that shows a queued run by its parameters, plus an export endpoint when
+             * the controller implements one. Run Audit declares its own routes above.
              */
-            $reportControllers = [
-                'high-value-no-phone' => HighValueNoPhoneController::class,
-                'country-mismatch' => CountryMismatchController::class,
-                'consent-audit' => ConsentAuditController::class,
-                'fraud-risk' => FraudRiskController::class,
-                'email-check' => EmailCheckController::class,
-                'address-check' => AddressCheckController::class,
-                'discount-abuse' => DiscountAbuseController::class,
-                'same-ip' => SameIpController::class,
-                'duplicate-orders' => DuplicateOrderController::class,
-                'customer-ltv' => CustomerLtvController::class,
-                'tag-policy' => TagPolicyController::class,
-                'disputes' => DisputeController::class,
-                'duplicate-addresses' => DuplicateAddressController::class,
-                'note-flags' => NoteFlagController::class,
-                'order-edits' => OrderEditController::class,
-                'address-changes' => AddressChangeController::class,
-                'post-ship-address-changes' => PostShipAddressChangeController::class,
-                'voided-shipments' => VoidedShipmentsController::class,
-                'fulfillment-sla' => FulfillmentSlaController::class,
-                'bundle-check' => BundleCheckController::class,
-                'partial-fulfillment' => PartialFulfillmentController::class,
-                'on-hold-stall' => OnHoldStallController::class,
-                'no-tracking' => NoTrackingController::class,
-                'shipment-aging' => ShipmentAgingController::class,
-                'item-mismatch' => ItemMismatchController::class,
-                'orphan-orders' => OrphanOrderController::class,
-                'active-shipstation-conflicts' => ActiveShipStationConflictController::class,
-                'shipped-unfulfilled' => ShippedUnfulfilledController::class,
-                'repeat-refunds' => RepeatRefundController::class,
-                'refund-tracker' => RefundTrackerController::class,
-                'return-rma' => ReturnRmaController::class,
-                'returned-items' => ReturnedItemsController::class,
-                'fulfilled-items' => FulfilledItemsController::class,
-                'carrier-performance' => CarrierPerformanceController::class,
-                'shipping-margin' => ShippingMarginController::class,
-                'tag-audit' => TagAuditController::class,
-                'tax-audit' => TaxAuditController::class,
-                'product-completeness' => ProductCompletenessController::class,
-                'sku-duplicates' => SkuDuplicatesController::class,
-                'inventory-oversell' => InventoryOversellController::class,
-                'inventory-aging' => InventoryAgingController::class,
-                'inventory-forecast' => InventoryForecastController::class,
-                'zombie-products' => ZombieProductsController::class,
-                'catalog-quality' => CatalogQualityController::class,
-                'gift-cards' => GiftCardsController::class,
-            ];
-            foreach ($reportControllers as $slug => $controller) {
+            foreach (app(ReportRegistry::class)->routedTools() as $tool) {
+                $slug = $tool->slug;
+                $controller = $tool->controller;
                 Route::get("/reports/{$slug}", [$controller, 'create'])->name("reports.{$slug}");
                 Route::post("/reports/{$slug}", [$controller, 'store'])->middleware('throttle:audit-report')->name("reports.{$slug}.store");
                 Route::get("/reports/{$slug}/result", [$controller, 'store'])->name("reports.{$slug}.result");
-                if (method_exists($controller, 'export')) {
+                if ($tool->hasExport()) {
                     Route::post("/reports/{$slug}/export", [$controller, 'export'])->middleware('throttle:audit-report')->name("reports.{$slug}.export");
                 }
             }

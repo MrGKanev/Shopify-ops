@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Application\Reports\ReportResult;
 use App\Models\Concerns\BelongsToStore;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -9,11 +10,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Crypt;
 
 /**
- * One queued execution of a report and, once finished, its serialized result.
+ * One queued execution of a report and, once finished, its JSON result.
  *
  * The result holds customer data, so it is stored compressed and encrypted.
+ *
+ * @return ReportResult<array<string, mixed>>|null
  */
-#[Fillable(['store_id', 'user_id', 'tool', 'report', 'arguments', 'arguments_hash', 'start_date', 'end_date', 'scanned_metric', 'rows_metric', 'status', 'started_at', 'finished_at'])]
+#[Fillable(['store_id', 'user_id', 'tool', 'report', 'arguments', 'arguments_hash', 'start_date', 'end_date', 'status', 'started_at', 'finished_at'])]
 #[Hidden(['result'])]
 class ReportRun extends Model
 {
@@ -29,47 +32,31 @@ class ReportRun extends Model
         return $this->status === 'failed';
     }
 
-    public function storeResult(mixed $result): void
+    /** @param ReportResult<array<string, mixed>> $result */
+    public function storeResult(ReportResult $result): void
     {
         $this->forceFill([
-            'result' => Crypt::encryptString(base64_encode((string) gzcompress(serialize($result)))),
+            'result' => Crypt::encryptString(base64_encode((string) gzcompress(json_encode($result->toArray(), JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION)))),
             'status' => 'completed',
+            'failure_reason' => null,
             'finished_at' => now(),
         ])->save();
     }
 
     /**
      * The report's result object, or null while pending or after a failure.
+     *
+     * @return ReportResult<array<string, mixed>>|null
      */
-    public function result(): mixed
+    public function result(): ?ReportResult
     {
         if ($this->status !== 'completed' || ! is_string($this->result)) {
             return null;
         }
 
-        $serialized = gzuncompress((string) base64_decode(Crypt::decryptString($this->result), true));
+        $json = gzuncompress((string) base64_decode(Crypt::decryptString($this->result), true));
 
-        return $serialized === false ? null : unserialize($serialized);
-    }
-
-    /**
-     * A count taken from the result: a property name (e.g. "scanned") or "count:<property>" for a list.
-     */
-    public function metric(mixed $result, string $metric): int
-    {
-        if (! is_object($result)) {
-            return 0;
-        }
-
-        if (str_starts_with($metric, 'count:')) {
-            $values = $result->{substr($metric, 6)} ?? [];
-
-            return is_countable($values) ? count($values) : 0;
-        }
-
-        $value = $result->{$metric} ?? 0;
-
-        return is_numeric($value) ? (int) $value : 0;
+        return $json === false ? null : ReportResult::fromArray(json_decode($json, true, flags: JSON_THROW_ON_ERROR));
     }
 
     protected function casts(): array

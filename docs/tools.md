@@ -2,7 +2,7 @@
 
 ## Audit
 
-_Sections mirror the grouped sidebar navigation in [`config/audit-hub.php`](../config/audit-hub.php). Update both when adding or removing an audit page — this table is maintained by hand, not generated._
+_Generated from the tool registry in [`config/reports.php`](../config/reports.php), which also drives the report routes, the audit navigation and the notification tool catalog. Edit the registry and run `php artisan docs:tools` — do not edit the section between the markers by hand._
 
 <!-- AUTO-GENERATED:AUDIT-SECTION:START -->
 
@@ -10,7 +10,7 @@ _Sections mirror the grouped sidebar navigation in [`config/audit-hub.php`](../c
 
 | Page | What it does |
 | --- | --- |
-| **Reports** | View and download saved audit reports |
+| **Saved Reports** | View and download saved audit reports |
 | **Run Audit** | Compare Shopify vs ShipStation for any date range |
 | **Trends** | Aggregated stats across all audit reports |
 

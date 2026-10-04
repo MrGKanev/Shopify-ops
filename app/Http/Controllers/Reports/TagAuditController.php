@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunTagAuditReport;
-use App\Application\Reports\TagAuditResult;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
 use Illuminate\Http\RedirectResponse;
@@ -27,7 +27,7 @@ class TagAuditController extends Controller
         $configurationError = $store->missingShopifyCredentials();
 
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'tag_audit', $report::class, [$startDate, $endDate, now()->subDays(90)->toDateString()], $startDate, $endDate, 'scanned', 'count:tags');
+            $run = $reports->run($request, $store, 'tag_audit', $report::class, [$startDate, $endDate, now()->subDays(90)->toDateString()], $startDate, $endDate);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -35,6 +35,6 @@ class TagAuditController extends Controller
             $reportFailed = $run->hasFailed();
         }
 
-        return view('reports.tag-audit', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof TagAuditResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.tag-audit', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof ReportResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 }

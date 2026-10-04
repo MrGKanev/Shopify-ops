@@ -49,7 +49,7 @@ class AppSetting extends Model
             default => ['all'],
         };
 
-        return collect($this->custom_links ?? [])
+        return array_values(collect($this->custom_links ?? [])
             ->filter(fn (mixed $link): bool => is_array($link)
                 && filled($link['label'] ?? null)
                 && in_array($link['audience'] ?? null, $allowedAudiences, true)
@@ -57,7 +57,7 @@ class AppSetting extends Model
                 && in_array(parse_url((string) $link['url'], PHP_URL_SCHEME), ['http', 'https'], true))
             ->map(fn (array $link): array => ['label' => (string) $link['label'], 'url' => (string) $link['url']])
             ->values()
-            ->all();
+            ->all());
     }
 
     /** @return array<string, string> */

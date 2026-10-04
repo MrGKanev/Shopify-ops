@@ -2,6 +2,6 @@
 
 namespace App\Integrations\Shopify\Exceptions;
 
-use RuntimeException;
+use App\Integrations\Exceptions\UnexpectedResponse;
 
-class ShopifyResponseException extends RuntimeException {}
+class ShopifyResponseException extends UnexpectedResponse {}

@@ -35,7 +35,7 @@ class WebhookEventController extends Controller
         $store = $this->resolveStore($request);
         $webhookEvent = $store->webhookEvents()->findOrFail($event);
         if ($webhookEvent->status !== 'failed') {
-            return back()->withErrors(['webhook_event' => 'Only failed webhook events can be retried.']);
+            return back()->withErrors(['webhook_event' => __('Only failed webhook events can be retried.')]);
         }
 
         $updated = $store->webhookEvents()
@@ -43,11 +43,11 @@ class WebhookEventController extends Controller
             ->where('status', 'failed')
             ->update(['status' => 'received', 'processed_at' => null, 'error_category' => null]);
         if ($updated !== 1) {
-            return back()->withErrors(['webhook_event' => 'Only failed webhook events can be retried.']);
+            return back()->withErrors(['webhook_event' => __('Only failed webhook events can be retried.')]);
         }
 
         ProcessShopifyWebhookEvent::dispatch((int) $webhookEvent->getKey());
 
-        return back()->with('status', 'Webhook retry queued.');
+        return back()->with('status', __('Webhook retry queued.'));
     }
 }

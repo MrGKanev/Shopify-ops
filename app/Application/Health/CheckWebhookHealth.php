@@ -2,14 +2,14 @@
 
 namespace App\Application\Health;
 
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyTransport;
 use App\Integrations\Shopify\ShopifyAdminClient;
 use App\Models\Store;
 use Throwable;
 
 class CheckWebhookHealth
 {
-    public function __construct(private readonly ShopifyAdminGateway $shopify) {}
+    public function __construct(private readonly ShopifyTransport $shopify) {}
 
     /** @return array{ok:bool,error:string,webhooks:list<array{id:string,topic:string,address:string,format:string,created_at:string,api_version:string,healthy:bool}>} */
     public function handle(Store $store): array

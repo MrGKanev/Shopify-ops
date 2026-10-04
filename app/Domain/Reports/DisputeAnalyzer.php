@@ -4,7 +4,10 @@ namespace App\Domain\Reports;
 
 class DisputeAnalyzer
 {
-    /** @param list<array<string, mixed>> $disputes @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $disputes
+     * @return list<array<string, mixed>>
+     */
     public function analyze(array $disputes, int $now): array
     {
         $rows = [];

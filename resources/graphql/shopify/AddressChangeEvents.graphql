@@ -1,0 +1,6 @@
+query AddressChangeEvents($search: String!, $after: String) {
+  events(first: 250, after: $after, sortKey: CREATED_AT, reverse: true, query: $search) {
+    pageInfo { hasNextPage endCursor }
+    edges { node { __typename id action createdAt message ... on BasicEvent { subjectId subjectType } } }
+  }
+}

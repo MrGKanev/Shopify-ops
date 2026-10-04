@@ -3,7 +3,7 @@
 namespace Tests\Unit\Application\Orders;
 
 use App\Application\Orders\SaveOrderNote;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 use Mockery;
 use PHPUnit\Framework\TestCase;
@@ -19,7 +19,7 @@ class SaveOrderNoteTest extends TestCase
     public function test_it_delegates_to_the_shopify_gateway(): void
     {
         $store = new Store;
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('updateOrderNote')->once()->with($store, '123', 'Fragile — handle with care')->andReturnNull();
 
         $result = (new SaveOrderNote($shopify))->handle($store, '123', 'Fragile — handle with care');

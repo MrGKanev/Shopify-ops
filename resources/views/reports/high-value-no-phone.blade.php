@@ -1,63 +1,31 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="flex flex-col gap-6">
-        <x-page-header eyebrow="Audit report" title="High-value orders without phone" subtitle="Paid, unfulfilled orders whose shipping phone is missing or not valid for the shipping country." />
-
-        <form class="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:grid-cols-5 dark:border-slate-800 dark:bg-slate-900" method="POST" action="{{ route('reports.high-value-no-phone.store') }}">
-            @csrf
-            @foreach (['start_date' => ['From', $startDate], 'end_date' => ['To', $endDate]] as $field => [$label, $value])
-                <div>
-                    <label class="text-sm font-medium" for="{{ $field }}">{{ $label }}</label>
-                    <input class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="{{ $field }}" name="{{ $field }}" type="date" value="{{ old($field, $value) }}">
-                    @error($field)
-                        <p class="text-sm text-red-600">{{ __($message) }}</p>
-                    @enderror
-                </div>
-            @endforeach
-            <div>
-                <label class="text-sm font-medium" for="minimum">{{ __('Minimum value') }}</label>
-                <input class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="minimum" name="minimum" type="number" min="0" step="0.01" value="{{ old('minimum', $minimum) }}">
-                @error('minimum')
-                    <p class="text-sm text-red-600">{{ __($message) }}</p>
-                @enderror
-            </div>
-            <div>
-                <label class="text-sm font-medium" for="currency">{{ __('Currency') }}</label>
-                <input class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 uppercase dark:border-slate-700 dark:bg-slate-950" id="currency" name="currency" maxlength="3" list="currency-options" value="{{ old('currency', $currency) }}">
+    <x-report.layout eyebrow="Audit report" title="High-value orders without phone" subtitle="Paid, unfulfilled orders whose shipping phone is missing or not valid for the shipping country." :report-failed="$reportFailed" failure-message="The report could not be completed. Check the Shopify integration and try again.">
+        <x-slot:form>
+            <x-report.date-range-form
+                :action="route('reports.high-value-no-phone.store')"
+                :start-date="$startDate"
+                :end-date="$endDate"
+                :fields="[
+                    'minimum' => ['label' => 'Minimum value', 'type' => 'number', 'value' => $minimum, 'min' => 0, 'step' => '0.01'],
+                    'currency' => ['label' => 'Currency', 'value' => $currency, 'maxlength' => 3, 'list' => 'currency-options', 'class' => 'uppercase'],
+                ]"
+            >
                 <datalist id="currency-options"><option value="ALL">{{ __('All currencies') }}</option></datalist>
-                @error('currency')
-                    <p class="text-sm text-red-600">{{ __($message) }}</p>
-                @enderror
-            </div>
-            <div class="flex items-end">
-                <x-button type="submit">{{ __('Run report') }}</x-button>
-            </div>
-        </form>
-
-        @if ($reportFailed)
-            <x-alert tone="error">{{ __('The report could not be completed. Check the Shopify integration and try again.') }}</x-alert>
-        @endif
+            </x-report.date-range-form>
+        </x-slot:form>
 
         @if ($result)
-            <section class="flex flex-col gap-4">
-                <div class="flex flex-wrap gap-3">
-                    <h2 class="text-2xl font-bold">{{ __('Results') }}</h2>
-                    <span>{{ $result->scanned }} scanned · {{ count($result->rows) }} issues</span>
-                </div>
-                @if ($result->truncated)
-                    <x-alert tone="warn">{{ __('Results were truncated after :pages pages.', ['pages' => $result->pages]) }}</x-alert>
-                @endif
+            <x-report.results :truncated="$result->truncated" truncated-message="Results were truncated after :pages pages." :pages="$result->pages">
+                <x-slot:heading>{{ __('Results') }}</x-slot:heading>
+                <x-slot:summary>{{ $result->scanned }} scanned · {{ count($result->rows) }} issues</x-slot:summary>
 
                 @forelse ($result->rows as $row)
                     <x-card>
                         <div class="flex justify-between gap-4">
                             <div>
-                                @if ($row['id'])
-                                    <a class="font-semibold text-indigo-600 dark:text-indigo-400" href="https://{{ $activeStore->shopify_store }}.myshopify.com/admin/orders/{{ $row['id'] }}" target="_blank" rel="noopener noreferrer">{{ $row['number'] }}</a>
-                                @else
-                                    <strong>{{ $row['number'] }}</strong>
-                                @endif
+                                <x-report.shopify-link :id="$row['id']" class="font-semibold">{{ $row['number'] }}</x-report.shopify-link>
                                 <p class="text-sm text-slate-500 dark:text-slate-400">{{ $row['created_at'] }} · {{ $row['email'] ?: 'No email' }}</p>
                                 <p class="mt-2 text-sm">{{ $row['recipient'] }}@if ($row['recipient'] && $row['address']), @endif{{ $row['address'] }}</p>
                                 <p class="mt-2">
@@ -75,7 +43,7 @@
                 @empty
                     <x-empty-state icon="✓">No high-value orders without a valid shipping phone were found.</x-empty-state>
                 @endforelse
-            </section>
+            </x-report.results>
         @endif
-    </div>
+    </x-report.layout>
 @endsection

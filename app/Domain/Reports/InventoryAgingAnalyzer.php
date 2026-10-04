@@ -8,7 +8,11 @@ class InventoryAgingAnalyzer
 {
     use NormalizesText;
 
-    /** @param list<array<string, mixed>> $products @param list<array<string, mixed>> $orders @return array{rows: list<array<string, mixed>>, variants: int} */
+    /**
+     * @param  list<array<string, mixed>>  $products
+     * @param  list<array<string, mixed>>  $orders
+     * @return array{rows: list<array<string, mixed>>, variants: int}
+     */
     public function analyze(array $products, array $orders): array
     {
         $sales = [];

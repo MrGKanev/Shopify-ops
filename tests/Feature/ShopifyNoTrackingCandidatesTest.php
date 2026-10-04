@@ -3,8 +3,6 @@
 namespace Tests\Feature;
 
 use App\Integrations\Shopify\ShopifyAdminClient;
-use App\Integrations\Shopify\ShopifyOrderEventNormalizer;
-use App\Integrations\Shopify\ShopifyOrderNormalizer;
 use App\Models\Store;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -16,7 +14,7 @@ class ShopifyNoTrackingCandidatesTest extends TestCase
     {
         $node = fn (string $status) => ['legacyResourceId' => '1', 'name' => '#1', 'createdAt' => '2025-01-01', 'displayFulfillmentStatus' => $status, 'fulfillments' => [['id' => 'gid://shopify/Fulfillment/1', 'createdAt' => '2026-06-05', 'trackingInfo' => [['company' => 'UPS', 'number' => '']]]]];
         Http::fake(['*' => Http::response(['data' => ['orders' => ['pageInfo' => ['hasNextPage' => false, 'endCursor' => null], 'edges' => [['node' => $node('FULFILLED')], ['node' => $node('UNFULFILLED')]]]]])]);
-        $result = (new ShopifyAdminClient(new ShopifyOrderNormalizer, new ShopifyOrderEventNormalizer))->noTrackingCandidates(new Store(['shopify_store' => 'acme', 'shopify_access_token' => 'token']), '2026-06-01');
+        $result = (app(ShopifyAdminClient::class))->noTrackingCandidates(new Store(['shopify_store' => 'acme', 'shopify_access_token' => 'token']), '2026-06-01');
         $this->assertCount(1, $result['orders']);
         $this->assertSame('UPS', $result['orders'][0]['fulfillments'][0]['tracking_company']);
         Http::assertSent(fn (Request $request): bool => $request['variables']['search'] === 'status:any updated_at:>=2026-06-01T00:00:00Z' && str_contains((string) $request['query'], 'trackingInfo'));

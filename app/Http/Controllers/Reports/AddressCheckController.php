@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\AddressCheckResult;
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunAddressCheckReport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AddressCheckRequest;
@@ -28,7 +28,7 @@ class AddressCheckController extends Controller
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'address_check', $report::class, [$startDate, $endDate, $poBoxOnly, $unfulfilledOnly], $startDate, $endDate, 'scanned', 'count:rows');
+            $run = $reports->run($request, $store, 'address_check', $report::class, [$startDate, $endDate, $poBoxOnly, $unfulfilledOnly], $startDate, $endDate);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -36,6 +36,6 @@ class AddressCheckController extends Controller
             $reportFailed = $run->hasFailed();
         }
 
-        return view('reports.address-check', ['startDate' => $startDate, 'endDate' => $endDate, 'poBoxOnly' => $poBoxOnly, 'unfulfilledOnly' => $unfulfilledOnly, 'result' => $result instanceof AddressCheckResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.address-check', ['startDate' => $startDate, 'endDate' => $endDate, 'poBoxOnly' => $poBoxOnly, 'unfulfilledOnly' => $unfulfilledOnly, 'result' => $result instanceof ReportResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 }

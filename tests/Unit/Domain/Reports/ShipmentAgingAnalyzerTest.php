@@ -25,6 +25,23 @@ class ShipmentAgingAnalyzerTest extends TestCase
         $this->assertSame(['SKU-A' => 2], $result['rows'][0]['skus']);
     }
 
+    public function test_repeated_skus_count_each_order_once_and_sum_all_item_quantities(): void
+    {
+        $now = 1_800_000_000;
+        $orders = [
+            $this->order(1, 8, [['sku' => '12345', 'quantity' => 2], ['sku' => '12345', 'quantity' => 3]], $now),
+            $this->order(2, 4, [['sku' => '12345', 'quantity' => 1], ['sku' => 'OTHER', 'quantity' => 7]], $now),
+        ];
+
+        $result = (new ShipmentAgingAnalyzer(new OrderTypeClassifier))->analyze($orders, 3, $now);
+
+        $this->assertSame([
+            ['sku' => '12345', 'orders' => 2, 'qty' => 6, 'oldest_days' => 8],
+            ['sku' => 'OTHER', 'orders' => 1, 'qty' => 7, 'oldest_days' => 4],
+        ], $result['by_sku']);
+        $this->assertSame([12345 => 5], $result['rows'][0]['skus']);
+    }
+
     private function order(int $id, int $age, array $items, int $now): array
     {
         return ['orderId' => $id, 'orderNumber' => (string) $id, 'orderDate' => gmdate('c', $now - $age * 86400), 'orderStatus' => 'awaiting_shipment', 'items' => $items];

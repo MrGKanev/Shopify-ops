@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\OrderEditResult;
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunOrderEditReport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
@@ -26,7 +26,7 @@ class OrderEditController extends Controller
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'order_edits', $report::class, [$start, $end], $start, $end, 'count:rows', 'count:rows');
+            $run = $reports->run($request, $store, 'order_edits', $report::class, [$start, $end], $start, $end);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -34,6 +34,6 @@ class OrderEditController extends Controller
             $reportFailed = $run->hasFailed();
         }
 
-        return view('reports.order-edits', ['startDate' => $start, 'endDate' => $end, 'result' => $result instanceof OrderEditResult ? $result : null, 'configurationError' => $configurationError, 'reportFailed' => $reportFailed]);
+        return view('reports.order-edits', ['startDate' => $start, 'endDate' => $end, 'result' => $result instanceof ReportResult ? $result : null, 'configurationError' => $configurationError, 'reportFailed' => $reportFailed]);
     }
 }

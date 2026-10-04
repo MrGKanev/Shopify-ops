@@ -7,7 +7,10 @@ use Throwable;
 
 class DuplicateOrderAnalyzer
 {
-    /** @param list<array<string, mixed>> $orders @return list<array{first: array<string, mixed>, second: array<string, mixed>, gap_seconds: int}> */
+    /**
+     * @param  list<array<string, mixed>>  $orders
+     * @return list<array{first: array<string, mixed>, second: array<string, mixed>, gap_seconds: int}>
+     */
     public function analyze(array $orders): array
     {
         $groups = [];

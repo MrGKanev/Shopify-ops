@@ -9,7 +9,11 @@ class ActiveShipStationConflictAnalyzer
 {
     use MatchesOrderNumbers, NormalizesText;
 
-    /** @param list<array<string, mixed>> $shopifyOrders @param list<array<string, mixed>> $shipStationOrders @return array{scanned: int, rows: list<array<string, mixed>>} */
+    /**
+     * @param  list<array<string, mixed>>  $shopifyOrders
+     * @param  list<array<string, mixed>>  $shipStationOrders
+     * @return array{scanned: int, rows: list<array<string, mixed>>}
+     */
     public function analyze(array $shopifyOrders, array $shipStationOrders): array
     {
         $exceptions = [];

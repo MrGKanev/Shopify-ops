@@ -83,9 +83,9 @@ class OrderBatchLookupRequest extends FormRequest
     {
         $tokens = preg_split('/[\s,]+/', trim($input), -1, PREG_SPLIT_NO_EMPTY) ?: [];
 
-        return array_values(array_map(
+        return array_map(
             fn (string $orderNumber): string => $this->stripOrderNumberHash($orderNumber),
             $tokens,
-        ));
+        );
     }
 }

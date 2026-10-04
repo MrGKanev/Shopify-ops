@@ -25,7 +25,7 @@ class AppearanceSettingsController extends Controller
 
         activity('administration')->causedBy($request->user())->performedOn($settings)->log('Appearance settings updated');
 
-        return back()->with('status', 'Appearance settings updated.');
+        return back()->with('status', __('Appearance settings updated.'));
     }
 
     /**
@@ -46,7 +46,7 @@ class AppearanceSettingsController extends Controller
         }
 
         $oldPath = $settings->{$column};
-        if (filled($oldPath) && $oldPath !== $attributes[$column]) {
+        if (is_string($oldPath) && $oldPath !== '' && $oldPath !== $attributes[$column]) {
             $replacedImages[] = $oldPath;
         }
     }

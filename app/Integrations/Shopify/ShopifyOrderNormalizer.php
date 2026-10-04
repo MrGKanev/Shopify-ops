@@ -161,7 +161,9 @@ class ShopifyOrderNormalizer
         return $order;
     }
 
-    /** @param array<string, mixed> $discount */
+    /**
+     * @param array<string, mixed> $discount
+     * @return array<string, mixed>|null */
     private function normalizeDiscountCode(array $discount): ?array
     {
         if (($discount['__typename'] ?? '') !== 'DiscountCodeApplication') {
@@ -192,7 +194,10 @@ class ShopifyOrderNormalizer
         ];
     }
 
-    /** @param array<string, mixed> $journey @return array{days_to_conversion: mixed, first_visit: array<string, mixed>|null, last_visit: array<string, mixed>|null} */
+    /**
+     * @param  array<string, mixed>  $journey
+     * @return array{days_to_conversion: mixed, first_visit: array<string, mixed>|null, last_visit: array<string, mixed>|null}
+     */
     private function normalizeCustomerJourney(array $journey): array
     {
         return [

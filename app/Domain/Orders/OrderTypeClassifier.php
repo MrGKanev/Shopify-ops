@@ -17,7 +17,10 @@ class OrderTypeClassifier
         return $matches === [] ? (string) config('order-types.fallback', 'Other') : implode(' + ', array_unique($matches));
     }
 
-    /** @param array<string, mixed> $order @return array<string, list<string>> */
+    /**
+     * @param  array<string, mixed>  $order
+     * @return array<string, list<string>>
+     */
     public function missingRequired(array $order): array
     {
         $missing = [];
@@ -42,7 +45,10 @@ class OrderTypeClassifier
         return array_values(array_filter(config('order-types.rules', []), is_array(...)));
     }
 
-    /** @param array<string, mixed> $order @param array<string, mixed> $rule */
+    /**
+     * @param  array<string, mixed>  $order
+     * @param  array<string, mixed>  $rule
+     */
     private function orderMatches(array $order, array $rule): bool
     {
         foreach (is_array($order['line_items'] ?? null) ? $order['line_items'] : [] as $item) {
@@ -54,7 +60,10 @@ class OrderTypeClassifier
         return false;
     }
 
-    /** @param array<string, mixed> $order @param array<string, mixed> $rule */
+    /**
+     * @param  array<string, mixed>  $order
+     * @param  array<string, mixed>  $rule
+     */
     private function excluded(array $order, array $rule): bool
     {
         foreach (is_array($rule['exclude_if'] ?? null) ? $rule['exclude_if'] : [] as $exclusion) {

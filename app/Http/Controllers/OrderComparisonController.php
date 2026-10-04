@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Application\Orders\CompareOrders;
 use App\Application\Orders\OrderComparisonResult;
 use App\Http\Requests\OrderComparisonRequest;
+use App\Integrations\Exceptions\IntegrationException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
@@ -28,7 +29,7 @@ class OrderComparisonController extends Controller
                 $comparisonFailed = true;
                 Log::warning('Order comparison failed.', [
                     'exception_type' => $exception::class,
-                    'status' => $exception instanceof RequestException ? $exception->response->status() : null,
+                    'status' => $exception instanceof IntegrationException ? $exception->status : ($exception instanceof RequestException ? $exception->response->status() : null),
                 ]);
             }
         }

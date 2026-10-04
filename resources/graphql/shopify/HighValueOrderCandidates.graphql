@@ -1,0 +1,6 @@
+query HighValueOrderCandidates($search: String!, $after: String) {
+  orders(first: 250, after: $after, sortKey: CREATED_AT, reverse: true, query: $search) {
+    pageInfo { hasNextPage endCursor }
+    edges { node { id legacyResourceId name createdAt cancelledAt email displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } shippingAddress { firstName lastName address1 address2 city province zip country countryCodeV2 phone } } }
+  }
+}

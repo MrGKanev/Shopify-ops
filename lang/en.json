@@ -1,0 +1,8 @@
+{
+    "reports.export_failed": "The CSV export could not be completed.",
+    "reports.shopify_credentials_incomplete": "Shopify credentials are incomplete for the active store.",
+    "reports.shipstation_credentials_incomplete": "ShipStation credentials are incomplete for the active store.",
+    "reports.integration_credentials_required": "Shopify and ShipStation credentials are required.",
+    "reports.audit_already_queued": "Audit is already queued.",
+    "reports.audit_queued": "Audit queued."
+}

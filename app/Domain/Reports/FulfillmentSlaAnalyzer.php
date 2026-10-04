@@ -11,7 +11,10 @@ class FulfillmentSlaAnalyzer
 
     public function __construct(private readonly OrderTypeClassifier $classifier) {}
 
-    /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $orders
+     * @return list<array{order_number: string, created_at: string, fulfilled_at: ?string, days: int, method: string, region: string, order_type: string, email: string, total: float|string, financial: string, fulfillment: string}>
+     */
     public function analyze(array $orders, int $threshold, int $now): array
     {
         $rows = [];

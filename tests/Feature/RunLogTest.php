@@ -16,7 +16,7 @@ class RunLogTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_recorder_defaults_caps_history_and_page_is_store_scoped(): void
+    public function test_recorder_preserves_history_and_page_is_store_scoped(): void
     {
         $store = Store::factory()->create();
         $foreign = Store::factory()->create();
@@ -28,8 +28,8 @@ class RunLogTest extends TestCase
         }
         $recorder->handle($foreign, ['tool' => 'secret']);
 
-        $this->assertSame(500, $store->runLogs()->count());
-        $this->assertDatabaseMissing('run_logs', ['store_id' => $store->id, 'tool' => 'scan-0']);
+        $this->assertSame(501, $store->runLogs()->count());
+        $this->assertDatabaseHas('run_logs', ['store_id' => $store->id, 'tool' => 'scan-0']);
         $latest = $store->runLogs()->latest('id')->firstOrFail();
         $this->assertSame(['ok', '', null], [$latest->status, $latest->error, $latest->duration_seconds]);
         $this->actingAs($user)->get('/run-logs')->assertOk()->assertSeeText('scan-500')->assertDontSeeText('secret')->assertDontSee('<script>', false);

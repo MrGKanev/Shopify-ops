@@ -7,7 +7,7 @@ use App\Application\Orders\RecordPush;
 use App\Application\Orders\ShippingAddressNeedsReview;
 use App\Integrations\ShipStation\ShipStationClientContract;
 use App\Integrations\ShipStation\ShipStationClientFactory;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 use LogicException;
 use Mockery;
@@ -26,7 +26,7 @@ class PushOrderToShipStationTest extends TestCase
     {
         $store = new Store;
         $order = $this->order();
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumber')->once()->with($store, '1001')->andReturn([$order]);
         $client = Mockery::mock(ShipStationClientContract::class);
         $client->shouldReceive('buildOrderPayload')->once()->with($order)->andReturn(['orderNumber' => '1001']);
@@ -44,7 +44,7 @@ class PushOrderToShipStationTest extends TestCase
     public function test_preview_throws_when_the_shopify_order_is_not_found(): void
     {
         $store = new Store;
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumber')->once()->andReturn([]);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $recordPush = Mockery::mock(RecordPush::class);
@@ -58,7 +58,7 @@ class PushOrderToShipStationTest extends TestCase
     public function test_preview_throws_when_shipstation_is_not_configured(): void
     {
         $store = new Store;
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumber')->once()->andReturn([$this->order()]);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->once()->andReturn(null);
@@ -73,7 +73,7 @@ class PushOrderToShipStationTest extends TestCase
     {
         $store = new Store;
         $order = $this->order();
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumber')->once()->with($store, '1001')->andReturn([$order]);
         $client = Mockery::mock(ShipStationClientContract::class);
         $client->shouldReceive('createOrder')->once()->with($order)->andReturn(['orderId' => 555, 'orderNumber' => '1001']);
@@ -91,7 +91,7 @@ class PushOrderToShipStationTest extends TestCase
     {
         $store = new Store;
         $order = $this->order();
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumber')->once()->andReturn([$order]);
         $client = Mockery::mock(ShipStationClientContract::class);
         $client->shouldReceive('createOrder')->once()->andReturn(['orderId' => 555]);
@@ -109,7 +109,7 @@ class PushOrderToShipStationTest extends TestCase
     {
         $store = new Store;
         $order = $this->order();
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumber')->once()->with($store, '1001')->andReturn([$order]);
         $client = Mockery::mock(ShipStationClientContract::class);
         $client->shouldReceive('createOrder')->once()->with($order)->andThrow(new RuntimeException('API secret must not be persisted'));
@@ -127,7 +127,7 @@ class PushOrderToShipStationTest extends TestCase
     {
         $store = new Store;
         $order = $this->order(['city' => '', 'phone' => '555']);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumber')->once()->andReturn([$order]);
         $client = Mockery::mock(ShipStationClientContract::class);
         $client->shouldReceive('buildOrderPayload')->once()->andReturn([]);
@@ -143,7 +143,7 @@ class PushOrderToShipStationTest extends TestCase
     {
         $store = new Store;
         $order = $this->order(['address1' => '']);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumber')->twice()->andReturn([$order]);
         $client = Mockery::mock(ShipStationClientContract::class);
         $client->shouldReceive('createOrder')->once()->with($order)->andReturn(['orderId' => 555, 'orderNumber' => '1001']);

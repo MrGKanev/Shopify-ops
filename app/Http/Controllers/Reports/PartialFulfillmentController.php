@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunPartialFulfillmentReport;
-use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PartialFulfillmentRequest;
@@ -31,7 +31,7 @@ class PartialFulfillmentController extends Controller
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'partial_fulfillment', $report::class, [$startDate, $endDate, $threshold], $startDate, $endDate, 'scanned', 'count:rows');
+            $run = $reports->run($request, $store, 'partial_fulfillment', $report::class, [$startDate, $endDate, $threshold], $startDate, $endDate);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -46,14 +46,14 @@ class PartialFulfillmentController extends Controller
     {
         [$store, $startDate, $endDate, $threshold] = $this->context($request);
         if ($this->configurationError($store)) {
-            return back()->withErrors(['export' => 'Shopify credentials are incomplete for the active store.']);
+            return back()->withErrors(['export' => __('reports.shopify_credentials_incomplete')]);
         }
         try {
             $result = $reports->completedResult($store, 'partial_fulfillment', $report::class, [$startDate, $endDate, $threshold]) ?? $report->handle($store, $startDate, $endDate, $threshold);
         } catch (Throwable $exception) {
             $this->logFailure('Partial fulfillment CSV export failed.', $exception, $store);
 
-            return back()->withErrors(['export' => 'The CSV export could not be completed.']);
+            return back()->withErrors(['export' => __('reports.export_failed')]);
         }
         $rows = array_map(fn (array $row): array => [$row['order_number'], $row['created_at'], $row['last_fulfilled'], $row['days_stalled'], implode('; ', array_map(fn (array $item): string => $item['name'].($item['sku'] ? ' ['.$item['sku'].']' : '').' ×'.$item['qty'], $row['unfulfilled_items'])), $row['email'], $row['total_price'], $row['financial']], $result->rows);
 
@@ -72,8 +72,12 @@ class PartialFulfillmentController extends Controller
         return $store->missingShopifyCredentials();
     }
 
-    /** @return array<string, mixed> */
-    private function viewData(?string $startDate = null, ?string $endDate = null, int $threshold = 7, ?ScanResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
+    /**
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @return array<string, mixed>
+     */
+    private function viewData(?string $startDate = null, ?string $endDate = null, int $threshold = 7, ?ReportResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
     {
         return compact('threshold', 'result', 'reportFailed', 'configurationError') + ['startDate' => $startDate ?? now()->subDays(90)->toDateString(), 'endDate' => $endDate ?? now()->toDateString()];
     }

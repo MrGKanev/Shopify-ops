@@ -8,7 +8,10 @@ class CatalogQualityAnalyzer
 {
     use NormalizesText;
 
-    /** @param list<array<string, mixed>> $products @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $products
+     * @return list<array{id: int|string, title: string, vendor: string, type: string, issues: list<string>}>
+     */
     public function analyze(array $products): array
     {
         $rows = [];

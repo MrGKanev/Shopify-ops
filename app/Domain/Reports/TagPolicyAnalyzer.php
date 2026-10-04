@@ -14,7 +14,11 @@ class TagPolicyAnalyzer
         return $this->rules($config, 'required') !== [] || $this->rules($config, 'forbidden') !== [];
     }
 
-    /** @param list<array<string, mixed>> $orders @param array<string, mixed> $config @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $orders
+     * @param  array<string, mixed>  $config
+     * @return list<array{order_number: string, created_at: string, email: string, financial: string, fulfillment: string, tags: list<string>, violations: list<array{type: string, name: string, detail: string}>, shopify_id: int|string}>
+     */
     public function analyze(array $orders, array $config): array
     {
         $rows = [];
@@ -57,7 +61,10 @@ class TagPolicyAnalyzer
         return array_values(array_filter(array_map(fn (mixed $tag): string => $this->text($tag), $values), fn (string $tag): bool => $tag !== ''));
     }
 
-    /** @param array<string, mixed> $config @return list<array<string, mixed>> */
+    /**
+     * @param  array<string, mixed>  $config
+     * @return list<array<string, mixed>>
+     */
     private function rules(array $config, string $key): array
     {
         $rules = $config[$key] ?? [];

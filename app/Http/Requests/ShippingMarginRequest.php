@@ -10,6 +10,7 @@ class ShippingMarginRequest extends FormRequest
 {
     use AuthorizesRunAudits, HasDateRangeRules;
 
+    /** @return array<string, array<int, string>> */
     public function rules(): array
     {
         return $this->dateRangeRules() + ['threshold' => ['required', 'numeric', 'min:1', 'max:1000000']];

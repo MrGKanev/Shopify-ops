@@ -1,0 +1,24 @@
+query CatalogueCandidates($after: String, $search: String) {
+  products(first: 250, after: $after, query: $search) {
+    pageInfo { hasNextPage endCursor }
+    edges {
+      node {
+        id
+        legacyResourceId
+        title
+        vendor
+        productType
+        status
+        onlineStoreUrl
+        seo { title description }
+        collections(first: 1) { nodes { id } }
+        descriptionHtml
+        images(first: 1) { nodes { id } }
+        variants(first: 250) {
+          pageInfo { hasNextPage endCursor }
+          nodes { sku title inventoryQuantity inventoryPolicy inventoryItem { tracked } }
+        }
+      }
+    }
+  }
+}

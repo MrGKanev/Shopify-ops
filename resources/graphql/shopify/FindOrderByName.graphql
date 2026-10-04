@@ -1,0 +1,138 @@
+query FindOrderByName($query: String!) {
+  orders(first: 10, query: $query) {
+    pageInfo { hasNextPage endCursor }
+    edges {
+      node {
+        id
+        legacyResourceId
+        name
+        createdAt
+        processedAt
+        closedAt
+        cancelledAt
+        cancelReason
+        email
+        note
+        tags
+        displayFinancialStatus
+        displayFulfillmentStatus
+        totalPriceSet { shopMoney { amount currencyCode } }
+        risk {
+          recommendation
+          assessments { riskLevel }
+        }
+        customAttributes { key value }
+        discountApplications(first: 250) {
+          nodes {
+            __typename
+            allocationMethod
+            targetSelection
+            targetType
+            value {
+              __typename
+              ... on MoneyV2 { amount currencyCode }
+              ... on PricingPercentageValue { percentage }
+            }
+            ... on DiscountCodeApplication { code }
+          }
+        }
+        test
+        sourceName
+        app { name }
+        currentTotalPriceSet { shopMoney { amount currencyCode } }
+        edited
+        paymentGatewayNames
+        poNumber
+        confirmationNumber
+        statusPageUrl
+        customerLocale
+        customerJourneySummary {
+          daysToConversion
+          firstVisit { landingPage referrerUrl source utmParameters { source medium campaign } }
+          lastVisit { landingPage referrerUrl source }
+        }
+        shippingAddress {
+          firstName
+          lastName
+          name
+          company
+          address1
+          address2
+          city
+          province
+          provinceCode
+          country
+          countryCodeV2
+          zip
+          phone
+        }
+        billingAddress {
+          firstName
+          lastName
+          name
+          company
+          address1
+          address2
+          city
+          province
+          provinceCode
+          country
+          countryCodeV2
+          zip
+          phone
+        }
+        lineItems(first: 250) {
+          nodes {
+            id
+            title
+            name
+            sku
+            quantity
+            variantTitle
+            originalUnitPriceSet { shopMoney { amount currencyCode } }
+          }
+          pageInfo { hasNextPage endCursor }
+        }
+        fulfillments(first: 250) {
+          id
+          legacyResourceId
+          createdAt
+          status
+          displayStatus
+          trackingInfo(first: 10) { company number url }
+          fulfillmentLineItems(first: 250) {
+            edges {
+              node {
+                quantity
+                lineItem {
+                  id
+                  title
+                  name
+                  sku
+                  quantity
+                  variantTitle
+                  originalUnitPriceSet { shopMoney { amount currencyCode } }
+                }
+              }
+            }
+          }
+        }
+        refunds {
+          id
+          legacyResourceId
+          createdAt
+          note
+          totalRefundedSet { shopMoney { amount currencyCode } }
+          transactions(first: 250) {
+            nodes {
+              id
+              kind
+              status
+              amountSet { shopMoney { amount currencyCode } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

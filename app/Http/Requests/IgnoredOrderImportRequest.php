@@ -9,6 +9,7 @@ class IgnoredOrderImportRequest extends FormRequest
 {
     use AuthorizesRunAudits;
 
+    /** @return array<string, list<string>> */
     public function rules(): array
     {
         return ['file' => ['required', 'file', 'mimes:csv,txt', 'max:2048'], 'reason' => ['nullable', 'string', 'max:1000']];

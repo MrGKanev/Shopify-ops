@@ -8,7 +8,13 @@ class AuditOrderAnalyzer
 {
     use MatchesOrderNumbers;
 
-    /** @param list<array<string,mixed>> $shopify @param list<array<string,mixed>> $shipstation @param array<string,array<string,mixed>> $ignored @return array{missing:list<array<string,mixed>>,found:list<array<string,mixed>>,skipped:list<array<string,mixed>>,ignored:list<array<string,mixed>>} */
+    /**
+     * @param  list<array<string,mixed>>  $shopify
+     * @param  list<array<string,mixed>>  $shipstation
+     * @param  array<string,array<string,mixed>>  $ignored
+     * @param  array<int|string, bool>  $onHoldOrderIds
+     * @return array{missing:list<array<string,mixed>>,found:list<array<string,mixed>>,skipped:list<array<string,mixed>>,ignored:list<array<string,mixed>>}
+     */
     public function analyze(array $shopify, array $shipstation, array $ignored, array $onHoldOrderIds = []): array
     {
         $byNumber = $byEmail = [];
@@ -76,6 +82,7 @@ class AuditOrderAnalyzer
         return $result;
     }
 
+    /** @param array<string, mixed> $order */
     private function skipReason(array $order): ?string
     {
         if ($order['cancelled_at'] ?? null) {

@@ -1,0 +1,3 @@
+query OrderMetafields($id: ID!, $after: String) {
+  order(id: $id) { metafields(first: 250, after: $after) { pageInfo { hasNextPage endCursor } nodes { id namespace key value type createdAt updatedAt } } }
+}

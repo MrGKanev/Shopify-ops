@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Application\Orders\UseMetafields;
 use App\Http\Requests\MetafieldLookupRequest;
 use App\Http\Requests\MetafieldSearchRequest;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -14,7 +14,7 @@ use Throwable;
 
 class MetafieldController extends Controller
 {
-    public function create(Request $request, ShopifyAdminGateway $shopify): View
+    public function create(Request $request, ShopifyOrders $shopify): View
     {
         $store = $this->resolveStore($request);
         $configurationError = $store->missingShopifyCredentials();
@@ -32,19 +32,19 @@ class MetafieldController extends Controller
         return view('metafields.index', compact('definitions', 'configurationError', 'loadFailed') + ['operationFailed' => false, 'search' => null, 'lookup' => null]);
     }
 
-    public function search(MetafieldSearchRequest $request, ShopifyAdminGateway $shopify, UseMetafields $use): View
+    public function search(MetafieldSearchRequest $request, ShopifyOrders $shopify, UseMetafields $use): View
     {
         return $this->run($request, $shopify, fn (Store $store): array => ['search' => $use->search($store, (string) $request->validated('namespace'), (string) $request->validated('key'), (string) ($request->validated('value') ?? ''), $request->validated('start_date'), $request->validated('end_date')), 'lookup' => null]);
     }
 
-    public function lookup(MetafieldLookupRequest $request, ShopifyAdminGateway $shopify, UseMetafields $use): View
+    public function lookup(MetafieldLookupRequest $request, ShopifyOrders $shopify, UseMetafields $use): View
     {
         $numbers = preg_split('/[\s,]+/', trim((string) $request->validated('orders')), -1, PREG_SPLIT_NO_EMPTY);
 
         return $this->run($request, $shopify, fn (Store $store): array => ['search' => null, 'lookup' => $use->lookup($store, $numbers ?: [], trim((string) ($request->validated('filter') ?? '')))]);
     }
 
-    private function run(Request $request, ShopifyAdminGateway $shopify, callable $action): View
+    private function run(Request $request, ShopifyOrders $shopify, callable $action): View
     {
         $store = $this->resolveStore($request);
         $definitions = [];

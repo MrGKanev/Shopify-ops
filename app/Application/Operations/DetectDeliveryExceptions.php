@@ -27,7 +27,7 @@ class DetectDeliveryExceptions
         }
 
         $shipments = $client->fetchShipmentsByDate(now()->subDays(max(30, $threshold + 7))->toDateString(), now()->toDateString());
-        $exceptions = $this->analyzer->analyze($shipments, $threshold, now()->timestamp);
+        $exceptions = $this->analyzer->analyze($shipments, $threshold, now()->getTimestamp());
 
         foreach ($exceptions as $exception) {
             if ($exception['resolved']) {

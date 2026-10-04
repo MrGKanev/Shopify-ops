@@ -3,15 +3,15 @@
 namespace App\Application\Reports;
 
 use App\Domain\Reports\CountryMismatchAnalyzer;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 
 class RunCountryMismatchReport extends RunScanReport
 {
-    public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly CountryMismatchAnalyzer $analyzer) {}
+    public function __construct(private readonly ShopifyOrders $shopify, private readonly CountryMismatchAnalyzer $analyzer) {}
 
-    /** @return ScanResult<array{id: int|string, number: string, created_at: string, email: string, total: float|string, currency: string, financial: string, fulfillment: string, billing_name: string, billing_country: string, shipping_country: string}> */
-    public function handle(Store $store, string $startDate, string $endDate): ScanResult
+    /** @return ReportResult<array{id: int|string, number: string, created_at: string, email: string, total: float|string, currency: string, financial: string, fulfillment: string, billing_name: string, billing_country: string, shipping_country: string}> */
+    public function handle(Store $store, string $startDate, string $endDate): ReportResult
     {
         $result = $this->shopify->countryMismatchCandidates($store, $startDate, $endDate);
         $analysis = $this->analyzer->analyze($result['orders']);

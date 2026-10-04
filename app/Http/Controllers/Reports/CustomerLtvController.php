@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\CustomerLtvResult;
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunCustomerLtvReport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
@@ -26,7 +26,7 @@ class CustomerLtvController extends Controller
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'customer_ltv', $report::class, [$startDate, $endDate], $startDate, $endDate, 'scanned', 'customers');
+            $run = $reports->run($request, $store, 'customer_ltv', $report::class, [$startDate, $endDate], $startDate, $endDate);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -34,6 +34,6 @@ class CustomerLtvController extends Controller
             $reportFailed = $run->hasFailed();
         }
 
-        return view('reports.customer-ltv', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof CustomerLtvResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.customer-ltv', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof ReportResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 }

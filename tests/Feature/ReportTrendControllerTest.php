@@ -11,7 +11,7 @@ class ReportTrendControllerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_access_validation_store_isolation_and_ordered_deltas(): void
+    public function test_validation_store_isolation_and_ordered_deltas(): void
     {
         $this->get('/report-trends')->assertRedirect(route('login'));
         [$viewer] = $this->userWithStore();

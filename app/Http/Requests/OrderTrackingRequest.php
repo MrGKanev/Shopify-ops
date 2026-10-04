@@ -60,6 +60,6 @@ class OrderTrackingRequest extends FormRequest
     {
         $tokens = preg_split('/[\s,]+/', trim($input), -1, PREG_SPLIT_NO_EMPTY) ?: [];
 
-        return array_values(array_map(fn (string $number): string => $this->stripOrderNumberHash($number), $tokens));
+        return array_map(fn (string $number): string => $this->stripOrderNumberHash($number), $tokens);
     }
 }

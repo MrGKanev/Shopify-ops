@@ -71,7 +71,7 @@ class BackupController extends Controller
         }
 
         if (Artisan::call('backup:run', $arguments) !== 0) {
-            return back()->withErrors(['backup' => 'Backup-ът не можа да бъде създаден. Виж application log за подробности.']);
+            return back()->withErrors(['backup' => __('Backup-ът не можа да бъде създаден. Виж application log за подробности.')]);
         }
 
         activity('administration')->causedBy($request->user())->withProperties(['scope' => $validated['scope']])->log('manual_backup_created');
@@ -115,6 +115,6 @@ class BackupController extends Controller
 
         RestoreBackup::dispatch($operationId, $path, $verification->checksum, $request->user()->name)->onConnection('background');
 
-        return back()->with('status', 'Restore-ът е стартиран. Презареди страницата, за да видиш статуса.');
+        return back()->with('status', __('Restore-ът е стартиран. Презареди страницата, за да видиш статуса.'));
     }
 }

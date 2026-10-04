@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -25,9 +25,9 @@ class OrderTagSearchControllerTest extends TestCase
     public function test_initial_form_supports_an_escaped_prefill_without_calling_shopify(): void
     {
         [$user] = $this->makeUserAndStore();
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldNotReceive('searchOrdersByTag');
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyOrders::class, $shopify);
 
         $this->actingAs($user)->get(route('orders.tag-search', ['tag' => '<script>x</script>']))
             ->assertOk()->assertSee('&lt;script&gt;x&lt;/script&gt;', false)->assertDontSee('<script>', false);
@@ -36,9 +36,9 @@ class OrderTagSearchControllerTest extends TestCase
     public function test_invalid_tags_and_dates_are_rejected_before_shopify_is_called(): void
     {
         [$user] = $this->makeUserAndStore();
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldNotReceive('searchOrdersByTag');
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyOrders::class, $shopify);
 
         foreach ([
             ['tag' => ''], ['tag' => ['vip']], ['tag' => str_repeat('a', 256)], ['tag' => "vip\nadmin"],
@@ -56,7 +56,7 @@ class OrderTagSearchControllerTest extends TestCase
         $otherStore = Store::factory()->create();
         $selectedStore = Store::factory()->create(['shopify_store' => 'selected']);
         $user->stores()->attach([$otherStore->getKey(), $selectedStore->getKey()]);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('searchOrdersByTag')->once()->with(Mockery::on(fn (Store $store): bool => $store->is($selectedStore)), 'VIP', '2026-09-01', null)->andReturn([
             'orders' => [[
                 'id' => 42, 'order_number' => 1001, 'name' => '#1001<script>x</script>', 'created_at' => '2026-09-05T10:00:00Z',
@@ -64,7 +64,7 @@ class OrderTagSearchControllerTest extends TestCase
                 'fulfillment_status' => 'partial', 'total_price' => '10.00', 'currency' => '<b>EUR</b>',
             ]], 'pages' => 20, 'truncated' => true,
         ]);
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyOrders::class, $shopify);
 
         $response = $this->actingAs($user)->withSession(['active_store_id' => $selectedStore->getKey()])->post(route('orders.tag-search.store'), ['tag' => 'VIP', 'start_date' => '2026-09-01']);
 
@@ -76,10 +76,10 @@ class OrderTagSearchControllerTest extends TestCase
     public function test_zero_results_and_upstream_failure_have_clear_atomic_states(): void
     {
         [$user] = $this->makeUserAndStore();
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('searchOrdersByTag')->once()->andReturn(['orders' => [], 'pages' => 1, 'truncated' => false]);
         $shopify->shouldReceive('searchOrdersByTag')->once()->andThrow(new RuntimeException('private-token'));
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyOrders::class, $shopify);
 
         $this->actingAs($user)->post(route('orders.tag-search.store'), ['tag' => 'missing'])->assertOk()->assertSeeText('No orders found with this tag.');
         $this->actingAs($user)->post(route('orders.tag-search.store'), ['tag' => 'broken'])->assertOk()->assertSeeText('could not be completed')->assertDontSeeText('private-token')->assertDontSeeText('Results');
@@ -88,9 +88,9 @@ class OrderTagSearchControllerTest extends TestCase
     public function test_missing_shopify_configuration_stops_before_the_gateway(): void
     {
         [$user] = $this->makeUserAndStore(['shopify_access_token' => '']);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldNotReceive('searchOrdersByTag');
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyOrders::class, $shopify);
 
         $this->actingAs($user)->post(route('orders.tag-search.store'), ['tag' => 'vip'])
             ->assertOk()->assertSeeText('Shopify is not configured completely for this store.');
@@ -99,9 +99,9 @@ class OrderTagSearchControllerTest extends TestCase
     public function test_search_is_rate_limited_per_user_and_ip(): void
     {
         [$user] = $this->makeUserAndStore();
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('searchOrdersByTag')->times(10)->andReturn(['orders' => [], 'pages' => 1, 'truncated' => false]);
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyOrders::class, $shopify);
 
         foreach (range(1, 10) as $attempt) {
             $this->actingAs($user)->post(route('orders.tag-search.store'), ['tag' => 'vip'])->assertOk();

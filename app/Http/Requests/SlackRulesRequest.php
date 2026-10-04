@@ -9,6 +9,7 @@ class SlackRulesRequest extends FormRequest
 {
     use AuthorizesAdministration;
 
+    /** @return array<string, list<string>> */
     public function rules(): array
     {
         return ['audit_enabled' => ['required', 'boolean'], 'audit_min_missing' => ['required', 'integer', 'min:0', 'max:100000'], 'include_zero_audit' => ['required', 'boolean'], 'scan_enabled' => ['required', 'boolean'], 'scan_min_rows' => ['required', 'integer', 'min:1', 'max:100000'], 'mentions' => ['nullable', 'string', 'max:500']];

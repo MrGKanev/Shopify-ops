@@ -8,7 +8,10 @@ class PartialFulfillmentAnalyzer
 {
     use NormalizesText;
 
-    /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $orders
+     * @return list<array{order_number: string, created_at: string, last_fulfilled: ?string, days_stalled: int, unfulfilled_items: list<array{name: string, sku: ?string, qty: int}>, email: string, total_price: float|string, financial: string}>
+     */
     public function analyze(array $orders, int $threshold, int $now): array
     {
         $rows = [];

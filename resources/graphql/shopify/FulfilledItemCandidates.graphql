@@ -1,0 +1,6 @@
+query FulfilledItemCandidates($search: String!, $after: String) {
+  orders(first: 250, after: $after, sortKey: UPDATED_AT, reverse: true, query: $search) {
+    pageInfo { hasNextPage endCursor }
+    edges { node { legacyResourceId name createdAt displayFinancialStatus displayFulfillmentStatus fulfillments(first: 250) { id legacyResourceId createdAt status displayStatus fulfillmentLineItems(first: 250) { edges { node { quantity lineItem { id title name variantTitle } } } } } } }
+  }
+}

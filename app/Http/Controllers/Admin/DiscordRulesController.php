@@ -26,9 +26,9 @@ class DiscordRulesController extends Controller
         $store = $this->store($request);
         $store->update(['discord_rules' => $request->validated()]);
         activity('operator-actions')->causedBy($request->user())->performedOn($store)
-            ->withProperties($store->resolvedDiscordRules())->log('save_discord_rules');
+            ->withProperties($store->discord_rules->toArray())->log('save_discord_rules');
 
-        return back()->with('status', 'Discord rules saved.');
+        return back()->with('status', __('Discord rules saved.'));
     }
 
     private function store(Request $request): Store

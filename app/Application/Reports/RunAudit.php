@@ -7,7 +7,7 @@ use App\Application\Operations\SyncAuditIssues;
 use App\Domain\Reports\AuditOrderAnalyzer;
 use App\Domain\Reports\DuplicateOrderClusterer;
 use App\Integrations\ShipStation\ShipStationClientFactory;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 use Carbon\CarbonImmutable;
 use LogicException;
@@ -15,9 +15,10 @@ use Throwable;
 
 class RunAudit
 {
-    public function __construct(private readonly ShipStationClientFactory $factory, private readonly ShopifyAdminGateway $shopify, private readonly AuditOrderAnalyzer $analyzer, private readonly RecordRun $runs, private readonly SyncAuditIssues $issues, private readonly ReportNotifier $notifier, private readonly DuplicateOrderClusterer $clusterer = new DuplicateOrderClusterer) {}
+    public function __construct(private readonly ShipStationClientFactory $factory, private readonly ShopifyOrders $shopify, private readonly AuditOrderAnalyzer $analyzer, private readonly RecordRun $runs, private readonly SyncAuditIssues $issues, private readonly ReportNotifier $notifier, private readonly DuplicateOrderClusterer $clusterer = new DuplicateOrderClusterer) {}
 
-    public function handle(Store $store, string $start, string $end): AuditResult
+    /** @return ReportResult<array<string, mixed>> */
+    public function handle(Store $store, string $start, string $end): ReportResult
     {
         $started = microtime(true);
 
@@ -49,7 +50,7 @@ class RunAudit
                 round(microtime(true) - $started, 3),
             );
 
-            return new AuditResult($start, $end, $result['missing'], count($result['found']), count($result['skipped']), count($result['ignored']), count($shopify['orders']), count($shipstation), $shopify['truncated'] || $onHold['truncated'], $this->clusterer->cluster($shopify['orders']));
+            return new ReportResult(rows: $result['missing'], scanned: count($shopify['orders']), pages: 0, truncated: $shopify['truncated'] || $onHold['truncated'], params: ['startDate' => $start, 'endDate' => $end], meta: ['found' => count($result['found']), 'skipped' => count($result['skipped']), 'ignored' => count($result['ignored']), 'shopifyTotal' => count($shopify['orders']), 'shipstationTotal' => count($shipstation), 'shopifyTruncated' => $shopify['truncated'] || $onHold['truncated'], 'duplicates' => $this->clusterer->cluster($shopify['orders'])]);
         } catch (Throwable $exception) {
             $this->runs->handle($store, ['tool' => 'run_audit', 'status' => 'error', 'start_date' => $start, 'end_date' => $end, 'duration_seconds' => round(microtime(true) - $started, 3), 'error' => 'Audit failed.']);
             throw $exception;

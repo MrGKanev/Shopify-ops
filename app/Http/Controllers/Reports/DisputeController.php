@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunDisputeReport;
-use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,7 +25,7 @@ class DisputeController extends Controller
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'disputes', $report::class, [now()->getTimestamp()], null, null, 'scanned', 'count:rows');
+            $run = $reports->run($request, $store, 'disputes', $report::class, [now()->getTimestamp()], null, null);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -33,6 +33,6 @@ class DisputeController extends Controller
             $reportFailed = $run->hasFailed();
         }
 
-        return view('reports.disputes', ['result' => $result instanceof ScanResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.disputes', ['result' => $result instanceof ReportResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 }

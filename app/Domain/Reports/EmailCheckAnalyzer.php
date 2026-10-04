@@ -13,7 +13,10 @@ class EmailCheckAnalyzer
         'mailinator.com', 'guerrillamail.com', 'tempmail.com', 'throwam.com', 'yopmail.com', 'sharklasers.com', 'guerrillamailblock.com', 'grr.la', 'guerrillamail.info', 'trashmail.com', 'trashmail.net', 'trashmail.org', 'dispostable.com', 'maildrop.cc', 'spamgourmet.com', 'spamgourmet.net', 'mailnull.com', 'spamcorner.com', '10minutemail.com', '10minutemail.net', 'fakeinbox.com', 'mailnesia.com', 'discard.email', 'spamspot.com', 'mytemp.email', 'temp-mail.org', 'getnada.com', 'tempr.email',
     ];
 
-    /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $orders
+     * @return list<array<string, mixed>>
+     */
     public function analyze(array $orders): array
     {
         $rows = [];
@@ -41,6 +44,9 @@ class EmailCheckAnalyzer
             return [['level' => 'critical', 'message' => 'Invalid email format']];
         }
         $separator = mb_strrpos($email, '@');
+        if ($separator === false) {
+            return [['level' => 'critical', 'message' => 'Invalid email format']];
+        }
         $domain = mb_substr($email, $separator + 1);
         $local = mb_substr($email, 0, $separator);
         $issues = [];

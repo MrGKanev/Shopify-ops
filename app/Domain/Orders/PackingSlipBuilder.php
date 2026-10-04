@@ -6,7 +6,10 @@ use Carbon\CarbonImmutable;
 
 class PackingSlipBuilder
 {
-    /** @param array<string, mixed> $order @return array<string, mixed> */
+    /**
+     * @param  array<string, mixed>  $order
+     * @return array<string, mixed>
+     */
     public function build(array $order): array
     {
         $shipTo = is_array($order['shipTo'] ?? null) ? $order['shipTo'] : [];
@@ -38,7 +41,7 @@ class PackingSlipBuilder
         }
         $hidden = ['has gpo', 'gpo product group', 'gpo parent product group', 'gpo field name', 'gpo options', 'gpo addon products', 'fulfillment_status'];
 
-        return collect($options)->filter(fn (mixed $option): bool => is_array($option))
+        return array_values(collect($options)->filter(fn (mixed $option): bool => is_array($option))
             ->reject(fn (array $option): bool => in_array(strtolower(trim($this->text($option['name'] ?? ''))), $hidden, true))
             ->map(function (array $option): array {
                 $value = $this->text($option['value'] ?? '');
@@ -46,7 +49,7 @@ class PackingSlipBuilder
                 $isList = is_array($decoded) && array_is_list($decoded) && collect($decoded)->every(fn (mixed $entry): bool => is_scalar($entry) || $entry === null);
 
                 return ['name' => $this->text($option['name'] ?? ''), 'value' => $isList ? collect($decoded)->map(fn (mixed $entry): string => $this->text($entry))->implode(', ') : $value, 'highlighted' => $isList];
-            })->values()->all();
+            })->values()->all());
     }
 
     private function date(mixed $value): string

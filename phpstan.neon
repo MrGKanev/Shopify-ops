@@ -2,11 +2,14 @@ includes:
     - vendor/larastan/larastan/extension.neon
 
 parameters:
-    level: 5
+    level: 7
     parseModelCastsMethod: true
     paths:
         - app/Application
         - app/Domain
         - app/Integrations
+        - app/Http
+        - app/Models
+        - app/Jobs
 
     tmpDir: storage/framework/cache/phpstan

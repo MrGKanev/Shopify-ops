@@ -29,12 +29,12 @@
         @if ($result)
             <section class="flex flex-col gap-4">
                 <x-card>
-                    <h2 class="text-2xl font-bold">{{ trim(($result->customer['firstName'] ?? '').' '.($result->customer['lastName'] ?? '')) ?: $result->email }}</h2>
-                    <p>{{ $result->email }}</p>
-                    <p class="mt-3">{{ count($result->orders) }}{{ $result->truncated ? '+' : '' }} orders · {{ $result->currency }} {{ number_format($result->totalSpent, 2) }} spent · {{ $result->paid }} paid · {{ $result->cancelled }} cancelled</p>
-                    @if ($result->tags)
+                    <h2 class="text-2xl font-bold">{{ trim(($result->meta['customer']['firstName'] ?? '').' '.($result->meta['customer']['lastName'] ?? '')) ?: $result->params['email'] }}</h2>
+                    <p>{{ $result->params['email'] }}</p>
+                    <p class="mt-3">{{ count($result->rows) }}{{ $result->truncated ? '+' : '' }} orders · {{ $result->meta['currency'] }} {{ number_format($result->meta['totalSpent'], 2) }} spent · {{ $result->meta['paid'] }} paid · {{ $result->meta['cancelled'] }} cancelled</p>
+                    @if ($result->meta['tags'])
                         <div class="mt-3 flex flex-wrap gap-2">
-                            @foreach (array_slice($result->tags, 0, 30, true) as $tag => $count)
+                            @foreach (array_slice($result->meta['tags'], 0, 30, true) as $tag => $count)
                                 <span class="rounded bg-slate-100 px-2 py-1 text-xs dark:bg-slate-800">{{ $tag }} · {{ $count }}</span>
                             @endforeach
                         </div>
@@ -46,7 +46,7 @@
                 @endif
 
                 <x-data-table :headers="['Order', 'Date', 'Financial', 'Fulfillment', 'Total', 'Tags']">
-                    @forelse ($result->orders as $order)
+                    @forelse ($result->rows as $order)
                         <tr class="{{ $order['cancelled_at'] ? 'opacity-50' : '' }}">
                             <td class="px-4 py-3">
                                 @if ($order['id'])
@@ -62,7 +62,7 @@
                             <td class="px-4 py-3">{{ implode(', ', $order['tags'] ?? []) }}</td>
                         </tr>
                     @empty
-                        <tr><td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="6">No orders found for {{ $result->email }}.</td></tr>
+                        <tr><td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="6">No orders found for {{ $result->params['email'] }}.</td></tr>
                     @endforelse
                 </x-data-table>
             </section>

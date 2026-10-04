@@ -4,7 +4,10 @@ namespace App\Domain\Reports;
 
 class CustomerLtvAnalyzer
 {
-    /** @param list<array<string, mixed>> $orders @return array{top_customers: list<array<string, mixed>>, cohorts: list<array<string, mixed>>, total_customers: int, total_revenue: float} */
+    /**
+     * @param  list<array<string, mixed>>  $orders
+     * @return array{top_customers: list<array<string, mixed>>, cohorts: list<array<string, mixed>>, total_customers: int, total_revenue: float}
+     */
     public function analyze(array $orders): array
     {
         $customers = [];

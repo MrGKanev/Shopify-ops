@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
-use App\Application\Reports\ActiveShipStationConflictResult;
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunActiveShipStationConflictReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Controller;
@@ -31,7 +31,7 @@ class ActiveShipStationConflictController extends Controller
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'active_shipstation_conflicts', $report::class, [$start, $end], $start, $end, 'scanned', 'count:rows');
+            $run = $reports->run($request, $store, 'active_shipstation_conflicts', $report::class, [$start, $end], $start, $end);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -46,13 +46,13 @@ class ActiveShipStationConflictController extends Controller
     {
         [$store,$start,$end] = $this->context($request);
         if ($this->configurationError($store)) {
-            return back()->withErrors(['export' => 'Shopify and ShipStation credentials are required.']);
+            return back()->withErrors(['export' => __('reports.integration_credentials_required')]);
         }try {
             $result = $reports->completedResult($store, 'active_shipstation_conflicts', $report::class, [$start, $end]) ?? $report->handle($store, $start, $end);
         } catch (Throwable $exception) {
             $this->logFailure('Active ShipStation conflicts CSV failed.', $exception, $store);
 
-            return back()->withErrors(['export' => 'The CSV export could not be completed.']);
+            return back()->withErrors(['export' => __('reports.export_failed')]);
         }
         $rows = array_map(fn (array $row): array => [$row['order_number'], $row['issue'], $row['created_at'], $row['email'], $row['total'], $row['ss_status'], $row['ss_date'], $row['ss_total']], $result->rows);
 
@@ -71,8 +71,12 @@ class ActiveShipStationConflictController extends Controller
         return $store->missingShopifyCredentials() || $store->missingShipStationCredentials();
     }
 
-    /** @return array<string,mixed> */
-    private function viewData(?string $start = null, ?string $end = null, ?ActiveShipStationConflictResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
+    /**
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @return array<string,mixed>
+     */
+    private function viewData(?string $start = null, ?string $end = null, ?ReportResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
     {
         return compact('result', 'reportFailed', 'configurationError') + ['startDate' => $start ?? now()->subDays(30)->toDateString(), 'endDate' => $end ?? now()->toDateString()];
     }

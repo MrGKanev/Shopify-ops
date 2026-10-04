@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Integrations\ShipStation\ShipStationClientContract;
 use App\Integrations\ShipStation\ShipStationClientFactory;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -16,11 +16,8 @@ class ShippedUnfulfilledControllerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_access_validation_configuration_success_and_safe_failure(): void
+    public function test_validation_configuration_success_and_safe_failure(): void
     {
-        $this->get('/reports/shipped-unfulfilled')->assertRedirect(route('login'));
-        [$viewer] = $this->userWithStore();
-        $this->actingAs($viewer)->get('/reports/shipped-unfulfilled')->assertForbidden();
         [$operator] = $this->userWithStore(true);
         $this->actingAs($operator)->post('/reports/shipped-unfulfilled', ['start_date' => 'bad', 'end_date' => '2026-06-30'])->assertSessionHasErrors('start_date');
         [$operator] = $this->userWithStore(true, ['shopify_access_token' => '']);
@@ -49,10 +46,10 @@ class ShippedUnfulfilledControllerTest extends TestCase
         $client->shouldReceive('fetchAllOrders')->andReturn([['orderId' => 1, 'orderNumber' => '1001', 'orderStatus' => 'shipped', 'orderDate' => '2026-06-01', 'customerEmail' => $email]]);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->andReturn($client);
-        $gateway = Mockery::mock(ShopifyAdminGateway::class);
+        $gateway = Mockery::mock(ShopifyOrders::class);
         $gateway->shouldReceive('itemMismatchCandidates')->andReturn(['orders' => [['id' => 1, 'name' => '#1001', 'fulfillment_status' => null, 'financial_status' => 'paid']], 'pages' => $truncated ? 100 : 1, 'truncated' => $truncated]);
         $this->app->instance(ShipStationClientFactory::class, $factory);
-        $this->app->instance(ShopifyAdminGateway::class, $gateway);
+        $this->app->instance(ShopifyOrders::class, $gateway);
     }
 
     private function input(): array

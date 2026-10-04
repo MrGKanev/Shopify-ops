@@ -5,7 +5,7 @@ namespace App\Application\Orders;
 use App\Domain\Reports\AddressCheckAnalyzer;
 use App\Integrations\ShipStation\ShipStationClientContract;
 use App\Integrations\ShipStation\ShipStationClientFactory;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 use LogicException;
 use RuntimeException;
@@ -14,7 +14,7 @@ use Throwable;
 class PushOrderToShipStation
 {
     public function __construct(
-        private readonly ShopifyAdminGateway $shopify,
+        private readonly ShopifyOrders $shopify,
         private readonly ShipStationClientFactory $shipStationClients,
         private readonly RecordPush $recordPush,
         private readonly AddressCheckAnalyzer $addresses = new AddressCheckAnalyzer,

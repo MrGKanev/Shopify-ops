@@ -3,15 +3,15 @@
 namespace App\Application\Reports;
 
 use App\Domain\Reports\DiscountAbuseAnalyzer;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 
 class RunDiscountAbuseReport extends RunScanReport
 {
-    public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly DiscountAbuseAnalyzer $analyzer) {}
+    public function __construct(private readonly ShopifyOrders $shopify, private readonly DiscountAbuseAnalyzer $analyzer) {}
 
-    /** @return ScanResult<array{code: string, address_name: string, address_line: string, order_count: int, email_count: int, emails: list<string>, total: float|string, orders: list<array<string, mixed>>}> */
-    public function handle(Store $store, string $start, string $end, int $minimumEmails): ScanResult
+    /** @return ReportResult<array{code: string, address_name: string, address_line: string, order_count: int, email_count: int, emails: list<string>, total: float|string, orders: list<array<string, mixed>>}> */
+    public function handle(Store $store, string $start, string $end, int $minimumEmails): ReportResult
     {
         $result = $this->shopify->discountAbuseCandidates($store, $start, $end);
 

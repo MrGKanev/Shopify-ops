@@ -25,14 +25,14 @@ class InstallApplicationController extends Controller
         abort_if($installer->isInstalled(), 404);
 
         try {
-            $installer->install($request->validated());
+            $installer->install($request->installationData());
         } catch (Throwable $exception) {
             Log::error('Application installation failed.', ['exception' => $exception]);
 
             return back()->withInput($request->except(['password', 'password_confirmation', 'db_password', 'shopify_access_token', 'shipstation_api_key', 'shipstation_api_secret']))
-                ->withErrors(['installation' => 'Installation could not be completed. Check the database details and that the application can write its .env file.']);
+                ->withErrors(['installation' => __('Installation could not be completed. Check the database details and that the application can write its .env file.')]);
         }
 
-        return redirect()->route('login')->with('status', 'Installation complete. You can now sign in.');
+        return redirect()->route('login')->with('status', __('Installation complete. You can now sign in.'));
     }
 }

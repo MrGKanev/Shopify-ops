@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\InventoryAgingResult;
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunInventoryAgingReport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
@@ -27,7 +27,7 @@ class InventoryAgingController extends Controller
         $configurationError = $store->missingShopifyCredentials();
 
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'inventory_aging', $report::class, [$startDate, $endDate], $startDate, $endDate, 'orders', 'count:rows');
+            $run = $reports->run($request, $store, 'inventory_aging', $report::class, [$startDate, $endDate], $startDate, $endDate);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -35,6 +35,6 @@ class InventoryAgingController extends Controller
             $reportFailed = $run->hasFailed();
         }
 
-        return view('reports.inventory-aging', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof InventoryAgingResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.inventory-aging', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof ReportResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 }

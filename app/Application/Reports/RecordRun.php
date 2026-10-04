@@ -27,10 +27,6 @@ class RecordRun
             'tool' => (string) ($attributes['tool'] ?? 'unknown'),
             'run_status' => (string) ($attributes['status'] ?? 'unknown'),
         ]);
-        $oldIds = $store->runLogs()->latest('id')->skip(500)->take(500)->pluck('id');
-        if ($oldIds->isNotEmpty()) {
-            RunLog::whereKey($oldIds)->delete();
-        }
         $tool = (string) ($attributes['tool'] ?? '');
         if (($attributes['status'] ?? '') !== 'error') {
             $rows = (int) ($attributes['rows_found'] ?? 0);

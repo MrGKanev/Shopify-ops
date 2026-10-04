@@ -9,6 +9,7 @@ class ShipmentAgingRequest extends FormRequest
 {
     use AuthorizesRunAudits;
 
+    /** @return array<string, list<string>> */
     public function rules(): array
     {
         return ['threshold' => ['required', 'integer', 'min:1', 'max:365']];

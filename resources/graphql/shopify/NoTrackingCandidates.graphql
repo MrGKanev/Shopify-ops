@@ -1,0 +1,6 @@
+query NoTrackingCandidates($search: String!, $after: String) {
+  orders(first: 250, after: $after, sortKey: UPDATED_AT, reverse: true, query: $search) {
+    pageInfo { hasNextPage endCursor }
+    edges { node { legacyResourceId name createdAt email displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } fulfillments(first: 250) { id legacyResourceId createdAt status displayStatus trackingInfo(first: 10) { company number url } } } }
+  }
+}

@@ -8,7 +8,10 @@ class ConsentAuditAnalyzer
 {
     use NormalizesText;
 
-    /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $orders
+     * @return list<array{id: int|string, number: string, created_at: string, email: string, total: float|string, currency: string, email_consent: string, sms_consent: string}>
+     */
     public function analyze(array $orders): array
     {
         $rows = [];

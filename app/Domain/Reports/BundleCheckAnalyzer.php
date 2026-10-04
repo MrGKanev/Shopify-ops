@@ -11,7 +11,10 @@ class BundleCheckAnalyzer
 
     public function __construct(private readonly OrderTypeClassifier $classifier) {}
 
-    /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $orders
+     * @return list<array{order_number: string, created_at: string, order_type: string, missing_text: string, fulfillment_status: string, financial_status: string, email: string, total: float|string}>
+     */
     public function analyze(array $orders): array
     {
         $rows = [];

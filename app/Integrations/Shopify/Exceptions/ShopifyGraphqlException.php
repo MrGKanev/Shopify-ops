@@ -2,9 +2,9 @@
 
 namespace App\Integrations\Shopify\Exceptions;
 
-use RuntimeException;
+use App\Integrations\Exceptions\UnexpectedResponse;
 
-class ShopifyGraphqlException extends RuntimeException
+class ShopifyGraphqlException extends UnexpectedResponse
 {
     /**
      * @param  list<array<string, mixed>>  $errors

@@ -4,7 +4,10 @@ namespace App\Domain\Reports;
 
 class CarrierPerformanceAnalyzer
 {
-    /** @param list<array<string, mixed>> $shipments @return list<array{carrier: string, count: int, with_delivery: int, avg_days: float|null, late_count: int, late_pct: float|null}> */
+    /**
+     * @param  list<array<string, mixed>>  $shipments
+     * @return list<array{carrier: string, count: int, with_delivery: int, avg_days: float|null, late_count: int, late_pct: float|null}>
+     */
     public function analyze(array $shipments): array
     {
         $carriers = [];

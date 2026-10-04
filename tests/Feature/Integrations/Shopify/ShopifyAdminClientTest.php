@@ -2,15 +2,21 @@
 
 namespace Tests\Feature\Integrations\Shopify;
 
+use App\Integrations\Exceptions\IntegrationException;
+use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyCatalog;
+use App\Integrations\Shopify\Contracts\ShopifyCustomers;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
+use App\Integrations\Shopify\Contracts\ShopifyPayments;
 use App\Integrations\Shopify\Exceptions\ShopifyGraphqlException;
 use App\Integrations\Shopify\Exceptions\ShopifyResponseException;
 use App\Integrations\Shopify\ShopifyAdminClient;
 use App\Models\Store;
 use Illuminate\Http\Client\Request;
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
 use InvalidArgumentException;
+use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -826,9 +832,9 @@ class ShopifyAdminClientTest extends TestCase
 
         try {
             $this->client()->get($this->store(), 'webhooks.json', ['limit' => 250]);
-            $this->fail('Expected RequestException was not thrown.');
-        } catch (RequestException $exception) {
-            $this->assertSame(401, $exception->response->status());
+            $this->fail('Expected IntegrationException was not thrown.');
+        } catch (IntegrationException $exception) {
+            $this->assertSame(401, $exception->status);
         }
 
         Http::assertSentCount(1);
@@ -961,6 +967,18 @@ class ShopifyAdminClientTest extends TestCase
         $this->client()->updateOrderNote($this->store(), '1', '');
 
         Http::assertSent(fn (Request $request): bool => $request['variables']['note'] === '');
+    }
+
+    public function test_capability_interfaces_resolve_through_the_gateway_binding(): void
+    {
+        $this->assertInstanceOf(ShopifyAdminClient::class, app(ShopifyOrders::class));
+
+        $gateway = Mockery::mock(ShopifyAdminGateway::class);
+        $this->app->instance(ShopifyAdminGateway::class, $gateway);
+
+        foreach ([ShopifyOrders::class, ShopifyCatalog::class, ShopifyCustomers::class, ShopifyPayments::class] as $capability) {
+            $this->assertSame($gateway, app($capability));
+        }
     }
 
     private function client(): ShopifyAdminClient

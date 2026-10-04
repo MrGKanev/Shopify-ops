@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\InventoryForecastResult;
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunInventoryForecastReport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\InventoryForecastRequest;
@@ -27,7 +27,7 @@ class InventoryForecastController extends Controller
         $configurationError = $store->missingShopifyCredentials();
 
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'inventory_forecast', $report::class, [$startDate, $endDate], $startDate, $endDate, 'orders', 'count:rows');
+            $run = $reports->run($request, $store, 'inventory_forecast', $report::class, [$startDate, $endDate], $startDate, $endDate);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -35,6 +35,6 @@ class InventoryForecastController extends Controller
             $reportFailed = $run->hasFailed();
         }
 
-        return view('reports.inventory-forecast', ['result' => $result instanceof InventoryForecastResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.inventory-forecast', ['result' => $result instanceof ReportResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 }

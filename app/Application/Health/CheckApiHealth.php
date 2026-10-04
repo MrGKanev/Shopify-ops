@@ -3,7 +3,7 @@
 namespace App\Application\Health;
 
 use App\Integrations\ShipStation\ShipStationClientFactory;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyHealth;
 use App\Models\Store;
 use Throwable;
 
@@ -12,7 +12,7 @@ class CheckApiHealth
     private const array REQUIRED_SHOPIFY_SCOPES = ['read_orders', 'read_fulfillments'];
 
     public function __construct(
-        private readonly ShopifyAdminGateway $shopify,
+        private readonly ShopifyHealth $shopify,
         private readonly ShipStationClientFactory $shipStationFactory,
     ) {}
 

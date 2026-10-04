@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\CarrierPerformanceResult;
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunCarrierPerformanceReport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
@@ -26,7 +26,7 @@ class CarrierPerformanceController extends Controller
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'carrier_performance', $report::class, [$startDate, $endDate], $startDate, $endDate, 'scanned', 'count:rows');
+            $run = $reports->run($request, $store, 'carrier_performance', $report::class, [$startDate, $endDate], $startDate, $endDate);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -37,8 +37,12 @@ class CarrierPerformanceController extends Controller
         return view('reports.carrier-performance', $this->viewData($startDate, $endDate, $result, $reportFailed, $configurationError));
     }
 
-    /** @return array<string, mixed> */
-    private function viewData(?string $startDate = null, ?string $endDate = null, ?CarrierPerformanceResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
+    /**
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @return array<string, mixed>
+     */
+    private function viewData(?string $startDate = null, ?string $endDate = null, ?ReportResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
     {
         return compact('result', 'reportFailed', 'configurationError') + ['startDate' => $startDate ?? now()->subDays(30)->toDateString(), 'endDate' => $endDate ?? now()->toDateString()];
     }

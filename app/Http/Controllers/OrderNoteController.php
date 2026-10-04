@@ -23,7 +23,7 @@ class OrderNoteController extends Controller
             activity('operator-actions')->causedBy($request->user())->performedOn($this->store($request))
                 ->withProperties(['shopify_id' => $orderId, 'note_length' => strlen($note)])->log('save_order_note');
 
-            return back()->with('status', "Note saved for order #{$orderNumber}.");
+            return back()->with('status', __('Note saved for order #:number.', ['number' => $orderNumber]));
         } catch (Throwable $exception) {
             Log::warning('Save order note failed.', ['exception_type' => $exception::class]);
 

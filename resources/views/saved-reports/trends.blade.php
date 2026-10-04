@@ -52,7 +52,7 @@
                 <x-data-table :headers="['Select', 'Order', 'Times missing', '']">
                     @foreach ($repeatOffenders as $offender)
                         <tr>
-                            <td class="px-4 py-3"><input type="checkbox" name="order_numbers[]" value="{{ $offender['number'] }}" form="bulk-ignore" aria-label="{{ __('Select order :number', ['number' => $offender['number']]) }}"></td>
+                            <x-report.ignore-checkbox :number="$offender['number']" />
                             <td class="px-4 py-3">{{ $offender['number'] }}</td>
                             <td class="px-4 py-3">{{ $offender['count'] }}</td>
                             <td class="px-4 py-3">

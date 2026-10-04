@@ -9,6 +9,7 @@ class EmailRulesRequest extends FormRequest
 {
     use AuthorizesAdministration;
 
+    /** @return array<string, list<string>> */
     public function rules(): array
     {
         return ['rules' => ['required', 'array'], 'rules.*.mode' => ['required', 'in:off,immediate,digest'], 'rules.*.threshold' => ['required', 'integer', 'min:0', 'max:100000'], 'rules.*.include_zero' => ['required', 'boolean'], 'rules.*.email' => ['required_unless:rules.*.mode,off', 'nullable', 'email:rfc', 'max:254'], 'default_alert_email' => ['nullable', 'email:rfc', 'max:254']];

@@ -8,7 +8,10 @@ class DiscountAbuseAnalyzer
 {
     use NormalizesText;
 
-    /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $orders
+     * @return list<array{code: string, address_name: string, address_line: string, order_count: int, email_count: int, emails: list<string>, total: float|string, orders: list<array<string, mixed>>}>
+     */
     public function analyze(array $orders, int $minimumEmails): array
     {
         $groups = [];

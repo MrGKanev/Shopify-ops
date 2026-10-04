@@ -1,0 +1,1 @@
+query EditedOrders($ids: [ID!]!) { nodes(ids: $ids) { ... on Order { legacyResourceId name createdAt email displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } } } }

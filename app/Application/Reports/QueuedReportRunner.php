@@ -28,8 +28,6 @@ class QueuedReportRunner
     /**
      * @param  class-string  $report  an action whose handle(Store $store, ...$arguments) returns the result
      * @param  list<mixed>  $arguments  JSON-serializable arguments passed after the store
-     * @param  string  $scannedMetric  result property counted as "scanned" in run history, or "count:<property>"
-     * @param  string  $rowsMetric  result property counted as "rows found" in run history, or "count:<property>"
      */
     public function run(
         Request $request,
@@ -39,8 +37,6 @@ class QueuedReportRunner
         array $arguments,
         ?string $startDate = null,
         ?string $endDate = null,
-        string $scannedMetric = 'scanned',
-        string $rowsMetric = 'count:rows',
     ): ReportRun {
         $hash = $this->hash($tool, $report, $arguments);
         $run = $request->isMethod('GET')
@@ -56,12 +52,14 @@ class QueuedReportRunner
                 'arguments_hash' => $hash,
                 'start_date' => $startDate,
                 'end_date' => $endDate,
-                'scanned_metric' => $scannedMetric,
-                'rows_metric' => $rowsMetric,
                 'status' => 'queued',
             ]);
             RunQueuedReport::dispatch($run->getKey());
             $run->refresh();
+        }
+
+        if ($run->hasFailed() && $run->failure_reason !== null) {
+            request()->attributes->set('reportFailureReason', $run->failure_reason);
         }
 
         if ($run->isPending()) {
@@ -96,8 +94,9 @@ class QueuedReportRunner
      *
      * @param  class-string  $report
      * @param  list<mixed>  $arguments
-     */
-    public function completedResult(Store $store, string $tool, string $report, array $arguments): mixed
+
+     * @return ReportResult<array<string, mixed>>|null */
+    public function completedResult(Store $store, string $tool, string $report, array $arguments): ?ReportResult
     {
         $run = $this->latest($store, $tool, $this->hash($tool, $report, $arguments), now()->subHours(self::RESULT_LIFETIME_HOURS));
 

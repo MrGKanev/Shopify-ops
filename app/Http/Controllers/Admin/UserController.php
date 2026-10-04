@@ -52,7 +52,7 @@ class UserController extends Controller
 
         return redirect()
             ->route('admin.users.edit', $user)
-            ->with('status', 'User created.');
+            ->with('status', __('User created.'));
     }
 
     /**
@@ -89,7 +89,7 @@ class UserController extends Controller
             activity('administration')->causedBy($request->user())->performedOn($user)->event('store_access_updated')->withProperties(['old_store_ids' => $previousStoreIds, 'store_ids' => $currentStoreIds])->log('User store access updated');
         }
 
-        return back()->with('status', 'User updated.');
+        return back()->with('status', __('User updated.'));
     }
 
     /**

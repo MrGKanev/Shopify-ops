@@ -22,7 +22,7 @@ class PrintQueueController extends Controller
         activity('operator-actions')->causedBy($request->user())->performedOn($store)
             ->withProperties(['order_number' => $orderNumber])->log('pq_add');
 
-        return back()->with('status', 'Order added to the print queue.');
+        return back()->with('status', __('Order added to the print queue.'));
     }
 
     public function destroy(Request $request, int $item): RedirectResponse
@@ -34,7 +34,7 @@ class PrintQueueController extends Controller
         activity('operator-actions')->causedBy($request->user())->performedOn($store)
             ->withProperties(['order_number' => $orderNumber])->log('pq_remove');
 
-        return back()->with('status', 'Order removed from the print queue.');
+        return back()->with('status', __('Order removed from the print queue.'));
     }
 
     public function clear(Request $request): RedirectResponse
@@ -45,6 +45,6 @@ class PrintQueueController extends Controller
         activity('operator-actions')->causedBy($request->user())->performedOn($store)
             ->withProperties(['count' => $count])->log('pq_clear');
 
-        return back()->with('status', 'Print queue cleared.');
+        return back()->with('status', __('Print queue cleared.'));
     }
 }

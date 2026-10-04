@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunGiftCardsReport;
-use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\GiftCardsRequest;
 use Illuminate\Http\RedirectResponse;
@@ -26,7 +26,7 @@ class GiftCardsController extends Controller
         $configurationError = $store->missingShopifyCredentials();
 
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'gift_cards', $report::class, [$days, now()->timestamp], null, null, 'scanned', 'count:rows');
+            $run = $reports->run($request, $store, 'gift_cards', $report::class, [$days, now()->getTimestamp()], null, null);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -34,6 +34,6 @@ class GiftCardsController extends Controller
             $reportFailed = $run->hasFailed();
         }
 
-        return view('reports.gift-cards', ['days' => $days, 'result' => $result instanceof ScanResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.gift-cards', ['days' => $days, 'result' => $result instanceof ReportResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 }

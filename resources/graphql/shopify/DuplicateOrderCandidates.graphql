@@ -1,0 +1,6 @@
+query DuplicateOrderCandidates($search: String!, $after: String) {
+  orders(first: 250, after: $after, sortKey: CREATED_AT, reverse: false, query: $search) {
+    pageInfo { hasNextPage endCursor }
+    edges { node { legacyResourceId name createdAt email displayFinancialStatus totalPriceSet { shopMoney { amount currencyCode } } } }
+  }
+}

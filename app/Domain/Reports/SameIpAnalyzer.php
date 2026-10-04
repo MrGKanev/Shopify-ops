@@ -8,7 +8,10 @@ class SameIpAnalyzer
 {
     use NormalizesText;
 
-    /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $orders
+     * @return list<array{ip: string, order_count: int, email_count: int, emails: list<string>, orders: list<array<string, mixed>>}>
+     */
     public function analyze(array $orders): array
     {
         $groups = [];

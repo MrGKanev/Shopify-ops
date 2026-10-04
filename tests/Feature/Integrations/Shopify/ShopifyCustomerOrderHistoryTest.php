@@ -3,8 +3,6 @@
 namespace Tests\Feature\Integrations\Shopify;
 
 use App\Integrations\Shopify\ShopifyAdminClient;
-use App\Integrations\Shopify\ShopifyOrderEventNormalizer;
-use App\Integrations\Shopify\ShopifyOrderNormalizer;
 use App\Models\Store;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -16,7 +14,7 @@ class ShopifyCustomerOrderHistoryTest extends TestCase
     {
         Http::preventStrayRequests();
         Http::fake(['*' => Http::response(['data' => ['orders' => ['pageInfo' => ['hasNextPage' => false, 'endCursor' => null], 'edges' => [['node' => ['legacyResourceId' => '42', 'name' => '#1', 'createdAt' => '2026-09-02', 'cancelledAt' => null, 'email' => 'jane@example.com', 'tags' => ['VIP'], 'displayFinancialStatus' => 'PAID', 'displayFulfillmentStatus' => 'UNFULFILLED', 'totalPriceSet' => ['shopMoney' => ['amount' => '50', 'currencyCode' => 'USD']], 'customer' => ['firstName' => 'Jane']]]]]]])]);
-        $client = new ShopifyAdminClient(new ShopifyOrderNormalizer, new ShopifyOrderEventNormalizer);
+        $client = app(ShopifyAdminClient::class);
 
         $result = $client->customerOrderHistory(new Store(['shopify_store' => 'acme', 'shopify_access_token' => 'token']), ' Jane@Example.com ');
 

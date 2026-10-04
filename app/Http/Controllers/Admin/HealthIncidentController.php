@@ -31,7 +31,7 @@ class HealthIncidentController extends Controller
             ->get(['started_at', 'resolved_at']);
         $averageRecoverySeconds = $recentResolved->isEmpty()
             ? null
-            : (int) round($recentResolved->average(fn (HealthIncident $incident): int => $incident->started_at->diffInSeconds($incident->resolved_at)));
+            : (int) round($recentResolved->average(fn (HealthIncident $incident): float => $incident->started_at->diffInSeconds($incident->resolved_at)));
 
         return view('admin.health-incidents', [
             'incidents' => $query->paginate(50)->withQueryString(),

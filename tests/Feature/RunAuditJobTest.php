@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Application\Reports\AuditResult;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunAudit;
+use App\Integrations\Exceptions\RateLimited;
+use App\Integrations\Exceptions\Unauthorized;
 use App\Jobs\RunAuditJob;
 use App\Models\AuditJob;
 use App\Models\Store;
@@ -25,7 +27,7 @@ class RunAuditJobTest extends TestCase
         $audit->shouldReceive('handle')
             ->once()
             ->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '2026-06-01', '2026-06-30')
-            ->andReturn(new AuditResult('2026-06-01', '2026-06-30', [], 0, 0, 0, 0, 0, false));
+            ->andReturn(new ReportResult(rows: [], scanned: 0, pages: 0, truncated: false, params: ['startDate' => '2026-06-01', 'endDate' => '2026-06-30'], meta: ['found' => 0, 'skipped' => 0, 'ignored' => 0, 'shopifyTotal' => 0, 'shipstationTotal' => 0, 'shopifyTruncated' => false]));
 
         (new RunAuditJob($store->getKey(), '2026-06-01', '2026-06-30'))->handle($audit);
     }
@@ -87,7 +89,7 @@ class RunAuditJobTest extends TestCase
         $store = Store::factory()->create();
         $auditJob = AuditJob::create(['store_id' => $store->getKey(), 'start_date' => '2026-06-01', 'end_date' => '2026-06-30']);
         $audit = Mockery::mock(RunAudit::class);
-        $audit->shouldReceive('handle')->once()->andReturn(new AuditResult('2026-06-01', '2026-06-30', [], 0, 0, 0, 0, 0, false));
+        $audit->shouldReceive('handle')->once()->andReturn(new ReportResult(rows: [], scanned: 0, pages: 0, truncated: false, params: ['startDate' => '2026-06-01', 'endDate' => '2026-06-30'], meta: ['found' => 0, 'skipped' => 0, 'ignored' => 0, 'shopifyTotal' => 0, 'shipstationTotal' => 0, 'shopifyTruncated' => false]));
         $job = new RunAuditJob($store->getKey(), '2026-06-01', '2026-06-30', $auditJob->getKey());
 
         $job->handle($audit);
@@ -99,5 +101,23 @@ class RunAuditJobTest extends TestCase
         $job->failed(new RuntimeException('secret-token'));
         $this->assertSame('failed', $auditJob->fresh()->status);
         $this->assertSame(RuntimeException::class, $auditJob->fresh()->error_category);
+    }
+
+    public function test_transient_integration_failures_release_a_scheduled_audit_for_one_minute(): void
+    {
+        $job = (new RunAuditJob(1, '2026-06-01', '2026-06-30'))->withFakeQueueInteractions();
+        $job->middleware()[0]->handle($job, function (): void {
+            throw new RateLimited(30);
+        });
+        $job->assertReleased(60);
+    }
+
+    public function test_permanent_integration_failures_are_not_swallowed_by_the_throttle(): void
+    {
+        $job = (new RunAuditJob(1, '2026-06-01', '2026-06-30'))->withFakeQueueInteractions();
+        $this->expectException(Unauthorized::class);
+        $job->middleware()[0]->handle($job, function (): void {
+            throw new Unauthorized('Rejected credentials.', 401);
+        });
     }
 }

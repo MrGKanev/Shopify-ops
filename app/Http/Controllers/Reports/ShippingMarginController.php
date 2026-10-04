@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunShippingMarginReport;
-use App\Application\Reports\ShippingMarginResult;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ShippingMarginRequest;
@@ -33,7 +33,7 @@ class ShippingMarginController extends Controller
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'shipping_margin', $report::class, [$startDate, $endDate, $threshold], $startDate, $endDate, 'scanned', 'count:rows');
+            $run = $reports->run($request, $store, 'shipping_margin', $report::class, [$startDate, $endDate, $threshold], $startDate, $endDate);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -54,14 +54,18 @@ class ShippingMarginController extends Controller
         } catch (Throwable $exception) {
             $this->logFailure('Shipping margin CSV export failed.', $exception, $store);
 
-            return back()->withErrors(['export' => 'The CSV export could not be completed.']);
+            return back()->withErrors(['export' => __('reports.export_failed')]);
         }
 
         return $csv->download("shipping-margin-{$startDate}-to-{$endDate}.csv", ['Order', 'Ship date', 'Carrier', 'Service', 'Ship cost', 'Shipping charged', 'Loss', 'Email', 'Order total'], array_map(fn (array $row): array => [$row['order_number'], $row['ship_date'], $row['carrier'], $row['service'], $row['ship_cost'], $row['shipping_charged'], $row['loss'], $row['email'], $row['total']], $result->rows));
     }
 
-    /** @return array<string, mixed> */
-    private function viewData(?string $startDate = null, ?string $endDate = null, float $threshold = 15, ?ShippingMarginResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
+    /**
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @return array<string, mixed>
+     */
+    private function viewData(?string $startDate = null, ?string $endDate = null, float $threshold = 15, ?ReportResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
     {
         return compact('threshold', 'result', 'reportFailed', 'configurationError') + ['startDate' => $startDate ?? now()->subDays(30)->toDateString(), 'endDate' => $endDate ?? now()->toDateString()];
     }

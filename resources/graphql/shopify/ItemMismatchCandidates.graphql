@@ -1,0 +1,6 @@
+query ItemMismatchCandidates($search: String!, $after: String) {
+  orders(first: 250, after: $after, sortKey: CREATED_AT, reverse: true, query: $search) {
+    pageInfo { hasNextPage endCursor }
+    edges { node { legacyResourceId name createdAt cancelledAt email displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } shippingLines(first: 1) { nodes { id } } lineItems(first: 250) { nodes { id title name sku quantity variantTitle vendor } } } }
+  }
+}

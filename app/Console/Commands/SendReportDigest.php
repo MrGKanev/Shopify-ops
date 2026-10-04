@@ -18,9 +18,9 @@ class SendReportDigest extends Command
     {
         Store::whereNotNull('email_rules')->each(function (Store $store) use ($notifier): void {
             $sectionsByRecipient = [];
-            foreach ($store->resolvedEmailRules() as $tool => $rule) {
+            foreach ($store->email_rules->rules as $tool => $rule) {
                 $recipient = $notifier->emailRecipient($store, $rule);
-                if ($rule['mode'] !== 'digest' || $recipient === '') {
+                if ($rule->mode !== 'digest' || $recipient === '') {
                     continue;
                 }
 

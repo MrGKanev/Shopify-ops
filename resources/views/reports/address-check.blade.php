@@ -1,57 +1,28 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="flex flex-col gap-6">
-        <x-page-header eyebrow="Fulfillment report" title="Address Scanner" subtitle="Find incomplete, invalid, short, or carrier-incompatible shipping addresses on paid orders." />
-
-        <form class="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:grid-cols-3 dark:border-slate-800 dark:bg-slate-900" method="POST" action="{{ route('reports.address-check.store') }}">
-            @csrf
-            @foreach (['start_date' => ['From', $startDate], 'end_date' => ['To', $endDate]] as $field => [$label, $value])
-                <div>
-                    <label class="text-sm font-medium" for="{{ $field }}">{{ $label }}</label>
-                    <input class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="{{ $field }}" name="{{ $field }}" type="date" value="{{ old($field, $value) }}">
-                    @error($field)
-                        <p class="text-sm text-red-600">{{ __($message) }}</p>
-                    @enderror
-                </div>
-            @endforeach
-            <div class="flex flex-col justify-end gap-2">
+    <x-report.layout eyebrow="Fulfillment report" title="Address Scanner" subtitle="Find incomplete, invalid, short, or carrier-incompatible shipping addresses on paid orders." :configuration-error="$configurationError" :report-failed="$reportFailed">
+        <x-slot:form>
+            <x-report.date-range-form :action="route('reports.address-check.store')" :start-date="$startDate" :end-date="$endDate">
                 <label><input name="unfulfilled_only" type="checkbox" value="1" @checked(old('unfulfilled_only', $unfulfilledOnly))> {{ __('Unfulfilled only') }}</label>
                 <label><input name="po_box_only" type="checkbox" value="1" @checked(old('po_box_only', $poBoxOnly))> {{ __('PO Box issues only') }}</label>
-                <x-button type="submit">{{ __('Run report') }}</x-button>
-            </div>
-        </form>
-
-        @if ($configurationError)
-            <x-alert tone="warn">{{ __('Shopify credentials are incomplete for the active store.') }}</x-alert>
-        @endif
-        @if ($reportFailed)
-            <x-alert tone="error">{{ __('The report could not be completed. Check Shopify and try again.') }}</x-alert>
-        @endif
+            </x-report.date-range-form>
+        </x-slot:form>
 
         @if ($result)
-            <section class="flex flex-col gap-4">
-                <h2 class="text-2xl font-bold">{{ $result->scanned }} scanned · {{ $result->critical }} critical · {{ $result->warnings }} warnings</h2>
-                @if ($result->truncated)
-                    <x-alert tone="warn">{{ __('Results are incomplete: orders truncated after :pages pages.', ['pages' => $result->pages]) }}</x-alert>
-                @endif
+            <x-report.results :truncated="$result->truncated" :pages="$result->pages">
+                <x-slot:heading>{{ $result->scanned }} scanned · {{ $result->meta['critical'] }} critical · {{ $result->meta['warnings'] }} warnings</x-slot:heading>
+
                 @if ($result->rows !== [])
                     @include('partials.bulk-ignore-form')
                 @endif
 
-                <x-data-table :headers="['Select', 'Severity', 'Order', 'Email', 'Address', 'Issues']">
-                    @forelse ($result->rows as $row)
+                <x-data-table :headers="['Select', 'Severity', 'Order', 'Email', 'Address', 'Issues']" :rows="$result->rows" empty="No address issues were found.">
+                    @foreach ($result->rows as $row)
                         <tr class="align-top">
-                            <td class="px-4 py-3"><input type="checkbox" name="order_numbers[]" value="{{ $row['number'] }}" form="bulk-ignore" aria-label="{{ __('Select order :number', ['number' => $row['number']]) }}"></td>
+                            <x-report.ignore-checkbox :number="$row['number']" />
                             <td class="px-4 py-3 font-semibold">{{ ucfirst($row['severity']) }}</td>
-                            <td class="px-4 py-3">
-                                @if ($row['id'])
-                                    <a class="text-indigo-600 dark:text-indigo-400" href="https://{{ $activeStore->shopify_store }}.myshopify.com/admin/orders/{{ $row['id'] }}" target="_blank" rel="noopener noreferrer">{{ $row['number'] }}</a>
-                                @else
-                                    {{ $row['number'] }}
-                                @endif
-                                <br>{{ $row['created_at'] }}
-                            </td>
+                            <td class="px-4 py-3"><x-report.shopify-link :id="$row['id']">{{ $row['number'] }}</x-report.shopify-link><br>{{ $row['created_at'] }}</td>
                             <td class="px-4 py-3">{{ $row['email'] }}</td>
                             <td class="px-4 py-3">{{ $row['address']['address1'] ?? 'Missing' }}<br>{{ $row['address']['city'] ?? '' }} {{ $row['address']['zip'] ?? '' }} {{ $row['address']['country_code'] ?? '' }}</td>
                             <td class="px-4 py-3">
@@ -62,13 +33,9 @@
                                 </ul>
                             </td>
                         </tr>
-                    @empty
-                        <tr>
-                            <td class="px-4 py-8 text-center text-slate-500" colspan="6">{{ __('No address issues were found.') }}</td>
-                        </tr>
-                    @endforelse
+                    @endforeach
                 </x-data-table>
-            </section>
+            </x-report.results>
         @endif
-    </div>
+    </x-report.layout>
 @endsection

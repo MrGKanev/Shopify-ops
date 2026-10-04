@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunCatalogQualityReport;
-use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CatalogQualityRequest;
 use Illuminate\Http\RedirectResponse;
@@ -25,7 +25,7 @@ class CatalogQualityController extends Controller
         $configurationError = $store->missingShopifyCredentials();
 
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'catalog_quality', $report::class, [], null, null, 'scanned', 'count:rows');
+            $run = $reports->run($request, $store, 'catalog_quality', $report::class, [], null, null);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -33,6 +33,6 @@ class CatalogQualityController extends Controller
             $reportFailed = $run->hasFailed();
         }
 
-        return view('reports.catalog-quality', ['result' => $result instanceof ScanResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.catalog-quality', ['result' => $result instanceof ReportResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 }

@@ -1,7 +1,5 @@
 <?php
 
-// Mirrors legacy's ToolRegistry::HUBS['search']['sections'] (src/ToolRegistry.php).
-
 return [
     'Orders' => [
         ['label' => 'Spot-check', 'route' => 'orders.spot-check'],

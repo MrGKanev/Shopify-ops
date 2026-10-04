@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Application\Orders\PushOrderToShipStation;
 use App\Application\Orders\ShippingAddressNeedsReview;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -106,9 +106,9 @@ class PushToShipStationControllerTest extends TestCase
     public function test_a_real_push_persists_a_push_log_row(): void
     {
         [$operator, $store] = $this->makeUserAndStore(true, ['shipstation_api_key' => 'ss-key', 'shipstation_api_secret' => 'ss-secret']);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumber')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '1001')->andReturn([['id' => 42, 'name' => '#1001', 'total_price' => '10.00', 'shipping_address' => ['first_name' => 'Jane', 'last_name' => 'Doe', 'address1' => '123 Main Street', 'city' => 'Boston', 'province_code' => 'MA', 'zip' => '02101', 'country_code' => 'US', 'phone' => '617-555-0100']]]);
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyOrders::class, $shopify);
         Http::fake(['https://ssapi.shipstation.com/orders/createorder' => Http::response(['orderId' => 555, 'orderNumber' => '1001'])]);
 
         $this->actingAs($operator)->post(route('orders.push.store'), ['order_number' => '1001'])->assertRedirect();

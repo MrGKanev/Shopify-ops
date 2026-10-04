@@ -1,0 +1,6 @@
+query FraudRiskCandidates($search: String!, $after: String) {
+  orders(first: 250, after: $after, sortKey: CREATED_AT, reverse: true, query: $search) {
+    pageInfo { hasNextPage endCursor }
+    edges { node { legacyResourceId name createdAt email tags displayFinancialStatus totalPriceSet { shopMoney { amount currencyCode } } billingAddress { country countryCodeV2 } shippingAddress { address1 country countryCodeV2 phone } risk { recommendation assessments { riskLevel } } } }
+  }
+}

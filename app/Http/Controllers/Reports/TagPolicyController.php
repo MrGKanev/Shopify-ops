@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunTagPolicyReport;
-use App\Application\Reports\ScanResult;
 use App\Domain\Reports\TagPolicyAnalyzer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
@@ -31,7 +31,7 @@ class TagPolicyController extends Controller
         $result = null;
         $reportFailed = false;
         if ($configured && ! $configurationError) {
-            $run = $reports->run($request, $store, 'tag_policy', $report::class, [$startDate, $endDate, $config], $startDate, $endDate, 'scanned', 'count:rows');
+            $run = $reports->run($request, $store, 'tag_policy', $report::class, [$startDate, $endDate, $config], $startDate, $endDate);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -39,7 +39,7 @@ class TagPolicyController extends Controller
             $reportFailed = $run->hasFailed();
         }
 
-        return view('reports.tag-policy', ['startDate' => $startDate, 'endDate' => $endDate, 'configured' => $configured, 'result' => $result instanceof ScanResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.tag-policy', ['startDate' => $startDate, 'endDate' => $endDate, 'configured' => $configured, 'result' => $result instanceof ReportResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 
     /** @return array<string, mixed> */

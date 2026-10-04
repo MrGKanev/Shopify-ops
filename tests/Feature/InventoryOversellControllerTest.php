@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Integrations\ShipStation\ShipStationClientContract;
 use App\Integrations\ShipStation\ShipStationClientFactory;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyCatalog;
 use App\Models\Store;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
@@ -25,11 +25,11 @@ class InventoryOversellControllerTest extends TestCase
     public function test_form_does_not_call_either_service(): void
     {
         [$user] = $this->userWithStore(true);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyCatalog::class);
         $shopify->shouldNotReceive('inventoryOversellCandidates');
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldNotReceive('forStore');
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyCatalog::class, $shopify);
         $this->app->instance(ShipStationClientFactory::class, $factory);
 
         $this->actingAs($user)->get(route('reports.inventory-oversell'))->assertOk()->assertSeeText('Inventory oversell risk');
@@ -38,11 +38,11 @@ class InventoryOversellControllerTest extends TestCase
     public function test_incomplete_configuration_prevents_calls(): void
     {
         [$user] = $this->userWithStore(true, ['shopify_access_token' => '', 'shipstation_api_secret' => '']);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyCatalog::class);
         $shopify->shouldNotReceive('inventoryOversellCandidates');
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldNotReceive('forStore');
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyCatalog::class, $shopify);
         $this->app->instance(ShipStationClientFactory::class, $factory);
 
         $this->actingAs($user)->post(route('reports.inventory-oversell.store'))->assertOk()->assertSeeText('Shopify credentials are incomplete')->assertSeeText('ShipStation credentials are incomplete');
@@ -51,7 +51,7 @@ class InventoryOversellControllerTest extends TestCase
     public function test_selected_store_results_truncation_and_xss_render_safely(): void
     {
         [$user, $store] = $this->userWithStore(true);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyCatalog::class);
         $shopify->shouldReceive('inventoryOversellCandidates')->once()->with(Mockery::on(fn (Store $selected): bool => $selected->is($store)))->andReturn([
             'products' => [['legacyResourceId' => '42', 'title' => '<script>x</script>', 'variants' => [['sku' => '<img src=x>', 'title' => '<b>V</b>', 'inventoryQuantity' => 1, 'inventoryPolicy' => 'DENY', 'inventoryItem' => ['tracked' => true]]]]],
             'pages' => 100,
@@ -61,7 +61,7 @@ class InventoryOversellControllerTest extends TestCase
         $client->shouldReceive('fetchAwaitingOrders')->once()->andReturn([['items' => [['sku' => '<img src=x>', 'quantity' => 3]]]]);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->once()->with(Mockery::on(fn (Store $selected): bool => $selected->is($store)))->andReturn($client);
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyCatalog::class, $shopify);
         $this->app->instance(ShipStationClientFactory::class, $factory);
 
         $this->actingAs($user)->post(route('reports.inventory-oversell.store'), ['store_id' => 999])->assertOk()
@@ -72,11 +72,11 @@ class InventoryOversellControllerTest extends TestCase
     public function test_upstream_error_is_atomic_and_safe(): void
     {
         [$user] = $this->userWithStore(true);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyCatalog::class);
         $shopify->shouldReceive('inventoryOversellCandidates')->andThrow(new RuntimeException('secret'));
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldNotReceive('forStore');
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyCatalog::class, $shopify);
         $this->app->instance(ShipStationClientFactory::class, $factory);
 
         $this->actingAs($user)->post(route('reports.inventory-oversell.store'))->assertOk()->assertSeeText('could not be completed')->assertDontSeeText('secret')->assertDontSeeText('SKUs at risk');

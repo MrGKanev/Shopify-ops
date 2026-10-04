@@ -1,0 +1,6 @@
+query OpenDisputes($search: String!, $after: String) {
+  disputes(first: 100, after: $after, query: $search) {
+    pageInfo { hasNextPage endCursor }
+    edges { node { legacyResourceId status initiatedAt evidenceDueBy amount { amount currencyCode } reasonDetails { reason networkReasonCode } order { legacyResourceId name } } }
+  }
+}

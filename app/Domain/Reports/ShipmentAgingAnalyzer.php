@@ -11,7 +11,10 @@ class ShipmentAgingAnalyzer
 
     public function __construct(private readonly OrderTypeClassifier $classifier) {}
 
-    /** @param list<array<string, mixed>> $orders @return array{rows: list<array<string, mixed>>, by_sku: list<array<string, mixed>>, by_type: list<array<string, mixed>>} */
+    /**
+     * @param  list<array<string, mixed>>  $orders
+     * @return array{rows: list<array<string, mixed>>, by_sku: list<array<string, mixed>>, by_type: list<array<string, mixed>>}
+     */
     public function analyze(array $orders, int $threshold, int $now): array
     {
         $rows = $bySku = $byType = [];
@@ -31,9 +34,8 @@ class ShipmentAgingAnalyzer
                 }
                 $quantity = (int) ($item['quantity'] ?? 1);
                 $skus[$sku] = ($skus[$sku] ?? 0) + $quantity;
-                $bySku[$sku] ??= ['sku' => $sku, 'orders' => 0, 'qty' => 0, 'oldest_days' => 0];
-                $bySku[$sku]['qty'] += $quantity;
-                $bySku[$sku]['oldest_days'] = max($bySku[$sku]['oldest_days'], $days);
+                $summary = $bySku[$sku] ?? ['sku' => $sku, 'orders' => 0, 'qty' => 0, 'oldest_days' => 0];
+                $bySku[$sku] = ['sku' => $sku, 'orders' => $summary['orders'], 'qty' => ($summary['qty'] ?? 0) + $quantity, 'oldest_days' => max($summary['oldest_days'] ?? 0, $days)];
             }
             foreach (array_keys($skus) as $sku) {
                 $bySku[$sku]['orders']++;

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\IgnoredOrder;
+use App\Models\PushLog;
 use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -39,9 +41,13 @@ class GlobalSearchController extends Controller
         return view('global-search', compact('query', 'results'));
     }
 
+    /**
+     * @param  Collection<int, covariant PushLog|IgnoredOrder>  $rows
+     * @return Collection<int, PushLog|IgnoredOrder>
+     */
     private function matching(Collection $rows, string $number): Collection
     {
-        return $rows->filter(fn ($row): bool => $this->matches($row->order_number, $number))->values();
+        return $rows->filter(fn (\App\Models\PushLog|IgnoredOrder $row): bool => $this->matches($row->order_number, $number))->values();
     }
 
     private function matches(mixed $value, string $number): bool

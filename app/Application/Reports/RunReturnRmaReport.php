@@ -3,18 +3,19 @@
 namespace App\Application\Reports;
 
 use App\Domain\Reports\ReturnRmaAnalyzer;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyPayments;
 use App\Models\Store;
 
 class RunReturnRmaReport
 {
-    public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly ReturnRmaAnalyzer $analyzer) {}
+    public function __construct(private readonly ShopifyPayments $shopify, private readonly ReturnRmaAnalyzer $analyzer) {}
 
-    public function handle(Store $store, string $startDate, string $endDate): ReturnRmaResult
+    /** @return ReportResult<array<string, mixed>> */
+    public function handle(Store $store, string $startDate, string $endDate): ReportResult
     {
         $candidates = $this->shopify->refundTrackerCandidates($store, $startDate, $endDate);
         $analysis = $this->analyzer->analyze($candidates['orders']);
 
-        return new ReturnRmaResult($startDate, $endDate, count($candidates['orders']), $analysis['rows'], $analysis['sku_stats'], $candidates['pages'], $candidates['truncated']);
+        return new ReportResult(rows: $analysis['rows'], scanned: count($candidates['orders']), pages: $candidates['pages'], truncated: $candidates['truncated'], params: ['startDate' => $startDate, 'endDate' => $endDate], meta: ['skuStats' => $analysis['sku_stats']]);
     }
 }

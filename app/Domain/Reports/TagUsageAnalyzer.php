@@ -8,7 +8,10 @@ class TagUsageAnalyzer
 {
     use NormalizesText;
 
-    /** @param list<array<string, mixed>> $orders @return list<array{tag: string, count: int, last_order: string, last_date: string, orphan: bool}> */
+    /**
+     * @param  list<array<string, mixed>>  $orders
+     * @return list<array{tag: string, count: int, last_order: string, last_date: string, orphan: bool}>
+     */
     public function analyze(array $orders, string $orphanCutoff): array
     {
         $tags = [];

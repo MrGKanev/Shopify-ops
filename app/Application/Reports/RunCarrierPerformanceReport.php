@@ -11,11 +11,12 @@ class RunCarrierPerformanceReport
 {
     public function __construct(private readonly ShipStationClientFactory $factory, private readonly CarrierPerformanceAnalyzer $analyzer) {}
 
-    public function handle(Store $store, string $startDate, string $endDate): CarrierPerformanceResult
+    /** @return ReportResult<array<string, mixed>> */
+    public function handle(Store $store, string $startDate, string $endDate): ReportResult
     {
         $client = $this->factory->forStore($store) ?? throw new LogicException('ShipStation credentials are required for the carrier performance report.');
         $shipments = $client->fetchShipmentsByDate($startDate, $endDate);
 
-        return new CarrierPerformanceResult($startDate, $endDate, count($shipments), $this->analyzer->analyze($shipments));
+        return new ReportResult(rows: $this->analyzer->analyze($shipments), scanned: count($shipments), pages: 0, truncated: false, params: ['startDate' => $startDate, 'endDate' => $endDate], meta: []);
     }
 }

@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunShippedUnfulfilledReport;
-use App\Application\Reports\ShippedUnfulfilledResult;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
@@ -31,7 +31,7 @@ class ShippedUnfulfilledController extends Controller
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'shipped_unfulfilled', $report::class, [$start, $end], $start, $end, 'shippedTotal', 'count:rows');
+            $run = $reports->run($request, $store, 'shipped_unfulfilled', $report::class, [$start, $end], $start, $end);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -46,13 +46,13 @@ class ShippedUnfulfilledController extends Controller
     {
         [$store,$start,$end] = $this->context($request);
         if ($this->configurationError($store)) {
-            return back()->withErrors(['export' => 'Shopify and ShipStation credentials are required.']);
+            return back()->withErrors(['export' => __('reports.integration_credentials_required')]);
         }try {
             $result = $reports->completedResult($store, 'shipped_unfulfilled', $report::class, [$start, $end]) ?? $report->handle($store, $start, $end);
         } catch (Throwable $exception) {
             $this->logFailure('Shipped/unfulfilled CSV failed.', $exception, $store);
 
-            return back()->withErrors(['export' => 'The CSV export could not be completed.']);
+            return back()->withErrors(['export' => __('reports.export_failed')]);
         }
         $rows = array_map(fn (array $row): array => [$row['order_number'], $row['order_date'], $row['customer'], $row['email'], 'shipped', $row['sh_fulfillment'], $row['sh_financial'], $row['total']], $result->rows);
 
@@ -71,8 +71,12 @@ class ShippedUnfulfilledController extends Controller
         return $store->missingShopifyCredentials() || $store->missingShipStationCredentials();
     }
 
-    /** @return array<string,mixed> */
-    private function viewData(?string $start = null, ?string $end = null, ?ShippedUnfulfilledResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
+    /**
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @return array<string,mixed>
+     */
+    private function viewData(?string $start = null, ?string $end = null, ?ReportResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
     {
         return compact('result', 'reportFailed', 'configurationError') + ['startDate' => $start ?? now()->subDays(30)->toDateString(), 'endDate' => $end ?? now()->toDateString()];
     }

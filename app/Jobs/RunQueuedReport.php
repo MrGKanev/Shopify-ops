@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Application\Reports\RecordRun;
+use App\Integrations\Exceptions\IntegrationException;
 use App\Models\ReportRun;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -43,8 +44,9 @@ class RunQueuedReport implements ShouldQueue
             $result = app($run->report)->handle($run->store, ...$run->arguments);
             $run->storeResult($result);
         } catch (Throwable $exception) {
-            $run->forceFill(['status' => 'failed', 'finished_at' => now()])->save();
-            Log::warning('Queued report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof RequestException ? $exception->response->status() : null, 'store_id' => $run->store_id, 'tool' => $run->tool]);
+            $result = null;
+            $run->forceFill(['status' => 'failed', 'finished_at' => now(), 'failure_reason' => $exception instanceof IntegrationException ? $exception->userMessage() : null])->save();
+            Log::warning('Queued report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof IntegrationException ? $exception->status : ($exception instanceof RequestException ? $exception->response->status() : null), 'store_id' => $run->store_id, 'tool' => $run->tool]);
         }
 
         $runs->handle($run->store, [
@@ -53,8 +55,8 @@ class RunQueuedReport implements ShouldQueue
             'start_date' => $run->start_date?->toDateString(),
             'end_date' => $run->end_date?->toDateString(),
             'duration_seconds' => round(microtime(true) - $started, 3),
-            'scanned' => $run->metric($result, $run->scanned_metric),
-            'rows_found' => $run->metric($result, $run->rows_metric),
+            'scanned' => $result->scanned ?? 0,
+            'rows_found' => $result === null ? 0 : count($result->rows),
         ]);
     }
 

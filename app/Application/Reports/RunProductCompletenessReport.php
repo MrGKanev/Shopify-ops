@@ -3,25 +3,19 @@
 namespace App\Application\Reports;
 
 use App\Domain\Reports\ProductCompletenessAnalyzer;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyCatalog;
 use App\Models\Store;
 
 class RunProductCompletenessReport
 {
-    public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly ProductCompletenessAnalyzer $analyzer) {}
+    public function __construct(private readonly ShopifyCatalog $shopify, private readonly ProductCompletenessAnalyzer $analyzer) {}
 
-    public function handle(Store $store): ProductCompletenessResult
+    /** @return ReportResult<array<string, mixed>> */
+    public function handle(Store $store): ReportResult
     {
         $result = $this->shopify->productCompletenessCandidates($store);
         $rows = $this->analyzer->analyze($result['products']);
 
-        return new ProductCompletenessResult(
-            count($result['products']),
-            $rows,
-            count(array_filter($rows, fn (array $row): bool => $row['severity'] === 'critical')),
-            count(array_filter($rows, fn (array $row): bool => $row['severity'] === 'warning')),
-            $result['pages'],
-            $result['truncated'],
-        );
+        return new ReportResult(rows: $rows, scanned: count($result['products']), pages: $result['pages'], truncated: $result['truncated'], params: [], meta: ['critical' => count(array_filter($rows, fn (array $row): bool => $row['severity'] === 'critical')), 'warnings' => count(array_filter($rows, fn (array $row): bool => $row['severity'] === 'warning'))]);
     }
 }

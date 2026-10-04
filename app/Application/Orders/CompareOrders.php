@@ -5,13 +5,13 @@ namespace App\Application\Orders;
 use App\Domain\Orders\ShopifyOrderComparator;
 use App\Integrations\ShipStation\ShipStationClientContract;
 use App\Integrations\ShipStation\ShipStationClientFactory;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 
 class CompareOrders
 {
     public function __construct(
-        private readonly ShopifyAdminGateway $shopify,
+        private readonly ShopifyOrders $shopify,
         private readonly ShipStationClientFactory $shipStationClients,
         private readonly ShopifyOrderComparator $comparator,
     ) {}

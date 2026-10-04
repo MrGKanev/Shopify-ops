@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunCountryMismatchReport;
-use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
 use Illuminate\Http\RedirectResponse;
@@ -24,13 +24,13 @@ class CountryMismatchController extends Controller
         $endDate = (string) $request->validated('end_date');
         $result = null;
         $reportFailed = false;
-        $run = $reports->run($request, $store, 'country_mismatch', $report::class, [$startDate, $endDate], $startDate, $endDate, 'scanned', 'count:rows');
+        $run = $reports->run($request, $store, 'country_mismatch', $report::class, [$startDate, $endDate], $startDate, $endDate);
         if ($reports->shouldRedirect($request, $run)) {
             return $reports->redirectToResult($request);
         }
         $result = $run->result();
         $reportFailed = $run->hasFailed();
 
-        return view('reports.country-mismatch', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof ScanResult ? $result : null, 'reportFailed' => $reportFailed]);
+        return view('reports.country-mismatch', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof ReportResult ? $result : null, 'reportFailed' => $reportFailed]);
     }
 }

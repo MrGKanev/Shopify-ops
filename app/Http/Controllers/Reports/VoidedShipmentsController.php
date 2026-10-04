@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunVoidedShipmentsReport;
-use App\Application\Reports\VoidedShipmentsResult;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
@@ -31,7 +31,7 @@ class VoidedShipmentsController extends Controller
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'voided_shipments', $report::class, [$startDate, $endDate], $startDate, $endDate, 'count:rows', 'count:rows');
+            $run = $reports->run($request, $store, 'voided_shipments', $report::class, [$startDate, $endDate], $startDate, $endDate);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -46,14 +46,14 @@ class VoidedShipmentsController extends Controller
     {
         [$store, $startDate, $endDate] = $this->context($request);
         if ($this->configurationError($store)) {
-            return back()->withErrors(['export' => 'ShipStation credentials are incomplete for the active store.']);
+            return back()->withErrors(['export' => __('reports.shipstation_credentials_incomplete')]);
         }
         try {
             $result = $reports->completedResult($store, 'voided_shipments', $report::class, [$startDate, $endDate]) ?? $report->handle($store, $startDate, $endDate);
         } catch (Throwable $exception) {
             $this->logFailure('Voided shipments CSV export failed.', $exception, $store);
 
-            return back()->withErrors(['export' => 'The CSV export could not be completed.']);
+            return back()->withErrors(['export' => __('reports.export_failed')]);
         }
         $rows = array_map(fn (array $row): array => [$row['order_number'], $row['shipment_id'], $row['void_date'], $row['ship_date'], $row['carrier'], $row['service'], $row['tracking'], $row['ship_to_name'], $row['ship_to_city'], $row['ship_to_state'], $row['ship_to_zip'], $row['ship_to_country']], $result->rows);
 
@@ -72,8 +72,12 @@ class VoidedShipmentsController extends Controller
         return $store->missingShipStationCredentials();
     }
 
-    /** @return array<string, mixed> */
-    private function viewData(?string $startDate = null, ?string $endDate = null, ?VoidedShipmentsResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
+    /**
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @return array<string, mixed>
+     */
+    private function viewData(?string $startDate = null, ?string $endDate = null, ?ReportResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
     {
         return compact('result', 'reportFailed', 'configurationError') + ['startDate' => $startDate ?? now()->subDays(30)->toDateString(), 'endDate' => $endDate ?? now()->toDateString()];
     }

@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\ProductCompletenessResult;
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunProductCompletenessReport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProductCompletenessRequest;
@@ -25,7 +25,7 @@ class ProductCompletenessController extends Controller
         $configurationError = $store->missingShopifyCredentials();
 
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'product_completeness', $report::class, [], null, null, 'scanned', 'count:rows');
+            $run = $reports->run($request, $store, 'product_completeness', $report::class, [], null, null);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -33,6 +33,6 @@ class ProductCompletenessController extends Controller
             $reportFailed = $run->hasFailed();
         }
 
-        return view('reports.product-completeness', ['result' => $result instanceof ProductCompletenessResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.product-completeness', ['result' => $result instanceof ReportResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 }

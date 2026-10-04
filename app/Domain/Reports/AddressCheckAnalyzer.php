@@ -15,7 +15,10 @@ class AddressCheckAnalyzer
         private readonly PhoneNumberValidator $phones = new PhoneNumberValidator,
     ) {}
 
-    /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $orders
+     * @return list<array<string, mixed>>
+     */
     public function analyze(array $orders, bool $poBoxOnly = false): array
     {
         $rows = [];
@@ -33,7 +36,11 @@ class AddressCheckAnalyzer
         return $rows;
     }
 
-    /** @param array<string, mixed>|null $address @param array<string, mixed> $order @return list<array{level: 'critical'|'warning', code: string, message: string}> */
+    /**
+     * @param  array<string, mixed>|null  $address
+     * @param  array<string, mixed>  $order
+     * @return list<array{level: 'critical'|'warning', code: string, message: string}>
+     */
     public function check(?array $address, array $order = []): array
     {
         if ($address === null || $address === []) {

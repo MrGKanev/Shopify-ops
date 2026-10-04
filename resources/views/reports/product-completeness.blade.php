@@ -1,40 +1,20 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="flex flex-col gap-6">
-        <x-page-header eyebrow="Catalogue report" title="Product completeness" subtitle="Find active products with no usable image, meaningful description, variants, or SKU." />
-
-        <form class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900" method="POST" action="{{ route('reports.product-completeness.store') }}">
-            @csrf
-            <x-button type="submit">Scan active products</x-button>
-        </form>
-
-        @if ($configurationError)
-            <x-alert tone="warn">{{ __('Shopify credentials are incomplete for the active store.') }}</x-alert>
-        @endif
-        @if ($reportFailed)
-            <x-alert tone="error">{{ __('The report could not be completed. Check Shopify and try again.') }}</x-alert>
-        @endif
+    <x-report.layout eyebrow="Catalogue report" title="Product completeness" subtitle="Find active products with no usable image, meaningful description, variants, or SKU." :configuration-error="$configurationError" :report-failed="$reportFailed">
+        <x-slot:form>
+            <x-report.params-form :action="route('reports.product-completeness.store')" submit-label="Scan active products" />
+        </x-slot:form>
 
         @if ($result)
-            <section class="flex flex-col gap-4">
-                <h2 class="text-2xl font-bold">{{ $result->scanned }} scanned · {{ count($result->rows) }} with issues</h2>
-                <p class="text-sm text-slate-500 dark:text-slate-400">{{ $result->critical }} critical · {{ $result->warnings }} warnings</p>
+            <x-report.results :truncated="$result->truncated" truncated-message="Results were truncated after :pages product pages. The report is not a complete store inventory." :pages="$result->pages">
+                <x-slot:heading>{{ $result->scanned }} scanned · {{ count($result->rows) }} with issues</x-slot:heading>
+                <x-slot:summary>{{ $result->meta['critical'] }} critical · {{ $result->meta['warnings'] }} warnings</x-slot:summary>
 
-                @if ($result->truncated)
-                    <x-alert tone="warn">{{ __('Results were truncated after :pages product pages. The report is not a complete store inventory.', ['pages' => $result->pages]) }}</x-alert>
-                @endif
-
-                <x-data-table :headers="['Product', 'Vendor / type', 'Images', 'Variants', 'Issues', 'Severity']">
-                    @forelse ($result->rows as $row)
+                <x-data-table :headers="['Product', 'Vendor / type', 'Images', 'Variants', 'Issues', 'Severity']" :rows="$result->rows" empty="All scanned active products are complete.">
+                    @foreach ($result->rows as $row)
                         <tr>
-                            <td class="px-4 py-3">
-                                @if ($row['id'])
-                                    <a class="font-semibold text-indigo-600 dark:text-indigo-400" href="https://{{ $activeStore->shopify_store }}.myshopify.com/admin/products/{{ $row['id'] }}" target="_blank" rel="noopener noreferrer">{{ $row['title'] ?: 'Untitled product' }}</a>
-                                @else
-                                    <strong>{{ $row['title'] ?: 'Untitled product' }}</strong>
-                                @endif
-                            </td>
+                            <td class="px-4 py-3"><x-report.shopify-link resource="products" :id="$row['id']" class="font-semibold">{{ $row['title'] ?: 'Untitled product' }}</x-report.shopify-link></td>
                             <td class="px-4 py-3">{{ $row['vendor'] ?: '—' }}@if ($row['type']) · {{ $row['type'] }}@endif</td>
                             <td class="px-4 py-3">{{ $row['images'] }}</td>
                             <td class="px-4 py-3">{{ $row['variants'] }}</td>
@@ -47,13 +27,9 @@
                             </td>
                             <td class="px-4 py-3"><x-badge :tone="$row['severity'] === 'critical' ? 'danger' : 'warn'">{{ $row['severity'] }}</x-badge></td>
                         </tr>
-                    @empty
-                        <tr>
-                            <td class="px-4 py-8 text-center text-slate-500" colspan="6">{{ __('All scanned active products are complete.') }}</td>
-                        </tr>
-                    @endforelse
+                    @endforeach
                 </x-data-table>
-            </section>
+            </x-report.results>
         @endif
-    </div>
+    </x-report.layout>
 @endsection

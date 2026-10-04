@@ -2,7 +2,8 @@
 
 namespace App\Domain\Authentication;
 
-use Laravel\Socialite\Two\User;
+use Laravel\Socialite\Contracts\User;
+use Laravel\Socialite\Two\User as OAuthUser;
 
 class GoogleIdentityPolicy
 {
@@ -18,6 +19,9 @@ class GoogleIdentityPolicy
 
     public function allows(User $identity): bool
     {
+        if (! $identity instanceof OAuthUser) {
+            return false;
+        }
         $raw = $identity->getRaw();
         $hostedDomain = mb_strtolower(trim(is_scalar($raw['hd'] ?? null) ? (string) $raw['hd'] : ''));
 

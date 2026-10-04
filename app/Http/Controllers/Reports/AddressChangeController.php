@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
-use App\Application\Reports\AddressChangeResult;
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunAddressChangeReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Controller;
@@ -32,7 +32,7 @@ class AddressChangeController extends Controller
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'address_changes', $report::class, [$start, $end], $start, $end, 'count:rows', 'count:rows');
+            $run = $reports->run($request, $store, 'address_changes', $report::class, [$start, $end], $start, $end);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -40,14 +40,14 @@ class AddressChangeController extends Controller
             $reportFailed = $run->hasFailed();
         }
 
-        return view('reports.address-changes', ['startDate' => $start, 'endDate' => $end, 'result' => $result instanceof AddressChangeResult ? $result : null, 'configurationError' => $configurationError, 'reportFailed' => $reportFailed]);
+        return view('reports.address-changes', ['startDate' => $start, 'endDate' => $end, 'result' => $result instanceof ReportResult ? $result : null, 'configurationError' => $configurationError, 'reportFailed' => $reportFailed]);
     }
 
     public function export(DateRangeReportRequest $request, RunAddressChangeReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse
     {
         $store = $this->resolveStore($request);
         if ($store->missingShopifyCredentials()) {
-            return back()->withErrors(['export' => 'Shopify credentials are incomplete for the active store.']);
+            return back()->withErrors(['export' => __('reports.shopify_credentials_incomplete')]);
         }
         $start = (string) $request->validated('start_date');
         $end = (string) $request->validated('end_date');
@@ -56,7 +56,7 @@ class AddressChangeController extends Controller
         } catch (Throwable $exception) {
             $this->logFailure('Address change CSV export failed.', $exception, $store);
 
-            return back()->withErrors(['export' => 'The CSV export could not be completed.']);
+            return back()->withErrors(['export' => __('reports.export_failed')]);
         }
         $rows = array_map(fn (array $row): array => [$row['order_number'], $row['created_at'], $row['changed_at'], $row['gap_mins'], $row['email'], $row['addr_name'], $row['addr_line'], number_format((float) $row['total'], 2, '.', ''), $row['financial'], $row['fulfillment']], $result->rows);
 

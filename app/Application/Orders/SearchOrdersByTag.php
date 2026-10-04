@@ -2,12 +2,12 @@
 
 namespace App\Application\Orders;
 
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 
 class SearchOrdersByTag
 {
-    public function __construct(private readonly ShopifyAdminGateway $shopify) {}
+    public function __construct(private readonly ShopifyOrders $shopify) {}
 
     public function handle(Store $store, string $tag, ?string $startDate, ?string $endDate): OrderTagSearchResult
     {
@@ -22,7 +22,10 @@ class SearchOrdersByTag
         return new OrderTagSearchResult($tag, $startDate, $endDate, $orders, $result['pages'], $result['truncated']);
     }
 
-    /** @param array<string, mixed> $order @return array<string, mixed> */
+    /**
+     * @param  array<string, mixed>  $order
+     * @return array<string, mixed>
+     */
     private function present(array $order): array
     {
         $candidateId = $this->text($order['id'] ?? '');

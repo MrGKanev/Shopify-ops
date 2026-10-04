@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyPayments;
 use App\Models\Store;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
@@ -23,9 +23,9 @@ class GiftCardsControllerTest extends TestCase
     public function test_form_defaults_to_thirty_days_without_fetching(): void
     {
         [$user] = $this->userWithStore(true);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyPayments::class);
         $shopify->shouldNotReceive('giftCardCandidates');
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyPayments::class, $shopify);
 
         $this->actingAs($user)->get(route('reports.gift-cards'))->assertOk()->assertSee('value="30"', false);
     }
@@ -40,9 +40,9 @@ class GiftCardsControllerTest extends TestCase
     public function test_configuration_error_prevents_call_and_preserves_days(): void
     {
         [$user] = $this->userWithStore(true, ['shopify_access_token' => '']);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyPayments::class);
         $shopify->shouldNotReceive('giftCardCandidates');
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyPayments::class, $shopify);
 
         $this->actingAs($user)->post(route('reports.gift-cards.store'), ['days' => 14])->assertOk()->assertSeeText('credentials are incomplete')->assertSee('value="14"', false);
     }
@@ -52,9 +52,9 @@ class GiftCardsControllerTest extends TestCase
         $this->travelTo('2026-05-28 12:00:00');
         [$user, $store] = $this->userWithStore(true);
         Store::factory()->create();
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyPayments::class);
         $shopify->shouldReceive('giftCardCandidates')->once()->with(Mockery::on(fn (Store $selected): bool => $selected->is($store)))->andReturn(['gift_cards' => [['id' => 'gid://shopify/GiftCard/1', 'masked_code' => '<script>x</script>', 'balance' => 50.0, 'initial_value' => 50.0, 'currency' => 'USD', 'expires_on' => null, 'enabled' => true, 'created_at' => '2026-01-01', 'customer_email' => '<img src=x>']], 'pages' => 1000, 'truncated' => true]);
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyPayments::class, $shopify);
 
         $this->actingAs($user)->post(route('reports.gift-cards.store'), ['days' => 14, 'store_id' => 999])->assertOk()->assertSeeText('1 gift cards · 1 flagged')->assertSeeText('Never redeemed')->assertSeeText('truncated after 1000 gift card pages')->assertDontSee('<script>', false)->assertDontSee('<img', false);
     }
@@ -62,9 +62,9 @@ class GiftCardsControllerTest extends TestCase
     public function test_upstream_error_is_atomic_and_safe(): void
     {
         [$user] = $this->userWithStore(true);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyPayments::class);
         $shopify->shouldReceive('giftCardCandidates')->andThrow(new RuntimeException('secret'));
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyPayments::class, $shopify);
 
         $this->actingAs($user)->post(route('reports.gift-cards.store'), ['days' => 30])->assertOk()->assertSeeText('could not be completed')->assertDontSeeText('secret')->assertDontSeeText('gift cards ·');
     }

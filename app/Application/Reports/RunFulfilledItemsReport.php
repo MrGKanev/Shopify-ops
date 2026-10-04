@@ -3,15 +3,15 @@
 namespace App\Application\Reports;
 
 use App\Domain\Reports\FulfilledItemsAnalyzer;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 
 class RunFulfilledItemsReport extends RunScanReport
 {
-    public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly FulfilledItemsAnalyzer $analyzer) {}
+    public function __construct(private readonly ShopifyOrders $shopify, private readonly FulfilledItemsAnalyzer $analyzer) {}
 
-    /** @return ScanResult<array{product: string, quantity: int}> */
-    public function handle(Store $store, string $startDate, string $endDate): ScanResult
+    /** @return ReportResult<array{product: string, quantity: int}> */
+    public function handle(Store $store, string $startDate, string $endDate): ReportResult
     {
         $candidates = $this->shopify->fulfilledItemCandidates($store, $startDate);
 

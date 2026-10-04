@@ -1,0 +1,6 @@
+query CustomerLtvCandidates($search: String!, $after: String) {
+  orders(first: 250, after: $after, sortKey: CREATED_AT, query: $search) {
+    pageInfo { hasNextPage endCursor }
+    edges { node { legacyResourceId name createdAt cancelledAt email totalPriceSet { shopMoney { amount currencyCode } } } }
+  }
+}

@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Application\Notifications\ChatRules;
+use App\Application\Notifications\EmailRules;
+use App\Models\Concerns\AsNotificationRules;
 use Database\Factories\StoreFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -12,6 +15,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
+/**
+ * @property ChatRules $slack_rules
+ * @property ChatRules $discord_rules
+ * @property EmailRules $email_rules
+ */
 #[Fillable([
     'slug',
     'label',
@@ -132,48 +140,6 @@ class Store extends Model
         return trim((string) $this->shipstation_api_key) === '' || trim((string) $this->shipstation_api_secret) === '';
     }
 
-    /** @return array{audit_enabled:bool,audit_min_missing:int,include_zero_audit:bool,scan_enabled:bool,scan_min_rows:int,mentions:string} */
-    public function resolvedSlackRules(): array
-    {
-        preg_match_all('/[UWS][A-Z0-9]{8,}/', strtoupper((string) ($this->slack_rules['mentions'] ?? '')), $mentionIds);
-
-        return [...$this->resolvedChatRules($this->slack_rules), 'mentions' => implode(' ', array_unique($mentionIds[0]))];
-    }
-
-    /** @return array{audit_enabled:bool,audit_min_missing:int,include_zero_audit:bool,scan_enabled:bool,scan_min_rows:int} */
-    public function resolvedDiscordRules(): array
-    {
-        return $this->resolvedChatRules($this->discord_rules);
-    }
-
-    /**
-     * Shared defaults and bounds for Slack and Discord audit/scan rules.
-     *
-     * @param  array<string, mixed>|null  $stored
-     * @return array{audit_enabled:bool,audit_min_missing:int,include_zero_audit:bool,scan_enabled:bool,scan_min_rows:int}
-     */
-    private function resolvedChatRules(?array $stored): array
-    {
-        $rules = array_replace(['audit_enabled' => true, 'audit_min_missing' => 0, 'include_zero_audit' => true, 'scan_enabled' => false, 'scan_min_rows' => 1], $stored ?? []);
-
-        return ['audit_enabled' => (bool) $rules['audit_enabled'], 'audit_min_missing' => max(0, (int) $rules['audit_min_missing']), 'include_zero_audit' => (bool) $rules['include_zero_audit'], 'scan_enabled' => (bool) $rules['scan_enabled'], 'scan_min_rows' => max(1, (int) $rules['scan_min_rows'])];
-    }
-
-    /** @return array<string, array{mode:string,threshold:int,include_zero:bool,email:string}> */
-    public function resolvedEmailRules(): array
-    {
-        $resolved = [];
-        foreach ($this->email_rules ?? [] as $tool => $rule) {
-            if (! is_string($tool) || ! is_array($rule) || ! in_array($rule['mode'] ?? null, ['off', 'immediate', 'digest'], true)) {
-                continue;
-            }
-            $email = trim((string) ($rule['email'] ?? ''));
-            $resolved[$tool] = ['mode' => $rule['mode'], 'threshold' => max($tool === 'run_audit' ? 0 : 1, (int) ($rule['threshold'] ?? 1)), 'include_zero' => (bool) ($rule['include_zero'] ?? false), 'email' => $email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : ''];
-        }
-
-        return $resolved;
-    }
-
     /**
      * @return array<string, string>
      */
@@ -184,9 +150,9 @@ class Store extends Model
             'shopify_webhook_secret' => 'encrypted',
             'shipstation_api_key' => 'encrypted',
             'shipstation_api_secret' => 'encrypted',
-            'slack_rules' => 'array',
-            'email_rules' => 'array',
-            'discord_rules' => 'array',
+            'slack_rules' => AsNotificationRules::class.':chat',
+            'email_rules' => AsNotificationRules::class.':email',
+            'discord_rules' => AsNotificationRules::class.':discord',
             'scheduled_audit_enabled' => 'boolean',
             'delivery_watch_days' => 'integer',
             'scheduled_audit_time' => 'datetime:H:i',

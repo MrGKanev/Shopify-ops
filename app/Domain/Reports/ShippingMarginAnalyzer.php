@@ -4,7 +4,11 @@ namespace App\Domain\Reports;
 
 class ShippingMarginAnalyzer
 {
-    /** @param list<array<string, mixed>> $shipments @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $shipments
+     * @param  list<array<string, mixed>>  $orders
+     * @return list<array<string, mixed>>
+     */
     public function analyze(array $shipments, array $orders, float $threshold): array
     {
         $orders = array_column($orders, null, 'order_number');
@@ -37,7 +41,10 @@ class ShippingMarginAnalyzer
         return $rows;
     }
 
-    /** @param list<array<string, mixed>> $rows @return list<array{carrier: string, count: int, total_loss: float, avg_loss: float}> */
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     * @return list<array{carrier: string, count: int, total_loss: float, avg_loss: float}>
+     */
     public function byCarrier(array $rows): array
     {
         $carriers = [];

@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\EmailCheckResult;
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunEmailCheckReport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
@@ -27,7 +27,7 @@ class EmailCheckController extends Controller
         $reportFailed = false;
 
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'email_check', $report::class, [$startDate, $endDate], $startDate, $endDate, 'scanned', 'count:rows');
+            $run = $reports->run($request, $store, 'email_check', $report::class, [$startDate, $endDate], $startDate, $endDate);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -35,6 +35,6 @@ class EmailCheckController extends Controller
             $reportFailed = $run->hasFailed();
         }
 
-        return view('reports.email-check', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof EmailCheckResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.email-check', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof ReportResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 }

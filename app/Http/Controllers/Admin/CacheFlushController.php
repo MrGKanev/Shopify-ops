@@ -16,6 +16,6 @@ class CacheFlushController extends Controller
         activity('operator-actions')->causedBy($request->user())->performedOn($store)
             ->withProperties(['store_id' => $store->getKey()])->log('flush_cache');
 
-        return back()->with('status', 'Cache flushed.');
+        return back()->with('status', __('Cache flushed.'));
     }
 }

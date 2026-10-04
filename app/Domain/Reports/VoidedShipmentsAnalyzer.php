@@ -8,7 +8,10 @@ class VoidedShipmentsAnalyzer
 {
     use NormalizesText;
 
-    /** @param list<array<string, mixed>> $shipments @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $shipments
+     * @return list<array<string, mixed>>
+     */
     public function analyze(array $shipments): array
     {
         $rows = array_map(function (array $shipment): array {

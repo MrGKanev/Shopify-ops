@@ -1,0 +1,33 @@
+query FindOrdersByNames($query: String!, $after: String) {
+  orders(first: 250, after: $after, query: $query) {
+    pageInfo { hasNextPage endCursor }
+    edges {
+      node {
+        id
+        legacyResourceId
+        name
+        createdAt
+        cancelledAt
+        email
+        tags
+        displayFinancialStatus
+        displayFulfillmentStatus
+        totalPriceSet { shopMoney { amount currencyCode } }
+        shippingAddress {
+          address1
+          country
+          countryCodeV2
+          phone
+        }
+        billingAddress {
+          country
+          countryCodeV2
+        }
+        risk {
+          recommendation
+          assessments { riskLevel }
+        }
+      }
+    }
+  }
+}

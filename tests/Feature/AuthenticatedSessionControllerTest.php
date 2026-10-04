@@ -135,6 +135,24 @@ class AuthenticatedSessionControllerTest extends TestCase
             ->assertSeeText('Two-factor authentication');
     }
 
+    public function test_enabled_two_factor_settings_render_recovery_codes_and_success_alert(): void
+    {
+        $user = User::factory()->create();
+        $store = Store::factory()->create();
+        $user->stores()->attach($store);
+        $user->forceFill([
+            'two_factor_secret' => encrypt('two-factor-secret'),
+            'two_factor_recovery_codes' => encrypt(json_encode(['recovery-code-one', 'recovery-code-two'])),
+            'two_factor_confirmed_at' => now(),
+        ])->save();
+
+        $this->actingAs($user)->get(route('two-factor.settings'))
+            ->assertOk()
+            ->assertSeeText('Two-factor authentication is enabled.')
+            ->assertSeeText('recovery-code-one')
+            ->assertSee('bg-emerald-50', false);
+    }
+
     public function test_logout_invalidates_the_authenticated_session(): void
     {
         $user = User::factory()->create();

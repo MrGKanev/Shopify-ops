@@ -4,7 +4,11 @@ namespace App\Domain\Orders;
 
 class TrackingFeedBuilder
 {
-    /** @param list<array<string, mixed>> $orders @param list<array<string, mixed>> $shipments */
+    /**
+     * @param list<array<string, mixed>> $orders
+     * @param list<array<string, mixed>> $shipments
+
+     * @return array{number: string, found: bool, shipments: list<array<string, string|null>>} */
     public function build(string $number, array $orders, array $shipments): array
     {
         $order = $orders[0] ?? null;
@@ -27,7 +31,9 @@ class TrackingFeedBuilder
         ];
     }
 
-    /** @param array<string, mixed> $shipment */
+    /**
+     * @param array<string, mixed> $shipment
+     * @return array<string, string|null> */
     private function shipment(array $shipment, string $fallbackOrderId, string $fallbackStatus): array
     {
         $carrier = $this->scalar($shipment['carrierCode'] ?? '');

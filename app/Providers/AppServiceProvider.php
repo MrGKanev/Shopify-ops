@@ -5,7 +5,14 @@ namespace App\Providers;
 use App\Application\Health\Checks\ScheduledTasksHealthCheck;
 use App\Application\Health\Checks\ShipStationApiHealthCheck;
 use App\Application\Health\Checks\ShopifyApiHealthCheck;
+use App\Application\Reports\ReportRegistry;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyCatalog;
+use App\Integrations\Shopify\Contracts\ShopifyCustomers;
+use App\Integrations\Shopify\Contracts\ShopifyHealth;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
+use App\Integrations\Shopify\Contracts\ShopifyPayments;
+use App\Integrations\Shopify\Contracts\ShopifyTransport;
 use App\Integrations\Shopify\ShopifyAdminClient;
 use App\Listeners\AlertOnOperationalFailure;
 use App\Listeners\LogNotificationDelivery;
@@ -41,6 +48,11 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(ShopifyAdminGateway::class, ShopifyAdminClient::class);
+
+        foreach ([ShopifyOrders::class, ShopifyCatalog::class, ShopifyCustomers::class, ShopifyPayments::class, ShopifyHealth::class, ShopifyTransport::class] as $shopifyCapability) {
+            $this->app->bind($shopifyCapability, fn () => $this->app->make(ShopifyAdminGateway::class));
+        }
+        $this->app->singleton(ReportRegistry::class, fn (): ReportRegistry => new ReportRegistry(config('reports')));
     }
 
     /**

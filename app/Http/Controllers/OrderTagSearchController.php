@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Application\Orders\OrderTagSearchResult;
 use App\Application\Orders\SearchOrdersByTag;
 use App\Http\Requests\OrderTagSearchRequest;
+use App\Integrations\Exceptions\IntegrationException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -42,7 +43,7 @@ class OrderTagSearchController extends Controller
                 $searchFailed = true;
                 Log::warning('Order tag search failed.', [
                     'exception_type' => $exception::class,
-                    'status' => $exception instanceof RequestException ? $exception->response->status() : null,
+                    'status' => $exception instanceof IntegrationException ? $exception->status : ($exception instanceof RequestException ? $exception->response->status() : null),
                     'store_id' => $store->getKey(),
                 ]);
             }

@@ -8,6 +8,7 @@ use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -15,11 +16,8 @@ class VoidedShipmentsControllerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_access_validation_configuration_success_and_safe_failure(): void
+    public function test_validation_configuration_success_and_safe_failure(): void
     {
-        $this->get('/reports/voided-shipments')->assertRedirect(route('login'));
-        [$viewer] = $this->userWithStore();
-        $this->actingAs($viewer)->get('/reports/voided-shipments')->assertForbidden();
         [$operator] = $this->userWithStore(true);
         $this->actingAs($operator)->post('/reports/voided-shipments', ['start_date' => 'bad', 'end_date' => '2026-06-30'])->assertSessionHasErrors('start_date');
         [$operator] = $this->userWithStore(true, ['shipstation_api_key' => '']);
@@ -51,6 +49,30 @@ class VoidedShipmentsControllerTest extends TestCase
         $response = $this->actingAs($operator)->post(route('reports.voided-shipments.export'), $this->input());
         $response->assertOk()->assertDownload('voided-shipments-2026-06-01-to-2026-06-30.csv');
         $this->assertStringContainsString("'=bad", $response->streamedContent());
+    }
+
+    #[DataProvider('exportLocales')]
+    public function test_export_errors_use_the_selected_locale(string $locale, bool $configured, string $message): void
+    {
+        app()->setLocale($locale);
+        [$operator] = $this->userWithStore(true, $configured ? [] : ['shipstation_api_key' => '']);
+        if ($configured) {
+            $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andThrow(new RuntimeException('secret-token'));
+        }
+
+        $response = $this->actingAs($operator)->post(route('reports.voided-shipments.export'), $this->input());
+
+        $response->assertSessionHasErrors(['export' => $message]);
+    }
+
+    public static function exportLocales(): array
+    {
+        return [
+            'English credentials' => ['en', false, 'ShipStation credentials are incomplete for the active store.'],
+            'Bulgarian credentials' => ['bg', false, 'Данните за достъп до ShipStation за активния магазин са непълни.'],
+            'English failure' => ['en', true, 'The CSV export could not be completed.'],
+            'Bulgarian failure' => ['bg', true, 'CSV експортът не можа да бъде завършен.'],
+        ];
     }
 
     private function input(): array

@@ -8,7 +8,10 @@ class ProductCompletenessAnalyzer
 {
     use NormalizesText;
 
-    /** @param list<array<string, mixed>> $products @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $products
+     * @return list<array<string, mixed>>
+     */
     public function analyze(array $products): array
     {
         $rows = [];

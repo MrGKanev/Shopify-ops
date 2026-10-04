@@ -1,0 +1,6 @@
+mutation UpdateOrderNote($id: ID!, $note: String!) {
+  orderUpdate(input: {id: $id, note: $note}) {
+    order { id note }
+    userErrors { field message }
+  }
+}

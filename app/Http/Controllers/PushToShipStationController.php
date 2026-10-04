@@ -39,7 +39,7 @@ class PushToShipStationController extends Controller
             activity('operator-actions')->causedBy($request->user())->performedOn($store)
                 ->withProperties(['order_number' => $result['order_number']])->log('push_to_shipstation');
 
-            return back()->with('status', "Pushed order #{$result['order_number']} to ShipStation.");
+            return back()->with('status', __('Pushed order #:number to ShipStation.', ['number' => $result['order_number']]));
         } catch (ShippingAddressNeedsReview $exception) {
             return back()->withInput()->with('addressIssues', $exception->issues)->withErrors(['order_number' => $exception->getMessage()]);
         } catch (Throwable $exception) {

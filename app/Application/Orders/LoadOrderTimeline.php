@@ -6,13 +6,13 @@ use App\Domain\Orders\OrderRiskScorer;
 use App\Domain\Orders\OrderTimelineBuilder;
 use App\Domain\Orders\OrderTimelineRiskAnalyzer;
 use App\Integrations\ShipStation\ShipStationClientFactory;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 
 class LoadOrderTimeline
 {
     public function __construct(
-        private readonly ShopifyAdminGateway $shopify,
+        private readonly ShopifyOrders $shopify,
         private readonly ShipStationClientFactory $shipStationClients,
         private readonly OrderTimelineBuilder $timelineBuilder,
         private readonly OrderTimelineRiskAnalyzer $riskAnalyzer,

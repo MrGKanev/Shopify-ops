@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Application\Orders\LoadOrderTimeline;
 use App\Application\Orders\OrderTimelineResult;
 use App\Http\Requests\OrderTimelineRequest;
+use App\Integrations\Exceptions\IntegrationException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
@@ -27,7 +28,7 @@ class OrderTimelineController extends Controller
                 $timelineFailed = true;
                 Log::warning('Order timeline failed.', [
                     'exception_type' => $exception::class,
-                    'status' => $exception instanceof RequestException ? $exception->response->status() : null,
+                    'status' => $exception instanceof IntegrationException ? $exception->status : ($exception instanceof RequestException ? $exception->response->status() : null),
                 ]);
             }
         }

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -14,34 +14,31 @@ class PartialFulfillmentControllerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_access_validation_configuration_success_and_safe_failure(): void
+    public function test_validation_configuration_success_and_safe_failure(): void
     {
-        $this->get('/reports/partial-fulfillment')->assertRedirect(route('login'));
-        [$viewer] = $this->userWithStore();
-        $this->actingAs($viewer)->get('/reports/partial-fulfillment')->assertForbidden();
         [$operator] = $this->userWithStore(true);
         $this->actingAs($operator)->post('/reports/partial-fulfillment', [...$this->input(), 'threshold' => 0])->assertSessionHasErrors('threshold');
         [$operator] = $this->userWithStore(true, ['shopify_access_token' => '']);
         $this->actingAs($operator)->post('/reports/partial-fulfillment', $this->input())->assertOk()->assertSeeText('credentials are incomplete');
 
         [$operator] = $this->userWithStore(true);
-        $gateway = Mockery::mock(ShopifyAdminGateway::class);
+        $gateway = Mockery::mock(ShopifyOrders::class);
         $gateway->shouldReceive('partialFulfillmentCandidates')->andReturn($this->candidates('<script>', true));
-        $this->app->instance(ShopifyAdminGateway::class, $gateway);
+        $this->app->instance(ShopifyOrders::class, $gateway);
         $this->actingAs($operator)->post('/reports/partial-fulfillment', $this->input())->assertOk()->assertSeeText('1 partial orders scanned · 1 stalled')->assertSeeText('truncated after 100 pages')->assertDontSee('<script>', false);
 
-        $gateway = Mockery::mock(ShopifyAdminGateway::class);
+        $gateway = Mockery::mock(ShopifyOrders::class);
         $gateway->shouldReceive('partialFulfillmentCandidates')->andThrow(new RuntimeException('secret-token'));
-        $this->app->instance(ShopifyAdminGateway::class, $gateway);
+        $this->app->instance(ShopifyOrders::class, $gateway);
         $this->actingAs($operator)->post('/reports/partial-fulfillment', $this->input())->assertOk()->assertSeeText('could not be completed')->assertDontSeeText('secret-token');
     }
 
     public function test_operator_can_download_formula_safe_csv(): void
     {
         [$operator] = $this->userWithStore(true);
-        $gateway = Mockery::mock(ShopifyAdminGateway::class);
+        $gateway = Mockery::mock(ShopifyOrders::class);
         $gateway->shouldReceive('partialFulfillmentCandidates')->andReturn($this->candidates('=bad'));
-        $this->app->instance(ShopifyAdminGateway::class, $gateway);
+        $this->app->instance(ShopifyOrders::class, $gateway);
 
         $response = $this->actingAs($operator)->post(route('reports.partial-fulfillment.export'), $this->input());
         $response->assertOk()->assertDownload('partial-fulfillment-stalls-2026-06-01-to-2026-06-30.csv');

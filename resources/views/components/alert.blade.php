@@ -1,3 +1,7 @@
+{{--
+    Plain-text slot content is passed through __(); markup in the slot (lists,
+    <strong>, <code>) is rendered as-is, matching the x-button convention.
+--}}
 @props(['tone' => 'ok'])
 @php
     $tones = [
@@ -5,5 +9,6 @@
         'warn' => 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800',
         'error' => 'bg-red-50 text-red-800 border-red-200 dark:bg-red-950 dark:text-red-200 dark:border-red-800',
     ];
+    $alertText = trim((string) $slot);
 @endphp
-<div {{ $attributes->merge(['class' => "rounded-xl border p-4 {$tones[$tone]}"]) }} role="alert">{{ __((string) $slot) }}</div>
+<div {{ $attributes->merge(['class' => "rounded-xl border p-4 {$tones[$tone]}"]) }} role="alert">@if (str_contains($alertText, '<')){!! $slot !!}@else{{ __($alertText) }}@endif</div>

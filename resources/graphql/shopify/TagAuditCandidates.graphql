@@ -1,0 +1,6 @@
+query TagAuditCandidates($search: String!, $after: String) {
+  orders(first: 250, after: $after, sortKey: CREATED_AT, reverse: true, query: $search) {
+    pageInfo { hasNextPage endCursor }
+    edges { node { name createdAt tags } }
+  }
+}

@@ -1,41 +1,31 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="flex flex-col gap-6">
-        <x-page-header eyebrow="Inventory report" title="Inventory oversell risk" subtitle="Compare active Shopify stock with every ShipStation order awaiting shipment and find SKUs that cannot cover current demand." />
-
-        <form class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900" method="POST" action="{{ route('reports.inventory-oversell.store') }}">
-            @csrf
-            <x-button type="submit">Scan inventory</x-button>
-        </form>
-
-        @if ($shopifyConfigurationError)
-            <x-alert tone="warn">{{ __('Shopify credentials are incomplete for the active store.') }}</x-alert>
-        @endif
-        @if ($shipStationConfigurationError)
-            <x-alert tone="warn">{{ __('ShipStation credentials are incomplete for the active store.') }}</x-alert>
-        @endif
-        @if ($reportFailed)
-            <x-alert tone="error">{{ __('The report could not be completed. Check Shopify and ShipStation, then try again.') }}</x-alert>
-        @endif
+    <x-report.layout
+        eyebrow="Inventory report"
+        title="Inventory oversell risk"
+        subtitle="Compare active Shopify stock with every ShipStation order awaiting shipment and find SKUs that cannot cover current demand."
+        :configuration-errors="[
+            'Shopify credentials are incomplete for the active store.' => $shopifyConfigurationError,
+            'ShipStation credentials are incomplete for the active store.' => $shipStationConfigurationError,
+        ]"
+        :report-failed="$reportFailed"
+        failure-message="The report could not be completed. Check Shopify and ShipStation, then try again."
+    >
+        <x-slot:form>
+            <x-report.params-form :action="route('reports.inventory-oversell.store')" submit-label="Scan inventory" />
+        </x-slot:form>
 
         @if ($result)
-            <section class="flex flex-col gap-4">
-                <h2 class="text-2xl font-bold">{{ $result->products }} products · {{ $result->awaitingOrders }} awaiting orders</h2>
-                <p class="text-sm text-slate-500 dark:text-slate-400">{{ count($result->rows) }} SKUs at risk of overselling</p>
-                @if ($result->productsTruncated)
-                    <x-alert tone="warn">{{ __('Results are incomplete: product catalogue truncated after :pages pages.', ['pages' => $result->productPages]) }}</x-alert>
-                @endif
+            <x-report.results :truncated="$result->meta['productsTruncated']" truncated-message="Results are incomplete: product catalogue truncated after :pages pages." :pages="$result->meta['productPages']">
+                <x-slot:heading>{{ $result->meta['products'] }} products · {{ $result->meta['awaitingOrders'] }} awaiting orders</x-slot:heading>
+                <x-slot:summary>{{ count($result->rows) }} SKUs at risk of overselling</x-slot:summary>
 
-                <x-data-table :headers="['Product / variant', 'SKU', 'Stock', 'Awaiting', 'Shortfall', 'Action']">
-                    @forelse ($result->rows as $row)
+                <x-data-table :headers="['Product / variant', 'SKU', 'Stock', 'Awaiting', 'Shortfall', 'Action']" :rows="$result->rows" empty="Current tracked stock covers every SKU awaiting shipment.">
+                    @foreach ($result->rows as $row)
                         <tr>
                             <td class="px-4 py-3">
-                                @if ($row['product_id'])
-                                    <a class="font-semibold text-indigo-600 dark:text-indigo-400" href="https://{{ $activeStore->shopify_store }}.myshopify.com/admin/products/{{ $row['product_id'] }}" target="_blank" rel="noopener noreferrer">{{ $row['product_title'] ?: 'Untitled product' }}</a>
-                                @else
-                                    <strong>{{ $row['product_title'] ?: 'Untitled product' }}</strong>
-                                @endif
+                                <x-report.shopify-link resource="products" :id="$row['product_id']" class="font-semibold">{{ $row['product_title'] ?: 'Untitled product' }}</x-report.shopify-link>
                                 @if ($row['variant_title'])
                                     <div class="text-slate-500">{{ $row['variant_title'] }}</div>
                                 @endif
@@ -50,13 +40,9 @@
                                 @endif
                             </td>
                         </tr>
-                    @empty
-                        <tr>
-                            <td class="px-4 py-8 text-center text-slate-500" colspan="6">{{ __('Current tracked stock covers every SKU awaiting shipment.') }}</td>
-                        </tr>
-                    @endforelse
+                    @endforeach
                 </x-data-table>
-            </section>
+            </x-report.results>
         @endif
-    </div>
+    </x-report.layout>
 @endsection

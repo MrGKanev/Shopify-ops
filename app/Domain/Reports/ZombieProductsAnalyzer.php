@@ -8,7 +8,10 @@ class ZombieProductsAnalyzer
 {
     use NormalizesText;
 
-    /** @param list<array<string, mixed>> $products @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $products
+     * @return list<array{id: int|string, title: string, vendor: string, type: string, reason: string, stock: int|null, detail: string}>
+     */
     public function analyze(array $products): array
     {
         $rows = [];
@@ -44,7 +47,10 @@ class ZombieProductsAnalyzer
         return $rows;
     }
 
-    /** @param array<string, mixed> $product @return array<string, mixed> */
+    /**
+     * @param  array<string, mixed>  $product
+     * @return array{id: string, title: string, vendor: string, type: string, reason: string, detail: string, stock: int|null}
+     */
     private function row(array $product, string $reason, string $detail, ?int $stock): array
     {
         $id = $this->text($product['legacyResourceId'] ?? null);

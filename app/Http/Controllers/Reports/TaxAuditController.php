@@ -24,7 +24,7 @@ class TaxAuditController extends Controller
         $failed = false;
         $configurationError = $store->missingShopifyCredentials();
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'tax_audit', $report::class, [(string) $data['start_date'], (string) $data['end_date'], (float) $data['minimum']], (string) $data['start_date'], (string) $data['end_date'], 'scanned', 'count:rows');
+            $run = $reports->run($request, $store, 'tax_audit', $report::class, [(string) $data['start_date'], (string) $data['end_date'], (float) $data['minimum']], (string) $data['start_date'], (string) $data['end_date']);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }

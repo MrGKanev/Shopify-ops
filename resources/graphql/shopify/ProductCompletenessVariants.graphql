@@ -1,0 +1,8 @@
+query ProductCompletenessVariants($id: ID!, $after: String) {
+  product(id: $id) {
+    variants(first: 250, after: $after) {
+      pageInfo { hasNextPage endCursor }
+      nodes { sku title inventoryQuantity inventoryPolicy inventoryItem { tracked } }
+    }
+  }
+}

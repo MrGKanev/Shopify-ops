@@ -11,7 +11,10 @@ class OrderEditAnalyzer
 
     public function __construct(private readonly ShopifyOrderEventNormalizer $eventNormalizer) {}
 
-    /** @param list<array<string, mixed>> $events @return array<string, array{latest_at: string, summary: list<string>}> */
+    /**
+     * @param  list<array<string, mixed>>  $events
+     * @return array<string, array{latest_at: string, summary: list<string>}>
+     */
     public function group(array $events): array
     {
         $groups = [];
@@ -37,7 +40,11 @@ class OrderEditAnalyzer
         return $groups;
     }
 
-    /** @param array<string, array<string, mixed>> $orders @param array<string, array{latest_at: string, summary: list<string>}> $groups @return list<array<string, mixed>> */
+    /**
+     * @param  array<string, array<string, mixed>>  $orders
+     * @param  array<string, array{latest_at: string, summary: list<string>}>  $groups
+     * @return list<array<string, mixed>>
+     */
     public function rows(array $orders, array $groups): array
     {
         $rows = [];

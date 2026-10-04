@@ -9,7 +9,7 @@ class PrintQueueControllerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_access_validation_deduplication_safe_output_and_actions(): void
+    public function test_validation_deduplication_safe_output_and_actions(): void
     {
         $this->get('/print-queue')->assertRedirect(route('login'));
         [$viewer] = $this->userWithStore();

@@ -2,15 +2,15 @@
 
 namespace Tests\Feature\Integrations\ShipStation;
 
+use App\Integrations\Exceptions\IntegrationException;
+use App\Integrations\Exceptions\UnexpectedResponse;
 use App\Integrations\ShipStation\ShipStationClient;
 use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Models\Store;
 use Illuminate\Http\Client\Request;
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
 use Tests\TestCase;
-use UnexpectedValueException;
 
 class ShipStationClientTest extends TestCase
 {
@@ -224,8 +224,8 @@ class ShipStationClientTest extends TestCase
         try {
             $this->client()->findByOrderNumber('1001');
             $this->fail('Expected the ShipStation request to fail.');
-        } catch (RequestException $exception) {
-            $this->assertSame(401, $exception->response->status());
+        } catch (IntegrationException $exception) {
+            $this->assertSame(401, $exception->status);
         }
 
         Http::assertSentCount(1);
@@ -328,8 +328,8 @@ class ShipStationClientTest extends TestCase
         try {
             $this->client()->findByOrderNumber('1001');
             $this->fail('Expected the ShipStation request to fail.');
-        } catch (RequestException $exception) {
-            $this->assertSame(503, $exception->response->status());
+        } catch (IntegrationException $exception) {
+            $this->assertSame(503, $exception->status);
         }
 
         Http::assertSentCount(4);
@@ -343,7 +343,7 @@ class ShipStationClientTest extends TestCase
             'https://ssapi.shipstation.com/orders*' => Http::response('not-json'),
         ]);
 
-        $this->expectException(UnexpectedValueException::class);
+        $this->expectException(UnexpectedResponse::class);
         $this->expectExceptionMessage('ShipStation returned an invalid JSON payload.');
 
         $this->client()->findByOrderNumber('1001');
@@ -358,7 +358,7 @@ class ShipStationClientTest extends TestCase
             ]),
         ]);
 
-        $this->expectException(UnexpectedValueException::class);
+        $this->expectException(UnexpectedResponse::class);
         $this->expectExceptionMessage('ShipStation returned an invalid orders collection.');
 
         $this->client()->findByOrderNumber('1001');
@@ -373,7 +373,7 @@ class ShipStationClientTest extends TestCase
             ]),
         ]);
 
-        $this->expectException(UnexpectedValueException::class);
+        $this->expectException(UnexpectedResponse::class);
         $this->expectExceptionMessage('ShipStation returned an invalid shipments collection.');
 
         $this->client()->getOrderShipments('1001');
@@ -391,7 +391,7 @@ class ShipStationClientTest extends TestCase
             ]),
         ]);
 
-        $this->expectException(UnexpectedValueException::class);
+        $this->expectException(UnexpectedResponse::class);
         $this->expectExceptionMessage('ShipStation returned an invalid orders collection.');
 
         $this->client()->findByOrderNumber('1001');
@@ -499,8 +499,8 @@ class ShipStationClientTest extends TestCase
 
         try {
             $this->client()->createOrder(['order_number' => '65075']);
-            $this->fail('Expected a RequestException.');
-        } catch (RequestException) {
+            $this->fail('Expected a IntegrationException.');
+        } catch (IntegrationException) {
             // expected
         }
 

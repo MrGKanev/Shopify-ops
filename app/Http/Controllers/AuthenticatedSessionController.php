@@ -52,7 +52,7 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request, LoginThrottle $throttle): RedirectResponse
     {
         if ((bool) config('services.google.login_only')) {
-            return back()->withErrors(['email' => 'Password sign-in is disabled. Continue with Google.'])->onlyInput('email');
+            return back()->withErrors(['email' => __('Password sign-in is disabled. Continue with Google.')])->onlyInput('email');
         }
 
         $ip = (string) $request->ip();

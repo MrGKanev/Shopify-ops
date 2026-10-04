@@ -3,8 +3,6 @@
 namespace Tests\Feature;
 
 use App\Integrations\Shopify\ShopifyAdminClient;
-use App\Integrations\Shopify\ShopifyOrderEventNormalizer;
-use App\Integrations\Shopify\ShopifyOrderNormalizer;
 use App\Models\Store;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -18,7 +16,7 @@ class ShopifyPartialFulfillmentCandidatesTest extends TestCase
         $fulfilled = [...$partial, 'legacyResourceId' => '2', 'displayFulfillmentStatus' => 'FULFILLED'];
         Http::fake(['*' => Http::response(['data' => ['orders' => ['pageInfo' => ['hasNextPage' => false, 'endCursor' => null], 'edges' => [['node' => $partial], ['node' => $fulfilled]]]]])]);
 
-        $result = (new ShopifyAdminClient(new ShopifyOrderNormalizer, new ShopifyOrderEventNormalizer))->partialFulfillmentCandidates(new Store(['shopify_store' => 'acme', 'shopify_access_token' => 'token']), '2026-06-01', '2026-06-30');
+        $result = (app(ShopifyAdminClient::class))->partialFulfillmentCandidates(new Store(['shopify_store' => 'acme', 'shopify_access_token' => 'token']), '2026-06-01', '2026-06-30');
 
         $this->assertCount(1, $result['orders']);
         $this->assertSame(1, $result['orders'][0]['line_items'][0]['fulfillable_quantity']);

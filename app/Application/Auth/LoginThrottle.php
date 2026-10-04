@@ -76,7 +76,7 @@ class LoginThrottle
 
     private function formatBanMessage(\Carbon\Carbon $bannedUntil): string
     {
-        $seconds = max(0, Carbon::now()->startOfSecond()->diffInSeconds($bannedUntil, false));
+        $seconds = (int) ceil(max(0, Carbon::now()->startOfSecond()->diffInSeconds($bannedUntil, false)));
         $days = intdiv($seconds, 86400);
         $hours = intdiv($seconds % 86400, 3600);
 

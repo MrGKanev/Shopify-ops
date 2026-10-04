@@ -1,0 +1,13 @@
+query GiftCardCandidates($after: String) {
+  giftCards(first: 250, after: $after) {
+    pageInfo { hasNextPage endCursor }
+    edges {
+      node {
+        id maskedCode expiresOn enabled createdAt
+        balance { amount currencyCode }
+        initialValue { amount currencyCode }
+        customer { email }
+      }
+    }
+  }
+}

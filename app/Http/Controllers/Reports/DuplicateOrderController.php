@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\DuplicateOrderResult;
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunDuplicateOrderReport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
@@ -26,7 +26,7 @@ class DuplicateOrderController extends Controller
         $result = null;
         $reportFailed = false;
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'duplicate_orders', $report::class, [$startDate, $endDate], $startDate, $endDate, 'scanned', 'count:pairs');
+            $run = $reports->run($request, $store, 'duplicate_orders', $report::class, [$startDate, $endDate], $startDate, $endDate);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -34,6 +34,6 @@ class DuplicateOrderController extends Controller
             $reportFailed = $run->hasFailed();
         }
 
-        return view('reports.duplicate-orders', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof DuplicateOrderResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return view('reports.duplicate-orders', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof ReportResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
     }
 }

@@ -8,7 +8,10 @@ class AddressChangeAnalyzer
 {
     use NormalizesText;
 
-    /** @param list<array<string, mixed>> $events @return array<string, string> */
+    /**
+     * @param  list<array<string, mixed>>  $events
+     * @return array<string, string>
+     */
     public function latestChanges(array $events): array
     {
         $changes = [];
@@ -26,7 +29,11 @@ class AddressChangeAnalyzer
         return $changes;
     }
 
-    /** @param array<string, array<string, mixed>> $orders @param array<string, string> $changes @return list<array<string, mixed>> */
+    /**
+     * @param  array<string, array<string, mixed>>  $orders
+     * @param  array<string, string>  $changes
+     * @return list<array<string, mixed>>
+     */
     public function rows(array $orders, array $changes): array
     {
         $rows = [];
@@ -54,7 +61,11 @@ class AddressChangeAnalyzer
         return $rows;
     }
 
-    /** @param array<string, array<string, mixed>> $orders @param array<string, string> $changes @return list<array<string, mixed>> */
+    /**
+     * @param  array<string, array<string, mixed>>  $orders
+     * @param  array<string, string>  $changes
+     * @return list<array<string, mixed>>
+     */
     public function postShipRows(array $orders, array $changes): array
     {
         $rows = [];

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\QueuedReportRunner;
-use App\Application\Reports\RefundTrackerResult;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunRefundTrackerReport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
@@ -28,7 +28,7 @@ class RefundTrackerController extends Controller
         $reportFailed = false;
 
         if (! $shopifyConfigurationError && ! $shipStationConfigurationWarning) {
-            $run = $reports->run($request, $store, 'refund_tracker', $report::class, [$startDate, $endDate], $startDate, $endDate, 'scanned', 'count:rows');
+            $run = $reports->run($request, $store, 'refund_tracker', $report::class, [$startDate, $endDate], $startDate, $endDate);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -39,8 +39,12 @@ class RefundTrackerController extends Controller
         return view('reports.refund-tracker', $this->viewData($startDate, $endDate, $result, $reportFailed, $shopifyConfigurationError, $shipStationConfigurationWarning));
     }
 
-    /** @return array<string, mixed> */
-    private function viewData(?string $startDate = null, ?string $endDate = null, ?RefundTrackerResult $result = null, bool $reportFailed = false, bool $shopifyConfigurationError = false, bool $shipStationConfigurationWarning = false): array
+    /**
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @return array<string, mixed>
+     */
+    private function viewData(?string $startDate = null, ?string $endDate = null, ?ReportResult $result = null, bool $reportFailed = false, bool $shopifyConfigurationError = false, bool $shipStationConfigurationWarning = false): array
     {
         return compact('result', 'reportFailed', 'shopifyConfigurationError', 'shipStationConfigurationWarning') + [
             'startDate' => $startDate ?? now()->subDays(30)->toDateString(),

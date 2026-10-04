@@ -8,7 +8,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CsvExporter
 {
-    /** @param list<string> $headers @param iterable<array-key, list<bool|float|int|string|null>> $rows */
+    /**
+     * @param  list<string>  $headers
+     * @param  iterable<array-key, list<bool|float|int|string|null>>  $rows
+     */
     public function download(string $filename, array $headers, iterable $rows): StreamedResponse
     {
         $safeFilename = $this->safeFilename($filename);
@@ -21,17 +24,20 @@ class CsvExporter
             $writer = Writer::from($stream);
             $this->configure($writer);
             $writer->insertOne($headers);
-            $writer->insertAll($rows);
+            $writer->insertAll($this->records($rows));
         }, $safeFilename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
-    /** @param list<string> $headers @param iterable<array-key, list<bool|float|int|string|null>> $rows */
+    /**
+     * @param  list<string>  $headers
+     * @param  iterable<array-key, list<bool|float|int|string|null>>  $rows
+     */
     public function content(array $headers, iterable $rows): string
     {
         $writer = Writer::createFromString('');
         $this->configure($writer);
         $writer->insertOne($headers);
-        $writer->insertAll($rows);
+        $writer->insertAll($this->records($rows));
 
         return $writer->toString();
     }
@@ -41,6 +47,17 @@ class CsvExporter
         $safeFilename = trim((string) preg_replace('/[^a-z0-9._-]+/i', '-', basename($filename)), '.-') ?: 'report.csv';
 
         return str_ends_with(mb_strtolower($safeFilename), '.csv') ? $safeFilename : $safeFilename.'.csv';
+    }
+
+    /**
+     * @param  iterable<array-key, list<bool|float|int|string|null>>  $rows
+     * @return \Generator<int, list<float|int|string|null>>
+     */
+    private function records(iterable $rows): \Generator
+    {
+        foreach ($rows as $row) {
+            yield array_map(fn (bool|float|int|string|null $value): float|int|string|null => is_bool($value) ? (string) $value : $value, $row);
+        }
     }
 
     private function configure(Writer $writer): void

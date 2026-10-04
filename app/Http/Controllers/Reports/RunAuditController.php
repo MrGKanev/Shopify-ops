@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\AuditResult;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunAudit;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Controller;
@@ -45,18 +45,18 @@ class RunAuditController extends Controller
     {
         [$store, $start, $end] = $this->context($request);
         if ($this->configurationError($store)) {
-            return back()->withErrors(['queue' => 'Shopify and ShipStation credentials are required.']);
+            return back()->withErrors(['queue' => __('reports.integration_credentials_required')]);
         }
         $pending = AuditJob::where('store_id', $store->getKey())->where('start_date', $start)->where('end_date', $end)->whereIn('status', ['queued', 'running'])->exists();
         if ($pending) {
-            return back()->with('status', 'Audit is already queued.');
+            return back()->with('status', __('reports.audit_already_queued'));
         }
         $auditJob = AuditJob::create(['store_id' => $store->getKey(), 'start_date' => $start, 'end_date' => $end]);
         RunAuditJob::dispatch($store->getKey(), $start, $end, $auditJob->getKey());
         activity('operator-actions')->causedBy($request->user())->performedOn($store)
             ->withProperties(['start_date' => $start, 'end_date' => $end])->log('queue_audit');
 
-        return back()->with('status', 'Audit queued.');
+        return back()->with('status', __('reports.audit_queued'));
     }
 
     /** @return array{Store,string,string} */
@@ -71,8 +71,12 @@ class RunAuditController extends Controller
         return $store->missingShopifyCredentials() || $store->missingShipStationCredentials();
     }
 
-    /** @return array<string,mixed> */
-    private function viewData(?string $start = null, ?string $end = null, ?AuditResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
+    /**
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @return array<string,mixed>
+     */
+    private function viewData(?string $start = null, ?string $end = null, ?ReportResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
     {
         return compact('result', 'reportFailed', 'configurationError') + ['startDate' => $start ?? now()->subDays(30)->toDateString(), 'endDate' => $end ?? now()->toDateString()];
     }

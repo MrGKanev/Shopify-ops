@@ -1,0 +1,6 @@
+query FulfillmentSlaCandidates($search: String!, $after: String) {
+  orders(first: 250, after: $after, sortKey: CREATED_AT, reverse: true, query: $search) {
+    pageInfo { hasNextPage endCursor }
+    edges { node { legacyResourceId name createdAt cancelledAt email displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } shippingAddress { provinceCode countryCodeV2 } shippingLines(first: 20) { nodes { title } } lineItems(first: 250) { nodes { id title name sku quantity variantTitle vendor } } fulfillments(first: 250) { id legacyResourceId createdAt status displayStatus } } }
+  }
+}

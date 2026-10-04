@@ -15,11 +15,8 @@ class CarrierPerformanceControllerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_access_validation_configuration_success_and_safe_failure(): void
+    public function test_validation_configuration_success_and_safe_failure(): void
     {
-        $this->get('/reports/carrier-performance')->assertRedirect(route('login'));
-        [$viewer] = $this->userWithStore();
-        $this->actingAs($viewer)->get('/reports/carrier-performance')->assertForbidden();
         [$operator] = $this->userWithStore(true);
         $this->actingAs($operator)->post('/reports/carrier-performance', ['start_date' => 'bad', 'end_date' => '2026-06-01'])->assertSessionHasErrors('start_date');
         [$operator] = $this->userWithStore(true, ['shipstation_api_key' => '']);

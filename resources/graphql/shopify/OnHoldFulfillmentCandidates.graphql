@@ -1,0 +1,6 @@
+query OnHoldFulfillmentCandidates($after: String) {
+  fulfillmentOrders(first: 250, after: $after, query: "status:on_hold") {
+    pageInfo { hasNextPage endCursor }
+    edges { node { id status order { id legacyResourceId name email createdAt displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } } fulfillmentHolds { reason reasonNotes } } }
+  }
+}

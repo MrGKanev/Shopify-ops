@@ -8,7 +8,10 @@ class OnHoldStallAnalyzer
 {
     use NormalizesText;
 
-    /** @param list<array<string, mixed>> $nodes @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $nodes
+     * @return list<array{order_number: string, created_at: string, days_waiting: int, hold_reason: string, hold_notes: string, email: string, total: float|string, financial: string, fulfillment: string}>
+     */
     public function analyze(array $nodes, int $now): array
     {
         $rows = [];

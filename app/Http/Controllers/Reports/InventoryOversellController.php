@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Application\Reports\InventoryOversellResult;
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunInventoryOversellReport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\InventoryOversellRequest;
@@ -26,7 +26,7 @@ class InventoryOversellController extends Controller
         $shipStationConfigurationError = $store->missingShipStationCredentials();
 
         if (! $shopifyConfigurationError && ! $shipStationConfigurationError) {
-            $run = $reports->run($request, $store, 'inventory_oversell', $report::class, [], null, null, 'products', 'count:rows');
+            $run = $reports->run($request, $store, 'inventory_oversell', $report::class, [], null, null);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -35,7 +35,7 @@ class InventoryOversellController extends Controller
         }
 
         return view('reports.inventory-oversell', [
-            'result' => $result instanceof InventoryOversellResult ? $result : null,
+            'result' => $result instanceof ReportResult ? $result : null,
             'reportFailed' => $reportFailed,
             'shopifyConfigurationError' => $shopifyConfigurationError,
             'shipStationConfigurationError' => $shipStationConfigurationError,

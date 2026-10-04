@@ -30,4 +30,27 @@ class CsvExporterTest extends TestCase
         $this->assertStringContainsString("#1,'=2+5\r\n", $content);
         $this->assertStringContainsString('"safe, value"', $content);
     }
+
+    public function test_download_and_content_use_the_same_boolean_cell_encoding(): void
+    {
+        $exporter = new CsvExporter;
+        $headers = ['Enabled', 'Disabled'];
+        $rows = [[true, false]];
+        $response = $exporter->download('booleans.csv', $headers, $rows);
+        ob_start();
+        ($response->getCallback())();
+        $content = (string) ob_get_clean();
+
+        $this->assertSame($exporter->content($headers, $rows), $content);
+        $this->assertSame("Enabled,Disabled\r\n1,\r\n", $content);
+    }
+
+    public function test_boolean_cells_preserve_php_csv_values_for_lazy_rows(): void
+    {
+        $rows = (function (): \Generator {
+            yield [true, false, null, 0, 1.5];
+        })();
+
+        $this->assertSame("True,False,Null,Zero,Decimal\r\n1,,,0,1.5\r\n", (new CsvExporter)->content(['True', 'False', 'Null', 'Zero', 'Decimal'], $rows));
+    }
 }

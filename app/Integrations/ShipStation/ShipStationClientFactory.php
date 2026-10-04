@@ -20,6 +20,6 @@ class ShipStationClientFactory
             throw new LogicException('The ShipStation credentials are incomplete.');
         }
 
-        return new ShipStationClient($apiKey, $apiSecret, shopTimezone: $store->shopTimezone());
+        return new ShipStationClient($apiKey, $apiSecret, shopTimezone: $store->shopTimezone(), storeId: $store->getKey());
     }
 }

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyTransport;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -20,9 +20,9 @@ class AllViewsSmokeTest extends TestCase
         $admin = User::factory()->admin()->create();
         $store = Store::factory()->create();
         $admin->stores()->attach($store);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyTransport::class);
         $shopify->shouldReceive('get')->zeroOrMoreTimes()->andReturn(['webhooks' => []]);
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyTransport::class, $shopify);
         Cache::put('health:checks:schedule:latestHeartbeatAt', now()->timestamp);
 
         $failures = [];

@@ -53,6 +53,39 @@ class InstallApplicationRequest extends FormRequest
         ];
     }
 
+    /** @return array{name:string,email:string,password:string,label:string,slug:string,shopify_store:string,shopify_access_token:string,shipstation_api_key:?string,shipstation_api_secret:?string,store_number:?string,db_connection:string,database:string,db_host:?string,db_port:?string,db_username:?string,db_password:?string,mail_mailer:string,mail_host:?string,mail_port:?string,mail_username:?string,mail_password:?string,mail_encryption:string,mail_from_address:?string,mail_from_name:?string,slack_webhook_url:?string,discord_webhook_url:?string} */
+    public function installationData(): array
+    {
+        return [
+            'name' => $this->string('name')->toString(),
+            'email' => $this->string('email')->toString(),
+            'password' => $this->string('password')->toString(),
+            'label' => $this->string('label')->toString(),
+            'slug' => $this->string('slug')->toString(),
+            'shopify_store' => $this->string('shopify_store')->toString(),
+            'shopify_access_token' => $this->string('shopify_access_token')->toString(),
+            'shipstation_api_key' => $this->filled('shipstation_api_key') ? $this->string('shipstation_api_key')->toString() : null,
+            'shipstation_api_secret' => $this->filled('shipstation_api_secret') ? $this->string('shipstation_api_secret')->toString() : null,
+            'store_number' => $this->filled('store_number') ? $this->string('store_number')->toString() : null,
+            'db_connection' => $this->string('db_connection')->toString(),
+            'database' => $this->string('database')->toString(),
+            'db_host' => $this->filled('db_host') ? $this->string('db_host')->toString() : null,
+            'db_port' => $this->filled('db_port') ? $this->string('db_port')->toString() : null,
+            'db_username' => $this->filled('db_username') ? $this->string('db_username')->toString() : null,
+            'db_password' => $this->filled('db_password') ? $this->string('db_password')->toString() : null,
+            'mail_mailer' => $this->string('mail_mailer')->toString(),
+            'mail_host' => $this->filled('mail_host') ? $this->string('mail_host')->toString() : null,
+            'mail_port' => $this->filled('mail_port') ? $this->string('mail_port')->toString() : null,
+            'mail_username' => $this->filled('mail_username') ? $this->string('mail_username')->toString() : null,
+            'mail_password' => $this->filled('mail_password') ? $this->string('mail_password')->toString() : null,
+            'mail_encryption' => $this->string('mail_encryption')->toString(),
+            'mail_from_address' => $this->filled('mail_from_address') ? $this->string('mail_from_address')->toString() : null,
+            'mail_from_name' => $this->filled('mail_from_name') ? $this->string('mail_from_name')->toString() : null,
+            'slack_webhook_url' => $this->filled('slack_webhook_url') ? $this->string('slack_webhook_url')->toString() : null,
+            'discord_webhook_url' => $this->filled('discord_webhook_url') ? $this->string('discord_webhook_url')->toString() : null,
+        ];
+    }
+
     protected function prepareForValidation(): void
     {
         $this->merge([

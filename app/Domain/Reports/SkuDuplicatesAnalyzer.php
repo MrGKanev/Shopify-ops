@@ -8,7 +8,10 @@ class SkuDuplicatesAnalyzer
 {
     use NormalizesText;
 
-    /** @param list<array<string, mixed>> $products @return array{rows: list<array<string, mixed>>, totalVariants: int} */
+    /**
+     * @param  list<array<string, mixed>>  $products
+     * @return array{rows: list<array{sku: string, count: int, variants: list<array<string, mixed>>}>, totalVariants: int}
+     */
     public function analyze(array $products): array
     {
         $groups = [];

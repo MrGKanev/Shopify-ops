@@ -21,7 +21,7 @@ class CheckOperationalAlerts
         $heartbeat = Cache::get('health:checks:schedule:latestHeartbeatAt');
         $this->alertOnce(
             'scheduler_absent',
-            ! is_numeric($heartbeat) || now()->timestamp - (int) $heartbeat > 300,
+            ! is_numeric($heartbeat) || now()->getTimestamp() - (int) $heartbeat > 300,
             'Scheduler heartbeat is older than 5 minutes.',
         );
 
@@ -49,7 +49,7 @@ class CheckOperationalAlerts
         if (config('queue.default') === 'database') {
             $oldest = DB::table('jobs')->min('available_at');
 
-            return is_numeric($oldest) ? max(0, now()->timestamp - (int) $oldest) : 0;
+            return is_numeric($oldest) ? max(0, now()->getTimestamp() - (int) $oldest) : 0;
         }
 
         return 0;

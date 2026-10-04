@@ -1,0 +1,6 @@
+query TaxAuditCandidates($search: String!, $after: String) {
+  orders(first: 250, after: $after, sortKey: CREATED_AT, reverse: true, query: $search) {
+    pageInfo { hasNextPage endCursor }
+    edges { node { legacyResourceId name createdAt email displayFinancialStatus totalPriceSet { shopMoney { amount currencyCode } } totalTaxSet { shopMoney { amount } } customer { taxExempt } } }
+  }
+}

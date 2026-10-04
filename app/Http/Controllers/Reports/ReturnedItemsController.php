@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunReturnedItemsReport;
-use App\Application\Reports\ScanResult;
 use App\Http\Controllers\Concerns\LogsReportFailure;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
@@ -32,7 +32,7 @@ class ReturnedItemsController extends Controller
         $reportFailed = false;
 
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'returned_items', $report::class, [$startDate, $endDate], $startDate, $endDate, 'scanned', 'count:rows');
+            $run = $reports->run($request, $store, 'returned_items', $report::class, [$startDate, $endDate], $startDate, $endDate);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }
@@ -47,7 +47,7 @@ class ReturnedItemsController extends Controller
     {
         [$store, $startDate, $endDate] = $this->context($request);
         if ($this->configurationError($store)) {
-            return back()->withErrors(['export' => 'Shopify credentials are incomplete for the active store.']);
+            return back()->withErrors(['export' => __('reports.shopify_credentials_incomplete')]);
         }
 
         try {
@@ -55,7 +55,7 @@ class ReturnedItemsController extends Controller
         } catch (Throwable $exception) {
             $this->logFailure('Returned items CSV export failed.', $exception, $store);
 
-            return back()->withErrors(['export' => 'The CSV export could not be completed.']);
+            return back()->withErrors(['export' => __('reports.export_failed')]);
         }
 
         $rows = array_map(fn (array $row): array => [$row['product'], $row['quantity']], $result->rows);
@@ -76,8 +76,12 @@ class ReturnedItemsController extends Controller
         return $store->missingShopifyCredentials();
     }
 
-    /** @return array<string, mixed> */
-    private function viewData(?string $startDate = null, ?string $endDate = null, ?ScanResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
+    /**
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @param  ReportResult<array<string, mixed>>|null  $result
+     * @return array<string, mixed>
+     */
+    private function viewData(?string $startDate = null, ?string $endDate = null, ?ReportResult $result = null, bool $reportFailed = false, bool $configurationError = false): array
     {
         return compact('result', 'reportFailed', 'configurationError') + ['startDate' => $startDate ?? now()->subDays(30)->toDateString(), 'endDate' => $endDate ?? now()->toDateString()];
     }

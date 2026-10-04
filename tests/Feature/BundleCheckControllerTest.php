@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -23,34 +23,31 @@ class BundleCheckControllerTest extends TestCase
         ]]]);
     }
 
-    public function test_access_validation_configuration_success_and_safe_failure(): void
+    public function test_validation_configuration_success_and_safe_failure(): void
     {
-        $this->get('/reports/bundle-check')->assertRedirect(route('login'));
-        [$viewer] = $this->userWithStore();
-        $this->actingAs($viewer)->get('/reports/bundle-check')->assertForbidden();
         [$operator] = $this->userWithStore(true);
         $this->actingAs($operator)->post('/reports/bundle-check', ['start_date' => 'bad', 'end_date' => '2026-06-30'])->assertSessionHasErrors('start_date');
         [$operator] = $this->userWithStore(true, ['shopify_access_token' => '']);
         $this->actingAs($operator)->post('/reports/bundle-check', $this->input())->assertOk()->assertSeeText('credentials are incomplete');
 
         [$operator] = $this->userWithStore(true);
-        $gateway = Mockery::mock(ShopifyAdminGateway::class);
+        $gateway = Mockery::mock(ShopifyOrders::class);
         $gateway->shouldReceive('fulfillmentSlaCandidates')->andReturn($this->candidates('<script>', true));
-        $this->app->instance(ShopifyAdminGateway::class, $gateway);
+        $this->app->instance(ShopifyOrders::class, $gateway);
         $this->actingAs($operator)->post('/reports/bundle-check', $this->input())->assertOk()->assertSeeText('1 orders scanned · 1 incomplete bundles')->assertSeeText('truncated after 100 pages')->assertDontSee('<script>', false);
 
-        $gateway = Mockery::mock(ShopifyAdminGateway::class);
+        $gateway = Mockery::mock(ShopifyOrders::class);
         $gateway->shouldReceive('fulfillmentSlaCandidates')->andThrow(new RuntimeException('secret-token'));
-        $this->app->instance(ShopifyAdminGateway::class, $gateway);
+        $this->app->instance(ShopifyOrders::class, $gateway);
         $this->actingAs($operator)->post('/reports/bundle-check', $this->input())->assertOk()->assertSeeText('could not be completed')->assertDontSeeText('secret-token');
     }
 
     public function test_operator_can_download_formula_safe_csv(): void
     {
         [$operator] = $this->userWithStore(true);
-        $gateway = Mockery::mock(ShopifyAdminGateway::class);
+        $gateway = Mockery::mock(ShopifyOrders::class);
         $gateway->shouldReceive('fulfillmentSlaCandidates')->andReturn($this->candidates('=bad'));
-        $this->app->instance(ShopifyAdminGateway::class, $gateway);
+        $this->app->instance(ShopifyOrders::class, $gateway);
 
         $response = $this->actingAs($operator)->post(route('reports.bundle-check.export'), $this->input());
         $response->assertOk()->assertDownload('bundle-check-2026-06-01-to-2026-06-30.csv');

@@ -9,7 +9,11 @@ class ShippedUnfulfilledAnalyzer
 {
     use MatchesOrderNumbers, NormalizesText;
 
-    /** @param list<array<string,mixed>> $ssOrders @param list<array<string,mixed>> $shopifyOrders @return array{shipped_total:int,rows:list<array<string,mixed>>} */
+    /**
+     * @param  list<array<string,mixed>>  $ssOrders
+     * @param  list<array<string,mixed>>  $shopifyOrders
+     * @return array{shipped_total:int,rows:list<array<string,mixed>>}
+     */
     public function analyze(array $ssOrders, array $shopifyOrders): array
     {
         $index = [];

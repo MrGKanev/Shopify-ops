@@ -1,0 +1,14 @@
+query InventoryAgingOrders($search: String!, $after: String) {
+  orders(first: 250, after: $after, sortKey: CREATED_AT, reverse: true, query: $search) {
+    pageInfo { hasNextPage endCursor }
+    edges {
+      node {
+        id legacyResourceId name createdAt cancelledAt displayFinancialStatus
+        lineItems(first: 250) {
+          nodes { id title name sku quantity variantTitle originalUnitPriceSet { shopMoney { amount currencyCode } } }
+          pageInfo { hasNextPage endCursor }
+        }
+      }
+    }
+  }
+}

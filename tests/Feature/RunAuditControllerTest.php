@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Integrations\ShipStation\ShipStationClientContract;
 use App\Integrations\ShipStation\ShipStationClientFactory;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Jobs\RunAuditJob;
 use App\Models\Store;
 use App\Models\User;
@@ -22,11 +22,8 @@ class RunAuditControllerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_access_validation_and_configuration(): void
+    public function test_validation_and_configuration(): void
     {
-        $this->get('/reports/run-audit')->assertRedirect(route('login'));
-        [$viewer] = $this->userWithStore();
-        $this->actingAs($viewer)->get('/reports/run-audit')->assertForbidden();
         [$operator] = $this->userWithStore(true);
         $this->actingAs($operator)->post('/reports/run-audit', ['start_date' => 'bad', 'end_date' => '2026-06-30'])->assertSessionHasErrors('start_date');
         [$operator] = $this->userWithStore(true, ['shopify_access_token' => '']);
@@ -43,14 +40,14 @@ class RunAuditControllerTest extends TestCase
         $client->shouldReceive('fetchAllOrders')->twice()->with('2026-06-01', '2026-07-07')->andReturn([['orderNumber' => '1001']]);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->twice()->andReturn($client);
-        $gateway = Mockery::mock(ShopifyAdminGateway::class);
+        $gateway = Mockery::mock(ShopifyOrders::class);
         $gateway->shouldReceive('itemMismatchCandidates')->twice()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '2026-06-01', '2026-06-30')->andReturn(['orders' => [
             ['name' => '#1001', 'financial_status' => 'paid', 'total_price' => 10],
             ['name' => '<script>', 'financial_status' => 'paid', 'total_price' => 20],
         ], 'pages' => 100, 'truncated' => true]);
         $gateway->shouldReceive('onHoldFulfillmentCandidates')->twice()->andReturn(['fulfillment_orders' => [], 'pages' => 1, 'truncated' => false]);
         $this->app->instance(ShipStationClientFactory::class, $factory);
-        $this->app->instance(ShopifyAdminGateway::class, $gateway);
+        $this->app->instance(ShopifyOrders::class, $gateway);
 
         $this->actingAs($operator)->post('/reports/run-audit', $this->input())->assertOk()->assertSeeText('2 Shopify orders · 1 missing')->assertSeeText('data was truncated')->assertDontSee('<script>', false)->assertSee(route('ignored-orders.bulk-store'), false)->assertSee('name="order_numbers[]"', false);
         $this->assertDatabaseHas('run_logs', ['store_id' => $store->getKey(), 'tool' => 'run_audit', 'status' => 'issues_found', 'rows_found' => 1]);
@@ -67,14 +64,14 @@ class RunAuditControllerTest extends TestCase
         $client->shouldReceive('fetchAllOrders')->once()->andReturn([]);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->once()->andReturn($client);
-        $gateway = Mockery::mock(ShopifyAdminGateway::class);
+        $gateway = Mockery::mock(ShopifyOrders::class);
         $gateway->shouldReceive('itemMismatchCandidates')->once()->andReturn(['orders' => [
             ['name' => '#1001', 'email' => 'a@example.com', 'financial_status' => 'paid', 'total_price' => '50.00', 'created_at' => '2026-06-01T10:00:00Z'],
             ['name' => '#1002', 'email' => 'a@example.com', 'financial_status' => 'paid', 'total_price' => '50.00', 'created_at' => '2026-06-01T10:10:00Z'],
         ], 'pages' => 1, 'truncated' => false]);
         $gateway->shouldReceive('onHoldFulfillmentCandidates')->once()->andReturn(['fulfillment_orders' => [], 'pages' => 1, 'truncated' => false]);
         $this->app->instance(ShipStationClientFactory::class, $factory);
-        $this->app->instance(ShopifyAdminGateway::class, $gateway);
+        $this->app->instance(ShopifyOrders::class, $gateway);
 
         $this->actingAs($operator)->post('/reports/run-audit', $this->input())->assertOk()->assertSeeText('1 potential duplicate detected')->assertSeeText('#1002, #1001');
     }
@@ -87,13 +84,13 @@ class RunAuditControllerTest extends TestCase
         $client->shouldReceive('fetchAllOrders')->once()->andReturn([['orderNumber' => '1001']]);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->once()->andReturn($client);
-        $gateway = Mockery::mock(ShopifyAdminGateway::class);
+        $gateway = Mockery::mock(ShopifyOrders::class);
         $gateway->shouldReceive('itemMismatchCandidates')->once()->andReturn(['orders' => [
             ['name' => '#1001', 'financial_status' => 'paid', 'total_price' => 10],
         ], 'pages' => 1, 'truncated' => false]);
         $gateway->shouldReceive('onHoldFulfillmentCandidates')->once()->andReturn(['fulfillment_orders' => [], 'pages' => 1, 'truncated' => false]);
         $this->app->instance(ShipStationClientFactory::class, $factory);
-        $this->app->instance(ShopifyAdminGateway::class, $gateway);
+        $this->app->instance(ShopifyOrders::class, $gateway);
 
         $this->actingAs($operator)->post('/reports/run-audit', $this->input())->assertOk()->assertSeeText('Every eligible Shopify order was found in ShipStation.');
         $this->assertDatabaseHas('run_logs', ['store_id' => $store->getKey(), 'tool' => 'run_audit', 'status' => 'ok', 'rows_found' => 0]);

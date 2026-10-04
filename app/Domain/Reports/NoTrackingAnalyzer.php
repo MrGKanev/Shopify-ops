@@ -8,7 +8,10 @@ class NoTrackingAnalyzer
 {
     use NormalizesText;
 
-    /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
+    /**
+     * @param  list<array<string, mixed>>  $orders
+     * @return list<array{order_number: string, created_at: string, email: string, total: float|string, missing: list<array{created_at: string, hours_ago: int, company: string, status: string}>}>
+     */
     public function analyze(array $orders, string $startDate, string $endDate, int $threshold, int $now): array
     {
         $rows = [];

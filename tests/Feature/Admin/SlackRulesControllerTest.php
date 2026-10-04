@@ -19,7 +19,7 @@ class SlackRulesControllerTest extends TestCase
         [$admin, $store] = $this->makeUserAndStore(true);
         $this->actingAs($admin)->get('/admin/slack-rules')->assertOk()->assertSeeText('Slack webhook is not configured');
         $this->actingAs($admin)->put('/admin/slack-rules', ['audit_enabled' => '1', 'audit_min_missing' => 2, 'scan_enabled' => '1', 'scan_min_rows' => 5, 'mentions' => 'jane@example.com, u012abc3de U012ABC3DE S024XYZ9FG'])->assertRedirect()->assertSessionHas('status');
-        $this->assertSame(['audit_enabled' => true, 'audit_min_missing' => 2, 'include_zero_audit' => false, 'scan_enabled' => true, 'scan_min_rows' => 5, 'mentions' => 'U012ABC3DE S024XYZ9FG'], $store->fresh()->slack_rules);
+        $this->assertSame(['audit_enabled' => true, 'audit_min_missing' => 2, 'include_zero_audit' => false, 'scan_enabled' => true, 'scan_min_rows' => 5, 'mentions' => 'U012ABC3DE S024XYZ9FG'], $store->fresh()->slack_rules->toArray());
         $this->actingAs($admin)->put('/admin/slack-rules', ['audit_min_missing' => -1])->assertSessionHasErrors('audit_min_missing');
     }
 

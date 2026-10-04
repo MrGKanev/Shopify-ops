@@ -50,5 +50,5 @@ The application version and repository URL come from `package.json` and are show
 
 - Order type classification and bundle requirements live in [`config/order-types.php`](../config/order-types.php) — see [Order type rules](order-types.md).
 - Tag policy rules live in [`config/tag-policy.php`](../config/tag-policy.php).
-- Audit and search navigation live in [`config/audit-hub.php`](../config/audit-hub.php) and [`config/search-hub.php`](../config/search-hub.php).
-- The notification tool catalog lives in [`config/tool-catalog.php`](../config/tool-catalog.php).
+- Every report tool is defined once in the tool registry, [`config/reports.php`](../config/reports.php): key, URL slug, label, navigation section, description, controller and required integrations. The report routes, the audit navigation ([`config/audit-hub.php`](../config/audit-hub.php)), the notification tool catalog ([`config/tool-catalog.php`](../config/tool-catalog.php)) and the audit tables in [`docs/tools.md`](tools.md) are derived from it; regenerate the docs with `php artisan docs:tools`.
+- Search navigation lives in [`config/search-hub.php`](../config/search-hub.php).

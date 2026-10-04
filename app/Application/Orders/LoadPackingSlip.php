@@ -11,7 +11,7 @@ class LoadPackingSlip
 {
     public function __construct(private readonly ShipStationClientFactory $clients, private readonly PackingSlipBuilder $builder) {}
 
-    /** @return array{status: string, slip: ?array} */
+    /** @return array{status: string, slip: array<string, mixed>|null} */
     public function handle(Store $store, string $number): array
     {
         $client = $this->clients->forStore($store);

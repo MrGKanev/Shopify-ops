@@ -74,7 +74,8 @@ class CheckConfiguration
         return $this->result('Active store', $issues, [$store->label]);
     }
 
-    /** @param array<string,mixed> $config
+    /**
+     * @param  array<string,mixed>  $config
      * @return array{name:string,ok:bool,issues:list<string>,notes:list<string>}
      */
     private function orderTypes(array $config): array
@@ -107,7 +108,8 @@ class CheckConfiguration
         return $this->result('Order types', $issues, [count($rules).' rules · fallback: '.($config['fallback'] ?? 'not set')]);
     }
 
-    /** @param array<string,mixed> $config
+    /**
+     * @param  array<string,mixed>  $config
      * @return array{name:string,ok:bool,issues:list<string>,notes:list<string>}
      */
     private function tagPolicy(array $config): array
@@ -161,7 +163,8 @@ class CheckConfiguration
         ]);
     }
 
-    /** @param list<string> $issues
+    /**
+     * @param  list<string>  $issues
      * @param  list<string>  $notes
      * @return array{name:string,ok:bool,issues:list<string>,notes:list<string>}
      */

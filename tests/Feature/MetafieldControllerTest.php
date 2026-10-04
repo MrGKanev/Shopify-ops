@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -13,7 +13,7 @@ class MetafieldControllerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_access_configuration_validation_and_search_output(): void
+    public function test_configuration_validation_and_search_output(): void
     {
         $this->get('/metafields')->assertRedirect(route('login'));
         [$user] = $this->makeUserAndStore(['shopify_access_token' => '']);
@@ -22,10 +22,10 @@ class MetafieldControllerTest extends TestCase
         $this->actingAs($user)->post('/metafields/lookup', ['orders' => implode(',', range(1, 21))])->assertSessionHasErrors('orders');
 
         [$user] = $this->makeUserAndStore();
-        $gateway = Mockery::mock(ShopifyAdminGateway::class);
+        $gateway = Mockery::mock(ShopifyOrders::class);
         $gateway->shouldReceive('orderMetafieldDefinitions')->andReturn([['namespace' => 'custom', 'key' => '<script>']]);
         $gateway->shouldReceive('searchOrdersByMetafield')->andReturn(['orders' => [], 'scanned' => 2, 'with_metafield' => 1, 'sample_values' => [], 'pages' => 1, 'truncated' => false]);
-        $this->app->instance(ShopifyAdminGateway::class, $gateway);
+        $this->app->instance(ShopifyOrders::class, $gateway);
         $this->actingAs($user)->post('/metafields/search', ['namespace' => 'custom', 'key' => 'gift'])->assertOk()->assertSeeText('2 scanned · 1 with metafield · 0 matches')->assertDontSee('<script>', false);
     }
 

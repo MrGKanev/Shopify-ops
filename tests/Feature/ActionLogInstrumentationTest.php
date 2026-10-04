@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Application\Auth\LoginThrottle;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -61,9 +61,9 @@ class ActionLogInstrumentationTest extends TestCase
     public function test_pushing_to_shipstation_is_logged(): void
     {
         [$operator, $store] = $this->makeUserAndStore(true);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumber')->once()->andReturn([['id' => 42, 'name' => '#1001', 'total_price' => '10.00', 'shipping_address' => ['first_name' => 'Jane', 'last_name' => 'Doe', 'address1' => '123 Main Street', 'city' => 'Boston', 'province_code' => 'MA', 'zip' => '02101', 'country_code' => 'US']]]);
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyOrders::class, $shopify);
         Http::fake(['https://ssapi.shipstation.com/orders/createorder' => Http::response(['orderId' => 555, 'orderNumber' => '1001'])]);
 
         $this->actingAs($operator)->post(route('orders.push.store'), ['order_number' => '1001'])->assertRedirect();
@@ -100,9 +100,9 @@ class ActionLogInstrumentationTest extends TestCase
     public function test_saving_an_order_note_is_logged(): void
     {
         [$operator] = $this->makeUserAndStore(true);
-        $shopify = Mockery::mock(ShopifyAdminGateway::class);
+        $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('updateOrderNote')->once();
-        $this->app->instance(ShopifyAdminGateway::class, $shopify);
+        $this->app->instance(ShopifyOrders::class, $shopify);
 
         $this->actingAs($operator)->post(route('orders.note.update'), ['order_id' => '123', 'order_number' => '1001', 'note' => 'hello'])->assertRedirect();
 

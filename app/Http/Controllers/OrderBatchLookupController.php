@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Application\Orders\BatchLookupOrders;
 use App\Application\Orders\BatchLookupResult;
 use App\Http\Requests\OrderBatchLookupRequest;
+use App\Integrations\Exceptions\IntegrationException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -42,7 +43,7 @@ class OrderBatchLookupController extends Controller
             $lookupFailed = true;
             Log::warning('Batch order lookup failed.', [
                 'exception_type' => $exception::class,
-                'status' => $exception instanceof RequestException ? $exception->response->status() : null,
+                'status' => $exception instanceof IntegrationException ? $exception->status : ($exception instanceof RequestException ? $exception->response->status() : null),
             ]);
         }
 

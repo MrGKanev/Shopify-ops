@@ -25,6 +25,6 @@ class BackupVerificationController extends Controller
             return back()->withErrors(['verification' => 'Backup-ът не издържа проверката: '.$verification->error]);
         }
 
-        return back()->with('status', 'Backup-ът е проверен успешно и съдържа четим database dump.');
+        return back()->with('status', __('Backup-ът е проверен успешно и съдържа четим database dump.'));
     }
 }

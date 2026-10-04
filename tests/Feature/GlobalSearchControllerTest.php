@@ -9,7 +9,7 @@ class GlobalSearchControllerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_access_validation_matches_all_sources_and_isolates_stores(): void
+    public function test_validation_matches_all_sources_and_isolates_stores(): void
     {
         $this->get('/search')->assertRedirect(route('login'));
         [$viewer] = $this->userWithStore();

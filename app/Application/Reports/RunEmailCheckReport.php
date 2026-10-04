@@ -3,18 +3,19 @@
 namespace App\Application\Reports;
 
 use App\Domain\Reports\EmailCheckAnalyzer;
-use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 
 class RunEmailCheckReport
 {
-    public function __construct(private readonly ShopifyAdminGateway $shopify, private readonly EmailCheckAnalyzer $analyzer) {}
+    public function __construct(private readonly ShopifyOrders $shopify, private readonly EmailCheckAnalyzer $analyzer) {}
 
-    public function handle(Store $store, string $start, string $end): EmailCheckResult
+    /** @return ReportResult<array<string, mixed>> */
+    public function handle(Store $store, string $start, string $end): ReportResult
     {
         $result = $this->shopify->emailCheckCandidates($store, $start, $end);
         $rows = $this->analyzer->analyze($result['orders']);
 
-        return new EmailCheckResult($start, $end, count($result['orders']), $rows, count(array_filter($rows, fn (array $row): bool => $row['severity'] === 'critical')), count(array_filter($rows, fn (array $row): bool => $row['severity'] === 'warning')), $result['pages'], $result['truncated']);
+        return new ReportResult(rows: $rows, scanned: count($result['orders']), pages: $result['pages'], truncated: $result['truncated'], params: ['startDate' => $start, 'endDate' => $end], meta: ['critical' => count(array_filter($rows, fn (array $row): bool => $row['severity'] === 'critical')), 'warnings' => count(array_filter($rows, fn (array $row): bool => $row['severity'] === 'warning'))]);
     }
 }
