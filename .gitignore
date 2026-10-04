@@ -38,3 +38,9 @@ Thumbs.db
 /reports/
 /order_types.json
 /package-lock.json
+
+# Temporary local planning files
+/ROADMAP-NEW-TOOLS.md
+/TODO.md
+/REFACTORING.md
+/IMPROVEMENTS.md
