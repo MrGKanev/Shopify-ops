@@ -3,7 +3,7 @@
 @section('content')
     <x-report.layout
         eyebrow="Fulfillment report"
-        title="Shipment Aging"
+        title="{{ __('Shipment Aging') }}"
         subtitle="Live ShipStation awaiting-shipment orders older than the threshold."
         :configuration-error="$configurationError"
         credentials-message="ShipStation credentials are incomplete for the active store."
@@ -19,19 +19,19 @@
 
         @if ($result)
             <x-report.results export-route="reports.shipment-aging.export" :export-params="['threshold' => $result->params['threshold']]">
-                <x-slot:heading>{{ $result->scanned }} awaiting orders scanned · {{ count($result->rows) }} older than {{ $result->params['threshold'] }} days</x-slot:heading>
+                <x-slot:heading>{{ $result->scanned }} {{ __('awaiting orders scanned ·') }} {{ count($result->rows) }} {{ __('older than') }} {{ $result->params['threshold'] }} {{ __('days') }}</x-slot:heading>
 
                 <div class="grid gap-4 md:grid-cols-2">
                     <x-card padding="p-4">
                         <h3 class="font-bold">{{ __('By SKU') }}</h3>
                         @foreach (array_slice($result->meta['bySku'], 0, 8) as $row)
-                            <p>{{ $row['sku'] }} · {{ $row['orders'] }} orders · {{ $row['qty'] }} qty · oldest {{ $row['oldest_days'] }}d</p>
+                            <p>{{ $row['sku'] }} · {{ $row['orders'] }} {{ __('orders ·') }} {{ $row['qty'] }} {{ __('qty · oldest') }} {{ $row['oldest_days'] }}d</p>
                         @endforeach
                     </x-card>
                     <x-card padding="p-4">
                         <h3 class="font-bold">{{ __('By type') }}</h3>
                         @foreach (array_slice($result->meta['byType'], 0, 8) as $row)
-                            <p>{{ $row['type'] }} · {{ $row['orders'] }} orders · oldest {{ $row['oldest_days'] }}d</p>
+                            <p>{{ $row['type'] }} · {{ $row['orders'] }} {{ __('orders · oldest') }} {{ $row['oldest_days'] }}d</p>
                         @endforeach
                     </x-card>
                 </div>
@@ -43,7 +43,7 @@
                             <td class="px-4 py-3">{{ $row['order_date'] }}</td>
                             <td class="px-4 py-3">{{ $row['days'] }}d</td>
                             <td class="px-4 py-3">{{ $row['customer'] }}<br>{{ $row['email'] }}</td>
-                            <td class="px-4 py-3">{{ number_format($row['total'], 2) }}</td>
+                            <td class="px-4 py-3">{{ \App\Support\UiFormat::number($row['total'], 2) }}</td>
                             <td class="px-4 py-3">{{ $row['order_type'] }}</td>
                             <td class="px-4 py-3">
                                 @foreach ($row['skus'] as $sku => $qty)

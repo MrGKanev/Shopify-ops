@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="flex flex-col gap-6">
-        <x-page-header title="Run History" subtitle="Recent audit and scan executions for this store." />
+        <x-page-header title="{{ __('Run History') }}" subtitle="Recent audit and scan executions for this store." />
 
         <x-card>
             <form class="flex flex-col gap-3 sm:flex-row sm:items-end" method="GET">
@@ -17,9 +17,9 @@
         <x-data-table :headers="['Time', 'Tool', 'Status', 'Period', 'Duration', 'Rows', 'Scanned', 'Error / Meta']">
             @forelse ($runs as $run)
                 <tr>
-                    <td class="px-4 py-3">{{ $run->created_at->toDateTimeString() }}</td>
+                    <td class="px-4 py-3">{{ \App\Support\UiFormat::date($run->created_at, true) }}</td>
                     <td class="px-4 py-3">{{ $run->tool }}</td>
-                    <td class="px-4 py-3">{{ $run->status }}</td>
+                    <td class="px-4 py-3">{{ __($run->status) }}</td>
                     <td class="px-4 py-3">{{ $run->start_date?->toDateString() ?: '-' }} → {{ $run->end_date?->toDateString() ?: '-' }}</td>
                     <td class="px-4 py-3">{{ $run->duration_seconds !== null ? $run->duration_seconds.'s' : '-' }}</td>
                     <td class="px-4 py-3">{{ $run->rows_found ?? '-' }}</td>

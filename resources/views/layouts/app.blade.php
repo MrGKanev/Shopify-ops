@@ -50,7 +50,7 @@
             @else
                 <div class="sidebar-section">{{ __('Recent Runs') }}</div>
                 <ul class="sidebar-nav">
-                    @forelse($recentRuns as $run)<li><a href="{{ route('run-logs.index', ['q' => $run->tool]) }}">{{ __(ucwords(str_replace('_', ' ', $run->tool))) }} · {{ $run->created_at->diffForHumans() }}</a></li>@empty<li>{{ __('No runs yet') }}</li>@endforelse
+                    @forelse($recentRuns as $run)<li><a href="{{ route('run-logs.index', ['q' => $run->tool]) }}">{{ __(ucwords(str_replace('_', ' ', $run->tool))) }} · {{ \App\Support\UiFormat::relative($run->created_at) }}</a></li>@empty<li>{{ __('No runs yet') }}</li>@endforelse
                     <li><a class="{{ request()->routeIs('run-logs.index') ? 'active' : '' }}" href="{{ route('run-logs.index') }}">{{ __('Full run history') }} →</a></li>
                 </ul>
             @endif
@@ -64,7 +64,7 @@
 <div class="command-palette" data-command-palette hidden>
     <button class="command-palette-backdrop" type="button" aria-label="{{ __('Close quick search') }}" data-command-palette-close></button>
     <section class="command-palette-dialog" role="dialog" aria-modal="true" aria-labelledby="command-palette-title">
-        <h2 class="sr-only" id="command-palette-title">Quick search</h2>
+        <h2 class="sr-only" id="command-palette-title">{{ __('Quick search') }}</h2>
         <div class="command-palette-input-wrap">
             <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
             <input data-command-palette-input type="search" placeholder="{{ __('Search by task, problem, order or report…') }}" autocomplete="off" data-endpoint="{{ route('command-palette') }}" data-no-results="{{ __('No matching results.') }}" data-search-failed="{{ __('Search could not be completed.') }}">

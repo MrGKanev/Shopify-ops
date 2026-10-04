@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Install {{ config('app.name') }} · Internal Tools</title>
+    <title>{{ __('Install') }} {{ config('app.name') }} {{ __('· Internal Tools') }}</title>
     <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -73,7 +73,7 @@
                     </div>
                     <div class="grid gap-4 sm:grid-cols-2">
                         <div class="field">
-                            <label for="name">Name</label>
+                            <label for="name">{{ __('Name') }}</label>
                             <input id="name" name="name" value="{{ old('name') }}" required autocomplete="name">
                             @error('name')<p class="text-sm text-danger">{{ __($message) }}</p>@enderror
                         </div>
@@ -140,7 +140,7 @@
 
                 <section class="space-y-4 border-t border-edge pt-8">
                     <div>
-                        <h2 class="text-lg font-semibold">Notifications <span class="normal-case font-normal text-muted">{{ __('(optional)') }}</span></h2>
+                        <h2 class="text-lg font-semibold">{{ __('Notifications') }} <span class="normal-case font-normal text-muted">{{ __('(optional)') }}</span></h2>
                         <p class="mt-1 text-sm text-muted">{{ __('Configure your own SMTP and chat webhooks now, or leave these blank and set them later in') }} <code>.env</code>{{ __('. Without SMTP, mail is only written to the log.') }}</p>
                     </div>
                     <div class="grid gap-4 sm:grid-cols-2">

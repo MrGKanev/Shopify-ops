@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="flex flex-col gap-6">
-        <x-page-header title="Global Search" subtitle="Search order numbers across saved reports, push log and ignored orders." />
+        <x-page-header title="{{ __('Global Search') }}" subtitle="Search order numbers across saved reports, push log and ignored orders." />
 
         <x-card>
             <form class="flex flex-col gap-3 sm:flex-row sm:items-end" method="GET">
@@ -19,10 +19,10 @@
 
         @if ($results !== null)
             @php($total = count($results['reports']) + $results['pushes']->count() + $results['ignored']->count())
-            <h2 class="text-2xl font-bold">{{ $total }} matches for “{{ $query }}”</h2>
+            <h2 class="text-2xl font-bold">{{ $total }} {{ __('matches for “') }}{{ $query }}”</h2>
 
             @if ($total === 0)
-                <x-empty-state title="Nothing found locally">
+                <x-empty-state title="{{ __('Nothing found locally') }}">
                     <a class="font-medium text-indigo-600 hover:underline dark:text-indigo-400" href="{{ route('orders.spot-check', ['prefill' => $query]) }}">{{ __('Run a live Spot-check') }}</a>.
                 </x-empty-state>
             @else
@@ -31,7 +31,7 @@
                         <h3 class="text-xl font-bold" id="saved-reports-heading">{{ __('Saved reports') }}</h3>
                         @foreach ($results['reports'] as $row)
                             <x-card padding="p-3">
-                                <a class="font-medium text-indigo-600 hover:underline dark:text-indigo-400" href="{{ route('saved-reports.show', $row['id']) }}">{{ $row['order_number'] }}</a> · {{ $row['report_date'] }}
+                                <a class="font-medium text-indigo-600 hover:underline dark:text-indigo-400" href="{{ route('saved-reports.show', $row['id']) }}">{{ $row['order_number'] }}</a> · {{ \App\Support\UiFormat::date($row['report_date']) }}
                             </x-card>
                         @endforeach
                     </section>
@@ -41,16 +41,16 @@
                     <section class="flex flex-col gap-3" aria-labelledby="push-log-heading">
                         <h3 class="text-xl font-bold" id="push-log-heading">{{ __('Push log') }}</h3>
                         @foreach ($results['pushes'] as $row)
-                            <x-card padding="p-3">{{ $row->order_number }} · {{ $row->pushed_at->toDateTimeString() }}</x-card>
+                            <x-card padding="p-3">{{ $row->order_number }} · {{ \App\Support\UiFormat::date($row->pushed_at, true) }}</x-card>
                         @endforeach
                     </section>
                 @endif
 
                 @if ($results['ignored']->isNotEmpty())
                     <section class="flex flex-col gap-3" aria-labelledby="ignored-orders-heading">
-                        <h3 class="text-xl font-bold" id="ignored-orders-heading">Ignored orders</h3>
+                        <h3 class="text-xl font-bold" id="ignored-orders-heading">{{ __('Ignored orders') }}</h3>
                         @foreach ($results['ignored'] as $row)
-                            <x-card padding="p-3">{{ $row->order_number }} · {{ $row->reason ?: 'No reason' }}</x-card>
+                            <x-card padding="p-3">{{ $row->order_number }} · {{ $row->reason ?: __('No reason') }}</x-card>
                         @endforeach
                     </section>
                 @endif

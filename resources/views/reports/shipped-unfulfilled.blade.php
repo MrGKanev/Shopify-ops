@@ -3,7 +3,7 @@
 @section('content')
     <x-report.layout
         eyebrow="Fulfillment report"
-        title="SS Shipped / Shopify Unfulfilled"
+        title="{{ __('SS Shipped / Shopify Unfulfilled') }}"
         subtitle="ShipStation shipped orders still unfulfilled or partial in Shopify."
         :configuration-error="$configurationError"
         credentials-message="Shopify and ShipStation credentials are required for the active store."
@@ -22,7 +22,7 @@
                 truncated-message="Results are incomplete: Shopify orders were truncated after :pages pages."
                 :pages="$result->meta['shopifyPages']"
             >
-                <x-slot:heading>{{ $result->meta['shippedTotal'] }} SS shipped orders · {{ count($result->rows) }} Shopify sync mismatches</x-slot:heading>
+                <x-slot:heading>{{ $result->meta['shippedTotal'] }} {{ __('SS shipped orders ·') }} {{ count($result->rows) }} {{ __('Shopify sync mismatches') }}</x-slot:heading>
 
                 <x-data-table
                     :rows="$result->rows"
@@ -34,7 +34,7 @@
                         'Email' => fn (array $row): string => $row['email'] ?: '—',
                         'SS status' => fn (): string => __('shipped'),
                         'Shopify status' => 'sh_fulfillment',
-                        'Total' => fn (array $row): string => number_format($row['total'], 2),
+                        'Total' => fn (array $row): string => \App\Support\UiFormat::number($row['total'], 2),
                     ]"
                 />
             </x-report.results>

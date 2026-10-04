@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-report.layout eyebrow="Gift card report" title="Gift cards" subtitle="Find enabled cards with remaining balances that expire soon or have never been redeemed." :configuration-error="$configurationError" :report-failed="$reportFailed">
+    <x-report.layout eyebrow="Gift card report" title="{{ __('Gift cards') }}" subtitle="Find enabled cards with remaining balances that expire soon or have never been redeemed." :configuration-error="$configurationError" :report-failed="$reportFailed">
         <x-slot:form>
             <x-card>
                 <ul class="list-disc space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-300">
@@ -20,20 +20,20 @@
 
         @if ($result)
             <x-report.results :truncated="$result->truncated" truncated-message="Results were truncated after :pages gift card pages." :pages="$result->pages">
-                <x-slot:heading>{{ $result->scanned }} gift cards · {{ count($result->rows) }} flagged</x-slot:heading>
+                <x-slot:heading>{{ $result->scanned }} {{ __('gift cards ·') }} {{ count($result->rows) }} {{ __('flagged') }}</x-slot:heading>
 
                 <x-data-table :headers="['Code', 'Customer', 'Balance', 'Initial value', 'Expires', 'Issues']" :rows="$result->rows" empty="All scanned gift cards are fresh, redeemed, disabled, or not close to expiry.">
                     @foreach ($result->rows as $row)
                         <tr>
                             <td class="px-4 py-3 font-mono">{{ $row['masked_code'] ?: '—' }}</td>
                             <td class="px-4 py-3">{{ $row['customer_email'] ?: '—' }}</td>
-                            <td class="px-4 py-3">{{ number_format($row['balance'], 2) }} {{ $row['currency'] }}</td>
-                            <td class="px-4 py-3">{{ number_format($row['initial_value'], 2) }} {{ $row['currency'] }}</td>
-                            <td class="px-4 py-3">{{ $row['expires_on'] ?: 'No expiry' }}</td>
+                            <td class="px-4 py-3">{{ \App\Support\UiFormat::number($row['balance'], 2) }} {{ $row['currency'] }}</td>
+                            <td class="px-4 py-3">{{ \App\Support\UiFormat::number($row['initial_value'], 2) }} {{ $row['currency'] }}</td>
+                            <td class="px-4 py-3">{{ $row['expires_on'] ? \App\Support\UiFormat::date($row['expires_on']) : __('No expiry') }}</td>
                             <td class="px-4 py-3">
                                 <div class="flex flex-col gap-1">
                                     @foreach ($row['reasons'] as $reason)
-                                        <x-badge tone="warn" class="w-fit">{{ $reason }}</x-badge>
+                                        <x-badge tone="warn" class="w-fit">{{ \App\Support\UiFormat::text($reason) }}</x-badge>
                                     @endforeach
                                 </div>
                             </td>

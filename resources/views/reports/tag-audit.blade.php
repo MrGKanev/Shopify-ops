@@ -1,14 +1,14 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-report.layout eyebrow="Audit report" title="Tag audit" subtitle="Inventory every order tag, its usage frequency, and the most recent order carrying it." :configuration-error="$configurationError" :report-failed="$reportFailed">
+    <x-report.layout eyebrow="Audit report" title="{{ __('Tag audit') }}" subtitle="Inventory every order tag, its usage frequency, and the most recent order carrying it." :configuration-error="$configurationError" :report-failed="$reportFailed">
         <x-slot:form>
             <x-report.date-range-form :action="route('reports.tag-audit.store')" :start-date="$startDate" :end-date="$endDate" />
         </x-slot:form>
 
         @if ($result)
             <x-report.results :truncated="$result->truncated" truncated-message="Results were truncated after :pages pages. Narrow the date range for a complete inventory." :pages="$result->pages">
-                <x-slot:heading>{{ $result->scanned }} scanned · {{ count($result->rows) }} unique tags</x-slot:heading>
+                <x-slot:heading>{{ $result->scanned }} {{ __('scanned ·') }} {{ \App\Support\UiFormat::count(count($result->rows), 'unique tags') }}</x-slot:heading>
                 <x-slot:summary>{{ $result->params['startDate'] }} → {{ $result->params['endDate'] }}</x-slot:summary>
 
                 <x-data-table :headers="['Tag', 'Orders', 'Last seen', 'Last order', 'Search']" :rows="$result->rows" empty="No orders in this date range have tags.">

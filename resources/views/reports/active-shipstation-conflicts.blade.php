@@ -3,7 +3,7 @@
 @section('content')
     <x-report.layout
         eyebrow="Fulfillment report"
-        title="Active SS Conflicts"
+        title="{{ __('Active SS Conflicts') }}"
         subtitle="Refunded or cancelled Shopify orders still active in ShipStation."
         :configuration-error="$configurationError"
         credentials-message="Shopify and ShipStation credentials are required for the active store."
@@ -22,7 +22,7 @@
                 truncated-message="Results are incomplete: Shopify orders were truncated after :pages pages."
                 :pages="$result->meta['shopifyPages']"
             >
-                <x-slot:heading>{{ $result->scanned }} Shopify exceptions vs {{ $result->meta['activeShipStation'] }} active SS orders · {{ count($result->rows) }} conflicts</x-slot:heading>
+                <x-slot:heading>{{ $result->scanned }} {{ __('Shopify exceptions vs') }} {{ $result->meta['activeShipStation'] }} {{ __('active SS orders ·') }} {{ \App\Support\UiFormat::count(count($result->rows), 'conflicts') }}</x-slot:heading>
 
                 <x-data-table
                     :rows="$result->rows"
@@ -32,10 +32,10 @@
                         'Issue' => 'issue',
                         'Shopify date' => 'created_at',
                         'Email' => 'email',
-                        'Total' => fn (array $row): string => number_format($row['total'], 2),
-                        'SS status' => fn (array $row): string => str_replace('_', ' ', $row['ss_status']),
+                        'Total' => fn (array $row): string => \App\Support\UiFormat::number($row['total'], 2),
+                        'SS status' => fn (array $row): string => __($row['ss_status']),
                         'SS date' => 'ss_date',
-                        'SS total' => fn (array $row): string => number_format($row['ss_total'], 2),
+                        'SS total' => fn (array $row): string => \App\Support\UiFormat::number($row['ss_total'], 2),
                     ]"
                 />
             </x-report.results>

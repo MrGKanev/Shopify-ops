@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-report.layout eyebrow="Fulfillment report" title="Fulfillment SLA Breaches" subtitle="Paid orders exceeding the configured time to first fulfillment." :configuration-error="$configurationError" :report-failed="$reportFailed">
+    <x-report.layout eyebrow="Fulfillment report" title="{{ __('Fulfillment SLA Breaches') }}" subtitle="Paid orders exceeding the configured time to first fulfillment." :configuration-error="$configurationError" :report-failed="$reportFailed">
         <x-slot:form>
             <x-report.date-range-form
                 :action="route('reports.fulfillment-sla.store')"
@@ -19,7 +19,7 @@
                 truncated-message="Results are incomplete: Shopify orders were truncated after :pages pages."
                 :pages="$result->pages"
             >
-                <x-slot:heading>{{ $result->scanned }} orders scanned · {{ count($result->rows) }} breaches of {{ $result->params['threshold'] }} days</x-slot:heading>
+                <x-slot:heading>{{ $result->scanned }} {{ __('orders scanned ·') }} {{ count($result->rows) }} {{ __('breaches of') }} {{ $result->params['threshold'] }} {{ __('days') }}</x-slot:heading>
 
                 <x-data-table
                     :rows="$result->rows"

@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="flex flex-col gap-6">
-        <x-page-header eyebrow="Administration" title="Settings" subtitle="Configuration overview for {{ $store->label }}." />
+        <x-page-header eyebrow="Administration" title="{{ __('Settings') }}" subtitle="Configuration overview for {{ $store->label }}." />
 
         <div class="grid gap-5 lg:grid-cols-2">
             <x-card>
@@ -20,12 +20,12 @@
             </x-card>
 
             <x-card>
-                <h2 class="text-xl font-bold">Notifications</h2>
+                <h2 class="text-xl font-bold">{{ __('Notifications') }}</h2>
                 @foreach ($notifications as $name => $channel)
                     <div class="mt-4 flex items-center justify-between gap-4">
                         <div>
                             <p>{{ $name }}</p>
-                            <p class="text-xs text-slate-500 dark:text-slate-400">{{ $channel['rules'] }} active rules</p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">{{ $channel['rules'] }} {{ __('active rules') }}</p>
                         </div>
                         <x-badge :tone="$channel['configured'] ? 'ok' : 'warn'">{{ $channel['configured'] ? 'Configured' : 'Needs configuration' }}</x-badge>
                     </div>
@@ -110,14 +110,14 @@
                     @endfor
                 </fieldset>
 
-                <div><x-button type="submit">Save appearance</x-button></div>
+                <div><x-button type="submit">{{ __('Save appearance') }}</x-button></div>
             </form>
         </x-card>
 
         <x-card>
             <div class="flex items-center justify-between gap-4">
                 <h2 class="text-xl font-bold">{{ __('Security') }}</h2>
-                <x-badge :tone="$bannedIpCount > 0 ? 'warn' : 'ok'">{{ $bannedIpCount }} banned {{ $bannedIpCount === 1 ? 'IP' : 'IPs' }}</x-badge>
+                <x-badge :tone="$bannedIpCount > 0 ? 'warn' : 'ok'">{{ $bannedIpCount }} {{ __('banned') }} {{ $bannedIpCount === 1 ? 'IP' : 'IPs' }}</x-badge>
             </div>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ __('Login abuse is limited automatically by Laravel\'s per-email and per-IP throttle; repeat offenders are banned for 1 week.') }}</p>
             <div class="mt-3 flex flex-wrap gap-4 text-sm font-semibold text-indigo-600 dark:text-indigo-400">
@@ -130,12 +130,12 @@
             <h2 class="text-xl font-bold">{{ __('Operations') }}</h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ __('Health, backups, and diagnostics installed in this admin.') }}</p>
             <div class="mt-3 flex flex-wrap gap-4 text-sm font-semibold text-indigo-600 dark:text-indigo-400">
-                <a href="{{ route('admin.health') }}">Diagnostics</a>
-                <a href="{{ route('admin.health-incidents') }}">Incidents</a>
+                <a href="{{ route('admin.health') }}">{{ __('Diagnostics') }}</a>
+                <a href="{{ route('admin.health-incidents') }}">{{ __('Incidents') }}</a>
                 <a href="{{ route('admin.webhook-events') }}">{{ __('Webhook events') }}</a>
-                <a href="{{ route('admin.backups.index') }}">Backups</a>
-                <a href="{{ route('admin.stores.index') }}">Stores</a>
-                <a href="{{ route('admin.users.index') }}">Users</a>
+                <a href="{{ route('admin.backups.index') }}">{{ __('Backups') }}</a>
+                <a href="{{ route('admin.stores.index') }}">{{ __('Stores') }}</a>
+                <a href="{{ route('admin.users.index') }}">{{ __('Users') }}</a>
             </div>
         </x-card>
     </div>

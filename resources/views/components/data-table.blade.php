@@ -17,7 +17,11 @@
     $cellValue = static function (mixed $accessor, mixed $row): mixed {
         $accessor = is_array($accessor) ? $accessor['value'] : $accessor;
 
-        return $accessor instanceof Closure ? $accessor($row) : data_get($row, $accessor);
+        $value = $accessor instanceof Closure ? $accessor($row) : data_get($row, $accessor);
+
+        return is_string($accessor) && in_array($accessor, ['status', 'financial', 'fulfillment', 'sh_fulfillment', 'order_status', 'ss_status'], true) && is_string($value)
+            ? __($value)
+            : $value;
     };
 @endphp
 <div {{ $attributes->merge(['class' => 'overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900']) }}>

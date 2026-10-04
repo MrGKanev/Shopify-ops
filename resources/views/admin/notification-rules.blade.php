@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="flex max-w-4xl flex-col gap-6">
-        <x-page-header eyebrow="Administration" title="Notifications" subtitle="Slack, Discord, and email rules for the active store, in one place." />
+        <x-page-header eyebrow="Administration" title="{{ __('Notifications') }}" subtitle="Slack, Discord, and email rules for the active store, in one place." />
 
         <div class="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-800" role="tablist" data-tabs>
             <button class="rounded-t-lg border border-b-0 border-transparent px-4 py-2 text-sm font-semibold text-slate-500 hover:text-slate-900 aria-selected:border-slate-200 aria-selected:bg-white aria-selected:text-indigo-600 dark:text-slate-400 dark:hover:text-slate-100 dark:aria-selected:border-slate-800 dark:aria-selected:bg-slate-900 dark:aria-selected:text-indigo-400" type="button" role="tab" data-tab-target="slack" aria-selected="{{ $activeTab === 'slack' ? 'true' : 'false' }}">{{ __('Slack') }}</button>
@@ -49,7 +49,7 @@
                         </div>
                     </div>
 
-                    <x-button class="self-start" type="submit">Save Slack rules</x-button>
+                    <x-button class="self-start" type="submit">{{ __('Save Slack rules') }}</x-button>
                 </form>
             </div>
         </div>
@@ -89,7 +89,7 @@
                         </div>
                     </div>
 
-                    <x-button class="self-start" type="submit">Save Discord rules</x-button>
+                    <x-button class="self-start" type="submit">{{ __('Save Discord rules') }}</x-button>
                 </form>
             </div>
         </div>
@@ -109,12 +109,12 @@
 
                     @foreach ($rules as $tool => $rule)
                         <fieldset class="grid gap-4 rounded-xl border border-slate-200 p-4 sm:grid-cols-4 dark:border-slate-800">
-                            <legend class="px-2 font-semibold">{{ $catalog[$tool]['label'] ?? $tool }}</legend>
+                            <legend class="px-2 font-semibold">{{ __($catalog[$tool]['label'] ?? $tool) }}</legend>
                             <div>
                                 <label class="text-sm font-medium" for="mode-{{ $loop->index }}">{{ __('Delivery') }}</label>
                                 <select class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="mode-{{ $loop->index }}" name="rules[{{ $tool }}][mode]">
                                     @foreach (['off' => 'Off', 'immediate' => 'Immediate', 'digest' => 'Daily digest'] as $value => $label)
-                                        <option value="{{ $value }}" @selected(old("rules.$tool.mode", $rule['mode']) === $value)>{{ $label }}</option>
+                                        <option value="{{ $value }}" @selected(old("rules.$tool.mode", $rule['mode']) === $value)>{{ __($label) }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -135,7 +135,7 @@
                     @endforeach
 
                     @error('rules.*')<p class="text-sm text-red-600 dark:text-red-400">{{ __($message) }}</p>@enderror
-                    <x-button class="self-start" type="submit">Save email rules</x-button>
+                    <x-button class="self-start" type="submit">{{ __('Save email rules') }}</x-button>
                 </form>
             </div>
         </div>

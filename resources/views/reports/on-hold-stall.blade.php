@@ -3,7 +3,7 @@
 @section('content')
     <x-report.layout
         eyebrow="Fulfillment report"
-        title="On-Hold Stall"
+        title="{{ __('On-Hold Stall') }}"
         subtitle="Shopify fulfillment orders currently on hold, sorted by time since placement."
         :configuration-error="$configurationError"
         :report-failed="$reportFailed"
@@ -21,7 +21,7 @@
                 truncated-message="Results are incomplete: Shopify fulfillment orders were truncated after :pages pages."
                 :pages="$result->pages"
             >
-                <x-slot:heading>{{ $result->scanned }} on-hold fulfillment orders</x-slot:heading>
+                <x-slot:heading>{{ \App\Support\UiFormat::count($result->scanned, 'on-hold fulfillment orders') }}</x-slot:heading>
 
                 <x-data-table
                     :rows="$result->rows"
@@ -29,11 +29,11 @@
                     :columns="[
                         'Order' => ['value' => 'order_number', 'class' => 'font-semibold'],
                         'Placed' => 'created_at',
-                        'Waiting' => fn (array $row): string => $row['days_waiting'].' days',
+                        'Waiting' => fn (array $row): string => $row['days_waiting'].' '.__('days'),
                         'Hold reason' => fn (array $row): string => $row['hold_reason'] ?: '—',
                         'Notes' => fn (array $row): string => $row['hold_notes'] ?: '—',
                         'Email' => 'email',
-                        'Total' => fn (array $row): string => number_format($row['total'], 2),
+                        'Total' => fn (array $row): string => \App\Support\UiFormat::number($row['total'], 2),
                         'Financial' => 'financial',
                     ]"
                 />

@@ -52,10 +52,10 @@ class LoginThrottle
         $remaining = max(0, self::MAX_ATTEMPTS - $attempts);
 
         if ($remaining > 0) {
-            return 'Incorrect email or password. '.$remaining.' attempt'.($remaining !== 1 ? 's' : '').' remaining.';
+            return trans_choice('{1} Incorrect email or password. :count attempt remaining.|[2,*] Incorrect email or password. :count attempts remaining.', $remaining);
         }
 
-        return 'Too many failed attempts. Account locked for 1 week. Contact your administrator.';
+        return __('Too many failed attempts. Account locked for 1 week. Contact your administrator.');
     }
 
     public function recordSuccess(string $ip): void
@@ -81,11 +81,11 @@ class LoginThrottle
         $hours = intdiv($seconds % 86400, 3600);
 
         if ($days > 0) {
-            $message = "Too many failed attempts. Try again in {$days} day".($days !== 1 ? 's' : '');
+            $message = trans_choice('{1} Too many failed attempts. Try again in :count day|[2,*] Too many failed attempts. Try again in :count days', $days);
 
-            return $hours > 0 ? "{$message} and {$hours}h." : "{$message}.";
+            return $hours > 0 ? $message.__(' and :hoursh.', ['hours' => $hours]) : "{$message}.";
         }
 
-        return "Too many failed attempts. Try again in {$hours} hour".($hours !== 1 ? 's' : '').'.';
+        return trans_choice('{1} Too many failed attempts. Try again in :count hour.|[2,*] Too many failed attempts. Try again in :count hours.', $hours);
     }
 }

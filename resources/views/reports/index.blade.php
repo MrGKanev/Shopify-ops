@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="flex flex-col gap-6">
-        <x-page-header eyebrow="Operations" title="Audits" subtitle="Every audit and report, grouped by category." />
+        <x-page-header eyebrow="Operations" title="{{ __('Audits') }}" subtitle="Every audit and report, grouped by category." />
 
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             @foreach (config('audit-hub') as $category => $links)

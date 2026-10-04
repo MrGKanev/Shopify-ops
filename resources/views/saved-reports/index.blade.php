@@ -2,14 +2,14 @@
 
 @section('content')
     <div class="flex flex-col gap-6">
-        <x-page-header eyebrow="Operations" title="Saved Reports" subtitle="Daily snapshots from completed audits." />
+        <x-page-header eyebrow="Operations" title="{{ __('Saved Reports') }}" subtitle="Daily snapshots from completed audits." />
 
         <x-data-table :headers="['Saved', 'Tool', 'Period', 'Rows', '']">
             @forelse ($reports as $report)
                 <tr>
-                    <td class="px-4 py-3">{{ $report->updated_at->toDateTimeString() }}</td>
+                    <td class="px-4 py-3">{{ \App\Support\UiFormat::date($report->updated_at, true) }}</td>
                     <td class="px-4 py-3">{{ $report->tool }}</td>
-                    <td class="px-4 py-3">{{ $report->start_date->toDateString() }} → {{ $report->end_date->toDateString() }}</td>
+                    <td class="px-4 py-3">{{ \App\Support\UiFormat::date($report->start_date) }} → {{ \App\Support\UiFormat::date($report->end_date) }}</td>
                     <td class="px-4 py-3">{{ $report->rows_found }}</td>
                     <td class="px-4 py-3"><a class="font-medium text-indigo-600 dark:text-indigo-400" href="{{ route('saved-reports.show', $report) }}">{{ __('Open') }}</a></td>
                 </tr>

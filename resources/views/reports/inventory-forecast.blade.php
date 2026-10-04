@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-report.layout eyebrow="Inventory report" title="Inventory forecast" subtitle="Estimate days until stock reaches zero from the last 30 days of paid-order sales." :configuration-error="$configurationError" :report-failed="$reportFailed" failure-message="The forecast could not be completed. Check Shopify and try again.">
+    <x-report.layout eyebrow="Inventory report" title="{{ __('Inventory forecast') }}" subtitle="Estimate days until stock reaches zero from the last 30 days of paid-order sales." :configuration-error="$configurationError" :report-failed="$reportFailed" failure-message="The forecast could not be completed. Check Shopify and try again.">
         <x-slot:form>
             <x-card>
                 <ul class="list-disc space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-300">
@@ -16,15 +16,15 @@
 
         @if ($result)
             <x-report.results>
-                <x-slot:heading>{{ $result->meta['products'] }} products · {{ $result->meta['variants'] }} variants · {{ $result->meta['orders'] }} orders</x-slot:heading>
+                <x-slot:heading>{{ $result->meta['products'] }} {{ __('products ·') }} {{ $result->meta['variants'] }} {{ __('variants ·') }} {{ \App\Support\UiFormat::count($result->meta['orders'], 'orders') }}</x-slot:heading>
 
                 <div class="flex flex-wrap gap-2 text-sm">
                     <span>{{ $result->params['startDate'] }} → {{ $result->params['endDate'] }}</span>
                     @if ($result->meta['critical'])
-                        <x-badge tone="danger">{{ $result->meta['critical'] }} critical</x-badge>
+                        <x-badge tone="danger">{{ $result->meta['critical'] }} {{ __('critical') }}</x-badge>
                     @endif
                     @if ($result->meta['warning'])
-                        <x-badge tone="warn">{{ $result->meta['warning'] }} low stock</x-badge>
+                        <x-badge tone="warn">{{ $result->meta['warning'] }} {{ __('low stock') }}</x-badge>
                     @endif
                 </div>
                 @if ($result->meta['productsTruncated'] || $result->meta['ordersTruncated'])
@@ -44,17 +44,17 @@
                         <tr class="{{ $row['days_to_zero'] !== null && $row['days_to_zero'] < 7 ? 'bg-red-50 dark:bg-red-950/30' : ($row['days_to_zero'] !== null && $row['days_to_zero'] < 14 ? 'bg-amber-50 dark:bg-amber-950/30' : '') }}">
                             <td class="px-4 py-3 font-mono">{{ $row['sku'] ?: '—' }}</td>
                             <td class="px-4 py-3">
-                                <x-report.shopify-link resource="products" :id="$row['product_id']" class="font-semibold">{{ $row['product_title'] ?: 'Untitled product' }}</x-report.shopify-link>
-                                <div class="text-slate-500">{{ $row['variant_title'] ?: 'Default' }}</div>
+                                <x-report.shopify-link resource="products" :id="$row['product_id']" class="font-semibold">{{ $row['product_title'] ?: __('Untitled product') }}</x-report.shopify-link>
+                                <div class="text-slate-500">{{ $row['variant_title'] ?: __('Default') }}</div>
                             </td>
                             <td class="px-4 py-3">{{ $row['stock'] }}</td>
                             <td class="px-4 py-3">{{ $row['sold_30d'] }}</td>
-                            <td class="px-4 py-3 font-mono">{{ number_format($row['daily_rate'], 2) }}/day</td>
+                            <td class="px-4 py-3 font-mono">{{ \App\Support\UiFormat::number($row['daily_rate'], 2) }}{{ __('/day') }}</td>
                             <td class="px-4 py-3 font-semibold">
                                 @if ($row['stock'] <= 0)
-                                    Out of stock
+                                    {{ __('Out of stock') }}
                                 @elseif ($row['days_to_zero'] !== null)
-                                    {{ $row['days_to_zero'] }} days
+                                    {{ $row['days_to_zero'] }} {{ __('days') }}
                                 @else
                                     —
                                 @endif

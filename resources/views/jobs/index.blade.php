@@ -2,27 +2,27 @@
 
 @section('content')
     <div class="flex flex-col gap-6">
-        <x-page-header eyebrow="Operations" title="Job Queue" subtitle="Monitor background work, audit executions, and failed jobs for the active store.">
+        <x-page-header eyebrow="Operations" title="{{ __('Job Queue') }}" subtitle="Monitor background work, audit executions, and failed jobs for the active store.">
             @if ($usingRedis && $canViewHorizon)
-                <x-button size="sm" variant="ghost" :href="route('horizon.index')">Open Horizon</x-button>
+                <x-button size="sm" variant="ghost" :href="route('horizon.index')">{{ __('Open Horizon') }}</x-button>
             @endif
         </x-page-header>
 
         <x-card>
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div><h2 class="text-xl font-bold">{{ __('Audit executions') }}</h2><p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ __('Queued and completed core audits for this store.') }}</p></div>
-                <x-badge tone="info">{{ $auditJobs->count() }} recent</x-badge>
+                <x-badge tone="info">{{ $auditJobs->count() }} {{ __('recent') }}</x-badge>
             </div>
             <x-data-table class="mt-4" :headers="['Range', 'Status', 'Queued', 'Finished', 'Result']">
                 @forelse ($auditJobs as $auditJob)
                     <tr>
-                        <td class="px-4 py-3 tabular-nums">{{ $auditJob->start_date->toDateString() }} → {{ $auditJob->end_date->toDateString() }}</td>
+                        <td class="px-4 py-3 tabular-nums">{{ \App\Support\UiFormat::date($auditJob->start_date) }} → {{ \App\Support\UiFormat::date($auditJob->end_date) }}</td>
                         <td class="px-4 py-3"><x-badge :tone="$auditJob->status === 'completed' ? 'ok' : ($auditJob->status === 'failed' ? 'danger' : 'warn')">{{ ucfirst($auditJob->status) }}</x-badge></td>
-                        <td class="px-4 py-3 tabular-nums">{{ $auditJob->created_at->toDateTimeString() }}</td>
+                        <td class="px-4 py-3 tabular-nums">{{ \App\Support\UiFormat::date($auditJob->created_at, true) }}</td>
                         <td class="px-4 py-3 tabular-nums">{{ $auditJob->finished_at?->toDateTimeString() ?? '—' }}</td>
                         <td class="px-4 py-3">
                             @if ($auditJob->status === 'completed')
-                                {{ $auditJob->rows_found ?? '—' }} missing
+                                {{ $auditJob->rows_found ?? '—' }} {{ __('missing') }}
                             @elseif ($auditJob->status === 'failed')
                                 {{ $auditJob->error_category ?? '—' }}
                             @else
@@ -41,7 +41,7 @@
                 <div class="flex flex-wrap items-center justify-between gap-4">
                     <div><h2 class="text-xl font-bold">{{ __('Pending jobs') }}</h2><p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ __('Redis queues are monitored in Horizon.') }}</p></div>
                     @if ($canViewHorizon)
-                        <x-button size="sm" :href="route('horizon.index')">View pending jobs</x-button>
+                        <x-button size="sm" :href="route('horizon.index')">{{ __('View pending jobs') }}</x-button>
                     @else
                         <div class="text-right"><x-badge tone="info">{{ __('Admins only') }}</x-badge><p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ __('Pending job details are only visible to administrators in the Horizon dashboard.') }}</p></div>
                     @endif
@@ -49,7 +49,7 @@
             </x-card>
         @else
             <x-card>
-                <div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="text-xl font-bold">{{ __('Pending jobs') }}</h2><p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Waiting in the {{ config('queue.default') }} queue.</p></div><x-badge tone="info">Pending · {{ $jobs->total() }}</x-badge></div>
+                <div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="text-xl font-bold">{{ __('Pending jobs') }}</h2><p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ __('Waiting in the') }} {{ config('queue.default') }} {{ __('queue.') }}</p></div><x-badge tone="info">{{ __('Pending ·') }} {{ $jobs->total() }}</x-badge></div>
                 <x-data-table class="mt-4" :headers="['ID', 'Queue', 'Job', 'Attempts', 'Available']">
                     @forelse ($jobs as $job)
                         @php($payload = json_decode($job->payload, true) ?: [])
@@ -63,11 +63,11 @@
         @endif
 
         <x-card>
-            <div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="text-xl font-bold">{{ __('Failed jobs') }}</h2><p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ __('Retry a recoverable job or remove obsolete failures.') }}</p></div><x-badge :tone="$failed->total() > 0 ? 'danger' : 'ok'">Failed · {{ $failed->total() }}</x-badge></div>
+            <div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="text-xl font-bold">{{ __('Failed jobs') }}</h2><p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ __('Retry a recoverable job or remove obsolete failures.') }}</p></div><x-badge :tone="$failed->total() > 0 ? 'danger' : 'ok'">{{ __('Failed ·') }} {{ $failed->total() }}</x-badge></div>
             <x-data-table class="mt-4" :headers="['Job', 'Queue', 'Failed', 'Actions']">
                 @forelse ($failed as $job)
                     @php($payload = json_decode($job->payload, true) ?: [])
-                    <tr><td class="max-w-md truncate px-4 py-3">{{ $payload['displayName'] ?? $payload['job'] ?? 'Unknown job' }}<div class="mt-1 font-mono text-xs text-slate-500 dark:text-slate-400">{{ $job->uuid }}</div></td><td class="px-4 py-3">{{ $job->queue }}</td><td class="px-4 py-3 tabular-nums">{{ $job->failed_at }}</td><td class="px-4 py-3"><div class="flex gap-2"><form method="POST" action="{{ route('jobs.retry', $job->uuid) }}">@csrf <x-button size="sm" type="submit">{{ __('Retry') }}</x-button></form><form method="POST" action="{{ route('jobs.destroy', $job->uuid) }}">@csrf @method('DELETE') <x-button size="sm" variant="danger" type="submit">Forget</x-button></form></div></td></tr>
+                    <tr><td class="max-w-md truncate px-4 py-3">{{ $payload['displayName'] ?? $payload['job'] ?? 'Unknown job' }}<div class="mt-1 font-mono text-xs text-slate-500 dark:text-slate-400">{{ $job->uuid }}</div></td><td class="px-4 py-3">{{ $job->queue }}</td><td class="px-4 py-3 tabular-nums">{{ $job->failed_at }}</td><td class="px-4 py-3"><div class="flex gap-2"><form method="POST" action="{{ route('jobs.retry', $job->uuid) }}">@csrf <x-button size="sm" type="submit">{{ __('Retry') }}</x-button></form><form method="POST" action="{{ route('jobs.destroy', $job->uuid) }}">@csrf @method('DELETE') <x-button size="sm" variant="danger" type="submit">{{ __('Forget') }}</x-button></form></div></td></tr>
                 @empty
                     <tr><td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="4">{{ __('No failed jobs.') }}</td></tr>
                 @endforelse

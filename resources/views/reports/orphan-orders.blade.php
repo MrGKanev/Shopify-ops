@@ -3,7 +3,7 @@
 @section('content')
     <x-report.layout
         eyebrow="Risk report"
-        title="Orphan Detector"
+        title="{{ __('Orphan Detector') }}"
         subtitle="ShipStation orders without a matching Shopify order."
         :configuration-error="$configurationError"
         credentials-message="Shopify and ShipStation credentials are required for the active store."
@@ -22,7 +22,7 @@
                 truncated-message="Results are incomplete: Shopify orders were truncated after :pages pages."
                 :pages="$result->meta['shopifyPages']"
             >
-                <x-slot:heading>{{ $result->meta['shipStationTotal'] }} ShipStation vs {{ $result->meta['shopifyTotal'] }} Shopify orders · {{ count($result->rows) }} orphans</x-slot:heading>
+                <x-slot:heading>{{ $result->meta['shipStationTotal'] }} {{ __('ShipStation vs') }} {{ $result->meta['shopifyTotal'] }} {{ __('Shopify orders ·') }} {{ \App\Support\UiFormat::count(count($result->rows), 'orphans') }}</x-slot:heading>
 
                 <x-data-table
                     :rows="$result->rows"
@@ -32,8 +32,8 @@
                         'Date' => 'order_date',
                         'Customer' => fn (array $row): string => $row['customer'] ?: '—',
                         'Email' => fn (array $row): string => $row['email'] ?: '—',
-                        'Status' => fn (array $row): string => str_replace('_', ' ', $row['order_status']),
-                        'Total' => fn (array $row): string => number_format($row['total'], 2),
+                        'Status' => fn (array $row): string => __($row['order_status']),
+                        'Total' => fn (array $row): string => \App\Support\UiFormat::number($row['total'], 2),
                     ]"
                 />
             </x-report.results>

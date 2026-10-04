@@ -3,7 +3,7 @@
 @section('content')
     <x-report.layout
         eyebrow="Risk report"
-        title="Refunds Tracker"
+        title="{{ __('Refunds Tracker') }}"
         subtitle="Refunded Shopify orders cross-checked against ShipStation status."
         :configuration-errors="[
             'Shopify credentials are incomplete for the active store.' => $shopifyConfigurationError,
@@ -49,10 +49,10 @@
                         <tr>
                             <x-report.ignore-checkbox :number="$row['order_number']" />
                             <td class="px-4 py-3">{{ $row['order_number'] }}</td>
-                            <td class="px-4 py-3">{{ $row['created_at'] }}</td>
+                            <td class="px-4 py-3">{{ \App\Support\UiFormat::date($row['created_at']) }}</td>
                             <td class="px-4 py-3">{{ $row['email'] }}</td>
-                            <td class="px-4 py-3">{{ number_format($row['refunded_amount'], 2) }}</td>
-                            <td class="px-4 py-3">{{ $row['shipstation_statuses'] === [] ? '—' : implode(', ', $row['shipstation_statuses']) }}</td>
+                            <td class="px-4 py-3">{{ \App\Support\UiFormat::number($row['refunded_amount'], 2) }}</td>
+                            <td class="px-4 py-3">{{ $row['shipstation_statuses'] === [] ? '—' : implode(', ', array_map(fn ($status) => __($status), $row['shipstation_statuses'])) }}</td>
                             <td class="px-4 py-3">{{ ucfirst($row['risk']) }}</td>
                         </tr>
                     @endforeach

@@ -2,8 +2,8 @@
 
 @section('content')
     <div class="flex flex-col gap-6">
-        <x-page-header eyebrow="Administration" title="Webhook Health" subtitle="Live Shopify webhook registrations for the active store.">
-            <x-button size="sm" variant="ghost" :href="route('admin.webhook-events')">Event history</x-button>
+        <x-page-header eyebrow="Administration" title="{{ __('Webhook Health') }}" subtitle="Live Shopify webhook registrations for the active store.">
+            <x-button size="sm" variant="ghost" :href="route('admin.webhook-events')">{{ __('Event history') }}</x-button>
         </x-page-header>
 
         <x-card>
@@ -15,7 +15,7 @@
         @if ($error)
             <x-alert tone="error">{{ $error }}</x-alert>
         @elseif ($webhooks === [])
-            <x-empty-state title="No Shopify webhooks are registered." />
+            <x-empty-state title="{{ __('No Shopify webhooks are registered.') }}" />
         @else
             <x-data-table :headers="['Status', 'Topic', 'Endpoint', 'Format', 'Registered', 'API version']">
                 @foreach ($webhooks as $webhook)

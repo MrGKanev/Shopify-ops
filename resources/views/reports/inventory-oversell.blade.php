@@ -3,7 +3,7 @@
 @section('content')
     <x-report.layout
         eyebrow="Inventory report"
-        title="Inventory oversell risk"
+        title="{{ __('Inventory oversell risk') }}"
         subtitle="Compare active Shopify stock with every ShipStation order awaiting shipment and find SKUs that cannot cover current demand."
         :configuration-errors="[
             'Shopify credentials are incomplete for the active store.' => $shopifyConfigurationError,
@@ -18,14 +18,14 @@
 
         @if ($result)
             <x-report.results :truncated="$result->meta['productsTruncated']" truncated-message="Results are incomplete: product catalogue truncated after :pages pages." :pages="$result->meta['productPages']">
-                <x-slot:heading>{{ $result->meta['products'] }} products · {{ $result->meta['awaitingOrders'] }} awaiting orders</x-slot:heading>
-                <x-slot:summary>{{ count($result->rows) }} SKUs at risk of overselling</x-slot:summary>
+                <x-slot:heading>{{ $result->meta['products'] }} {{ __('products ·') }} {{ $result->meta['awaitingOrders'] }} {{ __('awaiting orders') }}</x-slot:heading>
+                <x-slot:summary>{{ count($result->rows) }} {{ __('SKUs at risk of overselling') }}</x-slot:summary>
 
                 <x-data-table :headers="['Product / variant', 'SKU', 'Stock', 'Awaiting', 'Shortfall', 'Action']" :rows="$result->rows" empty="Current tracked stock covers every SKU awaiting shipment.">
                     @foreach ($result->rows as $row)
                         <tr>
                             <td class="px-4 py-3">
-                                <x-report.shopify-link resource="products" :id="$row['product_id']" class="font-semibold">{{ $row['product_title'] ?: 'Untitled product' }}</x-report.shopify-link>
+                                <x-report.shopify-link resource="products" :id="$row['product_id']" class="font-semibold">{{ $row['product_title'] ?: __('Untitled product') }}</x-report.shopify-link>
                                 @if ($row['variant_title'])
                                     <div class="text-slate-500">{{ $row['variant_title'] }}</div>
                                 @endif

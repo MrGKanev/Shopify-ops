@@ -40,27 +40,27 @@
                 <div class="flex flex-col gap-3">
                     <div class="flex items-center justify-between">
                         <h2 class="text-xl font-bold">Shopify</h2>
-                        <span class="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold dark:bg-slate-800">{{ count($result->shopifyOrders) }} found</span>
+                        <span class="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold dark:bg-slate-800">{{ count($result->shopifyOrders) }} {{ __('found') }}</span>
                     </div>
 
                     @forelse ($result->shopifyOrders as $order)
                         <article class="grid gap-3 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
                             <div class="flex items-start justify-between gap-3">
                                 <h3 class="text-lg font-semibold">{{ $order['name'] ?? ('#'.$result->orderNumber) }}</h3>
-                                <span class="text-sm font-medium capitalize text-slate-500 dark:text-slate-400">{{ $order['financial_status'] ?? 'unknown' }}</span>
+                                <span class="text-sm font-medium capitalize text-slate-500 dark:text-slate-400">{{ __($order['financial_status'] ?? 'unknown') }}</span>
                             </div>
-                            <p class="text-sm text-slate-600 dark:text-slate-300">{{ $order['email'] ?? 'No email' }}</p>
+                            <p class="text-sm text-slate-600 dark:text-slate-300">{{ $order['email'] ?? __('No email') }}</p>
                             <div class="flex flex-wrap gap-4 text-sm">
-                                <span>Total: {{ $order['total_price'] ?? '0.00' }}</span>
-                                <span>Fulfillment: {{ $order['fulfillment_status'] ?? 'unfulfilled' }}</span>
+                                <span>{{ __('Total:') }} {{ $order['total_price'] ?? '0.00' }}</span>
+                                <span>{{ __('Fulfillment:') }} {{ __($order['fulfillment_status'] ?? 'unfulfilled') }}</span>
                             </div>
 
                             @if (array_filter([$order['source_name'] ?? null, $order['app_name'] ?? null, $order['discount_codes'] ?? [], $order['note_attributes'] ?? [], $order['po_number'] ?? null, $order['confirmation_number'] ?? null, $order['customer_journey'] ?? null]) !== [])
                                 <details class="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-800">
-                                    <summary class="cursor-pointer font-medium text-slate-600 dark:text-slate-300">Details</summary>
+                                    <summary class="cursor-pointer font-medium text-slate-600 dark:text-slate-300">{{ __('Details') }}</summary>
                                     <dl class="mt-3 grid gap-2 sm:grid-cols-2">
                                         @if (($order['source_name'] ?? '') !== '')
-                                            <div><dt class="text-slate-500 dark:text-slate-400">{{ __('Channel') }}</dt><dd>{{ $order['source_name'] }}@if(($order['app_name'] ?? '') !== '') via {{ $order['app_name'] }}@endif</dd></div>
+                                            <div><dt class="text-slate-500 dark:text-slate-400">{{ __('Channel') }}</dt><dd>{{ $order['source_name'] }}@if(($order['app_name'] ?? '') !== '') {{ __('via') }} {{ $order['app_name'] }}@endif</dd></div>
                                         @endif
                                         @if (($order['customer_journey']['first_visit']['source'] ?? '') !== '')
                                             <div><dt class="text-slate-500 dark:text-slate-400">{{ __('Attribution') }}</dt><dd>{{ $order['customer_journey']['first_visit']['source'] }}@if(($order['customer_journey']['first_visit']['utm']['campaign'] ?? '') !== '') · {{ $order['customer_journey']['first_visit']['utm']['campaign'] }}@endif</dd></div>
@@ -100,7 +100,7 @@
                     <div class="flex items-center justify-between">
                         <h2 class="text-xl font-bold">ShipStation</h2>
                         @if ($result->shipStationConfigured)
-                            <span class="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold dark:bg-slate-800">{{ count($result->shipStationOrders) }} found</span>
+                            <span class="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold dark:bg-slate-800">{{ count($result->shipStationOrders) }} {{ __('found') }}</span>
                         @endif
                     </div>
 
@@ -111,10 +111,10 @@
                             <article class="grid gap-3 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
                                 <div class="flex items-start justify-between gap-3">
                                     <h3 class="text-lg font-semibold">#{{ $order['order_number'] ?: $result->orderNumber }}</h3>
-                                    <span class="text-sm font-medium text-slate-500 dark:text-slate-400">{{ $order['status'] }}</span>
+                                    <span class="text-sm font-medium text-slate-500 dark:text-slate-400">{{ __($order['status']) }}</span>
                                 </div>
                                 <p class="text-sm text-slate-600 dark:text-slate-300">{{ $order['customer_email'] ?? 'No email' }}</p>
-                                <p class="text-sm">Total: {{ $order['total'] ?? '—' }}</p>
+                                <p class="text-sm">{{ __('Total:') }} {{ $order['total'] ?? '—' }}</p>
                             </article>
                         @empty
                             <div class="rounded-xl border border-slate-200 bg-white p-5 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">{{ __('No ShipStation order found.') }}</div>
@@ -122,10 +122,10 @@
 
                         @if ($result->shipStationShipments !== [])
                             <div class="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-                                <h3 class="font-semibold">Shipments</h3>
+                                <h3 class="font-semibold">{{ __('Shipments') }}</h3>
                                 @foreach ($result->shipStationShipments as $shipment)
                                     <p class="text-sm text-slate-600 dark:text-slate-300">
-                                        {{ $shipment['carrierCode'] ?? 'Carrier' }} · {{ $shipment['trackingNumber'] ?? 'No tracking number' }}
+                                        {{ $shipment['carrierCode'] ?? __('Carrier') }} · {{ $shipment['trackingNumber'] ?? __('No tracking number') }}
                                     </p>
                                 @endforeach
                             </div>
@@ -152,7 +152,7 @@
                 @elseif ($result->comparison !== null)
                     @foreach ($result->comparison['warnings'] as $warning)
                         <x-alert tone="error">
-                            {{ $warning['message'] }}
+                            {{ \App\Support\UiFormat::text($warning['message']) }}
                         </x-alert>
                     @endforeach
 
@@ -163,16 +163,16 @@
                                     <th class="px-4 py-3 font-semibold">{{ __('Field') }}</th>
                                     <th class="px-4 py-3 font-semibold">Shopify</th>
                                     <th class="px-4 py-3 font-semibold">ShipStation</th>
-                                    <th class="px-4 py-3 font-semibold">Result</th>
+                                    <th class="px-4 py-3 font-semibold">{{ __('Result') }}</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
                                 @foreach ($result->comparison['fields'] as $field)
                                     <tr @class(['bg-amber-50 dark:bg-amber-950/30' => in_array($field['state'], ['different', 'missing'], true)])>
-                                        <td class="px-4 py-3 font-medium">{{ $field['label'] }}</td>
+                                        <td class="px-4 py-3 font-medium">{{ \App\Support\UiFormat::text($field['label']) }}</td>
                                         <td class="px-4 py-3">{{ $field['shopify'] }}</td>
                                         <td class="px-4 py-3">{{ $field['shipstation'] }}</td>
-                                        <td class="px-4 py-3 capitalize">{{ $field['state'] }}</td>
+                                        <td class="px-4 py-3 capitalize">{{ __($field['state']) }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>

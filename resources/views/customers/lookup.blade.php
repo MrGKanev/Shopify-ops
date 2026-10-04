@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="flex flex-col gap-6">
-        <x-page-header title="Customer Lookup" subtitle="Full Shopify order history and spend summary by email." />
+        <x-page-header title="{{ __('Customer Lookup') }}" subtitle="Full Shopify order history and spend summary by email." />
 
         <x-card>
             <form class="flex flex-col gap-4 sm:flex-row sm:items-end" method="POST" action="{{ route('customers.lookup.store') }}">
@@ -14,7 +14,7 @@
                         <p class="mt-2 text-sm text-red-600 dark:text-red-400" id="email-error" role="alert">{{ __($message) }}</p>
                     @enderror
                 </div>
-                <x-button type="submit">Look up</x-button>
+                <x-button type="submit">{{ __('Look up') }}</x-button>
             </form>
         </x-card>
 
@@ -31,7 +31,7 @@
                 <x-card>
                     <h2 class="text-2xl font-bold">{{ trim(($result->meta['customer']['firstName'] ?? '').' '.($result->meta['customer']['lastName'] ?? '')) ?: $result->params['email'] }}</h2>
                     <p>{{ $result->params['email'] }}</p>
-                    <p class="mt-3">{{ count($result->rows) }}{{ $result->truncated ? '+' : '' }} orders · {{ $result->meta['currency'] }} {{ number_format($result->meta['totalSpent'], 2) }} spent · {{ $result->meta['paid'] }} paid · {{ $result->meta['cancelled'] }} cancelled</p>
+                    <p class="mt-3">{{ count($result->rows) }}{{ $result->truncated ? '+' : '' }} {{ __('orders ·') }} {{ $result->meta['currency'] }} {{ \App\Support\UiFormat::number($result->meta['totalSpent'], 2) }} {{ __('spent ·') }} {{ $result->meta['paid'] }} {{ __('paid ·') }} {{ $result->meta['cancelled'] }} {{ __('cancelled') }}</p>
                     @if ($result->meta['tags'])
                         <div class="mt-3 flex flex-wrap gap-2">
                             @foreach (array_slice($result->meta['tags'], 0, 30, true) as $tag => $count)
@@ -56,13 +56,13 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3">{{ substr((string) $order['created_at'], 0, 10) }}</td>
-                            <td class="px-4 py-3">{{ $order['financial_status'] ?: '-' }}</td>
-                            <td class="px-4 py-3">{{ $order['fulfillment_status'] ?: '-' }}</td>
-                            <td class="px-4 py-3">{{ $order['currency'] ?? '' }} {{ number_format((float) $order['total_price'], 2) }}</td>
+                            <td class="px-4 py-3">{{ __($order['financial_status'] ?: '-') }}</td>
+                            <td class="px-4 py-3">{{ __($order['fulfillment_status'] ?: '-') }}</td>
+                            <td class="px-4 py-3">{{ $order['currency'] ?? '' }} {{ \App\Support\UiFormat::number((float) $order['total_price'], 2) }}</td>
                             <td class="px-4 py-3">{{ implode(', ', $order['tags'] ?? []) }}</td>
                         </tr>
                     @empty
-                        <tr><td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="6">No orders found for {{ $result->params['email'] }}.</td></tr>
+                        <tr><td class="px-4 py-8 text-center text-slate-500 dark:text-slate-400" colspan="6">{{ __('No orders found for') }} {{ $result->params['email'] }}.</td></tr>
                     @endforelse
                 </x-data-table>
             </section>

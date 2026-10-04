@@ -2,13 +2,13 @@
 
 @section('content')
     <div class="flex flex-col gap-6">
-        <x-page-header eyebrow="Administration" title="Diagnostics" subtitle="Operational health and configuration validation for the active store." />
+        <x-page-header eyebrow="Administration" title="{{ __('Diagnostics') }}" subtitle="Operational health and configuration validation for the active store." />
 
         <x-card>
             <h2 class="font-semibold">{{ __('Operations shortcuts') }}</h2>
             <div class="mt-3 flex flex-wrap gap-2">
                 @foreach ($quickLinks as $link)
-                    <x-button size="sm" variant="ghost" :href="route($link['route'])">{{ $link['label'] }}</x-button>
+                    <x-button size="sm" variant="ghost" :href="route($link['route'])">{{ __($link['label']) }}</x-button>
                 @endforeach
             </div>
         </x-card>
@@ -24,8 +24,8 @@
                     <x-card>
                         <div class="flex items-start justify-between gap-3">
                             <div>
-                                <h2 class="font-semibold">{{ $check['label'] }}</h2>
-                                <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ $check['detail'] }}</p>
+                                <h2 class="font-semibold">{{ \App\Support\UiFormat::text($check['label']) }}</h2>
+                                <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ \App\Support\UiFormat::text($check['detail']) }}</p>
                             </div>
                             <x-badge :tone="$check['ok'] ? 'ok' : 'danger'">{{ $check['ok'] ? 'OK' : 'Check' }}</x-badge>
                         </div>
@@ -39,7 +39,7 @@
                 @foreach ($results as $result)
                     <x-card>
                         <div class="flex items-center justify-between gap-4">
-                            <h2 class="text-xl font-bold">{{ $result['name'] }}</h2>
+                            <h2 class="text-xl font-bold">{{ __($result['name']) }}</h2>
                             <x-badge :tone="$result['ok'] ? 'ok' : 'danger'">{{ $result['ok'] ? 'Valid' : 'Needs attention' }}</x-badge>
                         </div>
 
@@ -49,7 +49,7 @@
 
                         <ul class="mt-3 list-disc pl-5 text-sm text-slate-500 dark:text-slate-400">
                             @foreach ($result['notes'] as $note)
-                                <li>{{ $note }}</li>
+                                <li>{{ \App\Support\UiFormat::text($note) }}</li>
                             @endforeach
                         </ul>
                     </x-card>

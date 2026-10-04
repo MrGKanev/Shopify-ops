@@ -1,6 +1,6 @@
 <div class="grid gap-5 sm:grid-cols-2">
     <div class="flex flex-col gap-2">
-        <label class="text-sm font-medium" for="name">Name</label>
+        <label class="text-sm font-medium" for="name">{{ __('Name') }}</label>
         <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="name" name="name" value="{{ old('name', $user?->name) }}" required>
         @error('name') <p class="text-sm text-red-600 dark:text-red-400">{{ __($message) }}</p> @enderror
     </div>
@@ -12,10 +12,10 @@
     </div>
 
     <div class="flex flex-col gap-2 sm:col-span-2">
-        <label class="text-sm font-medium" for="role">Role</label>
+        <label class="text-sm font-medium" for="role">{{ __('Role') }}</label>
         <select class="rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="role" name="role" required>
             @foreach (\App\UserRole::cases() as $role)
-                <option value="{{ $role->value }}" @selected(old('role', $user?->role?->value) === $role->value)>{{ ucfirst($role->value) }}</option>
+                <option value="{{ __($role->value) }}" @selected(old('role', $user?->role?->value) === $role->value)>{{ __($role->value) }}</option>
             @endforeach
         </select>
         @error('role') <p class="text-sm text-red-600 dark:text-red-400">{{ __($message) }}</p> @enderror
@@ -50,6 +50,6 @@
 </div>
 
 <div class="mt-6 flex items-center gap-3">
-    <x-button type="submit">Save user</x-button>
-    <a class="text-sm font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white" href="{{ route('admin.users.index') }}">Cancel</a>
+    <x-button type="submit">{{ __('Save user') }}</x-button>
+    <a class="text-sm font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white" href="{{ route('admin.users.index') }}">{{ __('Cancel') }}</a>
 </div>

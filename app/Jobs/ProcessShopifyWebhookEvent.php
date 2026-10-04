@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Application\Operations\DetectOrderWebhookIssues;
 use App\Application\Operations\RaiseOperationalIssue;
 use App\Models\WebhookEvent;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -21,9 +22,13 @@ class ProcessShopifyWebhookEvent implements ShouldQueue
 
     public function __construct(public int $eventId) {}
 
-    public function handle(RaiseOperationalIssue $issues): void
+    public function handle(RaiseOperationalIssue $issues, DetectOrderWebhookIssues $orderIssues): void
     {
         $event = WebhookEvent::query()->with('store')->findOrFail($this->eventId);
+        if ($event->status === 'processed') {
+            return;
+        }
+        $orderIssues->handle($event);
         $issue = $this->issueAttributes($event);
 
         if ($issue !== null) {

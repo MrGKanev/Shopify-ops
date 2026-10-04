@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="mx-auto max-w-xl space-y-6">
-        <x-page-header title="Two-factor authentication" subtitle="Protect your account with an authenticator app." />
+        <x-page-header title="{{ __('Two-factor authentication') }}" subtitle="Protect your account with an authenticator app." />
         @if (auth()->user()->hasEnabledTwoFactorAuthentication())
             <x-alert tone="ok">{{ __('Two-factor authentication is enabled. Store these recovery codes somewhere safe.') }}</x-alert>
             <div class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"><ul class="grid grid-cols-2 gap-2 font-mono text-sm">@foreach(auth()->user()->recoveryCodes() as $code)<li>{{ $code }}</li>@endforeach</ul></div>

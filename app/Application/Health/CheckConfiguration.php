@@ -58,7 +58,7 @@ class CheckConfiguration
             $issues[] = 'Google sign-in configuration is incomplete.';
         }
 
-        return $this->result('Application', $issues, ['Environment: '.config('app.env'), 'Cache: '.config('cache.default').' · Queue: '.config('queue.default')]);
+        return $this->result('Application', $issues, [__('Environment: :environment', ['environment' => config('app.env')]), __('Cache: :cache · Queue: :queue', ['cache' => config('cache.default'), 'queue' => config('queue.default')])]);
     }
 
     /** @return array{name:string,ok:bool,issues:list<string>,notes:list<string>} */
@@ -67,7 +67,7 @@ class CheckConfiguration
         $issues = [];
         foreach (['shopify_store' => 'Shopify store', 'shopify_access_token' => 'Shopify access token', 'shipstation_api_key' => 'ShipStation API key', 'shipstation_api_secret' => 'ShipStation API secret'] as $field => $label) {
             if (trim((string) $store->{$field}) === '') {
-                $issues[] = "{$label} is missing.";
+                $issues[] = __(':label is missing.', ['label' => __($label)]);
             }
         }
 
@@ -89,23 +89,23 @@ class CheckConfiguration
         $names = [];
         foreach ($rules as $index => $rule) {
             if (! is_array($rule)) {
-                $issues[] = "Rule {$index} must be an array.";
+                $issues[] = __('Rule :index must be an array.', ['index' => $index]);
 
                 continue;
             }
             $name = trim((string) ($rule['name'] ?? ''));
             if ($name === '') {
-                $issues[] = "Rule {$index} needs a name.";
+                $issues[] = __('Rule :index needs a name.', ['index' => $index]);
             } elseif (isset($names[$name])) {
-                $issues[] = "Duplicate order type: {$name}.";
+                $issues[] = __('Duplicate order type: :name.', ['name' => $name]);
             }
             $names[$name] = true;
             if (! in_array($rule['match'] ?? null, self::MATCHES, true) || ! array_key_exists('value', $rule)) {
-                $issues[] = "Rule {$index} has an invalid match or missing value.";
+                $issues[] = __('Rule :index has an invalid match or missing value.', ['index' => $index]);
             }
         }
 
-        return $this->result('Order types', $issues, [count($rules).' rules · fallback: '.($config['fallback'] ?? 'not set')]);
+        return $this->result('Order types', $issues, [__(':count rules · fallback: :fallback', ['count' => count($rules), 'fallback' => $config['fallback'] ?? __('not set')])]);
     }
 
     /**
@@ -117,23 +117,23 @@ class CheckConfiguration
         $issues = [];
         foreach (['required', 'forbidden'] as $group) {
             if (! is_array($config[$group] ?? null)) {
-                $issues[] = "tag-policy.{$group} must be an array.";
+                $issues[] = __('tag-policy.:group must be an array.', ['group' => $group]);
             }
         }
         foreach (is_array($config['required'] ?? null) ? $config['required'] : [] as $index => $rule) {
             if (! is_array($rule) || empty($rule['when']) || ! is_array($rule['when']) || empty($rule['must_have']) || ! is_array($rule['must_have'])) {
-                $issues[] = "Required policy {$index} needs non-empty when and must_have arrays.";
+                $issues[] = __('Required policy :index needs non-empty when and must_have arrays.', ['index' => $index]);
             }
         }
         foreach (is_array($config['forbidden'] ?? null) ? $config['forbidden'] : [] as $index => $rule) {
             if (! is_array($rule) || ! is_array($rule['tags'] ?? null) || count($rule['tags']) < 2) {
-                $issues[] = "Forbidden policy {$index} needs at least two tags.";
+                $issues[] = __('Forbidden policy :index needs at least two tags.', ['index' => $index]);
             }
         }
 
         $count = count(is_array($config['required'] ?? null) ? $config['required'] : []) + count(is_array($config['forbidden'] ?? null) ? $config['forbidden'] : []);
 
-        return $this->result('Tag policy', $issues, [$count === 0 ? 'No tag policies configured.' : "{$count} policies configured."]);
+        return $this->result('Tag policy', $issues, [$count === 0 ? 'No tag policies configured.' : __(':count policies configured.', ['count' => $count])]);
     }
 
     /** @return array{name:string,ok:bool,issues:list<string>,notes:list<string>} */
@@ -148,7 +148,7 @@ class CheckConfiguration
             $issues[] = 'MAIL_FROM_ADDRESS is missing.';
         }
 
-        return $this->result('Mail', $issues, ["Mailer: {$mailer}"]);
+        return $this->result('Mail', $issues, [__('Mailer: :mailer', ['mailer' => $mailer])]);
     }
 
     /** @return array{name:string,ok:bool,issues:list<string>,notes:list<string>} */
@@ -158,8 +158,8 @@ class CheckConfiguration
         $discord = trim((string) config('services.discord.notifications.webhook_url')) !== '';
 
         return $this->result('Notifications', [], [
-            'Slack webhook: '.($slack ? 'configured.' : 'not configured.'),
-            'Discord webhook: '.($discord ? 'configured.' : 'not configured.'),
+            __('Slack webhook: :status', ['status' => __($slack ? 'configured.' : 'not configured.')]),
+            __('Discord webhook: :status', ['status' => __($discord ? 'configured.' : 'not configured.')]),
         ]);
     }
 

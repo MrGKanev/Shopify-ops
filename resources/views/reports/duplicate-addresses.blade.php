@@ -1,14 +1,14 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-report.layout eyebrow="Risk report" title="Duplicate Shipping Addresses" subtitle="Find different customer emails shipping to the same normalized address." :configuration-error="$configurationError" :report-failed="$reportFailed">
+    <x-report.layout eyebrow="Risk report" title="{{ __('Duplicate Shipping Addresses') }}" subtitle="Find different customer emails shipping to the same normalized address." :configuration-error="$configurationError" :report-failed="$reportFailed">
         <x-slot:form>
             <x-report.date-range-form :action="route('reports.duplicate-addresses.store')" :start-date="$startDate" :end-date="$endDate" />
         </x-slot:form>
 
         @if ($result)
             <x-report.results :truncated="$result->truncated" :pages="$result->pages">
-                <x-slot:heading>{{ $result->scanned }} scanned · {{ count($result->rows) }} shared addresses</x-slot:heading>
+                <x-slot:heading>{{ $result->scanned }} {{ __('scanned ·') }} {{ \App\Support\UiFormat::count(count($result->rows), 'shared addresses') }}</x-slot:heading>
 
                 <x-data-table :headers="['Address', 'Name', 'Emails', 'Orders', 'Details']" :rows="$result->rows" empty="No duplicate shipping addresses.">
                     @foreach ($result->rows as $row)

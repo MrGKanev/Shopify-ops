@@ -29,8 +29,8 @@ class OrderComparisonRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'order_a.required_with' => 'Enter two order numbers to compare.',
-            'order_b.required_with' => 'Enter two order numbers to compare.',
+            'order_a.required_with' => __('Enter two order numbers to compare.'),
+            'order_b.required_with' => __('Enter two order numbers to compare.'),
         ];
     }
 

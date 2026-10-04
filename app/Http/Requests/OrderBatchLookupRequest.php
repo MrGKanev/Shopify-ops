@@ -29,7 +29,7 @@ class OrderBatchLookupRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'orders.required' => 'Enter at least one order number.',
+            'orders.required' => __('Enter at least one order number.'),
         ];
     }
 
@@ -44,20 +44,20 @@ class OrderBatchLookupRequest extends FormRequest
             $orderNumbers = $this->parseOrderNumbers((string) $this->input('orders'));
 
             if ($orderNumbers === []) {
-                $validator->errors()->add('orders', 'Enter at least one order number.');
+                $validator->errors()->add('orders', __('Enter at least one order number.'));
 
                 return;
             }
 
             if (count($orderNumbers) > 50) {
-                $validator->errors()->add('orders', 'Maximum 50 order numbers at once.');
+                $validator->errors()->add('orders', __('Maximum 50 order numbers at once.'));
 
                 return;
             }
 
             foreach ($orderNumbers as $orderNumber) {
                 if (! $this->isValidOrderNumber($orderNumber)) {
-                    $validator->errors()->add('orders', 'Every order number must contain only letters, numbers, hyphens, or underscores.');
+                    $validator->errors()->add('orders', __('Every order number must contain only letters, numbers, hyphens, or underscores.'));
 
                     return;
                 }

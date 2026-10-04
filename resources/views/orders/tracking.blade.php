@@ -18,7 +18,7 @@
             @enderror
 
             <div class="mt-4">
-                <x-button type="submit">Load tracking</x-button>
+                <x-button type="submit">{{ __('Load tracking') }}</x-button>
             </div>
         </form>
 
@@ -36,7 +36,7 @@
                     <article class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
                         <div class="flex justify-between gap-3">
                             <h3 class="font-semibold">#{{ $result['number'] }}</h3>
-                            <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs dark:bg-slate-800">{{ ! $result['found'] ? 'Not found' : (count($result['shipments']) > 1 ? count($result['shipments']).' shipments' : 'Found') }}</span>
+                            <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs dark:bg-slate-800">{{ ! $result['found'] ? __('Not found') : (count($result['shipments']) > 1 ? __(':count shipments', ['count' => count($result['shipments'])]) : __('Found')) }}</span>
                         </div>
                         @if (! $result['found'])
                             <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">{{ __('Not found in ShipStation.') }}</p>
@@ -45,7 +45,7 @@
                                 @foreach ($result['shipments'] as $shipment)
                                     <div class="rounded-lg bg-slate-50 p-4 text-sm dark:bg-slate-950">
                                         <div class="flex flex-wrap gap-3">
-                                            <strong>{{ str_replace('_', ' ', $shipment['orderStatus'] ?: 'unknown') }}</strong>
+                                            <strong>{{ __($shipment['orderStatus'] ?: 'unknown') }}</strong>
                                             @if ($shipment['carrierCode'])
                                                 <span>{{ strtoupper($shipment['carrierCode']) }}</span>
                                             @endif

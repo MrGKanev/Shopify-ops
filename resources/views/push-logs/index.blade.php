@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="flex flex-col gap-6">
-        <x-page-header title="Push Log" subtitle="History of push attempts to ShipStation for this store." />
+        <x-page-header title="{{ __('Push Log') }}" subtitle="History of push attempts to ShipStation for this store." />
 
         <x-card>
             <form class="flex flex-col gap-3 sm:flex-row sm:items-end" method="GET">
@@ -26,7 +26,7 @@
                     <td class="px-4 py-3">{{ $push->shipstation_order_id ?: '-' }}</td>
                     <td class="px-4 py-3"><x-badge :tone="$push->status === 'failed' ? 'danger' : 'ok'">{{ ucfirst($push->status) }}</x-badge></td>
                     <td class="px-4 py-3">{{ $push->error_category ?? '—' }}</td>
-                    <td class="px-4 py-3">{{ $push->pushed_at->toDateTimeString() }}</td>
+                    <td class="px-4 py-3">{{ \App\Support\UiFormat::date($push->pushed_at, true) }}</td>
                     <td class="px-4 py-3">@if ($push->status === 'success')
                         <a class="font-medium text-indigo-600 hover:underline dark:text-indigo-400" href="https://app.shipstation.com/#!/orders/all-orders-search-result?quickSearch={{ urlencode(ltrim($push->order_number, '#')) }}" target="_blank" rel="noopener noreferrer">{{ __('View in SS') }}</a>
                     @else — @endif</td>

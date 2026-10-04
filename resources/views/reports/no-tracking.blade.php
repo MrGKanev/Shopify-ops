@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-report.layout eyebrow="Fulfillment report" title="Fulfilled Without Tracking" subtitle="Fulfillments missing a tracking number after the grace period." :configuration-error="$configurationError" :report-failed="$reportFailed">
+    <x-report.layout eyebrow="Fulfillment report" title="{{ __('Fulfilled Without Tracking') }}" subtitle="Fulfillments missing a tracking number after the grace period." :configuration-error="$configurationError" :report-failed="$reportFailed">
         <x-slot:form>
             <x-report.date-range-form
                 :action="route('reports.no-tracking.store')"
@@ -19,19 +19,19 @@
                 truncated-message="Results are incomplete: Shopify orders were truncated after :pages pages."
                 :pages="$result->pages"
             >
-                <x-slot:heading>{{ $result->scanned }} fulfilled orders scanned · {{ count($result->rows) }} missing tracking after {{ $result->params['threshold'] }}h</x-slot:heading>
+                <x-slot:heading>{{ $result->scanned }} {{ __('fulfilled orders scanned ·') }} {{ count($result->rows) }} {{ __('missing tracking after') }} {{ $result->params['threshold'] }}h</x-slot:heading>
 
                 <x-data-table :headers="['Order', 'Placed', 'Fulfillment', 'Hours since', 'Carrier', 'Email', 'Total']" :rows="$result->rows" empty="All fulfillments have tracking.">
                     @foreach ($result->rows as $row)
                         @foreach ($row['missing'] as $missing)
                             <tr>
                                 <td class="px-4 py-3 font-semibold">{{ $row['order_number'] }}</td>
-                                <td class="px-4 py-3">{{ $row['created_at'] }}</td>
+                                <td class="px-4 py-3">{{ \App\Support\UiFormat::date($row['created_at']) }}</td>
                                 <td class="px-4 py-3">{{ $missing['created_at'] }}</td>
                                 <td class="px-4 py-3">{{ $missing['hours_ago'] }}h</td>
                                 <td class="px-4 py-3">{{ $missing['company'] ?: '—' }}</td>
                                 <td class="px-4 py-3">{{ $row['email'] }}</td>
-                                <td class="px-4 py-3">{{ number_format($row['total'], 2) }}</td>
+                                <td class="px-4 py-3">{{ \App\Support\UiFormat::number($row['total'], 2) }}</td>
                             </tr>
                         @endforeach
                     @endforeach

@@ -3,7 +3,7 @@
 @section('content')
     <x-report.layout
         eyebrow="Fulfillment audit"
-        title="Carrier Performance"
+        title="{{ __('Carrier Performance') }}"
         subtitle="Average delivery time and late-delivery rate grouped by ShipStation carrier."
         :configuration-error="$configurationError"
         credentials-message="ShipStation credentials are incomplete for the active store."
@@ -16,7 +16,7 @@
 
         @if ($result)
             <x-report.results>
-                <x-slot:heading>{{ $result->scanned }} shipments · {{ count($result->rows) }} carriers</x-slot:heading>
+                <x-slot:heading>{{ $result->scanned }} {{ __('shipments ·') }} {{ \App\Support\UiFormat::count(count($result->rows), 'carriers') }}</x-slot:heading>
 
                 <x-data-table
                     :rows="$result->rows"
@@ -25,7 +25,7 @@
                         'Carrier' => ['value' => 'carrier', 'class' => 'font-semibold'],
                         'Shipments' => 'count',
                         'With delivery date' => 'with_delivery',
-                        'Avg delivery days' => fn (array $row): string => $row['avg_days'] === null ? '—' : $row['avg_days'].' days',
+                        'Avg delivery days' => fn (array $row): string => $row['avg_days'] === null ? '—' : $row['avg_days'].' '.__('days'),
                         'Late deliveries' => 'late_count',
                         'Late %' => fn (array $row): string => $row['late_pct'] === null ? '—' : $row['late_pct'].'%',
                     ]"

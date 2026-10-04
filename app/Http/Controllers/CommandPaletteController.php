@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CommandPaletteRequest;
+use App\Support\UiFormat;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -17,7 +18,7 @@ class CommandPaletteController extends Controller
         $commands = collect($this->navigationCommands())
             ->when($query !== '', fn ($items) => $items->filter(fn (array $item): bool => Str::contains($searchableText($item), Str::lower($query))))
             ->take(8)
-            ->map(fn (array $item): array => [...$item, 'label' => __($item['label']), 'description' => __($item['description']), 'kind' => 'Page'])
+            ->map(fn (array $item): array => [...$item, 'label' => __($item['label']), 'description' => __($item['description']), 'kind' => 'Page', 'kind_label' => __('Page')])
             ->values();
 
         if (mb_strlen($query) >= 2) {
@@ -27,10 +28,10 @@ class CommandPaletteController extends Controller
                 ->limit(5)
                 ->get(['id', 'title', 'reference', 'priority'])
                 ->map(fn ($issue): array => [
-                    'label' => $issue->title,
+                    'label' => UiFormat::text($issue->title),
                     'description' => trim(__($issue->priority->value).' · '.($issue->reference ?: __('Operational issue'))),
                     'url' => route('operational-issues.index').'#issue-'.$issue->getKey(),
-                    'kind' => 'Issue',
+                    'kind' => 'Issue', 'kind_label' => __('Issue'),
                 ]);
             $runs = $store->runLogs()
                 ->where(fn ($builder) => $builder->whereLike('tool', "%{$query}%")->orWhereLike('status', "%{$query}%"))
@@ -39,9 +40,9 @@ class CommandPaletteController extends Controller
                 ->get(['id', 'tool', 'status', 'created_at'])
                 ->map(fn ($run): array => [
                     'label' => Str::headline($run->tool),
-                    'description' => __($run->status).' · '.$run->created_at->diffForHumans(),
+                    'description' => __($run->status).' · '.UiFormat::relative($run->created_at),
                     'url' => route('run-logs.index', ['q' => $run->tool]),
-                    'kind' => 'Run',
+                    'kind' => 'Run', 'kind_label' => __('Run'),
                 ]);
             $reports = $store->auditSnapshots()
                 ->whereLike('tool', "%{$query}%")
@@ -50,9 +51,9 @@ class CommandPaletteController extends Controller
                 ->get(['id', 'tool', 'report_date', 'rows_found'])
                 ->map(fn ($report): array => [
                     'label' => __(Str::headline($report->tool)),
-                    'description' => $report->report_date->toDateString().' · '.$report->rows_found.' results',
+                    'description' => UiFormat::date($report->report_date).' · '.__(':count results', ['count' => $report->rows_found]),
                     'url' => route('saved-reports.show', $report),
-                    'kind' => 'Report',
+                    'kind' => 'Report', 'kind_label' => __('Report'),
                 ]);
             $pushedOrders = $store->pushLogs()
                 ->where(fn ($builder) => $builder->whereLike('order_number', "%{$query}%")->orWhere('shopify_id', $query)->orWhere('shipstation_order_id', $query))
@@ -61,9 +62,9 @@ class CommandPaletteController extends Controller
                 ->get(['order_number', 'shopify_id', 'shipstation_order_id', 'pushed_at'])
                 ->map(fn ($order): array => [
                     'label' => '#'.$order->order_number,
-                    'description' => __('Pushed order').' · '.$order->pushed_at->diffForHumans(),
+                    'description' => __('Pushed order').' · '.UiFormat::relative($order->pushed_at),
                     'url' => route('push-logs.index', ['q' => $order->order_number]),
-                    'kind' => 'Order',
+                    'kind' => 'Order', 'kind_label' => __('Order'),
                 ]);
             $ignoredOrders = $store->ignoredOrders()
                 ->where(fn ($builder) => $builder->whereLike('order_number', "%{$query}%")->orWhereLike('reason', "%{$query}%"))
@@ -74,7 +75,7 @@ class CommandPaletteController extends Controller
                     'label' => '#'.$order->order_number,
                     'description' => __('Ignored order').($order->reason !== '' ? ' · '.$order->reason : ''),
                     'url' => route('ignored-orders.index'),
-                    'kind' => 'Order',
+                    'kind' => 'Order', 'kind_label' => __('Order'),
                 ]);
             $printQueue = $store->printQueueItems()
                 ->where(fn ($builder) => $builder->whereLike('order_number', "%{$query}%")->orWhereLike('note', "%{$query}%"))
@@ -85,7 +86,7 @@ class CommandPaletteController extends Controller
                     'label' => '#'.$order->order_number,
                     'description' => __('Print queue').($order->note !== '' ? ' · '.$order->note : ''),
                     'url' => route('print-queue.index'),
-                    'kind' => 'Order',
+                    'kind' => 'Order', 'kind_label' => __('Order'),
                 ]);
             $commands = $commands->concat($issues)->concat($runs)->concat($reports)->concat($pushedOrders)->concat($ignoredOrders)->concat($printQueue)->take(15)->values();
         }
@@ -96,12 +97,12 @@ class CommandPaletteController extends Controller
                 'label' => __('Look up order').' #'.$orderNumber,
                 'description' => __('Search Shopify and ShipStation'),
                 'url' => route('orders.lookup', ['order_number' => $orderNumber]),
-                'kind' => 'Order',
+                'kind' => 'Order', 'kind_label' => __('Order'),
             ])->prepend([
                 'label' => __('Search local history for').' #'.$orderNumber,
                 'description' => __('Saved reports, pushed and ignored orders'),
                 'url' => route('global-search', ['q' => $orderNumber]),
-                'kind' => 'Order',
+                'kind' => 'Order', 'kind_label' => __('Order'),
             ])->take(15)->values();
         }
 

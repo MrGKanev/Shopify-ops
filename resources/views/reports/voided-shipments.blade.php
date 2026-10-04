@@ -3,7 +3,7 @@
 @section('content')
     <x-report.layout
         eyebrow="Fulfillment report"
-        title="Voided Shipments"
+        title="{{ __('Voided Shipments') }}"
         subtitle="ShipStation shipments voided in the selected period."
         :configuration-error="$configurationError"
         credentials-message="ShipStation credentials are incomplete for the active store."
@@ -16,7 +16,7 @@
 
         @if ($result)
             <x-report.results export-route="reports.voided-shipments.export" :export-params="['start_date' => $result->params['startDate'], 'end_date' => $result->params['endDate']]">
-                <x-slot:heading>{{ count($result->rows) }} voided shipments</x-slot:heading>
+                <x-slot:heading>{{ \App\Support\UiFormat::count(count($result->rows), 'voided shipments') }}</x-slot:heading>
 
                 <x-data-table :headers="['Order', 'Void date', 'Ship date', 'Carrier / service', 'Tracking', 'Ship to']" :rows="$result->rows" empty="No voided shipments found.">
                     @foreach ($result->rows as $row)

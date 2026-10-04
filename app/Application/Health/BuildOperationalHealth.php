@@ -15,7 +15,7 @@ class BuildOperationalHealth
     {
         return [
             $this->check('Laravel runtime', fn (): string => 'Laravel '.app()->version().' · '.app()->environment().' · PHP '.PHP_VERSION),
-            $this->check('Laravel optimisation', fn (): string => 'Configuration cache: '.(app()->configurationIsCached() ? 'enabled' : 'not cached').'.'),
+            $this->check('Laravel optimisation', fn (): string => __('Configuration cache: :status.', ['status' => __(app()->configurationIsCached() ? 'enabled' : 'not cached')])),
             $this->check('Application key', fn (): string => config('app.key') !== null ? 'Encryption key is configured.' : throw new \RuntimeException('Application encryption key is missing.')),
             $this->check('Database', function (): string {
                 DB::select('select 1');
@@ -38,7 +38,7 @@ class BuildOperationalHealth
             $this->check('Failed queue jobs', function (): string {
                 $failed = DB::table('failed_jobs')->count();
                 if ($failed > 0) {
-                    throw new \RuntimeException("{$failed} failed job(s) need review.");
+                    throw new \RuntimeException(__(':count failed job(s) need review.', ['count' => $failed]));
                 }
 
                 return 'No failed jobs are waiting.';

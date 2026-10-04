@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Application\Orders\PushOrderToShipStation;
 use App\Application\Orders\ShippingAddressNeedsReview;
 use App\Http\Requests\PushOrderToShipStationRequest;
+use App\Support\UiFormat;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
@@ -25,7 +26,7 @@ class PushToShipStationController extends Controller
         } catch (Throwable $exception) {
             Log::warning('Push to ShipStation preview failed.', ['exception_type' => $exception::class]);
 
-            return response()->json(['error' => $exception->getMessage()], 422);
+            return response()->json(['error' => UiFormat::text($exception->getMessage())], 422);
         }
     }
 
@@ -41,11 +42,11 @@ class PushToShipStationController extends Controller
 
             return back()->with('status', __('Pushed order #:number to ShipStation.', ['number' => $result['order_number']]));
         } catch (ShippingAddressNeedsReview $exception) {
-            return back()->withInput()->with('addressIssues', $exception->issues)->withErrors(['order_number' => $exception->getMessage()]);
+            return back()->withInput()->with('addressIssues', $exception->issues)->withErrors(['order_number' => UiFormat::text($exception->getMessage())]);
         } catch (Throwable $exception) {
             Log::warning('Push to ShipStation failed.', ['exception_type' => $exception::class]);
 
-            return back()->withErrors(['order_number' => $exception->getMessage()]);
+            return back()->withErrors(['order_number' => UiFormat::text($exception->getMessage())]);
         }
     }
 }

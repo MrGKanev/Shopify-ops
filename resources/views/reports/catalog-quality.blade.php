@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-report.layout eyebrow="Catalogue report" title="Catalog quality" subtitle="Find active products with publishing, search visibility, or collection gaps." :configuration-error="$configurationError" :report-failed="$reportFailed">
+    <x-report.layout eyebrow="Catalogue report" title="{{ __('Catalog quality') }}" subtitle="Find active products with publishing, search visibility, or collection gaps." :configuration-error="$configurationError" :report-failed="$reportFailed">
         <x-slot:form>
             <x-card>
                 <ul class="list-disc space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-300">
@@ -16,12 +16,12 @@
 
         @if ($result)
             <x-report.results :truncated="$result->truncated" truncated-message="Results were truncated after :pages product pages." :pages="$result->pages">
-                <x-slot:heading>{{ $result->scanned }} active products · {{ count($result->rows) }} with quality issues</x-slot:heading>
+                <x-slot:heading>{{ $result->scanned }} {{ __('active products ·') }} {{ count($result->rows) }} {{ __('with quality issues') }}</x-slot:heading>
 
                 <x-data-table :headers="['Product', 'Vendor / type', 'Issues']" :rows="$result->rows" empty="All scanned active products are published, have SEO fields, and belong to a collection.">
                     @foreach ($result->rows as $row)
                         <tr>
-                            <td class="px-4 py-3"><x-report.shopify-link resource="products" :id="$row['id']" class="font-semibold">{{ $row['title'] ?: 'Untitled product' }}</x-report.shopify-link></td>
+                            <td class="px-4 py-3"><x-report.shopify-link resource="products" :id="$row['id']" class="font-semibold">{{ $row['title'] ?: __('Untitled product') }}</x-report.shopify-link></td>
                             <td class="px-4 py-3">{{ $row['vendor'] ?: '—' }}@if ($row['type']) · {{ $row['type'] }}@endif</td>
                             <td class="px-4 py-3">
                                 <div class="flex flex-col gap-1">

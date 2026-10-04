@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-report.layout eyebrow="Order audit" title="Bundle Check" :subtitle="$description" :configuration-error="$configurationError" :report-failed="$reportFailed">
+    <x-report.layout eyebrow="Order audit" title="{{ __('Bundle Check') }}" :subtitle="$description" :configuration-error="$configurationError" :report-failed="$reportFailed">
         <x-slot:form>
             @if ($ruleNames)
-                <p class="text-sm text-slate-500 dark:text-slate-400">Active rules: {{ implode(', ', $ruleNames) }}</p>
+                <p class="text-sm text-slate-500 dark:text-slate-400">{{ __('Active rules:') }} {{ implode(', ', $ruleNames) }}</p>
             @endif
 
             <x-report.date-range-form :action="route('reports.bundle-check.store')" :start-date="$startDate" :end-date="$endDate" />
@@ -18,7 +18,7 @@
                 truncated-message="Results are incomplete: Shopify orders were truncated after :pages pages."
                 :pages="$result->pages"
             >
-                <x-slot:heading>{{ $result->scanned }} orders scanned · {{ count($result->rows) }} incomplete bundles</x-slot:heading>
+                <x-slot:heading>{{ $result->scanned }} {{ __('orders scanned ·') }} {{ \App\Support\UiFormat::count(count($result->rows), 'incomplete bundles') }}</x-slot:heading>
 
                 <x-data-table
                     :rows="$result->rows"
@@ -28,7 +28,7 @@
                         'Date' => 'created_at',
                         'Type' => 'order_type',
                         'Missing items' => 'missing_text',
-                        'Fulfillment' => fn (array $row): string => $row['fulfillment_status'] ?: 'unfulfilled',
+                        'Fulfillment' => fn (array $row): string => __($row['fulfillment_status'] ?: 'unfulfilled'),
                         'Financial' => 'financial_status',
                         'Email' => fn (array $row): string => $row['email'] ?: '—',
                     ]"

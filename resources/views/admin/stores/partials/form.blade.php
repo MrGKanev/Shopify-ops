@@ -60,14 +60,14 @@
     </div>
 
     <div class="flex flex-col gap-2 sm:col-span-2">
-        <label class="text-sm font-medium" for="delivery_watch_days">Delivery watch threshold (days)</label>
+        <label class="text-sm font-medium" for="delivery_watch_days">{{ __('Delivery watch threshold (days)') }}</label>
         <input class="max-w-xs rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="delivery_watch_days" name="delivery_watch_days" type="number" min="1" max="90" value="{{ old('delivery_watch_days', $store?->delivery_watch_days ?? 5) }}" required>
-        <p class="text-xs text-slate-500 dark:text-slate-400">Create an issue if no delivery confirmation appears after this many days.</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400">{{ __('Create an issue if no delivery confirmation appears after this many days.') }}</p>
         @error('delivery_watch_days') <p class="text-sm text-red-600 dark:text-red-400">{{ __($message) }}</p> @enderror
     </div>
 </div>
 
 <div class="mt-6 flex items-center gap-3">
-    <x-button type="submit">Save store</x-button>
-    <a class="text-sm font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white" href="{{ route('admin.stores.index') }}">Cancel</a>
+    <x-button type="submit">{{ __('Save store') }}</x-button>
+    <a class="text-sm font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white" href="{{ route('admin.stores.index') }}">{{ __('Cancel') }}</a>
 </div>

@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="flex flex-col gap-6">
-        <x-page-header title="Ignored Orders" :subtitle="$orders->count().' orders excluded from audits for this store.'" />
+        <x-page-header title="{{ __('Ignored Orders') }}" :subtitle="__(':count orders excluded from audits for this store.', ['count' => $orders->count()])" />
 
         <x-card>
             <form class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] sm:items-end" method="POST" action="{{ route('ignored-orders.store') }}">
@@ -21,7 +21,7 @@
                         <p class="mt-1 text-sm text-red-600 dark:text-red-400" id="ignored-reason-error">{{ __($message) }}</p>
                     @enderror
                 </div>
-                <div><x-button type="submit">Ignore order</x-button></div>
+                <div><x-button type="submit">{{ __('Ignore order') }}</x-button></div>
             </form>
         </x-card>
 
@@ -42,7 +42,7 @@
                         <p class="mt-1 text-sm text-red-600 dark:text-red-400" id="import-reason-error">{{ __($message) }}</p>
                     @enderror
                 </div>
-                <div><x-button type="submit">Import CSV</x-button></div>
+                <div><x-button type="submit">{{ __('Import CSV') }}</x-button></div>
             </form>
         </x-card>
 
@@ -50,7 +50,7 @@
             <form id="bulk-unignore" method="POST" action="{{ route('ignored-orders.bulk-destroy') }}">
                 @csrf
                 @method('DELETE')
-                <x-button type="submit" variant="danger">Unignore selected</x-button>
+                <x-button type="submit" variant="danger">{{ __('Unignore selected') }}</x-button>
             </form>
         @endif
 
@@ -60,13 +60,13 @@
                 <tr>
                     <td class="px-4 py-3"><input type="checkbox" name="ids[]" value="{{ $order->id }}" form="bulk-unignore" aria-label="{{ __('Select order :number', ['number' => '#'.$order->order_number]) }}"></td>
                     <td class="px-4 py-3 font-medium">#{{ $order->order_number }}</td>
-                    <td class="px-4 py-3">{{ $order->ignored_at->toDateString() }}</td>
+                    <td class="px-4 py-3">{{ \App\Support\UiFormat::date($order->ignored_at) }}</td>
                     <td class="px-4 py-3">{{ $order->reason ?: '-' }}</td>
                     <td class="px-4 py-3">
                         @if ($count >= 3)
-                            <x-badge tone="danger">Hot · {{ $count }}</x-badge>
+                            <x-badge tone="danger">{{ __('Hot ·') }} {{ $count }}</x-badge>
                         @elseif ($count >= 2)
-                            <x-badge tone="warn">Recurring · {{ $count }}</x-badge>
+                            <x-badge tone="warn">{{ __('Recurring ·') }} {{ $count }}</x-badge>
                         @else
                             —
                         @endif
@@ -75,7 +75,7 @@
                         <form method="POST" action="{{ route('ignored-orders.destroy', $order) }}">
                             @csrf
                             @method('DELETE')
-                            <x-button type="submit" size="sm" variant="danger">Unignore</x-button>
+                            <x-button type="submit" size="sm" variant="danger">{{ __('Unignore') }}</x-button>
                         </form>
                     </td>
                 </tr>

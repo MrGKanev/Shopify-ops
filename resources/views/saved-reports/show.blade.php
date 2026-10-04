@@ -2,28 +2,28 @@
 
 @section('content')
     <div class="flex flex-col gap-6">
-        <x-page-header :eyebrow="$report->report_date->toDateString()" title="Run Audit snapshot" :subtitle="$report->start_date->toDateString().' → '.$report->end_date->toDateString()" />
+        <x-page-header :eyebrow="$report->report_date->toDateString()" title="{{ __('Run Audit snapshot') }}" :subtitle="$report->start_date->toDateString().' → '.$report->end_date->toDateString()" />
 
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <h2 class="text-2xl font-bold">{{ $report->rows_found }} missing</h2>
+            <h2 class="text-2xl font-bold">{{ $report->rows_found }} {{ __('missing') }}</h2>
             <div class="flex flex-wrap items-center gap-2">
                 <x-button variant="ghost" :href="route('saved-reports.export', $report)">{{ __('Download CSV') }}</x-button>
                 <form method="POST" action="{{ route('reports.run-audit.store') }}">
                     @csrf
-                    <input type="hidden" name="start_date" value="{{ $report->report_date->toDateString() }}">
-                    <input type="hidden" name="end_date" value="{{ $report->report_date->toDateString() }}">
-                    <x-button type="submit" variant="ghost">Re-run this audit</x-button>
+                    <input type="hidden" name="start_date" value="{{ \App\Support\UiFormat::date($report->report_date) }}">
+                    <input type="hidden" name="end_date" value="{{ \App\Support\UiFormat::date($report->report_date) }}">
+                    <x-button type="submit" variant="ghost">{{ __('Re-run this audit') }}</x-button>
                 </form>
             </div>
         </div>
 
         @if ($history->isNotEmpty())
             <x-card>
-                <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Last {{ $history->count() }} audits</h2>
+                <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">{{ __('Last') }} {{ \App\Support\UiFormat::count($history->count(), 'audits') }}</h2>
                 <div class="flex items-end gap-2" style="height: 60px">
                     @php($max = max(1, $history->max('rows_found')))
                     @foreach ($history as $point)
-                        <a class="flex flex-col items-center gap-1" href="{{ route('saved-reports.show', $point) }}" title="{{ $point->report_date->toDateString() }}: {{ $point->rows_found }} missing">
+                        <a class="flex flex-col items-center gap-1" href="{{ route('saved-reports.show', $point) }}" title="{{ \App\Support\UiFormat::date($point->report_date) }}: {{ $point->rows_found }} missing">
                             <div class="rounded-t bg-indigo-300 dark:bg-indigo-700" style="width: 16px; height: {{ max(4, (int) ($point->rows_found / $max * 50)) }}px; @if ($point->is($report)) background: #4f46e5; @endif"></div>
                         </a>
                     @endforeach
@@ -39,12 +39,12 @@
                     <td class="px-4 py-3 font-semibold">{{ $order['name'] ?? $order['order_number'] ?? '—' }}</td>
                     <td class="px-4 py-3">{{ $order['created_at'] ?? '—' }}</td>
                     <td class="px-4 py-3">{{ $order['email'] ?? '—' }}</td>
-                    <td class="px-4 py-3">{{ number_format((float) ($order['total_price'] ?? 0), 2) }}</td>
+                    <td class="px-4 py-3">{{ \App\Support\UiFormat::number((float) ($order['total_price'] ?? 0), 2) }}</td>
                     <td class="px-4 py-3">
                         @if ($count >= 3)
-                            <x-badge tone="danger">Hot · {{ $count }}</x-badge>
+                            <x-badge tone="danger">{{ __('Hot ·') }} {{ $count }}</x-badge>
                         @elseif ($count >= 2)
-                            <x-badge tone="warn">Recurring · {{ $count }}</x-badge>
+                            <x-badge tone="warn">{{ __('Recurring ·') }} {{ $count }}</x-badge>
                         @else
                             —
                         @endif
@@ -52,7 +52,7 @@
                     <td class="px-4 py-3">
                         <div class="flex flex-wrap items-center gap-2 text-sm">
                             @if ($number !== '')
-                                <a class="text-indigo-600 dark:text-indigo-400" href="{{ route('orders.spot-check', ['order_number' => $number]) }}">Spot-check</a>
+                                <a class="text-indigo-600 dark:text-indigo-400" href="{{ route('orders.spot-check', ['order_number' => $number]) }}">{{ __('Spot-check') }}</a>
                                 <a class="text-indigo-600 dark:text-indigo-400" href="{{ route('orders.timeline', ['order_number' => $number]) }}">{{ __('Timeline') }}</a>
                             @endif
                             @if (! empty($order['id']))

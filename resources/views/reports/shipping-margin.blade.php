@@ -3,7 +3,7 @@
 @section('content')
     <x-report.layout
         eyebrow="Fulfillment report"
-        title="Shipping Margin Erosion"
+        title="{{ __('Shipping Margin Erosion') }}"
         subtitle="ShipStation label cost compared with shipping charged in Shopify."
         :configuration-error="$configurationError"
         credentials-message="Shopify or ShipStation credentials are incomplete for the active store."
@@ -27,7 +27,7 @@
                 truncated-message="Results are incomplete: Shopify orders were truncated after :pages pages."
                 :pages="$result->meta['shopifyPages']"
             >
-                <x-slot:heading>{{ $result->scanned }} shipments scanned · {{ count($result->rows) }} losses over ${{ number_format($result->params['threshold'], 2) }}</x-slot:heading>
+                <x-slot:heading>{{ $result->scanned }} {{ __('shipments scanned ·') }} {{ count($result->rows) }} {{ __('losses over $') }}{{ \App\Support\UiFormat::number($result->params['threshold'], 2) }}</x-slot:heading>
 
                 @if ($result->meta['byCarrier'])
                     <x-data-table
@@ -35,8 +35,8 @@
                         :columns="[
                             'Carrier' => ['value' => 'carrier', 'class' => 'font-semibold'],
                             'Orders' => 'count',
-                            'Total loss' => fn (array $row): string => '$'.number_format($row['total_loss'], 2),
-                            'Average loss' => fn (array $row): string => '$'.number_format($row['avg_loss'], 2),
+                            'Total loss' => fn (array $row): string => '$'.\App\Support\UiFormat::number($row['total_loss'], 2),
+                            'Average loss' => fn (array $row): string => '$'.\App\Support\UiFormat::number($row['avg_loss'], 2),
                         ]"
                     />
                 @endif
@@ -48,11 +48,11 @@
                         'Order' => ['value' => 'order_number', 'class' => 'font-semibold'],
                         'Ship date' => 'ship_date',
                         'Carrier / service' => fn (array $row): string => $row['carrier'].($row['service'] ? ' / '.$row['service'] : ''),
-                        'Ship cost' => fn (array $row): string => '$'.number_format($row['ship_cost'], 2),
-                        'Charged' => fn (array $row): string => '$'.number_format($row['shipping_charged'], 2),
-                        'Loss' => ['value' => fn (array $row): string => '$'.number_format($row['loss'], 2), 'class' => 'font-semibold text-red-600 dark:text-red-400'],
+                        'Ship cost' => fn (array $row): string => '$'.\App\Support\UiFormat::number($row['ship_cost'], 2),
+                        'Charged' => fn (array $row): string => '$'.\App\Support\UiFormat::number($row['shipping_charged'], 2),
+                        'Loss' => ['value' => fn (array $row): string => '$'.\App\Support\UiFormat::number($row['loss'], 2), 'class' => 'font-semibold text-red-600 dark:text-red-400'],
                         'Email' => fn (array $row): string => $row['email'] ?: '—',
-                        'Total' => fn (array $row): string => '$'.number_format($row['total'], 2),
+                        'Total' => fn (array $row): string => '$'.\App\Support\UiFormat::number($row['total'], 2),
                     ]"
                 />
             </x-report.results>

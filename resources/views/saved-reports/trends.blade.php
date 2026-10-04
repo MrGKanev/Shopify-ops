@@ -2,12 +2,12 @@
 
 @section('content')
     <div class="flex flex-col gap-6">
-        <x-page-header eyebrow="Operations" title="Audit Trends" subtitle="Daily missing-order totals from saved Run Audit snapshots." />
+        <x-page-header eyebrow="Operations" title="{{ __('Audit Trends') }}" subtitle="Daily missing-order totals from saved Run Audit snapshots." />
 
         <form class="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:grid-cols-3 dark:border-slate-800 dark:bg-slate-900" method="GET">
             @foreach (['start_date' => ['From', $startDate], 'end_date' => ['To', $endDate]] as $field => [$label, $value])
                 <div>
-                    <label class="text-sm font-medium" for="{{ $field }}">{{ $label }}</label>
+                    <label class="text-sm font-medium" for="{{ $field }}">{{ __($label) }}</label>
                     <input class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="{{ $field }}" name="{{ $field }}" type="date" value="{{ old($field, $value) }}">
                     @error($field)
                         <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ __($message) }}</p>
@@ -15,7 +15,7 @@
                 </div>
             @endforeach
             <div class="flex items-end">
-                <x-button type="submit">Apply</x-button>
+                <x-button type="submit">{{ __('Apply') }}</x-button>
             </div>
         </form>
 
@@ -24,7 +24,7 @@
             <x-stat-tile label="Clear reports" :value="$clearReportCount" />
             <x-stat-tile label="Worst report" :value="$worstReport?->rows_found ?? '—'">
                 @if ($worstReport)
-                    <x-slot:sub><a class="text-indigo-600 dark:text-indigo-400" href="{{ route('saved-reports.show', $worstReport) }}">{{ $worstReport->report_date->toDateString() }}</a></x-slot:sub>
+                    <x-slot:sub><a class="text-indigo-600 dark:text-indigo-400" href="{{ route('saved-reports.show', $worstReport) }}">{{ \App\Support\UiFormat::date($worstReport->report_date) }}</a></x-slot:sub>
                 @endif
             </x-stat-tile>
             <x-stat-tile label="Unique missing orders" :value="$uniqueMissingCount" />

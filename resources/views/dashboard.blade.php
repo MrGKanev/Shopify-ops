@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('content')
 <div class="flex flex-col gap-6">
-    <x-page-header title="Dashboard" :subtitle="$activeStore->label.' · '.$activeStore->shopify_store.'.myshopify.com'">
+    <x-page-header title="{{ __('Dashboard') }}" :subtitle="$activeStore->label.' · '.$activeStore->shopify_store.'.myshopify.com'">
         @can('run-audits')
             <x-button size="sm" :href="route('reports.run-audit')">{{ __('Run Audit') }}</x-button>
         @endcan
@@ -20,10 +20,10 @@
         <x-stat-tile label="Latest audit" :value="$latest?->rows_found ?? '—'" :tone="($latest?->rows_found ?? 0) > 0 ? 'warn' : 'ok'">
             <x-slot:sub>
                 @if ($latest)
-                    {{ __('missing') }} · {{ $latest->report_date->toDateString() }}
+                    {{ __('missing') }} · {{ \App\Support\UiFormat::date($latest->report_date) }}
                     @if ($previousMissing !== null) · {{ __('was') }} {{ $previousMissing }} @endif
                 @else
-                    No audits yet
+                    {{ __('No audits yet') }}
                 @endif
             </x-slot:sub>
         </x-stat-tile>
@@ -103,9 +103,9 @@
             @endif
         </div>
         @if (! $latest)
-            <x-empty-state icon="📋" title="No audits yet">Run the first audit to build the queue.</x-empty-state>
+            <x-empty-state icon="📋" title="{{ __('No audits yet') }}">{{ __('Run the first audit to build the queue.') }}</x-empty-state>
         @elseif ($missingOrders === [])
-            <x-empty-state icon="✓" title="All clear">{{ __('No missing orders.') }}</x-empty-state>
+            <x-empty-state icon="✓" title="{{ __('All clear') }}">{{ __('No missing orders.') }}</x-empty-state>
         @else
             <x-data-table :headers="['Order', 'Date', 'Email', 'Total']">
                 @foreach ($missingOrders as $order)
@@ -113,7 +113,7 @@
                         <td class="px-4 py-3 font-semibold">{{ $order['name'] ?? $order['order_number'] ?? '—' }}</td>
                         <td class="px-4 py-3">{{ $order['created_at'] ?? '—' }}</td>
                         <td class="px-4 py-3">{{ $order['email'] ?? '—' }}</td>
-                        <td class="px-4 py-3">{{ number_format((float) ($order['total_price'] ?? 0), 2) }}</td>
+                        <td class="px-4 py-3">{{ \App\Support\UiFormat::number((float) ($order['total_price'] ?? 0), 2) }}</td>
                     </tr>
                 @endforeach
             </x-data-table>
@@ -128,7 +128,7 @@
             </div>
             <div class="flex flex-wrap gap-2">
                 @foreach ([['📋', 'Run Audit', 'reports.run-audit'], ['🏠', 'Address Check', 'reports.address-check'], ['✉', 'Email Check', 'reports.email-check'], ['📦', 'Bundle Check', 'reports.bundle-check'], ['⏳', 'Partial Stalls', 'reports.partial-fulfillment'], ['🔎', 'Orphan Orders', 'reports.orphan-orders']] as [$icon, $label, $name])
-                    <x-button variant="ghost" size="sm" :href="route($name)"><span>{{ $icon }}</span>{{ $label }}</x-button>
+                    <x-button variant="ghost" size="sm" :href="route($name)"><span>{{ $icon }}</span>{{ __($label) }}</x-button>
                 @endforeach
             </div>
         </x-card>

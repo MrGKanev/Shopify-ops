@@ -8,5 +8,13 @@
         'info' => 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300',
     ];
 @endphp
-@php($badgeText = trim((string) $slot))
-<span {{ $attributes->merge(['class' => "inline-flex items-center rounded px-2 py-1 text-xs font-semibold {$tones[$tone]}"]) }}>{{ app()->isLocale('bg') ? __(strtolower($badgeText)) : $badgeText }}</span>
+@php
+    $badgeText = trim((string) $slot);
+    $translatedBadgeText = \App\Support\UiFormat::text($badgeText);
+    if (app()->isLocale('bg') && $translatedBadgeText === $badgeText) {
+        $statusKey = mb_strtolower($badgeText);
+        $statusTranslation = __($statusKey);
+        $translatedBadgeText = $statusTranslation === $statusKey ? $badgeText : $statusTranslation;
+    }
+@endphp
+<span {{ $attributes->merge(['class' => "inline-flex items-center rounded px-2 py-1 text-xs font-semibold {$tones[$tone]}"]) }}>{{ $translatedBadgeText }}</span>

@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="flex flex-col gap-6">
-        <x-page-header title="Metafields" subtitle="Browse order metafield definitions, search by value, or inspect up to 20 orders." />
+        <x-page-header title="{{ __('Metafields') }}" subtitle="Browse order metafield definitions, search by value, or inspect up to 20 orders." />
 
         @if ($configurationError)
             <x-alert tone="warn">{{ __('Shopify credentials are incomplete for the active store.') }}</x-alert>
@@ -36,7 +36,7 @@
                 <h2 class="text-xl font-bold sm:col-span-3">{{ __('Search orders by metafield') }}</h2>
                 @foreach (['namespace' => 'Namespace', 'key' => 'Key', 'value' => 'Value (optional)'] as $field => $label)
                     <div>
-                        <label class="text-sm font-medium" for="search-{{ $field }}">{{ $label }}</label>
+                        <label class="text-sm font-medium" for="search-{{ $field }}">{{ __($label) }}</label>
                         <input class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="search-{{ $field }}" name="{{ $field }}" value="{{ old($field) }}" @error($field) aria-invalid="true" aria-describedby="search-{{ $field }}-error" @enderror>
                         @error($field)
                             <p class="mt-1 text-sm text-red-600 dark:text-red-400" id="search-{{ $field }}-error">{{ __($message) }}</p>
@@ -45,7 +45,7 @@
                 @endforeach
                 @foreach (['start_date' => 'Start date', 'end_date' => 'End date'] as $field => $label)
                     <div>
-                        <label class="text-sm font-medium" for="search-{{ $field }}">{{ $label }}</label>
+                        <label class="text-sm font-medium" for="search-{{ $field }}">{{ __($label) }}</label>
                         <input class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="search-{{ $field }}" type="date" name="{{ $field }}" value="{{ old($field) }}" @error($field) aria-invalid="true" aria-describedby="search-{{ $field }}-error" @enderror>
                         @error($field)
                             <p class="mt-1 text-sm text-red-600 dark:text-red-400" id="search-{{ $field }}-error">{{ __($message) }}</p>
@@ -58,7 +58,7 @@
 
         @if ($search)
             <section class="flex flex-col gap-3" aria-labelledby="metafield-results-heading">
-                <h2 class="text-xl font-bold" id="metafield-results-heading">{{ $search['scanned'] }} scanned · {{ $search['with_metafield'] }} with metafield · {{ count($search['orders']) }} matches</h2>
+                <h2 class="text-xl font-bold" id="metafield-results-heading">{{ $search['scanned'] }} {{ __('scanned ·') }} {{ $search['with_metafield'] }} {{ __('with metafield ·') }} {{ count($search['orders']) }} {{ __('matches') }}</h2>
                 @if ($search['truncated'])
                     <x-alert tone="warn">{{ __('Results truncated after :pages pages.', ['pages' => $search['pages']]) }}</x-alert>
                 @endif
@@ -96,7 +96,7 @@
                         <p class="mt-1 text-sm text-red-600 dark:text-red-400" id="lookup-filter-error">{{ __($message) }}</p>
                     @enderror
                 </div>
-                <div><x-button type="submit">Look up</x-button></div>
+                <div><x-button type="submit">{{ __('Look up') }}</x-button></div>
             </form>
         </x-card>
 

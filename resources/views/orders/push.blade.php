@@ -14,9 +14,9 @@
 
         <section class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
             <h2 class="text-xl font-bold">{{ __('Push to ShipStation') }}</h2>
-            <p class="text-sm text-slate-500 dark:text-slate-400">{{ __('Fetches the order from Shopify and creates it in ShipStation as') }} <code>{{ __('awaiting_shipment') }}</code>{{ __('. This creates a real order — preview the payload first.') }}</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ __('Fetches the order from Shopify and creates it in ShipStation as') }} <code>awaiting_shipment</code>{{ __('. This creates a real order — preview the payload first.') }}</p>
 
-            <form class="flex flex-col gap-3 sm:flex-row sm:items-end" method="POST" action="{{ route('orders.push.store') }}" id="push-form">
+            <form class="flex flex-col gap-3 sm:flex-row sm:items-end" method="POST" action="{{ route('orders.push.store') }}" id="push-form" data-confirm="{{ __('Create this order in ShipStation now?') }}">
                 @csrf
                 <div class="flex grow flex-col gap-2">
                     <label class="text-sm font-medium" for="push_order_number">{{ __('Order number') }}</label>
@@ -26,7 +26,7 @@
                     @enderror
                 </div>
                 <button class="rounded-lg border border-slate-300 px-5 py-2.5 font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800" type="button" id="push-preview-btn">{{ __('Preview payload') }}</button>
-                <button class="rounded-lg bg-amber-600 px-5 py-2.5 font-semibold text-white hover:bg-amber-500" type="submit" onclick="return confirm('Create this order in ShipStation now?')">{{ __('Push to ShipStation') }}</button>
+                <button class="rounded-lg bg-amber-600 px-5 py-2.5 font-semibold text-white hover:bg-amber-500" type="submit">{{ __('Push to ShipStation') }}</button>
             </form>
             @if (session('addressIssues'))
                 <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200" role="alert">
@@ -83,7 +83,7 @@
                     </div>
                 </div>
                 <div class="flex flex-col gap-2">
-                    <label class="text-sm font-medium" for="note">Note</label>
+                    <label class="text-sm font-medium" for="note">{{ __('Note') }}</label>
                     <textarea class="min-h-24 rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950" id="note" name="note" maxlength="5000" aria-invalid="{{ $errors->has('note') ? 'true' : 'false' }}" @if ($errors->has('note')) aria-describedby="note-error" @endif>{{ old('note') }}</textarea>
                     @error('note')
                         <p class="text-sm text-red-600 dark:text-red-400" id="note-error" role="alert">{{ __($message) }}</p>

@@ -1,14 +1,14 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-report.layout eyebrow="Returns report" title="Return / RMA Tracker" subtitle="Item-level return details with a per-SKU refund summary." :configuration-error="$configurationError" :report-failed="$reportFailed">
+    <x-report.layout eyebrow="Returns report" title="{{ __('Return / RMA Tracker') }}" subtitle="Item-level return details with a per-SKU refund summary." :configuration-error="$configurationError" :report-failed="$reportFailed">
         <x-slot:form>
             <x-report.date-range-form :action="route('reports.return-rma.store')" :start-date="$startDate" :end-date="$endDate" submit-label="Scan returns" />
         </x-slot:form>
 
         @if ($result)
             <x-report.results :truncated="$result->truncated" truncated-message="Results are incomplete: Shopify orders were truncated after :pages pages." :pages="$result->pages">
-                <x-slot:heading>{{ count($result->rows) }} refunds from {{ $result->scanned }} orders</x-slot:heading>
+                <x-slot:heading>{{ count($result->rows) }} {{ __('refunds from') }} {{ \App\Support\UiFormat::count($result->scanned, 'orders') }}</x-slot:heading>
 
                 <x-data-table :headers="['Order', 'Refund date', 'Reason', 'Items returned', 'Refund total']" :rows="$result->rows" empty="No returns found.">
                     @foreach ($result->rows as $row)
@@ -23,7 +23,7 @@
                                     <span class="text-slate-500">{{ __('No line items') }}</span>
                                 @endforelse
                             </td>
-                            <td class="px-4 py-3">{{ number_format($row['refund_total'], 2) }}</td>
+                            <td class="px-4 py-3">{{ \App\Support\UiFormat::number($row['refund_total'], 2) }}</td>
                         </tr>
                     @endforeach
                 </x-data-table>
@@ -36,7 +36,7 @@
                             'SKU' => ['value' => 'sku', 'class' => 'font-mono'],
                             'Units returned' => 'units',
                             'Return events' => 'events',
-                            'Revenue refunded' => fn (array $stat): string => number_format($stat['revenue'], 2),
+                            'Revenue refunded' => fn (array $stat): string => \App\Support\UiFormat::number($stat['revenue'], 2),
                         ]"
                     />
                 @endif

@@ -28,35 +28,35 @@
 
         @if ($result !== null && $result->state === 'not_found')
             <div class="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200" role="status">
-                No Shopify order was found for #{{ $result->orderNumber }}.
+                {{ __('No Shopify order was found for #') }}{{ $result->orderNumber }}.
             </div>
         @elseif ($result !== null && $result->state === 'ambiguous')
             <x-alert tone="warn">
-                Shopify returned {{ $result->shopifyMatchCount }} matches for #{{ $result->orderNumber }}. No ambiguous order was selected automatically.
+                {{ __('Shopify returned') }} {{ $result->shopifyMatchCount }} {{ __('matches for #') }}{{ $result->orderNumber }}{{ __('. No ambiguous order was selected automatically.') }}
             </x-alert>
         @elseif ($result !== null && $result->state === 'ready')
             <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <article class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-                    <p class="text-sm text-slate-500 dark:text-slate-400">Order</p>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">{{ __('Order') }}</p>
                     <p class="mt-2 text-lg font-semibold">{{ $result->order['name'] ?? '#'.$result->orderNumber }}</p>
                     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ $result->order['email'] ?? 'No email' }}</p>
                 </article>
 
                 <article class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
                     <p class="text-sm text-slate-500 dark:text-slate-400">{{ __('Risk score') }}</p>
-                    <p class="mt-2 text-lg font-semibold">{{ $result->riskScore['score'] }} · {{ ucfirst($result->riskScore['level']) }}</p>
-                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ count($result->riskScore['signals']) }} detected {{ count($result->riskScore['signals']) === 1 ? 'signal' : 'signals' }}</p>
+                    <p class="mt-2 text-lg font-semibold">{{ $result->riskScore['score'] }} · {{ __(ucfirst($result->riskScore['level'])) }}</p>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ count($result->riskScore['signals']) }} {{ __('detected') }} {{ __(count($result->riskScore['signals']) === 1 ? 'signal' : 'signals') }}</p>
                 </article>
 
                 <article class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
                     <p class="text-sm text-slate-500 dark:text-slate-400">{{ __('Time to ship') }}</p>
-                    <p class="mt-2 text-lg font-semibold">{{ $result->timeToShip === null ? 'Not shipped' : $result->timeToShip.' days' }}</p>
+                    <p class="mt-2 text-lg font-semibold">{{ $result->timeToShip === null ? __('Not shipped') : $result->timeToShip.' '.__('days') }}</p>
                 </article>
 
                 <article class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
                     <p class="text-sm text-slate-500 dark:text-slate-400">ShipStation</p>
-                    <p class="mt-2 text-lg font-semibold">{{ $result->shipStationConfigured ? count($result->shipStationOrders).' order matches' : 'Not configured' }}</p>
-                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ count($result->shipStationShipments) }} shipments</p>
+                    <p class="mt-2 text-lg font-semibold">{{ $result->shipStationConfigured ? __(':count order matches', ['count' => count($result->shipStationOrders)]) : __('Not configured') }}</p>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ \App\Support\UiFormat::count(count($result->shipStationShipments), 'shipments') }}</p>
                 </article>
             </section>
 
@@ -69,7 +69,7 @@
                         @else
                             <ul class="mt-3 list-disc space-y-2 pl-5 text-sm">
                                 @foreach ($result->riskScore['signals'] as $signal)
-                                    <li>{{ $signal['label'] }} <span class="text-slate-400">+{{ $signal['points'] }}</span></li>
+                                    <li>{{ \App\Support\UiFormat::text($signal['label']) }} <span class="text-slate-400">+{{ $signal['points'] }}</span></li>
                                 @endforeach
                             </ul>
                         @endif
@@ -87,7 +87,7 @@
                                         'border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200' => $risk['level'] === 'danger',
                                         'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200' => $risk['level'] === 'warn',
                                         'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200' => $risk['level'] === 'info',
-                                    ])>{{ $risk['message'] }}</li>
+                                    ])>{{ \App\Support\UiFormat::text($risk['message']) }}</li>
                                 @endforeach
                             </ul>
                         @endif
@@ -98,7 +98,7 @@
             <section class="flex flex-col gap-4">
                 <div>
                     <h2 class="text-2xl font-bold">{{ __('Activity') }}</h2>
-                    <p class="text-sm text-slate-500 dark:text-slate-400">Newest activity first · {{ count($result->timeline) }} entries</p>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">{{ __('Newest activity first ·') }} {{ \App\Support\UiFormat::count(count($result->timeline), 'entries') }}</p>
                 </div>
 
                 @forelse ($result->timeline as $item)
@@ -106,17 +106,17 @@
                         <div class="flex flex-col justify-between gap-2 sm:flex-row">
                             <div>
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <h3 class="font-semibold">{{ $item['title'] }}</h3>
+                                    <h3 class="font-semibold">{{ \App\Support\UiFormat::text($item['title']) }}</h3>
                                     <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ $item['source'] }}</span>
                                 </div>
                                 @if ($item['detail'] !== '')
-                                    <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">{{ $item['detail'] }}</p>
+                                    <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">{{ \App\Support\UiFormat::text($item['detail']) }}</p>
                                 @endif
                                 @if ($item['tracking'] !== '')
-                                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Tracking: {{ $item['tracking'] }}</p>
+                                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ __('Tracking:') }} {{ $item['tracking'] }}</p>
                                 @endif
                             </div>
-                            <time class="text-sm text-slate-500 dark:text-slate-400" datetime="{{ $item['timestamp'] }}">{{ $item['formatted_at'] }}</time>
+                            <time class="text-sm text-slate-500 dark:text-slate-400" datetime="{{ $item['timestamp'] }}">{{ \App\Support\UiFormat::date($item['timestamp'], true) }}</time>
                         </div>
 
                         @if ($item['url'] !== '')
