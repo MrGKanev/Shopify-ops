@@ -6,9 +6,10 @@ use App\Application\Health\CheckOperationalAlerts;
 use App\Listeners\AlertOnOperationalFailure;
 use App\Models\RunLog;
 use App\Models\Store;
-use App\Notifications\OperationalAlertDiscordNotification;
-use App\Notifications\OperationalAlertSlackNotification;
+use App\Notifications\Channels\DiscordWebhookChannel;
+use App\Notifications\OperationalAlertNotification;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Notifications\Channels\SlackWebhookChannel;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -40,10 +41,9 @@ class OperationalAlertsTest extends TestCase
         $check->handle();
         $check->handle();
 
-        Notification::assertSentOnDemandTimes(OperationalAlertSlackNotification::class, 3);
-        Notification::assertSentOnDemandTimes(OperationalAlertDiscordNotification::class, 3);
-        Notification::assertSentOnDemand(OperationalAlertSlackNotification::class, fn (OperationalAlertSlackNotification $alert): bool => $alert->category === 'queue_latency');
-        Notification::assertSentOnDemand(OperationalAlertSlackNotification::class, fn (OperationalAlertSlackNotification $alert): bool => $alert->category === 'scheduler_absent');
-        Notification::assertSentOnDemand(OperationalAlertSlackNotification::class, fn (OperationalAlertSlackNotification $alert): bool => $alert->category === 'api_failures:refund_tracker');
+        Notification::assertSentOnDemandTimes(OperationalAlertNotification::class, 3);
+        Notification::assertSentOnDemand(OperationalAlertNotification::class, fn (OperationalAlertNotification $alert, array $channels): bool => $alert->category === 'queue_latency' && $channels === [SlackWebhookChannel::class, DiscordWebhookChannel::class]);
+        Notification::assertSentOnDemand(OperationalAlertNotification::class, fn (OperationalAlertNotification $alert): bool => $alert->category === 'scheduler_absent');
+        Notification::assertSentOnDemand(OperationalAlertNotification::class, fn (OperationalAlertNotification $alert): bool => $alert->category === 'api_failures:refund_tracker');
     }
 }

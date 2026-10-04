@@ -2,11 +2,10 @@
 
 namespace App\Listeners;
 
-use App\Notifications\OperationalAlertDiscordNotification;
-use App\Notifications\OperationalAlertSlackNotification;
+use App\Notifications\OperationalAlertNotification;
+use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Notifications\Events\NotificationFailed;
 use Illuminate\Queue\Events\JobFailed;
-use Illuminate\Support\Facades\Notification;
 use Throwable;
 
 class AlertOnOperationalFailure
@@ -26,21 +25,22 @@ class AlertOnOperationalFailure
 
     public function send(string $category, string $summary): void
     {
-
-        $slackUrl = trim((string) config('services.slack.notifications.webhook_url'));
-        if ($slackUrl !== '') {
-            Notification::route('slack', $slackUrl)->notify(new OperationalAlertSlackNotification($category, $summary));
+        $notifiable = new AnonymousNotifiable;
+        foreach (['slack', 'discord'] as $channel) {
+            $url = trim((string) config("services.{$channel}.notifications.webhook_url"));
+            if ($url !== '') {
+                $notifiable->route($channel, $url);
+            }
         }
 
-        $discordUrl = trim((string) config('services.discord.notifications.webhook_url'));
-        if ($discordUrl !== '') {
-            Notification::route('discord', $discordUrl)->notify(new OperationalAlertDiscordNotification($category, $summary));
+        if ($notifiable->routes !== []) {
+            $notifiable->notify(new OperationalAlertNotification($category, $summary));
         }
     }
 
     private function isOwnAlert(object $notification): bool
     {
-        return $notification instanceof OperationalAlertSlackNotification || $notification instanceof OperationalAlertDiscordNotification;
+        return $notification instanceof OperationalAlertNotification;
     }
 
     private function exceptionClass(mixed $exception): string

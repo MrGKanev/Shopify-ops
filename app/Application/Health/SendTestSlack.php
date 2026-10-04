@@ -2,7 +2,7 @@
 
 namespace App\Application\Health;
 
-use App\Notifications\SlackTestNotification;
+use App\Notifications\ChatDeliveryTestNotification;
 use Illuminate\Support\Facades\Notification;
 use LogicException;
 
@@ -31,6 +31,6 @@ class SendTestSlack
         }
 
         Notification::route('slack', (string) config('services.slack.notifications.webhook_url'))
-            ->notifyNow(new SlackTestNotification((string) config('app.name'), now()->toDateTimeString()));
+            ->notifyNow(new ChatDeliveryTestNotification((string) config('app.name'), now()->toDateTimeString()));
     }
 }

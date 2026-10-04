@@ -11,6 +11,7 @@ class DetectDeliveryExceptions
     public function __construct(
         private readonly ShipStationClientFactory $clients,
         private readonly DeliveryExceptionAnalyzer $analyzer,
+        private readonly RaiseOperationalIssue $issues,
     ) {}
 
     public function handle(Store $store): int
@@ -29,28 +30,23 @@ class DetectDeliveryExceptions
         $exceptions = $this->analyzer->analyze($shipments, $threshold, now()->timestamp);
 
         foreach ($exceptions as $exception) {
-            $issue = $store->operationalIssues()->firstOrNew(['fingerprint' => $exception['fingerprint']]);
             if ($exception['resolved']) {
-                if ($issue->exists && in_array($issue->status, ['open', 'in_progress'], true)) {
-                    $issue->update(['status' => 'resolved', 'resolved_at' => now(), 'last_seen_at' => now()]);
+                $issue = $store->operationalIssues()->where('fingerprint', $exception['fingerprint'])->first();
+                if ($issue !== null) {
+                    $this->issues->resolve($issue);
                 }
 
                 continue;
             }
 
-            $newOccurrence = ! $issue->exists || $issue->last_seen_at->lt(now()->subDay());
-            $issue->fill([
+            $this->issues->handle($store, [
                 'source_tool' => 'delivery_watch',
+                'fingerprint' => $exception['fingerprint'],
                 'reference' => $exception['reference'],
                 'title' => $exception['title'].' ('.$exception['days'].' days)',
-                'status' => $issue->exists && in_array($issue->status, ['resolved', 'ignored'], true) ? 'open' : ($issue->status ?: 'open'),
                 'priority' => $exception['priority'],
-                'occurrences' => $issue->exists ? $issue->occurrences + (int) $newOccurrence : 1,
-                'first_seen_at' => $issue->first_seen_at ?? now(),
-                'last_seen_at' => now(),
-                'resolved_at' => null,
                 'payload' => $exception['payload'],
-            ])->save();
+            ], countOncePerDay: true);
         }
 
         return count(array_filter($exceptions, fn (array $exception): bool => ! $exception['resolved']));

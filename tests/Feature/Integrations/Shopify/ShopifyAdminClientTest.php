@@ -21,7 +21,7 @@ class ShopifyAdminClientTest extends TestCase
         Http::preventStrayRequests();
         Http::fake([
             'https://acme.myshopify.com/admin/api/2026-07/graphql.json' => Http::response(['data' => [
-                'shop' => ['name' => 'Acme'],
+                'shop' => ['name' => 'Acme', 'ianaTimezone' => 'America/New_York'],
                 'currentAppInstallation' => ['accessScopes' => [
                     ['handle' => 'read_orders'],
                     ['handle' => 'read_fulfillments'],
@@ -32,6 +32,7 @@ class ShopifyAdminClientTest extends TestCase
 
         $this->assertSame([
             'shop_name' => 'Acme',
+            'timezone' => 'America/New_York',
             'scopes' => ['read_orders', 'read_fulfillments'],
             'requested_version' => '2026-07',
             'returned_version' => '2026-07',

@@ -3,11 +3,12 @@
 namespace Tests\Unit\Listeners;
 
 use App\Listeners\AlertOnOperationalFailure;
-use App\Notifications\AuditSlackNotification;
-use App\Notifications\OperationalAlertDiscordNotification;
-use App\Notifications\OperationalAlertSlackNotification;
+use App\Notifications\AuditFinishedNotification;
+use App\Notifications\Channels\DiscordWebhookChannel;
+use App\Notifications\OperationalAlertNotification;
 use Illuminate\Contracts\Queue\Job;
 use Illuminate\Notifications\AnonymousNotifiable;
+use Illuminate\Notifications\Channels\SlackWebhookChannel;
 use Illuminate\Notifications\Events\NotificationFailed;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\Event;
@@ -36,10 +37,9 @@ class AlertOnOperationalFailureTest extends TestCase
         (new AlertOnOperationalFailure)->handle(new JobFailed('database', $job, new RuntimeException('db unreachable')));
 
         Notification::assertSentOnDemand(
-            OperationalAlertSlackNotification::class,
-            fn (OperationalAlertSlackNotification $n): bool => $n->category === 'App\\Jobs\\RunAuditJob' && $n->summary === 'RuntimeException',
+            OperationalAlertNotification::class,
+            fn (OperationalAlertNotification $n, array $channels): bool => $n->category === 'App\\Jobs\\RunAuditJob' && $n->summary === 'RuntimeException' && $channels === [SlackWebhookChannel::class, DiscordWebhookChannel::class],
         );
-        Notification::assertSentOnDemand(OperationalAlertDiscordNotification::class);
     }
 
     public function test_sends_an_alert_when_a_notification_delivery_fails(): void
@@ -47,13 +47,13 @@ class AlertOnOperationalFailureTest extends TestCase
         config(['services.slack.notifications.webhook_url' => 'https://hooks.slack.com/services/test']);
         Notification::fake();
         $notifiable = (new AnonymousNotifiable)->route('slack', 'https://hooks.slack.com/services/secret');
-        $notification = new AuditSlackNotification('Acme', 3, '2026-09-01 → 2026-09-07');
+        $notification = new AuditFinishedNotification('Acme', 3, '2026-09-01 → 2026-09-07');
 
         (new AlertOnOperationalFailure)->handle(new NotificationFailed($notifiable, $notification, 'slack', ['exception' => new RuntimeException('webhook rejected')]));
 
         Notification::assertSentOnDemand(
-            OperationalAlertSlackNotification::class,
-            fn (OperationalAlertSlackNotification $n): bool => $n->category === 'AuditSlackNotification' && $n->summary === 'RuntimeException',
+            OperationalAlertNotification::class,
+            fn (OperationalAlertNotification $n): bool => $n->category === 'AuditFinishedNotification' && $n->summary === 'RuntimeException',
         );
     }
 
@@ -62,7 +62,7 @@ class AlertOnOperationalFailureTest extends TestCase
         config(['services.slack.notifications.webhook_url' => 'https://hooks.slack.com/services/test']);
         Notification::fake();
         $notifiable = (new AnonymousNotifiable)->route('slack', 'https://hooks.slack.com/services/test');
-        $notification = new OperationalAlertSlackNotification('App\\Jobs\\RunAuditJob', 'RuntimeException');
+        $notification = new OperationalAlertNotification('App\\Jobs\\RunAuditJob', 'RuntimeException');
 
         (new AlertOnOperationalFailure)->handle(new NotificationFailed($notifiable, $notification, 'slack', ['exception' => new RuntimeException('still down')]));
 

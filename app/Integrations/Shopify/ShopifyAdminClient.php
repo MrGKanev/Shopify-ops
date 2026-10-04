@@ -7,6 +7,7 @@ use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Integrations\Shopify\Exceptions\ShopifyGraphqlException;
 use App\Integrations\Shopify\Exceptions\ShopifyResponseException;
 use App\Models\Store;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
@@ -28,12 +29,12 @@ class ShopifyAdminClient implements ShopifyAdminGateway
         private readonly ShopifyOrderEventNormalizer $orderEventNormalizer,
     ) {}
 
-    /** @return array{shop_name: string, scopes: list<string>, requested_version: string, returned_version: string} */
+    /** @return array{shop_name: string, timezone: string, scopes: list<string>, requested_version: string, returned_version: string} */
     public function healthCheck(Store $store): array
     {
         $result = $this->graphql($store, <<<'GRAPHQL'
             query ShopifyHealth {
-              shop { name }
+              shop { name ianaTimezone }
               currentAppInstallation { accessScopes { handle } }
             }
             GRAPHQL);
@@ -53,6 +54,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
 
         return [
             'shop_name' => is_scalar($shop['name'] ?? null) ? trim((string) $shop['name']) : '',
+            'timezone' => is_string($shop['ianaTimezone'] ?? null) ? trim($shop['ianaTimezone']) : '',
             'scopes' => array_values(array_unique($scopes)),
             'requested_version' => self::API_VERSION,
             'returned_version' => $this->lastResponseApiVersion,
@@ -449,11 +451,11 @@ class ShopifyAdminClient implements ShopifyAdminGateway
         $search = 'tag:"'.$escapedTag.'"';
 
         if ($startDate !== null) {
-            $search .= ' created_at:>='.$startDate.'T00:00:00Z';
+            $search .= ' created_at:>='.$this->dayStart($store, $startDate);
         }
 
         if ($endDate !== null) {
-            $search .= ' created_at:<='.$endDate.'T23:59:59Z';
+            $search .= ' created_at:<='.$this->dayEnd($store, $endDate);
         }
 
         $query = <<<'GRAPHQL'
@@ -498,11 +500,11 @@ class ShopifyAdminClient implements ShopifyAdminGateway
             query HighValueOrderCandidates($search: String!, $after: String) {
               orders(first: 250, after: $after, sortKey: CREATED_AT, reverse: true, query: $search) {
                 pageInfo { hasNextPage endCursor }
-                edges { node { id legacyResourceId name createdAt cancelledAt email displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } shippingAddress { firstName lastName address1 address2 city province zip country phone } } }
+                edges { node { id legacyResourceId name createdAt cancelledAt email displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount currencyCode } } shippingAddress { firstName lastName address1 address2 city province zip country countryCodeV2 phone } } }
               }
             }
             GRAPHQL;
-        $search = "status:any (financial_status:paid OR financial_status:partially_paid) (fulfillment_status:unfulfilled OR fulfillment_status:partial) created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z";
+        $search = "status:any (financial_status:paid OR financial_status:partially_paid) (fulfillment_status:unfulfilled OR fulfillment_status:partial) created_at:>={$this->dayStart($store, $startDate)} created_at:<={$this->dayEnd($store, $endDate)}";
         $result = $this->paginateGraphql($store, $query, 'orders', ['search' => $search], 100);
         $orders = [];
 
@@ -527,7 +529,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $search = "status:any (financial_status:paid OR financial_status:partially_paid) created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z";
+        $search = "status:any (financial_status:paid OR financial_status:partially_paid) created_at:>={$this->dayStart($store, $startDate)} created_at:<={$this->dayEnd($store, $endDate)}";
         $result = $this->paginateGraphql($store, $query, 'orders', ['search' => $search], 100);
         $orders = [];
         foreach ($result['edges'] as $edge) {
@@ -551,7 +553,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any financial_status:paid created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z"], 100);
+        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any financial_status:paid created_at:>={$this->dayStart($store, $startDate)} created_at:<={$this->dayEnd($store, $endDate)}"], 100);
         $orders = [];
         foreach ($result['edges'] as $edge) {
             $node = $edge['node'] ?? null;
@@ -578,7 +580,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any financial_status:paid created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z"], 100);
+        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any financial_status:paid created_at:>={$this->dayStart($store, $startDate)} created_at:<={$this->dayEnd($store, $endDate)}"], 100);
         $orders = [];
         foreach ($result['edges'] as $edge) {
             $node = $edge['node'] ?? null;
@@ -606,7 +608,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any financial_status:paid created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z"], 100);
+        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any financial_status:paid created_at:>={$this->dayStart($store, $startDate)} created_at:<={$this->dayEnd($store, $endDate)}"], 100);
         $orders = [];
         foreach ($result['edges'] as $edge) {
             if (! is_array($edge['node'] ?? null)) {
@@ -629,7 +631,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any financial_status:paid created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z"], 100);
+        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any financial_status:paid created_at:>={$this->dayStart($store, $startDate)} created_at:<={$this->dayEnd($store, $endDate)}"], 100);
         $orders = [];
         foreach ($result['edges'] as $edge) {
             if (! is_array($edge['node'] ?? null)) {
@@ -652,7 +654,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $search = "status:any financial_status:paid created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z".($unfulfilledOnly ? ' fulfillment_status:unfulfilled' : '');
+        $search = "status:any financial_status:paid created_at:>={$this->dayStart($store, $startDate)} created_at:<={$this->dayEnd($store, $endDate)}".($unfulfilledOnly ? ' fulfillment_status:unfulfilled' : '');
         $result = $this->paginateGraphql($store, $query, 'orders', ['search' => $search], 100);
         $orders = [];
         foreach ($result['edges'] as $edge) {
@@ -683,7 +685,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any financial_status:paid created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z"], 100);
+        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any financial_status:paid created_at:>={$this->dayStart($store, $startDate)} created_at:<={$this->dayEnd($store, $endDate)}"], 100);
         $orders = [];
         foreach ($result['edges'] as $edge) {
             $node = $edge['node'] ?? null;
@@ -713,7 +715,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any financial_status:paid created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z"], 100);
+        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any financial_status:paid created_at:>={$this->dayStart($store, $startDate)} created_at:<={$this->dayEnd($store, $endDate)}"], 100);
         $orders = [];
         foreach ($result['edges'] as $edge) {
             $node = $edge['node'] ?? null;
@@ -739,7 +741,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z"], 40);
+        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "created_at:>={$this->dayStart($store, $startDate)} created_at:<={$this->dayEnd($store, $endDate)}"], 40);
         $orders = [];
         foreach ($result['edges'] as $edge) {
             $node = $edge['node'] ?? null;
@@ -763,7 +765,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z"], 1000);
+        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any created_at:>={$this->dayStart($store, $startDate)} created_at:<={$this->dayEnd($store, $endDate)}"], 1000);
         $orders = [];
         foreach ($result['edges'] as $edge) {
             $node = $edge['node'] ?? null;
@@ -840,7 +842,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $filters = array_filter([$startDate ? "created_at:>={$startDate}T00:00:00Z" : null, $endDate ? "created_at:<={$endDate}T23:59:59Z" : null]);
+        $filters = array_filter([$startDate ? "created_at:>={$this->dayStart($store, $startDate)}" : null, $endDate ? "created_at:<={$this->dayEnd($store, $endDate)}" : null]);
         $result = $this->paginateGraphql($store, $query, 'orders', ['search' => $filters ? implode(' ', $filters) : null, 'namespace' => $namespace, 'key' => $key], 10);
         $orders = $samples = [];
         $withMetafield = 0;
@@ -914,7 +916,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any financial_status:paid created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z"], 100);
+        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any financial_status:paid created_at:>={$this->dayStart($store, $startDate)} created_at:<={$this->dayEnd($store, $endDate)}"], 100);
         $orders = [];
         foreach ($result['edges'] as $edge) {
             $node = $edge['node'] ?? null;
@@ -967,7 +969,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $search = "status:any financial_status:paid fulfillment_status:unfulfilled created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z";
+        $search = "status:any financial_status:paid fulfillment_status:unfulfilled created_at:>={$this->dayStart($store, $startDate)} created_at:<={$this->dayEnd($store, $endDate)}";
         $result = $this->paginateGraphql($store, $query, 'orders', ['search' => $search], 100);
         $orders = [];
         foreach ($result['edges'] as $edge) {
@@ -984,13 +986,13 @@ class ShopifyAdminClient implements ShopifyAdminGateway
     /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
     public function repeatRefundCandidates(Store $store, string $startDate, string $endDate): array
     {
-        return $this->refundCandidates($store, "status:any (financial_status:refunded OR financial_status:partially_refunded) created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z");
+        return $this->refundCandidates($store, "status:any (financial_status:refunded OR financial_status:partially_refunded) created_at:>={$this->dayStart($store, $startDate)} created_at:<={$this->dayEnd($store, $endDate)}");
     }
 
     /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
     public function returnedItemCandidates(Store $store, string $startDate): array
     {
-        return $this->refundCandidates($store, "status:any (financial_status:refunded OR financial_status:partially_refunded) updated_at:>={$startDate}T00:00:00Z");
+        return $this->refundCandidates($store, "status:any (financial_status:refunded OR financial_status:partially_refunded) updated_at:>={$this->dayStart($store, $startDate)}");
     }
 
     /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
@@ -1004,7 +1006,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any updated_at:>={$startDate}T00:00:00Z"], 100);
+        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any updated_at:>={$this->dayStart($store, $startDate)}"], 100);
         $orders = [];
         foreach ($result['edges'] as $edge) {
             $node = $edge['node'] ?? null;
@@ -1028,7 +1030,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any (fulfillment_status:fulfilled OR fulfillment_status:partial) updated_at:>={$startDate}T00:00:00Z"], 100);
+        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any (fulfillment_status:fulfilled OR fulfillment_status:partial) updated_at:>={$this->dayStart($store, $startDate)}"], 100);
         $orders = [];
         foreach ($result['edges'] as $edge) {
             $node = $edge['node'] ?? null;
@@ -1058,7 +1060,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $search = "status:any financial_status:paid created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z";
+        $search = "status:any financial_status:paid created_at:>={$this->dayStart($store, $startDate)} created_at:<={$this->dayEnd($store, $endDate)}";
         $result = $this->paginateGraphql($store, $query, 'orders', ['search' => $search], 100);
         $orders = [];
         foreach ($result['edges'] as $edge) {
@@ -1086,7 +1088,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $search = "status:open -financial_status:refunded fulfillment_status:partial created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z";
+        $search = "status:open -financial_status:refunded fulfillment_status:partial created_at:>={$this->dayStart($store, $startDate)} created_at:<={$this->dayEnd($store, $endDate)}";
         $result = $this->paginateGraphql($store, $query, 'orders', ['search' => $search], 100);
         $orders = [];
         foreach ($result['edges'] as $edge) {
@@ -1142,7 +1144,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any updated_at:>={$startDate}T00:00:00Z"], 100);
+        $result = $this->paginateGraphql($store, $query, 'orders', ['search' => "status:any updated_at:>={$this->dayStart($store, $startDate)}"], 100);
         $orders = [];
         foreach ($result['edges'] as $edge) {
             $node = $edge['node'] ?? null;
@@ -1169,7 +1171,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $search = "status:any created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z";
+        $search = "status:any created_at:>={$this->dayStart($store, $startDate)} created_at:<={$this->dayEnd($store, $endDate)}";
         $result = $this->paginateGraphql($store, $query, 'orders', ['search' => $search], 100);
         $orders = [];
         foreach ($result['edges'] as $edge) {
@@ -1273,7 +1275,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $page = $this->paginateGraphql($store, $eventsQuery, 'events', ['search' => "created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z"], 100);
+        $page = $this->paginateGraphql($store, $eventsQuery, 'events', ['search' => "created_at:>={$this->dayStart($store, $startDate)} created_at:<={$this->dayEnd($store, $endDate)}"], 100);
         $events = [];
         $ids = [];
         foreach ($page['edges'] as $edge) {
@@ -1328,7 +1330,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $page = $this->paginateGraphql($store, $eventsQuery, 'events', ['search' => "created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z"], 100);
+        $page = $this->paginateGraphql($store, $eventsQuery, 'events', ['search' => "created_at:>={$this->dayStart($store, $startDate)} created_at:<={$this->dayEnd($store, $endDate)}"], 100);
         $events = [];
         $ids = [];
         foreach ($page['edges'] as $edge) {
@@ -1383,7 +1385,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $search = "status:any created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z";
+        $search = "status:any created_at:>={$this->dayStart($store, $startDate)} created_at:<={$this->dayEnd($store, $endDate)}";
         $result = $this->paginateGraphql($store, $query, 'orders', ['search' => $search], 100);
         $orders = [];
 
@@ -1436,7 +1438,7 @@ class ShopifyAdminClient implements ShopifyAdminGateway
               }
             }
             GRAPHQL;
-        $search = "status:any (financial_status:paid OR financial_status:partially_paid) created_at:>={$startDate}T00:00:00Z created_at:<={$endDate}T23:59:59Z";
+        $search = "status:any (financial_status:paid OR financial_status:partially_paid) created_at:>={$this->dayStart($store, $startDate)} created_at:<={$this->dayEnd($store, $endDate)}";
         $ordersResult = $this->paginateGraphql($store, $query, 'orders', ['search' => $search], 100);
         $orders = [];
 
@@ -1720,7 +1722,8 @@ class ShopifyAdminClient implements ShopifyAdminGateway
     {
         $response = $this->request($store)
             ->retry(
-                self::RETRY_DELAYS_IN_MILLISECONDS,
+                $this->retryAttempts(),
+                fn (int $attempt, mixed $exception): int => $this->retryDelayInMilliseconds($attempt, $exception),
                 when: fn (Throwable $exception): bool => $this->isTransientFailure($exception),
                 throw: false,
             )
@@ -1751,7 +1754,8 @@ class ShopifyAdminClient implements ShopifyAdminGateway
         $this->lastResponseApiVersion = '';
         $response = $this->request($store)
             ->when(! str_contains($query, 'mutation'), fn (PendingRequest $request): PendingRequest => $request->retry(
-                self::RETRY_DELAYS_IN_MILLISECONDS,
+                $this->retryAttempts(),
+                fn (int $attempt, mixed $exception): int => $this->retryDelayInMilliseconds($attempt, $exception),
                 when: fn (Throwable $exception): bool => $this->isTransientFailure($exception),
                 throw: false,
             ))
@@ -1843,6 +1847,22 @@ class ShopifyAdminClient implements ShopifyAdminGateway
             'pages' => $pages,
             'truncated' => $hasNextPage,
         ];
+    }
+
+    /**
+     * The UTC search bound for the first second of a calendar day in the shop's timezone.
+     */
+    private function dayStart(Store $store, string $date): string
+    {
+        return CarbonImmutable::parse($date, $store->shopTimezone())->startOfDay()->utc()->format('Y-m-d\\TH:i:s\\Z');
+    }
+
+    /**
+     * The UTC search bound for the last second of a calendar day in the shop's timezone.
+     */
+    private function dayEnd(Store $store, string $date): string
+    {
+        return CarbonImmutable::parse($date, $store->shopTimezone())->endOfDay()->utc()->format('Y-m-d\\TH:i:s\\Z');
     }
 
     private function request(Store $store): PendingRequest

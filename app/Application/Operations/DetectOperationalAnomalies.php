@@ -6,6 +6,8 @@ use App\Models\Store;
 
 class DetectOperationalAnomalies
 {
+    public function __construct(private readonly RaiseOperationalIssue $issues) {}
+
     public function handle(Store $store): int
     {
         $triggeredFingerprints = [];
@@ -16,19 +18,14 @@ class DetectOperationalAnomalies
                 continue;
             }
 
-            $fingerprint = hash('sha256', 'anomaly_detection|'.$signal['key']);
+            $fingerprint = RaiseOperationalIssue::fingerprint('anomaly_detection', $signal['key']);
             $triggeredFingerprints[] = $fingerprint;
-            $issue = $store->operationalIssues()->firstOrNew(['fingerprint' => $fingerprint]);
-            $issue->fill([
+            $this->issues->handle($store, [
                 'source_tool' => 'anomaly_detection',
+                'fingerprint' => $fingerprint,
                 'title' => $signal['title'],
                 'reference' => $signal['key'],
-                'status' => $issue->exists && in_array($issue->status, ['resolved', 'ignored'], true) ? 'open' : ($issue->status ?: 'open'),
                 'priority' => $signal['priority'],
-                'occurrences' => $issue->exists ? $issue->occurrences + 1 : 1,
-                'first_seen_at' => $issue->first_seen_at ?? now(),
-                'last_seen_at' => now(),
-                'resolved_at' => null,
                 'payload' => [
                     'current' => $signal['current'],
                     'baseline_average' => round($signal['baseline'], 2),
@@ -36,18 +33,13 @@ class DetectOperationalAnomalies
                     'detected_at' => now()->toIso8601String(),
                 ],
             ]);
-            $issue->save();
         }
 
         $preservedFingerprints = $scheduledAuditState === 'waiting'
-            ? [hash('sha256', 'anomaly_detection|scheduled_audit_stale')]
+            ? [RaiseOperationalIssue::fingerprint('anomaly_detection', 'scheduled_audit_stale')]
             : [];
 
-        $store->operationalIssues()
-            ->where('source_tool', 'anomaly_detection')
-            ->whereIn('status', ['open', 'in_progress'])
-            ->when($triggeredFingerprints !== [] || $preservedFingerprints !== [], fn ($query) => $query->whereNotIn('fingerprint', [...$triggeredFingerprints, ...$preservedFingerprints]))
-            ->update(['status' => 'resolved', 'resolved_at' => now()]);
+        $this->issues->resolveStale($store, 'anomaly_detection', [...$triggeredFingerprints, ...$preservedFingerprints]);
 
         return count($triggeredFingerprints);
     }

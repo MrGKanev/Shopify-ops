@@ -3,6 +3,8 @@
 namespace Tests\Unit\Application\Operations;
 
 use App\Application\Operations\SyncAuditIssues;
+use App\IssuePriority;
+use App\IssueStatus;
 use App\Models\Store;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -20,12 +22,12 @@ class SyncAuditIssuesTest extends TestCase
         $sync->handle($store, [['name' => '#1001', 'total_price' => 600]]);
 
         $issue = $store->operationalIssues()->sole();
-        $this->assertSame('high', $issue->priority);
+        $this->assertSame(IssuePriority::High, $issue->priority);
         $this->assertSame(2, $issue->occurrences);
 
         $sync->handle($store, []);
 
-        $this->assertSame('resolved', $issue->fresh()->status);
+        $this->assertSame(IssueStatus::Resolved, $issue->fresh()->status);
         $this->assertNotNull($issue->fresh()->resolved_at);
     }
 
@@ -40,7 +42,7 @@ class SyncAuditIssuesTest extends TestCase
 
         $sync->handle($store, [['name' => '#1001']]);
 
-        $this->assertSame('open', $issue->fresh()->status);
+        $this->assertSame(IssueStatus::Open, $issue->fresh()->status);
         $this->assertNull($issue->fresh()->resolved_at);
         $this->assertSame(2, $issue->fresh()->occurrences);
     }

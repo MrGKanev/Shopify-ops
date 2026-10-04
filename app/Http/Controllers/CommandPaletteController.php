@@ -28,7 +28,7 @@ class CommandPaletteController extends Controller
                 ->get(['id', 'title', 'reference', 'priority'])
                 ->map(fn ($issue): array => [
                     'label' => $issue->title,
-                    'description' => trim(__(strtolower($issue->priority)).' · '.($issue->reference ?: __('Operational issue'))),
+                    'description' => trim(__($issue->priority->value).' · '.($issue->reference ?: __('Operational issue'))),
                     'url' => route('operational-issues.index').'#issue-'.$issue->getKey(),
                     'kind' => 'Issue',
                 ]);

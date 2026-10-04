@@ -34,6 +34,26 @@ class ShopifyTagSearchTest extends TestCase
         Http::assertSent(fn (Request $request): bool => str_contains((string) $request['query'], 'query SearchOrdersByTag($search: String!') && ! str_contains((string) $request['query'], 'VIP'));
     }
 
+    public function test_date_bounds_follow_the_shop_timezone_including_daylight_saving(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['https://acme.myshopify.com/admin/api/2026-07/graphql.json' => Http::response($this->response([], false, null))]);
+        $store = new Store(['shopify_store' => 'acme', 'shopify_access_token' => 'token', 'shopify_timezone' => 'Europe/Sofia']);
+
+        $this->client()->searchOrdersByTag($store, 'vip', '2026-10-24', '2026-10-25');
+
+        $this->assertSame(
+            'tag:"vip" created_at:>=2026-10-23T21:00:00Z created_at:<=2026-10-25T21:59:59Z',
+            Http::recorded()->first()[0]->data()['variables']['search'],
+        );
+    }
+
+    public function test_an_unknown_shop_timezone_falls_back_to_utc(): void
+    {
+        $this->assertSame('UTC', (new Store(['shopify_timezone' => 'Mars/Olympus']))->shopTimezone());
+        $this->assertSame('UTC', (new Store)->shopTimezone());
+    }
+
     public function test_reports_truncation_at_the_twentieth_page(): void
     {
         Http::preventStrayRequests();

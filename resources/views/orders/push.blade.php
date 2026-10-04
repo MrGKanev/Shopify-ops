@@ -28,6 +28,20 @@
                 <button class="rounded-lg border border-slate-300 px-5 py-2.5 font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800" type="button" id="push-preview-btn">{{ __('Preview payload') }}</button>
                 <button class="rounded-lg bg-amber-600 px-5 py-2.5 font-semibold text-white hover:bg-amber-500" type="submit" onclick="return confirm('Create this order in ShipStation now?')">{{ __('Push to ShipStation') }}</button>
             </form>
+            @if (session('addressIssues'))
+                <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200" role="alert">
+                    <p class="font-semibold">{{ __('Shipping address problems') }}</p>
+                    <ul class="mt-1 list-disc pl-5">
+                        @foreach (session('addressIssues') as $issue)
+                            <li>{{ __($issue['message']) }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+            <label class="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="confirm_address_issues" value="1" form="push-form" @checked(old('confirm_address_issues'))>
+                {{ __('Push even if the shipping address has critical problems') }}
+            </label>
             <pre id="push-preview-output" class="hidden overflow-x-auto rounded-lg bg-slate-50 p-3 text-xs dark:bg-slate-950"></pre>
         </section>
 

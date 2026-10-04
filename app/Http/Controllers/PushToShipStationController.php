@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Application\Orders\PushOrderToShipStation;
+use App\Application\Orders\ShippingAddressNeedsReview;
 use App\Http\Requests\PushOrderToShipStationRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -20,7 +21,7 @@ class PushToShipStationController extends Controller
     public function preview(PushOrderToShipStationRequest $request, PushOrderToShipStation $push): JsonResponse
     {
         try {
-            return response()->json(['payload' => $push->preview($this->resolveStore($request), (string) $request->validated('order_number'))]);
+            return response()->json($push->preview($this->resolveStore($request), (string) $request->validated('order_number')));
         } catch (Throwable $exception) {
             Log::warning('Push to ShipStation preview failed.', ['exception_type' => $exception::class]);
 
@@ -34,11 +35,13 @@ class PushToShipStationController extends Controller
 
         try {
             $store = $this->resolveStore($request);
-            $result = $push->handle($store, $orderNumber);
+            $result = $push->handle($store, $orderNumber, $request->boolean('confirm_address_issues'));
             activity('operator-actions')->causedBy($request->user())->performedOn($store)
                 ->withProperties(['order_number' => $result['order_number']])->log('push_to_shipstation');
 
             return back()->with('status', "Pushed order #{$result['order_number']} to ShipStation.");
+        } catch (ShippingAddressNeedsReview $exception) {
+            return back()->withInput()->with('addressIssues', $exception->issues)->withErrors(['order_number' => $exception->getMessage()]);
         } catch (Throwable $exception) {
             Log::warning('Push to ShipStation failed.', ['exception_type' => $exception::class]);
 

@@ -6,6 +6,8 @@ use App\Models\Store;
 
 class SyncAuditIssues
 {
+    public function __construct(private readonly RaiseOperationalIssue $issues) {}
+
     /**
      * @param  list<array<string, mixed>>  $missingOrders
      */
@@ -19,29 +21,18 @@ class SyncAuditIssues
                 continue;
             }
 
-            $fingerprint = hash('sha256', 'run_audit|'.ltrim($reference, '#'));
+            $fingerprint = RaiseOperationalIssue::fingerprint('run_audit', ltrim($reference, '#'));
             $seenFingerprints[] = $fingerprint;
-            $priority = (float) ($order['total_price'] ?? 0) >= 500 ? 'high' : 'normal';
-            $issue = $store->operationalIssues()->firstOrNew(['fingerprint' => $fingerprint]);
-            $issue->fill([
+            $this->issues->handle($store, [
                 'source_tool' => 'run_audit',
+                'fingerprint' => $fingerprint,
                 'title' => "Missing order {$reference}",
                 'reference' => $reference,
-                'priority' => $priority,
-                'status' => $issue->exists && in_array($issue->status, ['resolved', 'ignored'], true) ? 'open' : ($issue->status ?: 'open'),
-                'occurrences' => $issue->exists ? $issue->occurrences + 1 : 1,
-                'first_seen_at' => $issue->first_seen_at ?? now(),
-                'last_seen_at' => now(),
-                'resolved_at' => null,
+                'priority' => (float) ($order['total_price'] ?? 0) >= 500 ? 'high' : 'normal',
                 'payload' => $order,
             ]);
-            $issue->save();
         }
 
-        $store->operationalIssues()
-            ->where('source_tool', 'run_audit')
-            ->whereIn('status', ['open', 'in_progress'])
-            ->when($seenFingerprints !== [], fn ($query) => $query->whereNotIn('fingerprint', $seenFingerprints))
-            ->update(['status' => 'resolved', 'resolved_at' => now()]);
+        $this->issues->resolveStale($store, 'run_audit', $seenFingerprints);
     }
 }

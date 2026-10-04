@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Console\Commands;
 
+use App\IssuePriority;
+use App\IssueStatus;
 use App\Models\OperationalIssue;
 use App\Models\Store;
 use App\Models\WebhookEvent;
@@ -28,7 +30,7 @@ class DetectOperationalAnomaliesTest extends TestCase
             ->assertSuccessful();
 
         $issue = $store->operationalIssues()->where('reference', 'webhook_failures')->sole();
-        $this->assertSame('high', $issue->priority);
+        $this->assertSame(IssuePriority::High, $issue->priority);
         $this->assertSame(3, $issue->payload['current']);
         $this->assertSame(0, $issue->payload['baseline_average']);
     }
@@ -84,18 +86,18 @@ class DetectOperationalAnomaliesTest extends TestCase
         $this->artisan('operations:detect-anomalies')->assertSuccessful();
 
         $issue = $store->operationalIssues()->where('reference', 'scheduled_audit_stale')->sole();
-        $this->assertSame('open', $issue->status);
+        $this->assertSame(IssueStatus::Open, $issue->status);
         $this->assertSame('Scheduled audit has not completed', $issue->title);
 
         $this->travelTo(Carbon::parse('2026-09-16 01:05:00'));
         $this->artisan('operations:detect-anomalies')->assertSuccessful();
-        $this->assertSame('open', $issue->fresh()->status);
+        $this->assertSame(IssueStatus::Open, $issue->fresh()->status);
 
         $this->travelTo(Carbon::parse('2026-09-16 10:05:00'));
         $store->auditJobs()->create(['status' => 'completed', 'start_date' => today()->subDays(30), 'end_date' => today(), 'finished_at' => now()]);
         $this->artisan('operations:detect-anomalies')->assertSuccessful();
 
-        $this->assertSame('resolved', $issue->fresh()->status);
+        $this->assertSame(IssueStatus::Resolved, $issue->fresh()->status);
     }
 
     public function test_it_does_not_flag_an_early_morning_audit_before_its_scheduled_time(): void

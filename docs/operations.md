@@ -81,6 +81,27 @@ replace matching paths; files absent from the archive are left in place.
 
 Application logs are written through Laravel's configured log channel. **Settings → Action Log** shows recorded administrative and operator changes; it is not a replacement for exception logs or Sentry.
 
+### Data retention {#data-retention}
+
+Old operational history is removed manually; nothing below is scheduled.
+
+```bash
+php artisan ops:prune-data --dry-run   # show what would be removed
+php artisan ops:prune-data             # defaults: 30 / 90 / 90 / 180 days
+php artisan ops:prune-data --webhook-days=14 --run-log-days=365
+```
+
+| Data | Default | What happens |
+| --- | --- | --- |
+| Webhook payloads | 30 days | Payload (names, emails, addresses, phones) is cleared; the event row, topic and status stay |
+| Login attempts | 90 days | Deleted, except IPs that are still banned |
+| Notification deliveries | 90 days | Deleted |
+| Run history | 180 days | Deleted |
+
+### Store timezone {#store-timezone}
+
+Report date ranges are calendar days in the shop's own timezone. The timezone is read from Shopify (`shop.ianaTimezone`) by the API health check, which the scheduler runs every minute, and saved on the store. Until it has been recorded, and after the Shopify store domain changes, dates are treated as UTC. Run **Settings → API Health** once after adding a store to record it immediately.
+
 ## Development checks {#local-test-build}
 
 Run the exact checks CI runs, as a single command:
@@ -125,5 +146,6 @@ At minimum, production must provide:
 - HTTPS with correct `APP_URL`, secure session cookies, and HSTS (set `TRUSTED_PROXIES` only if a reverse proxy/load balancer sits in front of the app)
 - Built frontend assets and cached Laravel configuration/routes/views
 - A tested off-server backup destination
+- `php artisan schedule-monitor:sync` after every deploy, so new or renamed scheduled tasks are monitored and reported by the Health page
 
 These are the production requirements for the current app; use your hosting provider's process manager and deployment workflow to configure them.

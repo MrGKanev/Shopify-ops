@@ -2,10 +2,12 @@
 
 namespace App\Integrations\ShipStation;
 
+use App\Domain\Orders\PhoneNumberValidator;
 use App\Integrations\Concerns\RetriesTransientRequests;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
 use SensitiveParameter;
 use Throwable;
 use UnexpectedValueException;
@@ -21,6 +23,7 @@ class ShipStationClient implements ShipStationClientContract
     public function __construct(
         #[SensitiveParameter] private readonly string $apiKey,
         #[SensitiveParameter] private readonly string $apiSecret,
+        private readonly PhoneNumberValidator $phones = new PhoneNumberValidator,
     ) {}
 
     public function healthCheck(): void
@@ -103,6 +106,8 @@ class ShipStationClient implements ShipStationClientContract
         $address = function (mixed $address): array {
             $address = is_array($address) ? $address : [];
             $name = trim(($address['first_name'] ?? '').' '.($address['last_name'] ?? ''));
+            $country = $address['country_code'] ?? $address['country'] ?? null;
+            $phone = $address['phone'] ?? null;
 
             return [
                 'name' => $name !== '' ? $name : (is_scalar($address['name'] ?? null) ? (string) $address['name'] : ''),
@@ -112,8 +117,8 @@ class ShipStationClient implements ShipStationClientContract
                 'city' => $address['city'] ?? null,
                 'state' => $address['province_code'] ?? $address['province'] ?? null,
                 'postalCode' => $address['zip'] ?? null,
-                'country' => $address['country_code'] ?? $address['country'] ?? null,
-                'phone' => $address['phone'] ?? null,
+                'country' => $country,
+                'phone' => is_string($phone) && is_string($country) ? ($this->phones->toE164($phone, $country) ?? $phone) : $phone,
             ];
         };
 
@@ -168,11 +173,13 @@ class ShipStationClient implements ShipStationClientContract
     {
         $response = $this->request()
             ->retry(
-                self::RETRY_DELAYS_IN_MILLISECONDS,
+                $this->retryAttempts(),
+                fn (int $attempt, mixed $exception): int => $this->retryDelayInMilliseconds($attempt, $exception),
                 when: fn (Throwable $exception, PendingRequest $request, ?string $method): bool => $method === 'GET' && $this->isTransientFailure($exception),
             )
             ->get($path, $query)
             ->throw();
+        $this->pauseWhenRateLimitIsExhausted($response);
 
         return $this->decode($response);
     }
@@ -187,8 +194,25 @@ class ShipStationClient implements ShipStationClientContract
         // failure risks creating the order twice; a failed push should surface
         // to the operator to retry manually, not double-create silently.
         $response = $this->request()->post($path, $body)->throw();
+        $this->pauseWhenRateLimitIsExhausted($response);
 
         return $this->decode($response);
+    }
+
+    /**
+     * ShipStation allows 40 requests per minute per API key; when a response says none are left,
+     * wait for the window to reset instead of spending the next request on a 429.
+     */
+    private function pauseWhenRateLimitIsExhausted(Response $response): void
+    {
+        if (trim($response->header('X-Rate-Limit-Remaining')) !== '0') {
+            return;
+        }
+
+        $seconds = $this->rateLimitWaitSeconds($response->header('X-Rate-Limit-Reset'));
+        if ($seconds !== null) {
+            Sleep::for($seconds)->seconds();
+        }
     }
 
     private function request(): PendingRequest

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(['store_id', 'webhook_id', 'topic', 'shop_domain', 'api_version', 'subject_id', 'status', 'payload', 'occurred_at', 'processed_at', 'error_category'])]
+#[Fillable(['store_id', 'webhook_id', 'topic', 'shop_domain', 'api_version', 'subject_id', 'status', 'payload', 'occurred_at', 'processed_at', 'error_category', 'payload_pruned_at'])]
 class WebhookEvent extends Model
 {
     /** @use HasFactory<WebhookEventFactory> */
@@ -20,6 +20,7 @@ class WebhookEvent extends Model
             'payload' => 'encrypted:array',
             'occurred_at' => 'datetime',
             'processed_at' => 'datetime',
+            'payload_pruned_at' => 'datetime',
         ];
     }
 }

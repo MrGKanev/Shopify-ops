@@ -22,20 +22,20 @@
             @forelse ($issues as $issue)
                 <tr id="issue-{{ $issue->id }}">
                     <td class="px-4 py-3"><div class="font-semibold">{{ $issue->title }}</div><div class="text-xs text-slate-500 dark:text-slate-400">{{ $issue->source_tool }} · {{ $issue->occurrences }} occurrences</div>@if ($issue->reference && in_array($issue->source_tool, ['run_audit', 'shopify_webhook'], true))<a class="mt-1 inline-flex text-xs font-medium text-indigo-600 dark:text-indigo-400" href="{{ route('orders.timeline', ['order_number' => $issue->reference]) }}">Open order timeline · {{ $issue->reference }}</a>@elseif (data_get($issue->payload, 'order_number'))<a class="mt-1 inline-flex text-xs font-medium text-indigo-600 dark:text-indigo-400" href="{{ route('orders.timeline', ['order_number' => data_get($issue->payload, 'order_number')]) }}">Open order timeline · {{ data_get($issue->payload, 'order_number') }}</a>@endif</td>
-                    <td class="px-4 py-3"><x-badge :tone="in_array($issue->priority, ['high', 'urgent'], true) ? 'danger' : ($issue->priority === 'normal' ? 'warn' : 'default')">{{ $issue->priority }}</x-badge></td>
+                    <td class="px-4 py-3"><x-badge :tone="$issue->priority->tone()">{{ $issue->priority->value }}</x-badge></td>
                     <td class="px-4 py-3">{{ $issue->owner?->name ?? 'Unassigned' }}</td>
-                    <td class="px-4 py-3">@if ($issue->due_date) <span class="{{ $issue->due_date->isBefore(today()) && in_array($issue->status, ['open', 'in_progress'], true) ? 'font-semibold text-red-600 dark:text-red-400' : '' }}">{{ $issue->due_date->toDateString() }}</span>@if ($issue->due_date->isBefore(today()) && in_array($issue->status, ['open', 'in_progress'], true)) <x-badge tone="danger">{{ __('Overdue') }}</x-badge> @endif @else — @endif</td>
+                    <td class="px-4 py-3">@if ($issue->due_date) <span class="{{ $issue->due_date->isBefore(today()) && $issue->status->isActive() ? 'font-semibold text-red-600 dark:text-red-400' : '' }}">{{ $issue->due_date->toDateString() }}</span>@if ($issue->due_date->isBefore(today()) && $issue->status->isActive()) <x-badge tone="danger">{{ __('Overdue') }}</x-badge> @endif @else — @endif</td>
                     <td class="px-4 py-3">{{ $issue->last_seen_at->diffForHumans() }}</td>
-                    <td class="px-4 py-3">{{ str_replace('_', ' ', $issue->status) }}</td>
+                    <td class="px-4 py-3">{{ __($issue->status->label()) }}</td>
                     <td class="px-4 py-3">
                         <form class="flex min-w-64 flex-col gap-2" method="POST" action="{{ route('operational-issues.update', $issue) }}">
                             @csrf @method('PUT')
                             <div class="flex flex-wrap gap-2">
                             <select class="rounded border border-slate-300 bg-white px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-900" name="status">
-                                @foreach (['open' => 'Open', 'in_progress' => 'In progress', 'resolved' => 'Resolved', 'ignored' => 'Ignored'] as $value => $label)<option value="{{ $value }}" @selected($issue->status === $value)>{{ $label }}</option>@endforeach
+                                @foreach (\App\IssueStatus::cases() as $issueStatus)<option value="{{ $issueStatus->value }}" @selected($issue->status === $issueStatus)>{{ __($issueStatus->label()) }}</option>@endforeach
                             </select>
                             <select class="rounded border border-slate-300 bg-white px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-900" name="priority">
-                                @foreach (['low' => 'Low', 'normal' => 'Normal', 'high' => 'High', 'urgent' => 'Urgent'] as $value => $label)<option value="{{ $value }}" @selected($issue->priority === $value)>{{ $label }}</option>@endforeach
+                                @foreach (\App\IssuePriority::cases() as $issuePriority)<option value="{{ $issuePriority->value }}" @selected($issue->priority === $issuePriority)>{{ __($issuePriority->label()) }}</option>@endforeach
                             </select>
                             <select class="rounded border border-slate-300 bg-white px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-900" name="owner_user_id"><option value="">{{ __('Unassigned') }}</option>@foreach ($owners as $owner)<option value="{{ $owner->id }}" @selected($issue->owner_user_id === $owner->id)>{{ $owner->name }}</option>@endforeach</select>
                             <x-button size="sm" type="submit">Save</x-button>

@@ -2,11 +2,18 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Orders\AddressFormatRules;
+use App\Domain\Orders\PhoneNumberValidator;
 use App\Domain\Reports\Concerns\NormalizesText;
 
 class AddressCheckAnalyzer
 {
     use NormalizesText;
+
+    public function __construct(
+        private readonly AddressFormatRules $formats = new AddressFormatRules,
+        private readonly PhoneNumberValidator $phones = new PhoneNumberValidator,
+    ) {}
 
     /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
     public function analyze(array $orders, bool $poBoxOnly = false): array
@@ -37,6 +44,7 @@ class AddressCheckAnalyzer
         $city = $this->text($address['city'] ?? '');
         $zip = $this->text($address['zip'] ?? '');
         $country = strtoupper($this->text($address['country_code'] ?? $address['country'] ?? ''));
+        $countryCode = preg_match('/^[A-Z]{2}$/', $country) === 1 ? $country : '';
         $province = $this->text($address['province_code'] ?? '');
         $phone = $this->text($address['phone'] ?? '');
         $issues = [];
@@ -52,17 +60,19 @@ class AddressCheckAnalyzer
             $issues[] = ['level' => 'critical', 'code' => 'no_city', 'message' => 'Missing city'];
         }
         if ($zip === '') {
-            $issues[] = ['level' => 'critical', 'code' => 'no_zip', 'message' => 'Missing postal / ZIP code'];
-        } elseif ($country === 'US' && preg_match('/^\d{5}(-\d{4})?$/', $zip) !== 1) {
-            $issues[] = ['level' => 'warning', 'code' => 'bad_zip_us', 'message' => 'US ZIP code format invalid (expected 12345 or 12345-6789)'];
-        } elseif ($country === 'CA' && preg_match('/^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/', $zip) !== 1) {
-            $issues[] = ['level' => 'warning', 'code' => 'bad_zip_ca', 'message' => 'Canadian postal code format invalid (expected A1A 1A1)'];
+            if ($countryCode === '' || $this->formats->requiresPostalCode($countryCode)) {
+                $issues[] = ['level' => 'critical', 'code' => 'no_zip', 'message' => 'Missing postal / ZIP code'];
+            }
+        } elseif ($countryCode !== '' && ! $this->formats->isValidPostalCode($countryCode, $zip)) {
+            $issues[] = ['level' => 'warning', 'code' => 'bad_zip', 'message' => 'Postal / ZIP code format is invalid for the shipping country'];
         }
         if ($country === '') {
             $issues[] = ['level' => 'critical', 'code' => 'no_country', 'message' => 'Missing country'];
+        } elseif ($province === '' && $countryCode !== '' && $this->formats->requiresAdministrativeArea($countryCode)) {
+            $issues[] = ['level' => 'warning', 'code' => 'no_province', 'message' => 'Missing state / province (required for this country)'];
         }
-        if (in_array($country, ['US', 'CA'], true) && $province === '') {
-            $issues[] = ['level' => 'warning', 'code' => 'no_province', 'message' => 'Missing state / province (required for US and CA)'];
+        if ($phone !== '' && $countryCode !== '' && ! $this->phones->isValid($phone, $countryCode)) {
+            $issues[] = ['level' => 'warning', 'code' => 'invalid_phone', 'message' => 'Phone number is not valid for the shipping country'];
         }
         $shippingTitles = implode(' ', array_map(fn (mixed $line): string => is_array($line) ? $this->text($line['title'] ?? '') : '', is_array($order['shipping_lines'] ?? null) ? $order['shipping_lines'] : []));
         if ($phone === '' && preg_match('/overnight|express|priority|fedex|ups/i', $shippingTitles) === 1) {

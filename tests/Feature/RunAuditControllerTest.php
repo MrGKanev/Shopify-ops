@@ -8,9 +8,10 @@ use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Jobs\RunAuditJob;
 use App\Models\Store;
 use App\Models\User;
-use App\Notifications\AuditDiscordNotification;
-use App\Notifications\AuditSlackNotification;
+use App\Notifications\AuditFinishedNotification;
+use App\Notifications\Channels\DiscordWebhookChannel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Notifications\Channels\SlackWebhookChannel;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Mockery;
@@ -56,8 +57,7 @@ class RunAuditControllerTest extends TestCase
         $this->assertTrue($store->auditSnapshots()->where('tool', 'run_audit')->whereDate('report_date', now()->toDateString())->where('rows_found', 1)->exists());
         $this->actingAs($operator)->post('/reports/run-audit', $this->input())->assertOk();
         $this->assertSame(1, $store->auditSnapshots()->count());
-        Notification::assertSentOnDemand(AuditSlackNotification::class);
-        Notification::assertSentOnDemand(AuditDiscordNotification::class);
+        Notification::assertSentOnDemand(AuditFinishedNotification::class, fn (AuditFinishedNotification $notification, array $channels): bool => $channels === [SlackWebhookChannel::class, DiscordWebhookChannel::class]);
     }
 
     public function test_it_shows_the_inline_duplicates_panel(): void

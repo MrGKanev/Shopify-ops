@@ -12,7 +12,10 @@ class PushOrderToShipStationRequest extends FormRequest
 
     public function rules(): array
     {
-        return ['order_number' => ['required', 'string', 'max:64', $this->orderNumberRule()]];
+        return [
+            'order_number' => ['required', 'string', 'max:64', $this->orderNumberRule()],
+            'confirm_address_issues' => ['sometimes', 'boolean'],
+        ];
     }
 
     protected function prepareForValidation(): void

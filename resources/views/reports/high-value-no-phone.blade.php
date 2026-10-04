@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="flex flex-col gap-6">
-        <x-page-header eyebrow="Audit report" title="High-value orders without phone" subtitle="Paid, unfulfilled orders whose shipping address has no phone number." />
+        <x-page-header eyebrow="Audit report" title="High-value orders without phone" subtitle="Paid, unfulfilled orders whose shipping phone is missing or not valid for the shipping country." />
 
         <form class="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:grid-cols-5 dark:border-slate-800 dark:bg-slate-900" method="POST" action="{{ route('reports.high-value-no-phone.store') }}">
             @csrf
@@ -60,13 +60,20 @@
                                 @endif
                                 <p class="text-sm text-slate-500 dark:text-slate-400">{{ $row['created_at'] }} · {{ $row['email'] ?: 'No email' }}</p>
                                 <p class="mt-2 text-sm">{{ $row['recipient'] }}@if ($row['recipient'] && $row['address']), @endif{{ $row['address'] }}</p>
+                                <p class="mt-2">
+                                    @if ($row['phone_issue'] === 'invalid')
+                                        <x-badge tone="warn">{{ __('Invalid phone') }}</x-badge> <span class="text-sm">{{ $row['phone'] }}</span>
+                                    @else
+                                        <x-badge tone="danger">{{ __('No phone') }}</x-badge>
+                                    @endif
+                                </p>
                             </div>
                             <strong>{{ number_format($row['total'], 2) }} {{ $row['currency'] }}</strong>
                         </div>
                         <a class="mt-3 inline-flex text-sm text-indigo-600 dark:text-indigo-400" href="{{ route('orders.spot-check', ['prefill' => ltrim($row['number'], '#')]) }}">{{ __('Open in spot-check') }}</a>
                     </x-card>
                 @empty
-                    <x-empty-state icon="✓">No high-value orders without a shipping phone were found.</x-empty-state>
+                    <x-empty-state icon="✓">No high-value orders without a valid shipping phone were found.</x-empty-state>
                 @endforelse
             </section>
         @endif

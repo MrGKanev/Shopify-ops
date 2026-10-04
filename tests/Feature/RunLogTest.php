@@ -5,9 +5,10 @@ namespace Tests\Feature;
 use App\Application\Reports\RecordRun;
 use App\Models\Store;
 use App\Models\User;
-use App\Notifications\ScanDiscordNotification;
-use App\Notifications\ScanSlackNotification;
+use App\Notifications\Channels\DiscordWebhookChannel;
+use App\Notifications\ScanFinishedNotification;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Notifications\Channels\SlackWebhookChannel;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
@@ -63,7 +64,7 @@ class RunLogTest extends TestCase
         $recorder->handle($store, ['tool' => 'scan_test', 'rows_found' => 2]);
         $recorder->handle($store, ['tool' => 'scan_test', 'rows_found' => 3, 'status' => 'error']);
 
-        Notification::assertSentOnDemandTimes(ScanSlackNotification::class, 1);
-        Notification::assertSentOnDemandTimes(ScanDiscordNotification::class, 1);
+        Notification::assertSentOnDemandTimes(ScanFinishedNotification::class, 1);
+        Notification::assertSentOnDemand(ScanFinishedNotification::class, fn (ScanFinishedNotification $notification, array $channels): bool => $notification->rows === 2 && $channels === [SlackWebhookChannel::class, DiscordWebhookChannel::class]);
     }
 }

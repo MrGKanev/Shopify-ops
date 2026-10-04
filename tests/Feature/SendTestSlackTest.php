@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Store;
 use App\Models\User;
-use App\Notifications\SlackTestNotification;
+use App\Notifications\ChatDeliveryTestNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -28,8 +28,8 @@ class SendTestSlackTest extends TestCase
             ->assertDontSee('test-secret', false);
 
         Notification::assertSentOnDemand(
-            SlackTestNotification::class,
-            fn (SlackTestNotification $notification, array $channels, object $notifiable): bool => in_array('slack', array_keys($notifiable->routes), true)
+            ChatDeliveryTestNotification::class,
+            fn (ChatDeliveryTestNotification $notification, array $channels, object $notifiable): bool => in_array('slack', array_keys($notifiable->routes), true)
                 && $notification->applicationName === config('app.name'),
         );
     }
@@ -62,7 +62,7 @@ class SendTestSlackTest extends TestCase
 
     public function test_notification_is_queueable_and_contains_no_operational_data(): void
     {
-        $notification = new SlackTestNotification('Shopify Ops', '2026-09-08 15:00:00');
+        $notification = new ChatDeliveryTestNotification('Shopify Ops', '2026-09-08 15:00:00');
         $payload = $notification->toSlack((object) [])->toArray();
 
         $this->assertInstanceOf(ShouldQueue::class, $notification);

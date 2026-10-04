@@ -2,7 +2,7 @@
 
 namespace App\Application\Health;
 
-use App\Notifications\DiscordTestNotification;
+use App\Notifications\ChatDeliveryTestNotification;
 use Illuminate\Support\Facades\Notification;
 use LogicException;
 
@@ -31,6 +31,6 @@ class SendTestDiscord
         }
 
         Notification::route('discord', (string) config('services.discord.notifications.webhook_url'))
-            ->notifyNow(new DiscordTestNotification((string) config('app.name'), now()->toDateTimeString()));
+            ->notifyNow(new ChatDeliveryTestNotification((string) config('app.name'), now()->toDateTimeString()));
     }
 }

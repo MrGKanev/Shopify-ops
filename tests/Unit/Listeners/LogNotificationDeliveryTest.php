@@ -4,8 +4,8 @@ namespace Tests\Unit\Listeners;
 
 use App\Listeners\LogNotificationDelivery;
 use App\Models\NotificationDelivery;
-use App\Notifications\AuditSlackNotification;
-use App\Notifications\SlackTestNotification;
+use App\Notifications\AuditFinishedNotification;
+use App\Notifications\ChatDeliveryTestNotification;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Notifications\Events\NotificationFailed;
@@ -29,13 +29,13 @@ class LogNotificationDeliveryTest extends TestCase
     public function test_records_a_sent_mail_delivery_with_recipient(): void
     {
         $notifiable = (new AnonymousNotifiable)->route('mail', 'ops@example.com');
-        $notification = new SlackTestNotification('ShipStation Checker', '2026-09-11 12:00:00');
+        $notification = new ChatDeliveryTestNotification('ShipStation Checker', '2026-09-11 12:00:00');
 
         (new LogNotificationDelivery)->handle(new NotificationSent($notifiable, $notification, 'mail'));
 
         $this->assertDatabaseHas('notification_deliveries', [
             'channel' => 'mail',
-            'notification_type' => 'SlackTestNotification',
+            'notification_type' => 'ChatDeliveryTestNotification',
             'recipient' => 'ops@example.com',
             'status' => 'sent',
             'error_category' => null,
@@ -45,13 +45,13 @@ class LogNotificationDeliveryTest extends TestCase
     public function test_does_not_record_the_webhook_url_as_recipient_for_non_mail_channels(): void
     {
         $notifiable = (new AnonymousNotifiable)->route('slack', 'https://hooks.slack.com/services/secret-token');
-        $notification = new AuditSlackNotification('Acme', 3, '2026-09-01 → 2026-09-07');
+        $notification = new AuditFinishedNotification('Acme', 3, '2026-09-01 → 2026-09-07');
 
         (new LogNotificationDelivery)->handle(new NotificationSent($notifiable, $notification, 'slack'));
 
         $this->assertDatabaseHas('notification_deliveries', [
             'channel' => 'slack',
-            'notification_type' => 'AuditSlackNotification',
+            'notification_type' => 'AuditFinishedNotification',
             'store_label' => 'Acme',
             'recipient' => null,
             'status' => 'sent',
@@ -62,14 +62,14 @@ class LogNotificationDeliveryTest extends TestCase
     public function test_records_a_failed_delivery_with_an_error_category_and_no_message(): void
     {
         $notifiable = (new AnonymousNotifiable)->route('slack', 'https://hooks.slack.com/services/secret-token');
-        $notification = new AuditSlackNotification('Acme', 3, '2026-09-01 → 2026-09-07');
+        $notification = new AuditFinishedNotification('Acme', 3, '2026-09-01 → 2026-09-07');
         $exception = new RuntimeException('webhook token secret-token rejected');
 
         (new LogNotificationDelivery)->handle(new NotificationFailed($notifiable, $notification, 'slack', ['exception' => $exception]));
 
         $this->assertDatabaseHas('notification_deliveries', [
             'channel' => 'slack',
-            'notification_type' => 'AuditSlackNotification',
+            'notification_type' => 'AuditFinishedNotification',
             'status' => 'failed',
             'error_category' => RuntimeException::class,
         ]);

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\IssuePriority;
+use App\IssueStatus;
 use App\Models\Concerns\BelongsToStore;
 use Database\Factories\OperationalIssueFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -24,6 +26,8 @@ class OperationalIssue extends Model
     protected function casts(): array
     {
         return [
+            'status' => IssueStatus::class,
+            'priority' => IssuePriority::class,
             'first_seen_at' => 'datetime',
             'last_seen_at' => 'datetime',
             'resolved_at' => 'datetime',

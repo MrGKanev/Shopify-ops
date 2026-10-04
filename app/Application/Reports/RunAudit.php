@@ -2,22 +2,20 @@
 
 namespace App\Application\Reports;
 
+use App\Application\Notifications\ReportNotifier;
 use App\Application\Operations\SyncAuditIssues;
 use App\Domain\Reports\AuditOrderAnalyzer;
 use App\Domain\Reports\DuplicateOrderClusterer;
 use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
-use App\Notifications\AuditDiscordNotification;
-use App\Notifications\AuditSlackNotification;
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Facades\Notification;
 use LogicException;
 use Throwable;
 
 class RunAudit
 {
-    public function __construct(private readonly ShipStationClientFactory $factory, private readonly ShopifyAdminGateway $shopify, private readonly AuditOrderAnalyzer $analyzer, private readonly RecordRun $runs, private readonly SyncAuditIssues $issues, private readonly DuplicateOrderClusterer $clusterer = new DuplicateOrderClusterer) {}
+    public function __construct(private readonly ShipStationClientFactory $factory, private readonly ShopifyAdminGateway $shopify, private readonly AuditOrderAnalyzer $analyzer, private readonly RecordRun $runs, private readonly SyncAuditIssues $issues, private readonly ReportNotifier $notifier, private readonly DuplicateOrderClusterer $clusterer = new DuplicateOrderClusterer) {}
 
     public function handle(Store $store, string $start, string $end): AuditResult
     {
@@ -43,17 +41,13 @@ class RunAudit
             $this->issues->handle($store, $result['missing']);
             $store->auditSnapshots()->updateOrCreate(['tool' => 'run_audit', 'report_date' => today()->toDateString()], ['start_date' => $start, 'end_date' => $end, 'rows_found' => count($result['missing']), 'result' => ['missing' => $result['missing'], 'found' => count($result['found']), 'skipped' => count($result['skipped']), 'ignored' => count($result['ignored']), 'shopify_total' => count($shopify['orders']), 'shipstation_total' => count($shipstation), 'truncated' => $shopify['truncated'] || $onHold['truncated']]]);
             $this->runs->handle($store, ['tool' => 'run_audit', 'status' => $result['missing'] ? 'issues_found' : 'ok', 'start_date' => $start, 'end_date' => $end, 'duration_seconds' => round(microtime(true) - $started, 3), 'scanned' => count($shopify['orders']), 'rows_found' => count($result['missing']), 'meta' => ['shipstation_total' => count($shipstation), 'found' => count($result['found']), 'skipped' => count($result['skipped']), 'ignored' => count($result['ignored'])], 'attachment' => ['headers' => ['Order', 'Placed', 'Email', 'Total'], 'rows' => array_map(fn (array $order): array => [(string) ($order['name'] ?? $order['order_number'] ?? ''), (string) ($order['created_at'] ?? ''), (string) ($order['email'] ?? ''), (string) ($order['total_price'] ?? '')], $result['missing'])]]);
-            $rules = $store->resolvedSlackRules();
-            $missing = count($result['missing']);
-            $duration = round(microtime(true) - $started, 3);
-            $missingOrders = array_map(fn (array $order): array => ['name' => (string) ($order['name'] ?? $order['order_number'] ?? ''), 'total' => (float) ($order['total_price'] ?? 0)], $result['missing']);
-            if ($rules['audit_enabled'] && $missing >= $rules['audit_min_missing'] && ($missing > 0 || $rules['include_zero_audit']) && trim((string) config('services.slack.notifications.webhook_url')) !== '') {
-                Notification::route('slack', config('services.slack.notifications.webhook_url'))->notify(new AuditSlackNotification($store->label, $missing, "{$start} → {$end}", $rules['mentions'], count($result['found']), count($result['skipped']), count($result['ignored']), count($shipstation), $duration, $missingOrders));
-            }
-            $discordRules = $store->resolvedDiscordRules();
-            if ($discordRules['audit_enabled'] && $missing >= $discordRules['audit_min_missing'] && ($missing > 0 || $discordRules['include_zero_audit']) && trim((string) config('services.discord.notifications.webhook_url')) !== '') {
-                Notification::route('discord', config('services.discord.notifications.webhook_url'))->notify(new AuditDiscordNotification($store->label, $missing, "{$start} → {$end}", count($result['found']), count($result['skipped']), count($result['ignored']), count($shipstation), $duration, $missingOrders));
-            }
+            $this->notifier->auditFinished(
+                $store,
+                "{$start} → {$end}",
+                array_map(fn (array $order): array => ['name' => (string) ($order['name'] ?? $order['order_number'] ?? ''), 'total' => (float) ($order['total_price'] ?? 0)], $result['missing']),
+                ['found' => count($result['found']), 'skipped' => count($result['skipped']), 'ignored' => count($result['ignored']), 'shipstation_total' => count($shipstation)],
+                round(microtime(true) - $started, 3),
+            );
 
             return new AuditResult($start, $end, $result['missing'], count($result['found']), count($result['skipped']), count($result['ignored']), count($shopify['orders']), count($shipstation), $shopify['truncated'] || $onHold['truncated'], $this->clusterer->cluster($shopify['orders']));
         } catch (Throwable $exception) {

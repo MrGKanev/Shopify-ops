@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Application\Health\Checks\ScheduledTasksHealthCheck;
 use App\Application\Health\Checks\ShipStationApiHealthCheck;
 use App\Application\Health\Checks\ShopifyApiHealthCheck;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
@@ -66,6 +67,7 @@ class AppServiceProvider extends ServiceProvider
                 ->youngestBackShouldHaveBeenMadeBefore(now()->subDays((int) env('BACKUP_MAX_AGE_DAYS', 2))),
             UsedDiskSpaceCheck::new()->warnWhenUsedSpaceIsAbovePercentage(80)->failWhenUsedSpaceIsAbovePercentage(90),
             ScheduleCheck::new()->heartbeatMaxAgeInMinutes(5),
+            ScheduledTasksHealthCheck::new(),
             QueueCheck::new()->failWhenHealthJobTakesLongerThanMinutes(10),
             $this->app->make(ShopifyApiHealthCheck::class),
             $this->app->make(ShipStationApiHealthCheck::class),

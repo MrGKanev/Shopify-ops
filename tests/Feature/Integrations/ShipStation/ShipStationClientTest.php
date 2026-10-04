@@ -217,6 +217,37 @@ class ShipStationClientTest extends TestCase
         Sleep::assertSleptTimes(1);
     }
 
+    public function test_429_waits_for_the_rate_limit_window_shipstation_reports(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://ssapi.shipstation.com/orders*' => Http::sequence()
+                ->push(['message' => 'Too Many Requests'], 429, ['X-Rate-Limit-Remaining' => '0', 'X-Rate-Limit-Reset' => '12'])
+                ->push(['message' => 'Too Many Requests'], 429, ['Retry-After' => '500'])
+                ->push(['orders' => [['orderId' => 91]], 'pages' => 1]),
+        ]);
+        Sleep::fake();
+
+        $this->assertSame([['orderId' => 91]], $this->client()->findByOrderNumber('1001'));
+
+        Sleep::assertSequence([Sleep::for(12)->seconds(), Sleep::for(60)->seconds()]);
+    }
+
+    public function test_an_exhausted_rate_limit_pauses_before_the_next_request(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://ssapi.shipstation.com/orders*' => Http::sequence()
+                ->push(['orders' => [['orderId' => 1]], 'pages' => 2], 200, ['X-Rate-Limit-Remaining' => '0', 'X-Rate-Limit-Reset' => '7'])
+                ->push(['orders' => [['orderId' => 2]], 'pages' => 2], 200, ['X-Rate-Limit-Remaining' => '38', 'X-Rate-Limit-Reset' => '50']),
+        ]);
+        Sleep::fake();
+
+        $this->assertSame([['orderId' => 1], ['orderId' => 2]], $this->client()->fetchAwaitingOrders());
+
+        Sleep::assertSequence([Sleep::for(7)->seconds()]);
+    }
+
     public function test_500_response_is_retried_and_then_returns_orders(): void
     {
         Http::preventStrayRequests();

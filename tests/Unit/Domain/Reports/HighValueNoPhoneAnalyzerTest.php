@@ -34,6 +34,23 @@ class HighValueNoPhoneAnalyzerTest extends TestCase
         $this->assertSame([], $rows);
     }
 
+    public function test_phones_invalid_for_the_shipping_country_are_flagged(): void
+    {
+        $invalid = $this->order('#invalid', '500', '555');
+        $invalid['shipping_address']['country_code'] = 'US';
+        $valid = $this->order('#valid', '500', '617-555-0100');
+        $valid['shipping_address']['country_code'] = 'US';
+        $international = $this->order('#international', '500', '+359 888 123 456');
+        $international['shipping_address']['country_code'] = 'US';
+        $missing = $this->order('#missing', '400', '');
+
+        $rows = (new HighValueNoPhoneAnalyzer)->analyze([$invalid, $valid, $international, $missing], 200.0, 'USD');
+
+        $this->assertSame(['#invalid', '#missing'], array_column($rows, 'number'));
+        $this->assertSame(['invalid', 'missing'], array_column($rows, 'phone_issue'));
+        $this->assertSame('555', $rows[0]['phone']);
+    }
+
     public function test_cancelled_orders_are_still_flagged(): void
     {
         // Legacy's buildHvOrderRows() has no cancelled-order exclusion at

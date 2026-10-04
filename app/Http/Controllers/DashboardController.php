@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Domain\Orders\OrderTypeClassifier;
+use App\IssueStatus;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -80,9 +81,9 @@ class DashboardController extends Controller
             'staleIgnoredCount' => $store->ignoredOrders()->where('ignored_at', '<=', today()->subDays(30))->count(),
             'pushesToday' => $store->pushLogs()->where('pushed_at', '>=', today())->count(),
             'pushesMonth' => $store->pushLogs()->where('pushed_at', '>=', now()->subDays(30))->count(),
-            'openIssueCount' => $store->operationalIssues()->whereIn('status', ['open', 'in_progress'])->count(),
-            'overdueIssueCount' => $store->operationalIssues()->whereIn('status', ['open', 'in_progress'])->whereNotNull('due_date')->whereDate('due_date', '<', today())->count(),
-            'deliveryExceptionCount' => $store->operationalIssues()->where('source_tool', 'delivery_watch')->whereIn('status', ['open', 'in_progress'])->count(),
+            'openIssueCount' => $store->operationalIssues()->whereIn('status', IssueStatus::active())->count(),
+            'overdueIssueCount' => $store->operationalIssues()->whereIn('status', IssueStatus::active())->whereNotNull('due_date')->whereDate('due_date', '<', today())->count(),
+            'deliveryExceptionCount' => $store->operationalIssues()->where('source_tool', 'delivery_watch')->whereIn('status', IssueStatus::active())->count(),
             'missingOrders' => array_slice($latestMissing, 0, 10),
             'missingByType' => $missingByType,
             'oldestMissingAge' => $oldestMissingAge,

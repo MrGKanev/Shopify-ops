@@ -54,6 +54,7 @@ class ApiHealthControllerTest extends TestCase
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
         $shopify->shouldReceive('healthCheck')->once()->with(Mockery::on(fn (Store $selected): bool => $selected->is($store)))->andReturn([
             'shop_name' => '<script>Shop</script>',
+            'timezone' => 'Europe/Sofia',
             'scopes' => ['read_orders'],
             'requested_version' => '2026-07',
             'returned_version' => '2026-07',
@@ -68,6 +69,7 @@ class ApiHealthControllerTest extends TestCase
         $this->actingAs($admin)->post(route('admin.api-health.check'))->assertOk()
             ->assertSeeText('Required Shopify scopes are missing')->assertSeeText('read_fulfillments')
             ->assertSeeText('Healthy')->assertDontSee('<script>', false);
+        $this->assertSame('Europe/Sofia', $store->fresh()->shopify_timezone);
     }
 
     public function test_health_check_reports_the_returned_shopify_api_version_mismatch(): void
@@ -76,6 +78,7 @@ class ApiHealthControllerTest extends TestCase
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
         $shopify->shouldReceive('healthCheck')->once()->andReturn([
             'shop_name' => 'Example Shop',
+            'timezone' => '',
             'scopes' => ['read_orders', 'read_fulfillments'],
             'requested_version' => '2026-07',
             'returned_version' => '2026-04',

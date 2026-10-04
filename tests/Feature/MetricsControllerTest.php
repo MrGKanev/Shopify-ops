@@ -36,7 +36,7 @@ class MetricsControllerTest extends TestCase
         RunLog::create(['store_id' => $store->id, 'tool' => 'same_ip', 'status' => 'ok']);
         RunLog::create(['store_id' => $store->id, 'tool' => 'run_audit', 'status' => 'error']);
         NotificationDelivery::create(['channel' => 'mail', 'notification_type' => 'ReportEmailNotification', 'recipient' => 'ops@example.com', 'status' => 'sent']);
-        NotificationDelivery::create(['channel' => 'slack', 'notification_type' => 'AuditSlackNotification', 'store_label' => 'Acme Store', 'status' => 'failed', 'error_category' => 'RuntimeException']);
+        NotificationDelivery::create(['channel' => 'slack', 'notification_type' => 'AuditFinishedNotification', 'store_label' => 'Acme Store', 'status' => 'failed', 'error_category' => 'RuntimeException']);
         DB::table('failed_jobs')->insert(['uuid' => 'test-uuid', 'connection' => 'database', 'queue' => 'default', 'payload' => '{}', 'exception' => 'secret webhook token boom', 'failed_at' => now()]);
 
         $response = $this->withHeader('Authorization', 'Bearer secret-scrape-token')->get('/metrics');

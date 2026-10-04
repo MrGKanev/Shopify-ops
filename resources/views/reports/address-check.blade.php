@@ -57,7 +57,7 @@
                             <td class="px-4 py-3">
                                 <ul class="list-disc pl-5">
                                     @foreach ($row['issues'] as $issue)
-                                        <li>{{ $issue['message'] }}</li>
+                                        <li>{{ __($issue['message']) }}</li>
                                     @endforeach
                                 </ul>
                             </td>

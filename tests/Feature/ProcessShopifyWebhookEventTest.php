@@ -19,8 +19,8 @@ class ProcessShopifyWebhookEventTest extends TestCase
         $refund = WebhookEvent::factory()->for($store)->create(['topic' => 'refunds/create', 'subject_id' => '1001']);
         $dispute = WebhookEvent::factory()->for($store)->create(['topic' => 'disputes/create', 'subject_id' => '1002']);
 
-        (new ProcessShopifyWebhookEvent($refund->getKey()))->handle();
-        (new ProcessShopifyWebhookEvent($dispute->getKey()))->handle();
+        ProcessShopifyWebhookEvent::dispatchSync($refund->getKey());
+        ProcessShopifyWebhookEvent::dispatchSync($dispute->getKey());
 
         $this->assertDatabaseHas('operational_issues', ['store_id' => $store->getKey(), 'reference' => '1001', 'priority' => 'high']);
         $this->assertDatabaseHas('operational_issues', ['store_id' => $store->getKey(), 'reference' => '1002', 'priority' => 'urgent']);
@@ -32,7 +32,7 @@ class ProcessShopifyWebhookEventTest extends TestCase
     {
         $event = WebhookEvent::factory()->create(['topic' => 'orders/updated']);
 
-        (new ProcessShopifyWebhookEvent($event->getKey()))->handle();
+        ProcessShopifyWebhookEvent::dispatchSync($event->getKey());
 
         $this->assertSame('processed', $event->fresh()->status);
         $this->assertDatabaseCount('operational_issues', 0);

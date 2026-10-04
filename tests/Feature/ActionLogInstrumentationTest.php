@@ -62,7 +62,7 @@ class ActionLogInstrumentationTest extends TestCase
     {
         [$operator, $store] = $this->makeUserAndStore(true);
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
-        $shopify->shouldReceive('findByOrderNumber')->once()->andReturn([['id' => 42, 'name' => '#1001', 'total_price' => '10.00']]);
+        $shopify->shouldReceive('findByOrderNumber')->once()->andReturn([['id' => 42, 'name' => '#1001', 'total_price' => '10.00', 'shipping_address' => ['first_name' => 'Jane', 'last_name' => 'Doe', 'address1' => '123 Main Street', 'city' => 'Boston', 'province_code' => 'MA', 'zip' => '02101', 'country_code' => 'US']]]);
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
         Http::fake(['https://ssapi.shipstation.com/orders/createorder' => Http::response(['orderId' => 555, 'orderNumber' => '1001'])]);
 

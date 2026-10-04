@@ -2,11 +2,16 @@
 
 namespace App\Notifications;
 
-use Illuminate\Notifications\Channels\SlackWebhookChannel;
+use App\Notifications\Concerns\RoutesToChatChannels;
 use Illuminate\Notifications\Slack\SlackMessage;
 
-class SlackTestNotification extends QueuedNotification
+/**
+ * Confirms a Slack or Discord webhook works. It carries no store credentials or order data.
+ */
+class ChatDeliveryTestNotification extends QueuedNotification
 {
+    use RoutesToChatChannels;
+
     public function __construct(
         public readonly string $applicationName,
         public readonly string $sentAt,
@@ -14,19 +19,6 @@ class SlackTestNotification extends QueuedNotification
         parent::__construct();
     }
 
-    /**
-     * Get the notification's delivery channels.
-     *
-     * @return list<class-string>
-     */
-    public function via(object $notifiable): array
-    {
-        return [SlackWebhookChannel::class];
-    }
-
-    /**
-     * Get the mail representation of the notification.
-     */
     public function toSlack(object $notifiable): SlackMessage
     {
         return (new SlackMessage)
@@ -34,5 +26,11 @@ class SlackTestNotification extends QueuedNotification
             ->headerBlock(__(':app Slack delivery test', ['app' => $this->applicationName]))
             ->unfurlLinks(false)
             ->unfurlMedia(false);
+    }
+
+    /** @return array{content: string} */
+    public function toDiscord(object $notifiable): array
+    {
+        return ['content' => __(':app successfully connected to Discord at :time. No store credentials or order data are included.', ['app' => $this->applicationName, 'time' => $this->sentAt])];
     }
 }

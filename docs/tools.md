@@ -33,9 +33,9 @@ _Sections mirror the grouped sidebar navigation in [`config/audit-hub.php`](../c
 
 | Page | What it does |
 | --- | --- |
-| **Address Scanner** | Paid orders with incomplete or invalid shipping addresses |
+| **Address Scanner** | Paid orders with incomplete or invalid shipping addresses — required fields and postal code formats per country, plus phone validation for the shipping country |
 | **Email Checker** | Orders with invalid, disposable or suspicious emails |
-| **High-Value No Phone** | High-value unfulfilled orders missing a shipping phone |
+| **High-Value No Phone** | High-value unfulfilled orders whose shipping phone is missing or not valid for the shipping country |
 | **Address Changes** | Orders whose shipping address was edited after placement |
 | **Post-Ship Address Change** | Address edited AFTER the order was already fulfilled - package already in transit |
 | **Duplicate Shipping Addresses** | Different customer emails shipping to the exact same address |

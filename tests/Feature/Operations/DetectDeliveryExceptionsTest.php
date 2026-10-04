@@ -5,6 +5,7 @@ namespace Tests\Feature\Operations;
 use App\Application\Operations\DetectDeliveryExceptions;
 use App\Integrations\ShipStation\ShipStationClientContract;
 use App\Integrations\ShipStation\ShipStationClientFactory;
+use App\IssueStatus;
 use App\Models\Store;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -40,7 +41,7 @@ class DetectDeliveryExceptionsTest extends TestCase
 
         $this->assertSame(0, $detector->handle($store));
 
-        $this->assertSame('resolved', $issue->fresh()->status);
+        $this->assertSame(IssueStatus::Resolved, $issue->fresh()->status);
         $this->assertSame(1, $issue->fresh()->occurrences);
         $this->assertFalse($otherStore->operationalIssues()->exists());
     }

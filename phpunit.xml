@@ -18,6 +18,7 @@
         </include>
     </source>
     <php>
+        <!-- With opcache disabled on the CLI, compiled classes and views stay in process memory; the full suite needs ~130 MB. -->
         <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_LOCALE" value="en"/>

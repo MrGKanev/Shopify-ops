@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Application\Operations\RaiseOperationalIssue;
 use App\Models\WebhookEvent;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -20,25 +21,19 @@ class ProcessShopifyWebhookEvent implements ShouldQueue
 
     public function __construct(public int $eventId) {}
 
-    public function handle(): void
+    public function handle(RaiseOperationalIssue $issues): void
     {
         $event = WebhookEvent::query()->with('store')->findOrFail($this->eventId);
         $issue = $this->issueAttributes($event);
 
         if ($issue !== null) {
-            $fingerprint = hash('sha256', "webhook|{$event->topic}|{$event->subject_id}");
-            $operationalIssue = $event->store->operationalIssues()->firstOrNew(['fingerprint' => $fingerprint]);
-            $operationalIssue->fill([
+            $issues->handle($event->store, [
                 ...$issue,
                 'source_tool' => 'shopify_webhook',
+                'fingerprint' => RaiseOperationalIssue::fingerprint('webhook', "{$event->topic}|{$event->subject_id}"),
                 'reference' => $event->subject_id,
-                'status' => $operationalIssue->exists && $operationalIssue->status === 'resolved' ? 'open' : ($operationalIssue->status ?: 'open'),
-                'occurrences' => $operationalIssue->exists ? $operationalIssue->occurrences + 1 : 1,
-                'first_seen_at' => $operationalIssue->first_seen_at ?? now(),
-                'last_seen_at' => now(),
-                'resolved_at' => null,
                 'payload' => ['webhook_event_id' => $event->getKey(), 'topic' => $event->topic],
-            ])->save();
+            ], reopenIgnored: false);
         }
 
         $event->update(['status' => 'processed', 'processed_at' => now(), 'error_category' => null]);

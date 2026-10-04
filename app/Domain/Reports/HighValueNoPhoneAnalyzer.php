@@ -2,13 +2,21 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Orders\PhoneNumberValidator;
 use App\Domain\Reports\Concerns\NormalizesText;
 
 class HighValueNoPhoneAnalyzer
 {
     use NormalizesText;
 
-    /** @param list<array<string, mixed>> $orders @return list<array<string, mixed>> */
+    public function __construct(private readonly PhoneNumberValidator $phones = new PhoneNumberValidator) {}
+
+    /**
+     * High-value orders whose shipping phone is missing, or invalid for the shipping country.
+     *
+     * @param  list<array<string, mixed>>  $orders
+     * @return list<array<string, mixed>>
+     */
     public function analyze(array $orders, float $minimum, ?string $currency): array
     {
         $rows = [];
@@ -18,7 +26,14 @@ class HighValueNoPhoneAnalyzer
             $total = is_numeric($order['total_price'] ?? null) ? (float) $order['total_price'] : 0.0;
             $orderCurrency = strtoupper($this->text($order['currency'] ?? ''));
 
-            if ($phone !== '' || $total < $minimum || ($currency !== null && $orderCurrency !== $currency)) {
+            $countryCode = strtoupper($this->text($address['country_code'] ?? ''));
+            $phoneIssue = match (true) {
+                $phone === '' => 'missing',
+                preg_match('/^[A-Z]{2}$/', $countryCode) === 1 && ! $this->phones->isValid($phone, $countryCode) => 'invalid',
+                default => null,
+            };
+
+            if ($phoneIssue === null || $total < $minimum || ($currency !== null && $orderCurrency !== $currency)) {
                 continue;
             }
 
@@ -30,6 +45,8 @@ class HighValueNoPhoneAnalyzer
                 'email' => $this->text($order['email'] ?? ''),
                 'total' => $total,
                 'currency' => $orderCurrency,
+                'phone' => $phone,
+                'phone_issue' => $phoneIssue,
                 'recipient' => trim($this->text($address['first_name'] ?? '').' '.$this->text($address['last_name'] ?? '')),
                 'address' => implode(', ', array_filter(array_map(fn (string $key): string => $this->text($address[$key] ?? ''), ['address1', 'address2', 'city', 'province', 'zip', 'country']))),
             ];

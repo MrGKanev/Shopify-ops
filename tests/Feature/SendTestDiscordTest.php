@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Store;
 use App\Models\User;
-use App\Notifications\DiscordTestNotification;
+use App\Notifications\ChatDeliveryTestNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -28,8 +28,8 @@ class SendTestDiscordTest extends TestCase
             ->assertDontSee('test-secret', false);
 
         Notification::assertSentOnDemand(
-            DiscordTestNotification::class,
-            fn (DiscordTestNotification $notification, array $channels, object $notifiable): bool => in_array('discord', array_keys($notifiable->routes), true)
+            ChatDeliveryTestNotification::class,
+            fn (ChatDeliveryTestNotification $notification, array $channels, object $notifiable): bool => in_array('discord', array_keys($notifiable->routes), true)
                 && $notification->applicationName === config('app.name'),
         );
     }
@@ -62,7 +62,7 @@ class SendTestDiscordTest extends TestCase
 
     public function test_notification_is_queueable_and_contains_no_operational_data(): void
     {
-        $notification = new DiscordTestNotification('Shopify Ops', '2026-09-08 15:00:00');
+        $notification = new ChatDeliveryTestNotification('Shopify Ops', '2026-09-08 15:00:00');
         $payload = $notification->toDiscord((object) []);
 
         $this->assertInstanceOf(ShouldQueue::class, $notification);

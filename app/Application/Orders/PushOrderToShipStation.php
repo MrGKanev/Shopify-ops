@@ -2,6 +2,7 @@
 
 namespace App\Application\Orders;
 
+use App\Domain\Reports\AddressCheckAnalyzer;
 use App\Integrations\ShipStation\ShipStationClientContract;
 use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
@@ -16,22 +17,49 @@ class PushOrderToShipStation
         private readonly ShopifyAdminGateway $shopify,
         private readonly ShipStationClientFactory $shipStationClients,
         private readonly RecordPush $recordPush,
+        private readonly AddressCheckAnalyzer $addresses = new AddressCheckAnalyzer,
     ) {}
 
-    /** @return array<string, mixed> the ShipStation createorder payload, without sending it */
+    /**
+     * The ShipStation createorder payload and the shipping address problems, without sending anything.
+     *
+     * @return array{payload: array<string, mixed>, address_issues: list<array{level: 'critical'|'warning', code: string, message: string}>}
+     */
     public function preview(Store $store, string $orderNumber): array
     {
         $order = $this->findOrder($store, $orderNumber);
 
-        return $this->client($store)->buildOrderPayload($order);
+        return [
+            'payload' => $this->client($store)->buildOrderPayload($order),
+            'address_issues' => $this->addressIssues($order),
+        ];
     }
 
-    /** @return array{order_number: string, shopify_order_number: string, ss_order_id: mixed} */
-    public function handle(Store $store, string $orderNumber): array
+    /**
+     * Create the order in ShipStation. Critical shipping address problems stop the push unless the
+     * operator confirmed pushing anyway.
+     *
+     * @return array{order_number: string, shopify_order_number: string, ss_order_id: mixed}
+     *
+     * @throws ShippingAddressNeedsReview
+     */
+    public function handle(Store $store, string $orderNumber, bool $confirmAddressIssues = false): array
     {
         $order = [];
         try {
             $order = $this->findOrder($store, $orderNumber);
+        } catch (Throwable $exception) {
+            $this->recordPush->failed($store, $orderNumber, '', $exception);
+
+            throw $exception;
+        }
+
+        $criticalIssues = array_values(array_filter($this->addressIssues($order), fn (array $issue): bool => $issue['level'] === 'critical'));
+        if ($criticalIssues !== [] && ! $confirmAddressIssues) {
+            throw new ShippingAddressNeedsReview($orderNumber, $criticalIssues);
+        }
+
+        try {
             $created = $this->client($store)->createOrder($order);
         } catch (Throwable $exception) {
             $this->recordPush->failed($store, $orderNumber, (string) ($order['id'] ?? ''), $exception);
@@ -49,6 +77,17 @@ class PushOrderToShipStation
             'shopify_order_number' => $orderNumber,
             'ss_order_id' => $ssOrderId,
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $order
+     * @return list<array{level: 'critical'|'warning', code: string, message: string}>
+     */
+    private function addressIssues(array $order): array
+    {
+        $address = $order['shipping_address'] ?? $order['billing_address'] ?? null;
+
+        return $this->addresses->check(is_array($address) ? $address : null, $order);
     }
 
     /** @return array<string, mixed> */

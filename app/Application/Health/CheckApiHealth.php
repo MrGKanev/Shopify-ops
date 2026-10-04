@@ -30,12 +30,13 @@ class CheckApiHealth
     public function checkShopify(Store $store): array
     {
         if ($store->missingShopifyCredentials()) {
-            return ['ok' => false, 'configured' => false, 'error' => 'Shopify credentials are incomplete.', 'latency_ms' => null, 'shop_name' => '', 'requested_version' => '', 'returned_version' => '', 'version_matches' => false, 'scopes' => [], 'missing_scopes' => []];
+            return ['ok' => false, 'configured' => false, 'error' => 'Shopify credentials are incomplete.', 'latency_ms' => null, 'shop_name' => '', 'timezone' => '', 'requested_version' => '', 'returned_version' => '', 'version_matches' => false, 'scopes' => [], 'missing_scopes' => []];
         }
 
         $startedAt = hrtime(true);
         try {
             $result = $this->shopify->healthCheck($store);
+            $this->rememberTimezone($store, $result['timezone']);
             $missingScopes = array_values(array_diff(self::REQUIRED_SHOPIFY_SCOPES, $result['scopes']));
             $versionMatches = $result['returned_version'] !== '' && $result['returned_version'] === $result['requested_version'];
             $error = match (true) {
@@ -47,7 +48,17 @@ class CheckApiHealth
 
             return [...$result, 'ok' => $missingScopes === [] && $versionMatches, 'configured' => true, 'error' => $error, 'latency_ms' => $this->elapsedMilliseconds($startedAt), 'missing_scopes' => $missingScopes, 'version_matches' => $versionMatches];
         } catch (Throwable) {
-            return ['ok' => false, 'configured' => true, 'error' => 'Shopify could not be reached or rejected the request.', 'latency_ms' => $this->elapsedMilliseconds($startedAt), 'shop_name' => '', 'requested_version' => '', 'returned_version' => '', 'version_matches' => false, 'scopes' => [], 'missing_scopes' => []];
+            return ['ok' => false, 'configured' => true, 'error' => 'Shopify could not be reached or rejected the request.', 'latency_ms' => $this->elapsedMilliseconds($startedAt), 'shop_name' => '', 'timezone' => '', 'requested_version' => '', 'returned_version' => '', 'version_matches' => false, 'scopes' => [], 'missing_scopes' => []];
+        }
+    }
+
+    /**
+     * Keep the shop timezone used for report date ranges in sync with Shopify.
+     */
+    private function rememberTimezone(Store $store, string $timezone): void
+    {
+        if ($store->exists && $timezone !== '' && $store->shopify_timezone !== $timezone) {
+            $store->forceFill(['shopify_timezone' => $timezone])->saveQuietly();
         }
     }
 

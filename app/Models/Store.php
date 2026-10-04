@@ -28,12 +28,22 @@ use Spatie\Activitylog\Support\LogOptions;
     'scheduled_audit_enabled',
     'scheduled_audit_time',
     'delivery_watch_days',
+    'shopify_timezone',
 ])]
 #[Hidden(['shopify_access_token', 'shopify_webhook_secret', 'shipstation_api_key', 'shipstation_api_secret'])]
 class Store extends Model
 {
     /** @use HasFactory<StoreFactory> */
     use HasFactory, LogsActivity;
+
+    protected static function booted(): void
+    {
+        static::saving(function (Store $store): void {
+            if ($store->exists && $store->isDirty('shopify_store') && ! $store->isDirty('shopify_timezone')) {
+                $store->shopify_timezone = null;
+            }
+        });
+    }
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -101,6 +111,16 @@ class Store extends Model
         return trim((string) $this->shopify_store) === '' || trim((string) $this->shopify_access_token) === '';
     }
 
+    /**
+     * The shop's IANA timezone as reported by Shopify, or UTC until the API health check has recorded it.
+     */
+    public function shopTimezone(): string
+    {
+        $timezone = trim((string) $this->shopify_timezone);
+
+        return $timezone !== '' && in_array($timezone, timezone_identifiers_list(), true) ? $timezone : 'UTC';
+    }
+
     public function missingShipStationCredentials(): bool
     {
         return trim((string) $this->shipstation_api_key) === '' || trim((string) $this->shipstation_api_secret) === '';
@@ -109,16 +129,26 @@ class Store extends Model
     /** @return array{audit_enabled:bool,audit_min_missing:int,include_zero_audit:bool,scan_enabled:bool,scan_min_rows:int,mentions:string} */
     public function resolvedSlackRules(): array
     {
-        $rules = array_replace(['audit_enabled' => true, 'audit_min_missing' => 0, 'include_zero_audit' => true, 'scan_enabled' => false, 'scan_min_rows' => 1, 'mentions' => ''], $this->slack_rules ?? []);
-        preg_match_all('/[UWS][A-Z0-9]{8,}/', strtoupper((string) $rules['mentions']), $mentionIds);
+        preg_match_all('/[UWS][A-Z0-9]{8,}/', strtoupper((string) ($this->slack_rules['mentions'] ?? '')), $mentionIds);
 
-        return ['audit_enabled' => (bool) $rules['audit_enabled'], 'audit_min_missing' => max(0, (int) $rules['audit_min_missing']), 'include_zero_audit' => (bool) $rules['include_zero_audit'], 'scan_enabled' => (bool) $rules['scan_enabled'], 'scan_min_rows' => max(1, (int) $rules['scan_min_rows']), 'mentions' => implode(' ', array_unique($mentionIds[0]))];
+        return [...$this->resolvedChatRules($this->slack_rules), 'mentions' => implode(' ', array_unique($mentionIds[0]))];
     }
 
     /** @return array{audit_enabled:bool,audit_min_missing:int,include_zero_audit:bool,scan_enabled:bool,scan_min_rows:int} */
     public function resolvedDiscordRules(): array
     {
-        $rules = array_replace(['audit_enabled' => true, 'audit_min_missing' => 0, 'include_zero_audit' => true, 'scan_enabled' => false, 'scan_min_rows' => 1], $this->discord_rules ?? []);
+        return $this->resolvedChatRules($this->discord_rules);
+    }
+
+    /**
+     * Shared defaults and bounds for Slack and Discord audit/scan rules.
+     *
+     * @param  array<string, mixed>|null  $stored
+     * @return array{audit_enabled:bool,audit_min_missing:int,include_zero_audit:bool,scan_enabled:bool,scan_min_rows:int}
+     */
+    private function resolvedChatRules(?array $stored): array
+    {
+        $rules = array_replace(['audit_enabled' => true, 'audit_min_missing' => 0, 'include_zero_audit' => true, 'scan_enabled' => false, 'scan_min_rows' => 1], $stored ?? []);
 
         return ['audit_enabled' => (bool) $rules['audit_enabled'], 'audit_min_missing' => max(0, (int) $rules['audit_min_missing']), 'include_zero_audit' => (bool) $rules['include_zero_audit'], 'scan_enabled' => (bool) $rules['scan_enabled'], 'scan_min_rows' => max(1, (int) $rules['scan_min_rows'])];
     }

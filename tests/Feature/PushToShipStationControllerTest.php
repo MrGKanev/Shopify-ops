@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Application\Orders\PushOrderToShipStation;
+use App\Application\Orders\ShippingAddressNeedsReview;
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
 use App\Models\User;
@@ -32,7 +33,7 @@ class PushToShipStationControllerTest extends TestCase
     {
         [$operator] = $this->makeUserAndStore(true);
         $push = Mockery::mock(PushOrderToShipStation::class);
-        $push->shouldReceive('handle')->once()->with(Mockery::type(Store::class), '1001')->andReturn(['order_number' => '1001', 'shopify_order_number' => '1001', 'ss_order_id' => 555]);
+        $push->shouldReceive('handle')->once()->with(Mockery::type(Store::class), '1001', false)->andReturn(['order_number' => '1001', 'shopify_order_number' => '1001', 'ss_order_id' => 555]);
         $this->app->instance(PushOrderToShipStation::class, $push);
 
         $this->actingAs($operator)->post(route('orders.push.store'), ['order_number' => '#1001'])
@@ -52,16 +53,34 @@ class PushToShipStationControllerTest extends TestCase
             ->assertSessionHasErrors('order_number');
     }
 
+    public function test_store_returns_address_problems_and_honours_the_confirmation(): void
+    {
+        [$operator] = $this->makeUserAndStore(true);
+        $issues = [['level' => 'critical', 'code' => 'no_city', 'message' => 'Missing city']];
+        $push = Mockery::mock(PushOrderToShipStation::class);
+        $push->shouldReceive('handle')->once()->with(Mockery::type(Store::class), '1001', false)->andThrow(new ShippingAddressNeedsReview('1001', $issues));
+        $push->shouldReceive('handle')->once()->with(Mockery::type(Store::class), '1001', true)->andReturn(['order_number' => '1001', 'shopify_order_number' => '1001', 'ss_order_id' => 555]);
+        $this->app->instance(PushOrderToShipStation::class, $push);
+
+        $this->actingAs($operator)->post(route('orders.push.store'), ['order_number' => '1001'])
+            ->assertRedirect()
+            ->assertSessionHas('addressIssues', $issues)
+            ->assertSessionHasErrors('order_number');
+
+        $this->actingAs($operator)->post(route('orders.push.store'), ['order_number' => '1001', 'confirm_address_issues' => '1'])
+            ->assertSessionHas('status', 'Pushed order #1001 to ShipStation.');
+    }
+
     public function test_preview_returns_the_payload_as_json(): void
     {
         [$operator] = $this->makeUserAndStore(true);
         $push = Mockery::mock(PushOrderToShipStation::class);
-        $push->shouldReceive('preview')->once()->with(Mockery::type(Store::class), '1001')->andReturn(['orderNumber' => '1001']);
+        $push->shouldReceive('preview')->once()->with(Mockery::type(Store::class), '1001')->andReturn(['payload' => ['orderNumber' => '1001'], 'address_issues' => []]);
         $this->app->instance(PushOrderToShipStation::class, $push);
 
         $this->actingAs($operator)->post(route('orders.push.preview'), ['order_number' => '1001'])
             ->assertOk()
-            ->assertJson(['payload' => ['orderNumber' => '1001']]);
+            ->assertExactJson(['payload' => ['orderNumber' => '1001'], 'address_issues' => []]);
     }
 
     public function test_preview_returns_a_safe_error_message_without_exposing_internals(): void
@@ -88,13 +107,14 @@ class PushToShipStationControllerTest extends TestCase
     {
         [$operator, $store] = $this->makeUserAndStore(true, ['shipstation_api_key' => 'ss-key', 'shipstation_api_secret' => 'ss-secret']);
         $shopify = Mockery::mock(ShopifyAdminGateway::class);
-        $shopify->shouldReceive('findByOrderNumber')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '1001')->andReturn([['id' => 42, 'name' => '#1001', 'total_price' => '10.00']]);
+        $shopify->shouldReceive('findByOrderNumber')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '1001')->andReturn([['id' => 42, 'name' => '#1001', 'total_price' => '10.00', 'shipping_address' => ['first_name' => 'Jane', 'last_name' => 'Doe', 'address1' => '123 Main Street', 'city' => 'Boston', 'province_code' => 'MA', 'zip' => '02101', 'country_code' => 'US', 'phone' => '617-555-0100']]]);
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
         Http::fake(['https://ssapi.shipstation.com/orders/createorder' => Http::response(['orderId' => 555, 'orderNumber' => '1001'])]);
 
         $this->actingAs($operator)->post(route('orders.push.store'), ['order_number' => '1001'])->assertRedirect();
 
         $this->assertDatabaseHas('push_logs', ['store_id' => $store->getKey(), 'order_number' => '1001', 'shopify_id' => '42', 'shipstation_order_id' => 555]);
+        Http::assertSent(fn ($request): bool => $request['shipTo']['phone'] === '+16175550100');
     }
 
     /** @return array{User, Store} */
