@@ -1,0 +1,5 @@
+mutation UpdateRemediationTracking($id: ID!, $tracking: FulfillmentTrackingInput!) {
+  fulfillmentTrackingInfoUpdate(fulfillmentId: $id, trackingInfoInput: $tracking, notifyCustomer: false) {
+    fulfillment { id } userErrors { field message }
+  }
+}

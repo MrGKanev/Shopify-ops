@@ -3,6 +3,7 @@
 @section('content')
     <div class="flex flex-col gap-6">
         <x-page-header eyebrow="Operations" title="{{ __('Issue triage') }}" :subtitle="__(':count open or in-progress issues for :store', ['count' => $openCount, 'store' => $activeStore->label])">
+            <x-button size="sm" variant="ghost" :href="route('orders.remediation.create')">{{ __('Fix orders') }}</x-button>
             <x-button size="sm" :href="route('reports.run-audit')">{{ __('Run audit') }}</x-button>
         </x-page-header>
 
@@ -22,8 +23,21 @@
             @forelse ($issues as $issue)
                 <tr id="issue-{{ $issue->id }}">
                     <td class="px-4 py-3"><div class="font-semibold">{{ \App\Support\UiFormat::text($issue->title) }}</div><div class="text-xs text-slate-500 dark:text-slate-400">{{ $issue->source_tool }} · {{ trans_choice('{1} :count occurrence|[2,*] :count occurrences', $issue->occurrences) }}</div>@if ($issue->reference && in_array($issue->source_tool, ['run_audit', 'shopify_webhook'], true))<a class="mt-1 inline-flex text-xs font-medium text-indigo-600 dark:text-indigo-400" href="{{ route('orders.timeline', ['order_number' => $issue->reference]) }}">{{ __('Open order timeline ·') }} {{ $issue->reference }}</a>@elseif (data_get($issue->payload, 'order_number'))<a class="mt-1 inline-flex text-xs font-medium text-indigo-600 dark:text-indigo-400" href="{{ route('orders.timeline', ['order_number' => data_get($issue->payload, 'order_number')]) }}">{{ __('Open order timeline ·') }} {{ data_get($issue->payload, 'order_number') }}</a>@endif
-                        @if ($issue->source_tool === 'order_changed_after_push')
+                        @if ($issue->source_tool === 'return_exceptions')
+                            <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ __(data_get($issue->payload, 'next_action', '')) }} · {{ \App\Support\UiFormat::date(data_get($issue->payload, 'due_at'), true) }}</p>
+                            <x-button class="mt-2" size="sm" variant="ghost" :href="route('reports.return-rma.result', ['start_date' => data_get($issue->payload, 'start_date'), 'end_date' => data_get($issue->payload, 'end_date')]).'#return-'.basename($issue->reference).'-'.data_get($issue->payload, 'kind')">{{ __('Open return exception') }}</x-button>
+                        @elseif ($issue->source_tool === 'order_changed_after_push')
                             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('Verify the items and shipping details in ShipStation before fulfillment.') }}</p>
+                            @if (data_get($issue->payload, 'diff'))
+                                <details class="mt-2 text-xs"><summary class="cursor-pointer">{{ __('Show shipping differences') }}</summary>
+                                    @foreach ($issue->payload['diff'] as $field => $difference)
+                                        <p class="mt-1 break-all">{{ $field }} · Shopify: {{ is_array($difference['shopify']) ? json_encode($difference['shopify'], JSON_UNESCAPED_UNICODE) : $difference['shopify'] }} · ShipStation: {{ is_array($difference['shipstation']) ? json_encode($difference['shipstation'], JSON_UNESCAPED_UNICODE) : $difference['shipstation'] }}</p>
+                                    @endforeach
+                                </details>
+                            @endif
+                            @if ($issue->status->isActive() && in_array(data_get($issue->payload, 'shipstation_status'), ['awaiting_shipment', 'awaiting_payment', 'on_hold'], true))
+                                <x-button class="mt-2" size="sm" :href="route('orders.remediation.create', ['order_number' => data_get($issue->payload, 'order_number'), 'action' => 'sync_shipstation'])">{{ __('Review ShipStation update') }}</x-button>
+                            @endif
                         @elseif ($issue->source_tool === 'repeated_shipping_address')
                             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('Warning only: :count recent orders share this address; :names distinct recipient names. No orders are blocked.', ['count' => data_get($issue->payload, 'order_count'), 'names' => data_get($issue->payload, 'different_names')]) }}</p>
                             <div class="mt-1 flex flex-wrap gap-2">
@@ -39,6 +53,9 @@
                     <td class="px-4 py-3">{{ \App\Support\UiFormat::relative($issue->last_seen_at) }}</td>
                     <td class="px-4 py-3">{{ __($issue->status->label()) }}</td>
                     <td class="px-4 py-3">
+                        @if ($issue->source_tool === 'run_audit' && $issue->status->isActive())
+                            <x-button class="mb-2" size="sm" :href="route('orders.remediation.create', ['order_number' => $issue->reference, 'action' => 'refresh_import'])">{{ __('Refresh import / review push') }}</x-button>
+                        @endif
                         <form class="flex min-w-64 flex-col gap-2" method="POST" action="{{ route('operational-issues.update', $issue) }}">
                             @csrf @method('PUT')
                             <div class="flex flex-wrap gap-2">

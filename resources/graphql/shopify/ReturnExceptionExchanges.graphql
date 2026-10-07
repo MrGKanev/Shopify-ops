@@ -1,0 +1,11 @@
+query ReturnExceptionExchanges($id: ID!, $after: String) {
+  return(id: $id) {
+    exchangeLineItems(first: 100, after: $after) {
+      nodes {
+        id quantity processedQuantity unprocessedQuantity
+        lineItems { id title sku unfulfilledQuantity currentQuantity requiresShipping }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}

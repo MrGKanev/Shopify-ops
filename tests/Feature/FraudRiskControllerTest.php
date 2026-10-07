@@ -29,7 +29,7 @@ class FraudRiskControllerTest extends TestCase
         $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('fraudRiskCandidates')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '2026-09-01', '2026-09-07')->andReturn(['orders' => [['id' => '42', 'name' => '#1<script>', 'created_at' => '2026-09-02', 'email' => '<img src=x>', 'total_price' => 50, 'currency' => 'USD', 'financial_status' => 'paid', 'risk_level' => 'HIGH']], 'pages' => 100, 'truncated' => true]);
         $this->app->instance(ShopifyOrders::class, $shopify);
-        $this->actingAs($operator)->post('/reports/fraud-risk', ['start_date' => '2026-09-01', 'end_date' => '2026-09-07'])->assertOk()->assertSeeText('1 scanned · 1 flagged')->assertSeeText('truncated after 100 pages')->assertSeeText('Shopify HIGH risk level')->assertDontSee('<script>', false)->assertDontSee('<img', false);
+        $this->actingAs($operator)->post('/reports/fraud-risk', ['start_date' => '2026-09-01', 'end_date' => '2026-09-07'])->assertOk()->assertSeeText('1 scanned · 1 flagged')->assertSeeText('Hold for review')->assertSee('name="order_numbers[]"', false)->assertSeeText('truncated after 100 pages')->assertSeeText('Shopify HIGH risk level')->assertDontSee('<script>', false)->assertDontSee('<img', false);
 
         $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('fraudRiskCandidates')->andThrow(new RuntimeException('secret'));

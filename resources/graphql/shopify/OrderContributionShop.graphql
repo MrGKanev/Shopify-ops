@@ -1,0 +1,4 @@
+query OrderContributionShop {
+  shop { currencyCode ianaTimezone }
+  currentAppInstallation { accessScopes { handle } }
+}

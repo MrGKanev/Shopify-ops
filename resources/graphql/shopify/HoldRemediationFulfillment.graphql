@@ -1,0 +1,3 @@
+mutation HoldRemediationFulfillment($id: ID!, $hold: FulfillmentOrderHoldInput!) {
+  fulfillmentOrderHold(id: $id, fulfillmentHold: $hold) { fulfillmentOrder { id } userErrors { field message } }
+}

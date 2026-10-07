@@ -18,7 +18,11 @@ class WebhookHealthControllerTest extends TestCase
     {
         [$admin, $store] = $this->makeUserAndStore(true);
         $gateway = Mockery::mock(ShopifyTransport::class);
-        $gateway->shouldReceive('get')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), 'webhooks.json', ['limit' => 250])->andReturn(['webhooks' => [['id' => 1, 'topic' => 'orders/create', 'address' => 'https://example.test/hook', 'format' => 'json', 'created_at' => '2026-09-01T10:00:00Z', 'api_version' => '2026-07'], ['id' => 2, 'topic' => '<script>', 'address' => 'http://unsafe.test', 'api_version' => '2025-01']]]);
+        config(['app.url' => 'https://ops.example.test']);
+        $gateway->shouldReceive('paginateGraphql')->once()->andReturn(['edges' => [
+            ['node' => ['id' => 'gid://shopify/WebhookSubscription/1', 'topic' => 'ORDERS_CREATE', 'uri' => 'https://ops.example.test/webhooks/shopify/'.$store->slug, 'format' => 'JSON', 'createdAt' => '2026-09-01', 'apiVersion' => ['handle' => '2026-07']]],
+            ['node' => ['id' => 'gid://shopify/WebhookSubscription/2', 'topic' => '<script>', 'uri' => 'http://unsafe.test', 'format' => 'JSON', 'apiVersion' => ['handle' => '2025-01']]],
+        ], 'pages' => 1, 'truncated' => false]);
         $this->app->instance(ShopifyTransport::class, $gateway);
 
         $this->actingAs($admin)->get('/admin/webhook-health')->assertOk()->assertSeeText('orders/create')->assertSeeText('Healthy')->assertSeeText('Review')->assertDontSee('<script>', false);
@@ -36,17 +40,17 @@ class WebhookHealthControllerTest extends TestCase
     {
         [$admin] = $this->makeUserAndStore(true);
         $gateway = Mockery::mock(ShopifyTransport::class);
-        $gateway->shouldReceive('get')->once()->andReturn(['unexpected' => true]);
+        $gateway->shouldReceive('paginateGraphql')->once()->andReturn(['edges' => [['node' => ['unexpected' => true]]], 'pages' => 1, 'truncated' => false]);
         $this->app->instance(ShopifyTransport::class, $gateway);
 
-        $this->actingAs($admin)->get('/admin/webhook-health')->assertOk()->assertSeeText('unexpected webhook response');
+        $this->actingAs($admin)->get('/admin/webhook-health')->assertOk()->assertSeeText('could not be loaded');
     }
 
     public function test_transport_failures_are_safe(): void
     {
         [$admin] = $this->makeUserAndStore(true);
         $gateway = Mockery::mock(ShopifyTransport::class);
-        $gateway->shouldReceive('get')->andThrow(new RuntimeException('secret-token'));
+        $gateway->shouldReceive('paginateGraphql')->andThrow(new RuntimeException('secret-token'));
         $this->app->instance(ShopifyTransport::class, $gateway);
 
         $this->actingAs($admin)->get('/admin/webhook-health')->assertOk()->assertSeeText('could not be loaded')->assertDontSeeText('secret-token');

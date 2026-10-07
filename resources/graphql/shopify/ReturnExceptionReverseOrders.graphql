@@ -1,0 +1,8 @@
+query ReturnExceptionReverseOrders($id: ID!, $after: String) {
+  return(id: $id) {
+    reverseFulfillmentOrders(first: 100, after: $after) {
+      nodes { id }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}

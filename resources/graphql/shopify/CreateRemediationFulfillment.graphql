@@ -1,0 +1,3 @@
+mutation CreateRemediationFulfillment($fulfillment: FulfillmentInput!) {
+  fulfillmentCreate(fulfillment: $fulfillment) { fulfillment { id } userErrors { field message } }
+}

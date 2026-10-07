@@ -60,7 +60,9 @@ class PushOrderToShipStation
         }
 
         try {
-            $created = $this->client($store)->createOrder($order);
+            $client = $this->client($store);
+            $payload = $client->buildOrderPayload($order);
+            $created = $client->createOrder($order);
         } catch (Throwable $exception) {
             $this->recordPush->failed($store, $orderNumber, (string) ($order['id'] ?? ''), $exception);
 
@@ -70,7 +72,7 @@ class PushOrderToShipStation
         $ssOrderId = $created['orderId'] ?? null;
         $createdOrderNumber = (string) ($created['orderNumber'] ?? $orderNumber);
 
-        $this->recordPush->handle($store, $createdOrderNumber, (string) ($order['id'] ?? ''), is_int($ssOrderId) || is_string($ssOrderId) ? $ssOrderId : null);
+        $this->recordPush->handle($store, $createdOrderNumber, (string) ($order['id'] ?? ''), is_int($ssOrderId) || is_string($ssOrderId) ? $ssOrderId : null, $payload);
 
         return [
             'order_number' => $createdOrderNumber,

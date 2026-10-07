@@ -23,7 +23,7 @@
             >
                 <x-slot:heading>{{ \App\Support\UiFormat::count($result->scanned, 'on-hold fulfillment orders') }}</x-slot:heading>
 
-                <x-data-table
+                <x-data-table :remediation-actions="['release_hold' => 'Release Ops holds']"
                     :rows="$result->rows"
                     empty="No on-hold fulfillment orders found."
                     :columns="[

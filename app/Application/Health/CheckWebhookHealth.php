@@ -2,49 +2,26 @@
 
 namespace App\Application\Health;
 
-use App\Integrations\Shopify\Contracts\ShopifyTransport;
-use App\Integrations\Shopify\ShopifyAdminClient;
 use App\Models\Store;
 use Throwable;
 
 class CheckWebhookHealth
 {
-    public function __construct(private readonly ShopifyTransport $shopify) {}
+    public function __construct(private readonly ManageWebhookSubscriptions $subscriptions) {}
 
-    /** @return array{ok:bool,error:string,webhooks:list<array{id:string,topic:string,address:string,format:string,created_at:string,api_version:string,healthy:bool}>} */
+    /** @return array<string, mixed> */
     public function handle(Store $store): array
     {
+        $result = ['ok' => false, 'error' => '', 'webhooks' => [], 'missing' => [], 'callback' => $this->subscriptions->callback($store)];
         if ($store->missingShopifyCredentials()) {
-            return ['ok' => false, 'error' => 'Shopify credentials are incomplete.', 'webhooks' => []];
+            return [...$result, 'error' => 'Shopify credentials are incomplete.'];
         }
-
         try {
-            $payload = $this->shopify->get($store, 'webhooks.json', ['limit' => 250]);
-            if (! is_array($payload['webhooks'] ?? null)) {
-                return ['ok' => false, 'error' => 'Shopify returned an unexpected webhook response.', 'webhooks' => []];
-            }
+            $webhooks = $this->subscriptions->subscriptions($store);
 
-            $webhooks = [];
-            foreach ($payload['webhooks'] as $webhook) {
-                if (! is_array($webhook)) {
-                    continue;
-                }
-                $address = is_scalar($webhook['address'] ?? null) ? (string) $webhook['address'] : '';
-                $apiVersion = is_scalar($webhook['api_version'] ?? null) ? (string) $webhook['api_version'] : '';
-                $webhooks[] = [
-                    'id' => is_scalar($webhook['id'] ?? null) ? (string) $webhook['id'] : '',
-                    'topic' => is_scalar($webhook['topic'] ?? null) ? (string) $webhook['topic'] : '',
-                    'address' => $address,
-                    'format' => strtoupper(is_scalar($webhook['format'] ?? null) ? (string) $webhook['format'] : 'json'),
-                    'created_at' => is_scalar($webhook['created_at'] ?? null) ? (string) $webhook['created_at'] : '',
-                    'api_version' => $apiVersion,
-                    'healthy' => str_starts_with($address, 'https://') && ($apiVersion === '' || $apiVersion === ShopifyAdminClient::API_VERSION),
-                ];
-            }
-
-            return ['ok' => true, 'error' => '', 'webhooks' => $webhooks];
+            return [...$result, 'ok' => true, 'webhooks' => $webhooks, 'missing' => $this->subscriptions->missing($webhooks)];
         } catch (Throwable) {
-            return ['ok' => false, 'error' => 'Shopify webhooks could not be loaded.', 'webhooks' => []];
+            return [...$result, 'error' => 'Shopify webhooks could not be loaded.'];
         }
     }
 }

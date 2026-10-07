@@ -1,0 +1,9 @@
+query OrderContributionFees($id: ID!) {
+  order(id: $id) {
+    id
+    transactions(first: 100) {
+      id kind status gateway test
+      fees { id amount { amount currencyCode } taxAmount { amount currencyCode } }
+    }
+  }
+}

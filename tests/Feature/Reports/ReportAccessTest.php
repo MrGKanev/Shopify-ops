@@ -3,6 +3,7 @@
 namespace Tests\Feature\Reports;
 
 use App\Application\Reports\ReportRegistry;
+use App\Models\RateQuoteSnapshot;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -20,6 +21,7 @@ class ReportAccessTest extends TestCase
         Http::preventStrayRequests();
         Queue::fake();
         $tool = app(ReportRegistry::class)->find($key);
+        $snapshot = $key === 'rate_shopping' ? RateQuoteSnapshot::factory()->create() : null;
         $endpoints = [['GET', $tool->route], ['POST', $tool->route.'.store']];
         foreach (['result', 'export', 'queue'] as $action) {
             if (Route::has($tool->route.'.'.$action)) {
@@ -27,13 +29,13 @@ class ReportAccessTest extends TestCase
             }
         }
         foreach ($endpoints as [$method, $route]) {
-            $this->call($method, route($route))->assertRedirect(route('login'));
+            $this->call($method, route($route, $snapshot !== null && str_ends_with($route, '.result') ? ['snapshot' => $snapshot->id] : []))->assertRedirect(route('login'));
         }
         [$viewer] = $this->userWithStore();
         $this->actingAs($viewer);
 
         foreach ($endpoints as [$method, $route]) {
-            $this->call($method, route($route))->assertForbidden();
+            $this->call($method, route($route, $snapshot !== null && str_ends_with($route, '.result') ? ['snapshot' => $snapshot->id] : []))->assertForbidden();
         }
 
         $this->assertDatabaseCount('report_runs', 0);

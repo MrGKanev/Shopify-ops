@@ -1,0 +1,6 @@
+query WebhookSubscriptions($after: String) {
+  webhookSubscriptions(first: 250, after: $after) {
+    edges { node { id topic uri name format createdAt apiVersion { handle } filter includeFields } }
+    pageInfo { hasNextPage endCursor }
+  }
+}

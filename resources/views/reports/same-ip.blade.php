@@ -26,7 +26,7 @@
                             <td class="px-4 py-3">
                                 <ul>
                                     @foreach ($row['orders'] as $order)
-                                        <li><x-report.shopify-link :id="$order['id']">{{ $order['number'] }}</x-report.shopify-link> · {{ \App\Support\UiFormat::date($order['created_at']) }} · {{ $order['email'] }} · {{ \App\Support\UiFormat::number($order['total'], 2) }} {{ $order['currency'] }}</li>
+                                        <li><x-report.shopify-link :id="$order['id']">{{ $order['number'] }}</x-report.shopify-link> · {{ \App\Support\UiFormat::date($order['created_at']) }} · {{ $order['email'] }} · {{ \App\Support\UiFormat::number($order['total'], 2) }} {{ $order['currency'] }} · <a class="text-indigo-600 dark:text-indigo-400" href="{{ route('orders.remediation.create', ['order_number' => $order['number'], 'action' => 'hold']) }}">{{ __('Review hold') }}</a></li>
                                     @endforeach
                                 </ul>
                             </td>

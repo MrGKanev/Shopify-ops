@@ -1,0 +1,11 @@
+query ReturnExceptionDispositions($id: ID!, $after: String) {
+  reverseFulfillmentOrder(id: $id) {
+    lineItems(first: 100, after: $after) {
+      nodes {
+        id totalQuantity fulfillmentLineItem { id }
+        dispositions { id type quantity createdAt location { id name } }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}

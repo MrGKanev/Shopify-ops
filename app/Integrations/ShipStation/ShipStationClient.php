@@ -35,14 +35,91 @@ class ShipStationClient implements ShipStationClientContract
         private readonly ?int $storeId = null,
     ) {}
 
+    public function getOrder(int $orderId): array
+    {
+        return $this->get('/orders/'.$orderId, []);
+    }
+
+    public function updateOrder(array $payload): array
+    {
+        return $this->post('/orders/createorder', $payload);
+    }
+
+    public function holdOrder(int $orderId, string $holdUntil): void
+    {
+        $result = $this->post('/orders/holduntil', ['orderId' => $orderId, 'holdUntilDate' => $holdUntil]);
+        if (($result['success'] ?? false) !== true) {
+            throw new UnexpectedResponse('ShipStation did not confirm the order action.');
+        }
+    }
+
+    public function restoreOrder(int $orderId): void
+    {
+        $result = $this->post('/orders/restorefromhold', ['orderId' => $orderId]);
+        if (($result['success'] ?? false) !== true) {
+            throw new UnexpectedResponse('ShipStation did not confirm the order action.');
+        }
+    }
+
+    public function addOrderTag(int $orderId, int $tagId): void
+    {
+        $result = $this->post('/orders/addtag', ['orderId' => $orderId, 'tagId' => $tagId]);
+        if (($result['success'] ?? false) !== true) {
+            throw new UnexpectedResponse('ShipStation did not confirm the order action.');
+        }
+    }
+
+    public function refreshStore(int $storeId): void
+    {
+        $response = $this->request()->post('/stores/refreshstore?storeId='.$storeId);
+        $this->checkedResponse($response);
+        $this->pauseWhenRateLimitIsExhausted($response);
+    }
+
+    public function getRates(array $request): array
+    {
+        $response = $this->request()->post('/shipments/getrates', $request);
+        $this->checkedResponse($response);
+        $this->pauseWhenRateLimitIsExhausted($response);
+        $data = $response->json();
+        if (! is_array($data) || ! array_is_list($data)) {
+            throw new UnexpectedResponse('ShipStation returned invalid rates.');
+        }
+        $rates = [];
+        $services = [];
+        foreach ($data as $rate) {
+            if (! is_array($rate) || ! is_string($rate['serviceCode'] ?? null) || trim($rate['serviceCode']) === '' || isset($services[$rate['serviceCode']])
+                || (isset($rate['serviceName']) && ! is_string($rate['serviceName']))
+                || ! is_numeric($rate['shipmentCost'] ?? null) || ! is_numeric($rate['otherCost'] ?? null)
+                || ! is_finite((float) $rate['shipmentCost']) || ! is_finite((float) $rate['otherCost'])
+                || ! is_finite((float) $rate['shipmentCost'] + (float) $rate['otherCost'])
+                || (float) $rate['shipmentCost'] < 0 || (float) $rate['otherCost'] < 0) {
+                throw new UnexpectedResponse('ShipStation returned an incomplete rate.');
+            }
+            $services[$rate['serviceCode']] = true;
+            $rates[] = $rate;
+        }
+
+        return $rates;
+    }
+
+    public function getWarehouse(int $warehouseId): array
+    {
+        return $this->get('/warehouses/'.$warehouseId, []);
+    }
+
     public function healthCheck(): void
     {
         $payload = $this->get('/orders', ['pageSize' => 1]);
         $this->items($payload, 'orders');
     }
 
-    public function findByOrderNumber(string $orderNumber): array
+    public function findByOrderNumber(string $orderNumber, ?int $shipStationStoreId = null): array
     {
+        if ($shipStationStoreId !== null) {
+            return $this->paginate('/orders', ['orderNumber' => $orderNumber, 'storeId' => $shipStationStoreId], 'orders');
+        }
+
         $payload = $this->get('/orders', [
             'orderNumber' => $orderNumber,
             'pageSize' => 50,
@@ -51,14 +128,27 @@ class ShipStationClient implements ShipStationClientContract
         return $this->items($payload, 'orders');
     }
 
-    public function getOrderShipments(string $orderNumber): array
+    public function getOrderShipments(string $orderNumber, bool $includeItems = false): array
     {
+        if ($includeItems) {
+            return $this->paginate('/shipments', ['orderNumber' => $orderNumber, 'includeShipmentItems' => 'true'], 'shipments');
+        }
+
         $payload = $this->get('/shipments', [
             'orderNumber' => $orderNumber,
             'pageSize' => 100,
         ]);
 
         return $this->items($payload, 'shipments');
+    }
+
+    public function getOrderCostShipments(int $orderId, int $storeId, string $startDate, string $endDate): array
+    {
+        $filters = ['orderId' => $orderId, 'storeId' => $storeId];
+        $labels = $this->paginate('/shipments', $filters, 'shipments', confirmPages: true);
+        $voided = $this->paginate('/shipments', [...$filters, 'voidDateStart' => $this->dayStart($startDate), 'voidDateEnd' => $this->dayEnd($endDate)], 'shipments', confirmPages: true);
+
+        return [...$labels, ...$voided];
     }
 
     public function fetchAllOrders(string $startDate, string $endDate): array
@@ -134,7 +224,7 @@ class ShipStationClient implements ShipStationClientContract
         $items = [];
 
         foreach (is_array($shopifyOrder['line_items'] ?? null) ? $shopifyOrder['line_items'] : [] as $lineItem) {
-            if (! is_array($lineItem)) {
+            if (! is_array($lineItem) || (int) ($lineItem['current_quantity'] ?? $lineItem['quantity'] ?? 1) <= 0) {
                 continue;
             }
 
@@ -142,7 +232,7 @@ class ShipStationClient implements ShipStationClientContract
                 'lineItemKey' => (string) ($lineItem['id'] ?? ''),
                 'name' => $lineItem['title'] ?? '',
                 'sku' => $lineItem['sku'] ?? null,
-                'quantity' => (int) ($lineItem['quantity'] ?? 1),
+                'quantity' => (int) ($lineItem['current_quantity'] ?? $lineItem['quantity'] ?? 1),
                 'unitPrice' => (float) ($lineItem['price'] ?? 0),
             ];
         }
@@ -166,6 +256,7 @@ class ShipStationClient implements ShipStationClientContract
             'amountPaid' => (float) ($shopifyOrder['total_price'] ?? 0),
             'taxAmount' => (float) ($shopifyOrder['total_tax'] ?? 0),
             'shippingAmount' => $shippingAmount,
+            'requestedShippingService' => (string) ($shopifyOrder['shipping_lines'][0]['title'] ?? ''),
         ];
     }
 
@@ -255,7 +346,7 @@ class ShipStationClient implements ShipStationClientContract
      * @param  array<string, scalar>  $filters
      * @return list<array<string, mixed>>
      */
-    private function paginate(string $path, array $filters, string $itemsKey): array
+    private function paginate(string $path, array $filters, string $itemsKey, bool $confirmPages = false): array
     {
         $items = [];
         $page = 1;
@@ -266,6 +357,9 @@ class ShipStationClient implements ShipStationClientContract
                 'pageSize' => self::PAGE_SIZE,
                 'page' => $page,
             ]);
+            if ($confirmPages && (! is_array($payload[$itemsKey] ?? null) || ! is_int($payload['pages'] ?? null) || $payload['pages'] < 0 || ($payload['pages'] === 0 && $payload[$itemsKey] !== []))) {
+                throw new UnexpectedResponse('ShipStation could not confirm cost pagination.');
+            }
             $pageItems = $this->items($payload, $itemsKey);
             array_push($items, ...$pageItems);
 

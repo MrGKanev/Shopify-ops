@@ -4,6 +4,7 @@ namespace App\Application\Notifications;
 
 use App\Models\Store;
 use App\Notifications\AuditFinishedNotification;
+use App\Notifications\ReportDigestNotification;
 use App\Notifications\ReportEmailNotification;
 use App\Notifications\ScanFinishedNotification;
 use Illuminate\Notifications\AnonymousNotifiable;
@@ -66,6 +67,32 @@ class ReportNotifier
         $recipient = $this->emailRecipient($store, $rule);
         if ($recipient !== '') {
             Notification::route('mail', $recipient)->notify(new ReportEmailNotification($store->label, $tool, $rows, $startDate, $endDate, $attachment['headers'] ?? null, $attachment['rows'] ?? null));
+        }
+    }
+
+    public function hasDigestRule(Store $store, string $tool): bool
+    {
+        $rule = $store->email_rules->forTool($tool);
+
+        return $rule !== null && $rule->mode === 'digest' && $this->emailRecipient($store, $rule) !== '';
+    }
+
+    /** @param list<array{tool: string, rows: int, summary?: array<string, mixed>, snapshot_url?: string}> $sections */
+    public function emailDigest(Store $store, array $sections): void
+    {
+        $recipients = [];
+        foreach ($sections as $section) {
+            $rule = $store->email_rules->forTool($section['tool']);
+            if ($rule === null || $rule->mode !== 'digest' || ! $this->emailRuleMatches($rule, $section['rows'])) {
+                continue;
+            }
+            $recipient = $this->emailRecipient($store, $rule);
+            if ($recipient !== '') {
+                $recipients[$recipient][] = $section;
+            }
+        }
+        foreach ($recipients as $recipient => $matched) {
+            Notification::route('mail', $recipient)->notify(new ReportDigestNotification($store->label, $matched));
         }
     }
 

@@ -1,0 +1,6 @@
+query OrderContributionAnalytics($query: String!) {
+  shopifyqlQuery(query: $query) {
+    tableData { columns { name dataType } rows }
+    parseErrors
+  }
+}

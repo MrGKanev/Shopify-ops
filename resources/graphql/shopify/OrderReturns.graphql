@@ -1,0 +1,8 @@
+query OrderReturns($id: ID!, $after: String) {
+  order(id: $id) {
+    returns(first: 100, after: $after) {
+      nodes { id name status createdAt requestApprovedAt }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}

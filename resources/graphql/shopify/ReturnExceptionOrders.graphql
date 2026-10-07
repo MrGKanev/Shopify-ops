@@ -1,0 +1,6 @@
+query ReturnExceptionOrders($search: String!, $after: String) {
+  orders(first: 100, query: $search, after: $after, sortKey: CREATED_AT, reverse: true) {
+    edges { node { id legacyResourceId name } }
+    pageInfo { hasNextPage endCursor }
+  }
+}

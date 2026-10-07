@@ -73,6 +73,13 @@ class ShopifyOrderNormalizer
             $order['shipping_address'] = $this->normalizeAddress($node['shippingAddress'] ?? null);
         }
 
+        if (isset($node['shippingLines']['nodes'])) {
+            $order['shipping_lines'] = array_map(fn (array $line): array => [
+                'title' => (string) ($line['title'] ?? ''),
+                'price' => $line['originalPriceSet']['shopMoney']['amount'] ?? '0.00',
+            ], $node['shippingLines']['nodes']);
+        }
+
         if (array_key_exists('billingAddress', $node)) {
             $order['billing_address'] = $this->normalizeAddress($node['billingAddress'] ?? null);
         }
@@ -271,6 +278,10 @@ class ShopifyOrderNormalizer
             'price' => $lineItem['originalUnitPriceSet']['shopMoney']['amount'] ?? '0.00',
             'admin_graphql_api_id' => $lineItem['id'] ?? '',
         ];
+
+        if (array_key_exists('currentQuantity', $lineItem)) {
+            $normalized['current_quantity'] = (int) $lineItem['currentQuantity'];
+        }
 
         if (array_key_exists('vendor', $lineItem)) {
             $normalized['vendor'] = $lineItem['vendor'];

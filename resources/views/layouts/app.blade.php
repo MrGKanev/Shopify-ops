@@ -17,7 +17,7 @@
         default => [],
     };
     // Laravel-only search additions with no equivalent in legacy's grouped hub (search-hub.php mirrors legacy exactly).
-    $searchExtras = [['Order Lookup','orders.lookup'],['Push Order / Fix Note','orders.push.create'],['Global Search','global-search']];
+    $searchExtras = [['Order Lookup','orders.lookup'],['Push Order / Fix Note','orders.push.create'],['Fix orders','orders.remediation.create'],['Global Search','global-search']];
     $recentRuns = $group === 'audit' ? $activeStore->runLogs()->latest()->limit(10)->get(['id','tool','status','created_at']) : collect();
     $customLinks = $appSettings->linksFor(auth()->user());
 @endphp
@@ -45,7 +45,7 @@
         @endif
         @if(in_array($group, ['audit', 'search'], true))
             @if($group === 'search')
-                <div class="sidebar-section">{{ __('Search') }}</div><ul class="sidebar-nav">@foreach($searchExtras as [$label,$name])@if(!in_array($name,['orders.push.create','global-search'],true) || auth()->user()->can('run-audits'))<li><a class="{{ request()->routeIs($name) ? 'active' : '' }}" href="{{ route($name) }}">{{ __($label) }}</a></li>@endif @endforeach</ul>
+                <div class="sidebar-section">{{ __('Search') }}</div><ul class="sidebar-nav">@foreach($searchExtras as [$label,$name])@if(!in_array($name,['orders.push.create','orders.remediation.create','global-search'],true) || auth()->user()->can('run-audits'))<li><a class="{{ request()->routeIs($name) ? 'active' : '' }}" href="{{ route($name) }}">{{ __($label) }}</a></li>@endif @endforeach</ul>
                 @foreach(config('search-hub') as $section => $links)<div class="sidebar-section">{{ __($section) }}</div><ul class="sidebar-nav">@foreach($links as $link)<li><a class="{{ request()->routeIs($link['route']) ? 'active' : '' }}" href="{{ route($link['route']) }}">{{ __($link['label']) }}</a></li>@endforeach</ul>@endforeach
             @else
                 <div class="sidebar-section">{{ __('Recent Runs') }}</div>

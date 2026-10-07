@@ -18,7 +18,7 @@ class ProcessShopifyWebhookEvent implements ShouldQueue
     /** @var list<int> */
     public array $backoff = [10, 60, 180];
 
-    public int $timeout = 30;
+    public int $timeout = 240;
 
     public function __construct(public int $eventId) {}
 
@@ -58,7 +58,7 @@ class ProcessShopifyWebhookEvent implements ShouldQueue
     {
         return match ($event->topic) {
             'refunds/create' => ['title' => "Shopify refund created for {$event->subject_id}", 'priority' => 'high'],
-            'disputes/create' => ['title' => "Shopify dispute opened for {$event->subject_id}", 'priority' => 'urgent'],
+            'disputes/create', 'shopify_payments/dispute_create' => ['title' => "Shopify dispute opened for {$event->subject_id}", 'priority' => 'urgent'],
             default => null,
         };
     }

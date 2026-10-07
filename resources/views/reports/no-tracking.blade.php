@@ -21,7 +21,7 @@
             >
                 <x-slot:heading>{{ $result->scanned }} {{ __('fulfilled orders scanned ·') }} {{ count($result->rows) }} {{ __('missing tracking after') }} {{ $result->params['threshold'] }}h</x-slot:heading>
 
-                <x-data-table :headers="['Order', 'Placed', 'Fulfillment', 'Hours since', 'Carrier', 'Email', 'Total']" :rows="$result->rows" empty="All fulfillments have tracking.">
+                <x-data-table :remediation-actions="['update_tracking' => 'Add tracking']" :headers="['Order', 'Placed', 'Fulfillment', 'Hours since', 'Carrier', 'Email', 'Total']" :rows="$result->rows" empty="All fulfillments have tracking.">
                     @foreach ($result->rows as $row)
                         @foreach ($row['missing'] as $missing)
                             <tr>

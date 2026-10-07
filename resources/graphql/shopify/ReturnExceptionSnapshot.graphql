@@ -1,0 +1,6 @@
+query ReturnExceptionSnapshot($id: ID!) {
+  return(id: $id) {
+    id name status createdAt requestApprovedAt
+    order { id legacyResourceId name }
+  }
+}

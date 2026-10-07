@@ -36,6 +36,7 @@ use App\Http\Controllers\OrderBatchLookupController;
 use App\Http\Controllers\OrderComparisonController;
 use App\Http\Controllers\OrderLookupController;
 use App\Http\Controllers\OrderNoteController;
+use App\Http\Controllers\OrderRemediationController;
 use App\Http\Controllers\OrderTagSearchController;
 use App\Http\Controllers\OrderTimelineController;
 use App\Http\Controllers\OrderTrackingController;
@@ -45,6 +46,7 @@ use App\Http\Controllers\PrintQueueController;
 use App\Http\Controllers\PushLogController;
 use App\Http\Controllers\PushToShipStationController;
 use App\Http\Controllers\ReadinessController;
+use App\Http\Controllers\Reports\RateShoppingController;
 use App\Http\Controllers\Reports\RunAuditController;
 use App\Http\Controllers\ReportTrendController;
 use App\Http\Controllers\RunLogController;
@@ -84,6 +86,12 @@ Route::middleware('auth')->group(function (): void {
     Route::middleware('active.store')->group(function (): void {
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
         Route::get('/orders/lookup', OrderLookupController::class)->name('orders.lookup');
+        Route::middleware('can:run-audits')->group(function (): void {
+            Route::get('/orders/remediation', [OrderRemediationController::class, 'create'])->name('orders.remediation.create');
+            Route::post('/orders/remediation/preview', [OrderRemediationController::class, 'preview'])->middleware('throttle:push-order')->name('orders.remediation.preview');
+            Route::post('/orders/remediation/confirm', [OrderRemediationController::class, 'store'])->middleware('throttle:push-order')->name('orders.remediation.store');
+            Route::get('/orders/remediation/{group}', [OrderRemediationController::class, 'show'])->whereUuid('group')->name('orders.remediation.show');
+        });
         Route::get('/orders/push', [PushToShipStationController::class, 'create'])->middleware('can:run-audits')->name('orders.push.create');
         Route::post('/orders/push', [PushToShipStationController::class, 'preview'])->middleware(['can:run-audits', 'throttle:push-order'])->name('orders.push.preview');
         Route::post('/orders/push/confirm', [PushToShipStationController::class, 'store'])->middleware(['can:run-audits', 'throttle:push-order'])->name('orders.push.store');
@@ -129,6 +137,10 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/jobs/failed/{uuid}/retry', [JobQueueController::class, 'retry'])->middleware('can:run-audits')->name('jobs.retry');
         Route::delete('/jobs/failed/{uuid}', [JobQueueController::class, 'destroy'])->middleware('can:run-audits')->name('jobs.destroy');
         Route::middleware('can:run-audits')->group(function (): void {
+            Route::get('/reports/rate-shopping', [RateShoppingController::class, 'create'])->name('reports.rate-shopping');
+            Route::post('/reports/rate-shopping', [RateShoppingController::class, 'store'])->middleware('throttle:audit-report')->name('reports.rate-shopping.store');
+            Route::get('/reports/rate-shopping/{snapshot}', [RateShoppingController::class, 'show'])->whereNumber('snapshot')->name('reports.rate-shopping.result');
+            Route::post('/reports/rate-shopping/{snapshot}/select', [RateShoppingController::class, 'select'])->whereNumber('snapshot')->middleware('throttle:push-order')->name('rate-quote-selections.store');
             Route::view('/reports', 'reports.index')->name('audits.index');
             Route::get('/reports/run-audit', [RunAuditController::class, 'create'])->name('reports.run-audit');
             Route::post('/reports/run-audit', [RunAuditController::class, 'store'])->middleware('throttle:audit-report')->name('reports.run-audit.store');
@@ -159,6 +171,8 @@ Route::middleware('auth')->group(function (): void {
                 Route::put('/appearance', [AppearanceSettingsController::class, 'update'])->name('appearance.update');
                 Route::get('/config-check', ConfigCheckController::class)->name('config-check');
                 Route::get('/webhook-health', WebhookHealthController::class)->name('webhook-health');
+                Route::post('/webhook-health/register', [WebhookHealthController::class, 'store'])->middleware('throttle:api-health')->name('webhook-health.register');
+                Route::delete('/webhook-health', [WebhookHealthController::class, 'destroy'])->middleware('throttle:api-health')->name('webhook-health.destroy');
                 Route::get('/webhook-events', WebhookEventController::class)->name('webhook-events');
                 Route::post('/webhook-events/{event}/retry', [WebhookEventController::class, 'retry'])->whereNumber('event')->name('webhook-events.retry');
                 Route::get('/slack-rules', [SlackRulesController::class, 'edit'])->name('slack-rules.edit');

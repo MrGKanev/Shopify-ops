@@ -59,6 +59,29 @@
         <div class="flex max-w-xs flex-col gap-2"><label class="text-sm font-medium" for="scheduled_audit_time">{{ __('Local run time') }}</label><input class="rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="scheduled_audit_time" name="scheduled_audit_time" type="time" value="{{ old('scheduled_audit_time', $store?->scheduled_audit_time?->format('H:i')) }}"><p class="text-xs text-slate-500 dark:text-slate-400">{{ __('Uses the application timezone and scans the previous 30 days.') }}</p></div>
     </div>
 
+    <x-card class="sm:col-span-2">
+        <h2 class="text-lg font-semibold">{{ __('Operational digest defaults') }}</h2>
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ __('Used for fresh operational snapshots in the existing daily email digest. Enable Operational Digest in Email Rules.') }}</p>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+            @foreach (['sla_days' => 'Fulfillment SLA (calendar days)', 'lookback_days' => 'Order lookback (calendar days)'] as $key => $label)
+                <label class="flex flex-col gap-2 text-sm font-medium">{{ __($label) }}<input name="operational_digest_policy[{{ $key }}]" type="number" min="1" max="365" required value="{{ old('operational_digest_policy.'.$key, ($store?->operationalDigestPolicy() ?? ['sla_days' => 3, 'lookback_days' => 30])[$key]) }}" class="rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950">@error('operational_digest_policy.'.$key)<span class="text-sm text-red-600 dark:text-red-400">{{ __($message) }}</span>@enderror</label>
+            @endforeach
+        </div>
+    </x-card>
+
+    <x-card class="sm:col-span-2">
+        <h2 class="text-lg font-semibold">{{ __('Return exception deadlines') }}</h2>
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ __('Business days are Monday to Friday in the shop timezone. Public holidays are not excluded.') }}</p>
+        <div class="mt-4 grid gap-4 sm:grid-cols-3">
+            @foreach (['approval_days' => 'Return approval (business days)', 'processing_days' => 'Processing after warehouse receipt (business days)', 'exchange_days' => 'Exchange completion (business days)'] as $key => $label)
+                <label class="flex flex-col gap-2 text-sm font-medium" for="return-{{ $key }}">{{ __($label) }}
+                    <input id="return-{{ $key }}" name="return_exception_policy[{{ $key }}]" type="number" min="1" max="90" required value="{{ old('return_exception_policy.'.$key, ($store?->returnExceptionPolicy() ?? ['approval_days' => 2, 'processing_days' => 3, 'exchange_days' => 5])[$key]) }}" class="rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950">
+                    @error('return_exception_policy.'.$key)<span class="text-sm text-red-600 dark:text-red-400">{{ __($message) }}</span>@enderror
+                </label>
+            @endforeach
+        </div>
+    </x-card>
+
     <div class="flex flex-col gap-2 sm:col-span-2">
         <label class="text-sm font-medium" for="delivery_watch_days">{{ __('Delivery watch threshold (days)') }}</label>
         <input class="max-w-xs rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="delivery_watch_days" name="delivery_watch_days" type="number" min="1" max="90" value="{{ old('delivery_watch_days', $store?->delivery_watch_days ?? 5) }}" required>

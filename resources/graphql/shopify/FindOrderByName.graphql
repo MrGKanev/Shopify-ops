@@ -81,6 +81,7 @@ query FindOrderByName($query: String!) {
           zip
           phone
         }
+        shippingLines(first: 10) { nodes { title originalPriceSet { shopMoney { amount } } } }
         lineItems(first: 250) {
           nodes {
             id
@@ -88,6 +89,7 @@ query FindOrderByName($query: String!) {
             name
             sku
             quantity
+            currentQuantity
             variantTitle
             originalUnitPriceSet { shopMoney { amount currencyCode } }
           }

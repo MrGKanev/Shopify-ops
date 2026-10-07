@@ -1,0 +1,3 @@
+mutation ReleaseRemediationHold($id: ID!, $holdIds: [ID!]) {
+  fulfillmentOrderReleaseHold(id: $id, holdIds: $holdIds) { fulfillmentOrder { id } userErrors { field message } }
+}

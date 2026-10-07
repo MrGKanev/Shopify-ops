@@ -4,17 +4,42 @@ namespace App\Integrations\ShipStation;
 
 interface ShipStationClientContract
 {
+    /** @return array<string, mixed> */
+    public function getOrder(int $orderId): array;
+
+    /** @param array<string, mixed> $payload
+     * @return array<string, mixed> */
+    public function updateOrder(array $payload): array;
+
+    public function holdOrder(int $orderId, string $holdUntil): void;
+
+    public function restoreOrder(int $orderId): void;
+
+    public function addOrderTag(int $orderId, int $tagId): void;
+
+    public function refreshStore(int $storeId): void;
+
+    /** @param array<string, mixed> $request
+     * @return list<array<string, mixed>> */
+    public function getRates(array $request): array;
+
+    /** @return array<string, mixed> */
+    public function getWarehouse(int $warehouseId): array;
+
     public function healthCheck(): void;
 
     /**
      * @return list<array<string, mixed>>
      */
-    public function findByOrderNumber(string $orderNumber): array;
+    public function findByOrderNumber(string $orderNumber, ?int $shipStationStoreId = null): array;
 
     /**
      * @return list<array<string, mixed>>
      */
-    public function getOrderShipments(string $orderNumber): array;
+    public function getOrderShipments(string $orderNumber, bool $includeItems = false): array;
+
+    /** @return list<array<string, mixed>> */
+    public function getOrderCostShipments(int $orderId, int $storeId, string $startDate, string $endDate): array;
 
     /**
      * @return list<array<string, mixed>>

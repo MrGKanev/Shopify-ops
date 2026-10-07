@@ -44,16 +44,7 @@ class QueuedReportRunner
             : $this->latest($store, $tool, $hash, now()->subMinutes(self::PENDING_REUSE_MINUTES), pendingOnly: true);
 
         if ($run === null) {
-            $run = $store->reportRuns()->create([
-                'user_id' => $request->user()?->getAuthIdentifier(),
-                'tool' => $tool,
-                'report' => $report,
-                'arguments' => $arguments,
-                'arguments_hash' => $hash,
-                'start_date' => $startDate,
-                'end_date' => $endDate,
-                'status' => 'queued',
-            ]);
+            $run = $this->createRun($store, $tool, $report, $arguments, $startDate, $endDate, $request->user()?->getAuthIdentifier());
             RunQueuedReport::dispatch($run->getKey());
             $run->refresh();
         }
@@ -67,6 +58,16 @@ class QueuedReportRunner
         }
 
         return $run;
+    }
+
+    /** @param class-string $report
+     * @param list<mixed> $arguments */
+    public function createRun(Store $store, string $tool, string $report, array $arguments, ?string $startDate, ?string $endDate, int|string|null $userId = null): ReportRun
+    {
+        return $store->reportRuns()->create([
+            'user_id' => $userId, 'tool' => $tool, 'report' => $report, 'arguments' => $arguments,
+            'arguments_hash' => $this->hash($tool, $report, $arguments), 'start_date' => $startDate, 'end_date' => $endDate, 'status' => 'queued',
+        ]);
     }
 
     /**

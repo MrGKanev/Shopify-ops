@@ -23,8 +23,11 @@ class JobQueueController extends Controller
             $auditJob->rows_found = $rowsFoundByRange[$auditJob->start_date->toDateString().'|'.$auditJob->end_date->toDateString()] ?? null;
         });
 
+        $remediationGroups = $store->remediationRuns()->select('group_uuid')->groupBy('group_uuid')->orderByRaw('MAX(id) DESC')->limit(10)->pluck('group_uuid');
+
         return view('jobs.index', [
             'auditJobs' => $auditJobs,
+            'remediationGroups' => $store->remediationRuns()->whereIn('group_uuid', $remediationGroups)->latest('id')->get(['id', 'group_uuid', 'action', 'status'])->groupBy('group_uuid'),
             'jobs' => $jobs,
             'failed' => $failed,
             'usingRedis' => $usingRedis,

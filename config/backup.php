@@ -47,6 +47,7 @@ return [
                 'exclude' => [
                     base_path('vendor'),
                     base_path('node_modules'),
+                    base_path('todo.md'),
                     storage_path('framework'),
                     storage_path('app/backups'),
                     storage_path('app/backup-temp'),

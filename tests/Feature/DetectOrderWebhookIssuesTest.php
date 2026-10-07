@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use App\Application\Orders\RecordPush;
+use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Jobs\ProcessShopifyWebhookEvent;
 use App\Models\Store;
 use App\Models\WebhookEvent;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class DetectOrderWebhookIssuesTest extends TestCase
@@ -20,12 +22,15 @@ class DetectOrderWebhookIssuesTest extends TestCase
         app(RecordPush::class)->handle($store, '1001', '1001', 77);
         $this->travel(1)->minutes();
         $event = $this->orderEvent($store, '1001');
+        $this->mock(ShopifyOrders::class)->shouldReceive('findByOrderNumber')->andReturn([$event->payload]);
+        Http::preventStrayRequests();
+        Http::fake(['https://ssapi.shipstation.com/orders/77' => Http::response(['orderId' => 77, 'orderKey' => 'gid://shopify/Order/1001', 'orderNumber' => '1001', 'orderStatus' => 'awaiting_shipment', 'shipTo' => ['street1' => 'OLD address'], 'items' => []])]);
 
         ProcessShopifyWebhookEvent::dispatchSync($event->id);
         ProcessShopifyWebhookEvent::dispatchSync($event->id);
 
         $this->assertDatabaseCount('operational_issues', 1);
-        $this->assertDatabaseHas('operational_issues', ['store_id' => $store->id, 'source_tool' => 'order_changed_after_push', 'reference' => '1001', 'priority' => 'normal', 'occurrences' => 1]);
+        $this->assertDatabaseHas('operational_issues', ['store_id' => $store->id, 'source_tool' => 'order_changed_after_push', 'reference' => '1001', 'priority' => 'high', 'occurrences' => 1]);
     }
 
     public function test_old_changes_and_pushes_in_another_store_do_not_create_issues(): void
@@ -130,6 +135,22 @@ class DetectOrderWebhookIssuesTest extends TestCase
         ProcessShopifyWebhookEvent::dispatchSync($event->id);
 
         $this->assertDatabaseCount('operational_issues', 0);
+    }
+
+    public function test_same_recipient_with_different_emails_creates_only_a_review_warning(): void
+    {
+        $this->freezeTime();
+        $store = Store::factory()->create();
+        $this->orderEvent($store, '1001', ['email' => 'a@example.com']);
+        $second = $this->orderEvent($store, '1002', ['email' => 'b@example.com']);
+
+        ProcessShopifyWebhookEvent::dispatchSync($second->id);
+
+        $issue = $store->operationalIssues()->sole();
+        $this->assertSame('normal', $issue->priority->value);
+        $this->assertSame(2, $issue->payload['different_emails']);
+        $this->assertTrue($issue->payload['warning_only']);
+        $this->assertDatabaseCount('push_logs', 0);
     }
 
     /** @param array<string, mixed> $overrides */

@@ -24,7 +24,7 @@
             >
                 <x-slot:heading>{{ $result->scanned }} {{ __('Shopify exceptions vs') }} {{ $result->meta['activeShipStation'] }} {{ __('active SS orders ·') }} {{ \App\Support\UiFormat::count(count($result->rows), 'conflicts') }}</x-slot:heading>
 
-                <x-data-table
+                <x-data-table :remediation-actions="['cancel_shipstation' => 'Cancel in ShipStation', 'hold' => 'Hold for review']"
                     :rows="$result->rows"
                     empty="No active conflicts found."
                     :columns="[

@@ -4,5 +4,18 @@
     "reports.shipstation_credentials_incomplete": "ShipStation credentials are incomplete for the active store.",
     "reports.integration_credentials_required": "Shopify and ShipStation credentials are required.",
     "reports.audit_already_queued": "Audit is already queued.",
-    "reports.audit_queued": "Audit queued."
+    "reports.audit_queued": "Audit queued.",
+    "paid_pending": "Pending fulfillment",
+    "sla_overdue": "SLA overdue",
+    "sla_due_soon": "SLA due soon",
+    "sync_shipped_pending": "SS shipped / Shopify pending",
+    "sync_active_conflict": "Active SS conflict",
+    "sync_review": "Sync review",
+    "sync_paid_cancelled": "Paid / SS cancelled",
+    "sync_fulfilled_active": "Fulfilled / SS active",
+    "open_issue": "Open issue",
+    "source_unavailable": "Unavailable source",
+    "complete": "Complete",
+    "partial": "Partial",
+    "unavailable": "Unavailable"
 }

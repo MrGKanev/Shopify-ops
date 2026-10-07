@@ -24,7 +24,7 @@ class ShippedUnfulfilledControllerTest extends TestCase
         $this->actingAs($operator)->post('/reports/shipped-unfulfilled', $this->input())->assertOk()->assertSeeText('credentials are required');
         [$operator] = $this->userWithStore(true);
         $this->bindSuccess('<script>', true);
-        $this->actingAs($operator)->post('/reports/shipped-unfulfilled', $this->input())->assertOk()->assertSeeText('1 SS shipped orders')->assertSeeText('truncated after 100 pages')->assertDontSee('<script>', false);
+        $this->actingAs($operator)->post('/reports/shipped-unfulfilled', $this->input())->assertOk()->assertSeeText('1 SS shipped orders')->assertSeeText('Review selected')->assertSee('name="order_numbers[]"', false)->assertSeeText('truncated after 100 pages')->assertDontSee('<script>', false);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->andThrow(new RuntimeException('secret-token'));
         $this->app->instance(ShipStationClientFactory::class, $factory);

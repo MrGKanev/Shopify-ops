@@ -10,9 +10,10 @@
             <x-report.results :truncated="$result->truncated" :pages="$result->pages">
                 <x-slot:heading>{{ $result->scanned }} {{ __('scanned ·') }} {{ count($result->rows) }} {{ __('flagged') }}</x-slot:heading>
 
-                <x-data-table :headers="['Order', 'Date', 'Email', 'Total', 'Payment', 'Risk']" :rows="$result->rows" empty="No medium or high risk orders were found in this range.">
+                <x-data-table :remediation-actions="['hold' => 'Hold for review']" :headers="['Order', 'Date', 'Email', 'Total', 'Payment', 'Risk']" :rows="$result->rows" empty="No medium or high risk orders were found in this range.">
                     @foreach ($result->rows as $row)
                         <tr class="align-top">
+                            <x-report.remediation-cell :number="$row['number']" action="hold" />
                             <td class="px-4 py-3"><x-report.shopify-link :id="$row['id']">{{ $row['number'] }}</x-report.shopify-link></td>
                             <td class="px-4 py-3">{{ \App\Support\UiFormat::date($row['created_at']) }}</td>
                             <td class="px-4 py-3">{{ $row['email'] }}</td>

@@ -9,6 +9,22 @@
         </x-page-header>
 
         <x-card>
+            <h2 class="text-xl font-bold">{{ __('Order remediation') }}</h2>
+            <x-data-table class="mt-4" :headers="['Action', 'Progress', 'Result']">
+                @forelse ($remediationGroups as $group => $runs)
+                    @php($finished = $runs->whereIn('status', ['completed', 'failed', 'blocked', 'cancelled'])->count())
+                    <tr>
+                        <td class="px-4 py-3">{{ __(\App\Application\Orders\BuildRemediationPlan::ACTIONS[$runs->first()->action] ?? $runs->first()->action) }}</td>
+                        <td class="px-4 py-3"><label class="flex flex-col gap-1">{{ $finished }} / {{ $runs->count() }} {{ __('finished') }}<progress max="{{ $runs->count() }}" value="{{ $finished }}" class="h-2 w-48"></progress></label></td>
+                        <td class="px-4 py-3"><x-button size="sm" variant="ghost" :href="route('orders.remediation.show', $group)">{{ __('View changes and results') }}</x-button></td>
+                    </tr>
+                @empty
+                    <tr><td colspan="3" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">{{ __('No recent remediation jobs.') }}</td></tr>
+                @endforelse
+            </x-data-table>
+        </x-card>
+
+        <x-card>
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div><h2 class="text-xl font-bold">{{ __('Audit executions') }}</h2><p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ __('Queued and completed core audits for this store.') }}</p></div>
                 <x-badge tone="info">{{ $auditJobs->count() }} {{ __('recent') }}</x-badge>

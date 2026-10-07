@@ -221,12 +221,32 @@ Finds Shopify orders that are refunded or cancelled but still active in ShipStat
 ### Bundle Check
 Scans for orders missing required companion items as defined in [`config/order-types.php`](../config/order-types.php) under `required_items`. Covers fulfilled orders too - catching shipped bundles missing a component is the most urgent case. See [order-types.md](order-types.md) for configuration.
 
-### Return / RMA Tracker
-Fetches refunded and partially-refunded orders in a date range and shows the returned items from each refund.
+### Operational Digest
 
-- Each row is one refund event, with the items returned and the refund amount
-- Reason column shows the note attached to the refund, if any
-- SKU Return Summary totals units returned and revenue refunded per SKU across all refunds in the range
+Combines paid orders awaiting Shopify fulfillment, scoped ShipStation status findings, active operational issues, and estimated fulfillment deadlines due within 24 hours or already overdue. Order checks use the selected creation-date window; active issues cover the whole store. Estimates use order creation plus a configurable calendar-day threshold in the shop timezone.
+
+Enable **Operational Digest** in Email Rules with **Daily digest** mode to build a fresh snapshot through the existing `reports:email-digest` schedule. Store settings provide the lookback window (default 30 days) and SLA estimate (default 3 days). Snapshot links and counts are included alongside existing digest sections. Unavailable sources are shown as unavailable; truncated or permission-limited counts are lower bounds. Manifests, billing refunds and physical handover are not inferred from V1 shipment/label status.
+
+### Rate Shopping Audit
+
+Captures ShipStation V1 quotes with the full account/route/parcel/service context and the original retrieval time. Every new capture starts as a **Current-tariff simulation**, including captures for already-shipped orders. A cached response retains its original timestamp; its key includes account credentials' fingerprint, carrier, complete route, residential status, warehouse, weight, dimensions, package, confirmation, date, currency and approved service conditions.
+
+- Enter the account billing currency and an operator-approved service list. Transit limits, tracking, included coverage and route restrictions are operator-confirmed because V1 quotes do not independently establish those facts.
+- Price comparisons sum `shipmentCost` and `otherCost`, exclude unapproved services, and never turn a missing reference price into zero savings.
+- Optional explicit confirmation applies a quoted service and the reviewed parcel/warehouse settings to an open SS order. Conditions are rechecked, quotes must be at most five minutes old, and the returned settings must match. The resulting **Recorded quote decision** preserves the comparison available at selection; it does not prove label purchase or invoiced savings.
+- Shipped/cancelled orders cannot accept selection. Current V1 comparisons are limited to domestic, default-account shipments without additional insurance, DDP, special billing or other unmodelled shipping options. Unsupported conditions are refused.
+- Full contexts and quotes are encrypted at rest. Access is store-scoped, and capture/selection work runs on the existing queue and integration throttle. No label is purchased or voided by this workflow.
+
+### Return / RMA Tracker
+
+Finds overdue steps using Shopify Returns API data: requests awaiting approval, confirmed warehouse receipts with unprocessed quantities, and unfinished physical exchanges. Scanning creates store-scoped operational issues with links back to each exception.
+
+- The range selects return creation dates, including returns attached to older orders. Previously flagged returns are rechecked so completed steps can resolve their issues; incomplete or unobserved data never resolves an issue.
+- Per-store deadlines default to 2 business days for approval, 3 after warehouse receipt for processing, and 5 for exchanges. Configure them in Store settings. Business days are Monday–Friday in the shop timezone; holidays are not excluded.
+- Warehouse receipt requires a positive Shopify disposition at a location. Missing-item dispositions, return labels and carrier scans alone do not count as warehouse receipt or inspection.
+- Exchange checks use remaining physical quantities and exclude fulfilled, removed and digital items. Exchanges with outstanding shipping can still be flagged after their return closes. Planned exchanges are not overdue for processing until receipt is confirmed.
+- Requires `read_returns` and location-read access (such as `read_locations`). Access to orders older than 60 days also depends on `read_all_orders`.
+- The existing refund history and per-SKU refunded quantities remain in a separate section, using their existing order-based range. Refunds without returns are not flagged as errors.
 
 ### Returned Items Report
 Pulls orders refunded in a date range and sums refund line-item quantities per product/variant, filtered by order creation date.

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Integrations\Shopify\Contracts\ShopifyPayments;
+use App\Integrations\Shopify\ShopifyReturns;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -32,9 +33,10 @@ class ReturnRmaControllerTest extends TestCase
             'truncated' => true,
         ]);
         $this->app->instance(ShopifyPayments::class, $gateway);
+        $this->mock(ShopifyReturns::class)->shouldReceive('candidates')->andReturn(['returns' => [], 'pages' => 0, 'truncated' => false]);
 
         $this->actingAs($operator)->post('/reports/return-rma', ['start_date' => '2026-01-01', 'end_date' => '2026-01-31'])
-            ->assertOk()->assertSeeText('1 refunds from 1 orders')->assertSeeText('Return Rate by SKU')->assertSeeText('truncated after 100 pages')
+            ->assertOk()->assertSeeText('1 refunds from 1 orders')->assertSeeText('Refunded units by SKU')->assertSeeText('truncated after 100 pages')
             ->assertDontSee('<script>', false)->assertDontSee('<img>', false)->assertDontSee('<svg>', false);
     }
 
@@ -44,6 +46,7 @@ class ReturnRmaControllerTest extends TestCase
         $gateway = Mockery::mock(ShopifyPayments::class);
         $gateway->shouldReceive('refundTrackerCandidates')->andThrow(new RuntimeException('secret-token'));
         $this->app->instance(ShopifyPayments::class, $gateway);
+        $this->mock(ShopifyReturns::class)->shouldReceive('candidates')->andReturn(['returns' => [], 'pages' => 0, 'truncated' => false]);
 
         $this->actingAs($operator)->post('/reports/return-rma', ['start_date' => '2026-01-01', 'end_date' => '2026-01-31'])
             ->assertOk()->assertSeeText('could not be completed')->assertDontSeeText('secret-token');

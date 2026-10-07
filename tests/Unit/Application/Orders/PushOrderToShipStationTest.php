@@ -76,11 +76,12 @@ class PushOrderToShipStationTest extends TestCase
         $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumber')->once()->with($store, '1001')->andReturn([$order]);
         $client = Mockery::mock(ShipStationClientContract::class);
+        $client->shouldReceive('buildOrderPayload')->andReturn([]);
         $client->shouldReceive('createOrder')->once()->with($order)->andReturn(['orderId' => 555, 'orderNumber' => '1001']);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->once()->with($store)->andReturn($client);
         $recordPush = Mockery::mock(RecordPush::class);
-        $recordPush->shouldReceive('handle')->once()->with($store, '1001', '1', 555);
+        $recordPush->shouldReceive('handle')->once()->with($store, '1001', '1', 555, []);
 
         $result = (new PushOrderToShipStation($shopify, $factory, $recordPush))->handle($store, '1001');
 
@@ -94,11 +95,12 @@ class PushOrderToShipStationTest extends TestCase
         $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumber')->once()->andReturn([$order]);
         $client = Mockery::mock(ShipStationClientContract::class);
+        $client->shouldReceive('buildOrderPayload')->andReturn([]);
         $client->shouldReceive('createOrder')->once()->andReturn(['orderId' => 555]);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->once()->andReturn($client);
         $recordPush = Mockery::mock(RecordPush::class);
-        $recordPush->shouldReceive('handle')->once()->with($store, '1001', '1', 555);
+        $recordPush->shouldReceive('handle')->once()->with($store, '1001', '1', 555, []);
 
         $result = (new PushOrderToShipStation($shopify, $factory, $recordPush))->handle($store, '1001');
 
@@ -112,6 +114,7 @@ class PushOrderToShipStationTest extends TestCase
         $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumber')->once()->with($store, '1001')->andReturn([$order]);
         $client = Mockery::mock(ShipStationClientContract::class);
+        $client->shouldReceive('buildOrderPayload')->andReturn([]);
         $client->shouldReceive('createOrder')->once()->with($order)->andThrow(new RuntimeException('API secret must not be persisted'));
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->once()->with($store)->andReturn($client);
@@ -146,12 +149,13 @@ class PushOrderToShipStationTest extends TestCase
         $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumber')->twice()->andReturn([$order]);
         $client = Mockery::mock(ShipStationClientContract::class);
+        $client->shouldReceive('buildOrderPayload')->andReturn([]);
         $client->shouldReceive('createOrder')->once()->with($order)->andReturn(['orderId' => 555, 'orderNumber' => '1001']);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->once()->andReturn($client);
         $recordPush = Mockery::mock(RecordPush::class);
         $recordPush->shouldNotReceive('failed');
-        $recordPush->shouldReceive('handle')->once()->with($store, '1001', '1', 555);
+        $recordPush->shouldReceive('handle')->once()->with($store, '1001', '1', 555, []);
         $push = new PushOrderToShipStation($shopify, $factory, $recordPush);
 
         try {

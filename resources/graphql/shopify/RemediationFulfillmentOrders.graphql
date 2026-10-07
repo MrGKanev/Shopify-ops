@@ -1,0 +1,17 @@
+query RemediationFulfillmentOrders($id: ID!) {
+  order(id: $id) {
+    id
+    fulfillmentOrders(first: 250) {
+      nodes {
+        id status
+        supportedActions { action }
+        fulfillmentHolds { id handle heldByRequestingApp }
+        lineItems(first: 250) {
+          nodes { id remainingQuantity lineItem { id sku } }
+          pageInfo { hasNextPage }
+        }
+      }
+      pageInfo { hasNextPage }
+    }
+  }
+}

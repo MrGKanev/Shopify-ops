@@ -1,0 +1,6 @@
+query OrderContributionOrders($search: String!, $after: String) {
+  orders(first: 25, query: $search, after: $after, sortKey: CREATED_AT) {
+    edges { node { id legacyResourceId name createdAt displayFinancialStatus displayFulfillmentStatus currentTotalPriceSet { shopMoney { amount currencyCode } } currentTotalTaxSet { shopMoney { amount currencyCode } } } }
+    pageInfo { hasNextPage endCursor }
+  }
+}

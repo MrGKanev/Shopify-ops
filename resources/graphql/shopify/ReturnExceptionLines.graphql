@@ -1,0 +1,11 @@
+query ReturnExceptionLines($id: ID!, $after: String) {
+  return(id: $id) {
+    returnLineItems(first: 100, after: $after) {
+      nodes {
+        __typename id quantity processedQuantity unprocessedQuantity
+        ... on ReturnLineItem { fulfillmentLineItem { id lineItem { title sku } } }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}

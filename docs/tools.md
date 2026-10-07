@@ -12,6 +12,8 @@ _Generated from the tool registry in [`config/reports.php`](../config/reports.ph
 | --- | --- |
 | **Saved Reports** | View and download saved audit reports |
 | **Run Audit** | Compare Shopify vs ShipStation for any date range |
+| **Operational Digest** | Paid pending orders, sync findings, unresolved issues and upcoming fulfillment deadlines |
+| **Rate Shopping Audit** | Captured quote decisions and clearly labelled current-rate simulations under approved service conditions |
 | **Trends** | Aggregated stats across all audit reports |
 
 ### Order Issues
@@ -21,7 +23,7 @@ _Generated from the tool registry in [`config/reports.php`](../config/reports.ph
 | **Duplicate Detector** | Same customer, same total - placed within 10 minutes |
 | **Refunds Tracker** | Refunded Shopify orders cross-checked against ShipStation |
 | **Repeat Refunds** | Customers with multiple refunded orders in a date range |
-| **Return / RMA Tracker** | Refunded orders with item-level return details and per-SKU return rate summary |
+| **Return / RMA Tracker** | Overdue return requests, received items awaiting processing and unfinished exchanges |
 | **Returned Items Report** | Itemized quantity totals for refunded line items in a date range |
 | **Orphan Detector** | ShipStation orders with no matching Shopify order |
 | **Active SS Conflicts** | Refunded or cancelled Shopify orders still active in ShipStation |
@@ -59,6 +61,7 @@ _Generated from the tool registry in [`config/reports.php`](../config/reports.ph
 | Page | What it does |
 | --- | --- |
 | **Carrier Performance** | Avg delivery time, late rate, and order count grouped by carrier for a date range |
+| **Order Contribution Margin** | Shopify-reported net revenue and historical product costs, payment fees and matched ShipStation labels, with explicit missing costs and currency coverage |
 | **Shipping Margin Erosion** | Orders where the ShipStation label cost exceeds what the customer was charged for shipping — flags orders shipped at a loss |
 
 ### Products & Inventory

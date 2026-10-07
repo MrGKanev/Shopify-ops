@@ -14,9 +14,10 @@
             <x-report.results :truncated="$result->truncated" :pages="$result->pages">
                 <x-slot:heading>{{ $result->scanned }} {{ __('scanned ·') }} {{ \App\Support\UiFormat::count(count($result->rows), 'policy violations') }}</x-slot:heading>
 
-                <x-data-table :headers="['Order', 'Placed', 'Violations', 'Tags', 'Email', 'Status']" :rows="$result->rows" empty="No scanned orders violated the configured tag policy.">
+                <x-data-table :remediation-actions="['add_tag' => 'Add tag', 'remove_tag' => 'Remove tag']" :headers="['Order', 'Placed', 'Violations', 'Tags', 'Email', 'Status']" :rows="$result->rows" empty="No scanned orders violated the configured tag policy.">
                     @foreach ($result->rows as $row)
                         <tr class="align-top">
+                            <x-report.remediation-cell :number="$row['order_number']" action="add_tag" />
                             <td class="px-4 py-3 font-semibold"><x-report.shopify-link :id="$row['shopify_id']">{{ $row['order_number'] }}</x-report.shopify-link></td>
                             <td class="px-4 py-3">{{ \App\Support\UiFormat::date($row['created_at']) }}</td>
                             <td class="px-4 py-3">

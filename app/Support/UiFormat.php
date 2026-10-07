@@ -22,17 +22,20 @@ class UiFormat
         return (string) Number::format($value, precision: $precision, locale: app()->getLocale());
     }
 
-    public static function date(CarbonInterface|string|null $value, bool $withTime = false): string
+    public static function date(CarbonInterface|string|null $value, bool $withTime = false, ?string $timezone = null): string
     {
         if ($value === null || $value === '') {
             return '—';
         }
         $date = $value instanceof CarbonInterface ? $value : Carbon::parse($value);
+        if ($timezone !== null) {
+            $date = $date->copy()->timezone($timezone);
+        }
         if (app()->isLocale('en')) {
             return $date->format($withTime ? 'Y-m-d H:i:s' : 'Y-m-d');
         }
 
-        return $date->copy()->timezone(config('app.timezone'))->locale(app()->getLocale())
+        return $date->copy()->timezone($timezone ?? config('app.timezone'))->locale(app()->getLocale())
             ->isoFormat($withTime ? 'L LT' : 'L');
     }
 

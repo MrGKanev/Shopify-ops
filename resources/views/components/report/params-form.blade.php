@@ -17,12 +17,13 @@
     @foreach ($fields as $name => $field)
         <div>
             <label class="text-sm font-medium" for="{{ $name }}">{{ __($field['label']) }}</label>
+            @php($inputValue = old($name, $field['value'] ?? null))
             <input
                 {{ (new \Illuminate\View\ComponentAttributeBag(\Illuminate\Support\Arr::except($field, ['label', 'type', 'value', 'class'])))->class([$inputClass, $field['class'] ?? '']) }}
                 id="{{ $name }}"
                 name="{{ $name }}"
                 type="{{ $field['type'] ?? 'text' }}"
-                value="{{ old($name, $field['value'] ?? null) }}"
+                value="{{ is_array($inputValue) ? implode(', ', array_filter($inputValue, is_scalar(...))) : $inputValue }}"
                 @error($name) aria-invalid="true" aria-describedby="{{ $name }}-error" @enderror
             >
             @error($name)

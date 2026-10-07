@@ -1,0 +1,6 @@
+mutation CreateWebhookSubscription($topic: WebhookSubscriptionTopic!, $subscription: WebhookSubscriptionInput!) {
+  webhookSubscriptionCreate(topic: $topic, webhookSubscription: $subscription) {
+    webhookSubscription { id }
+    userErrors { field message }
+  }
+}

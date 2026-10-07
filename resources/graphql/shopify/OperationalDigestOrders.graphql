@@ -1,0 +1,6 @@
+query OperationalDigestOrders($search: String!, $after: String) {
+  orders(first: 250, query: $search, after: $after, sortKey: CREATED_AT) {
+    edges { node { id legacyResourceId name createdAt cancelledAt displayFinancialStatus displayFulfillmentStatus } }
+    pageInfo { hasNextPage endCursor }
+  }
+}

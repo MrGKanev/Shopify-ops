@@ -17,7 +17,7 @@ final readonly class EmailRule implements Arrayable
 
         return new self(
             in_array($mode, ['off', 'immediate', 'digest'], true) ? $mode : 'off',
-            max($tool === 'run_audit' ? 0 : 1, (int) ($stored['threshold'] ?? 1)),
+            max(in_array($tool, ['run_audit', 'operational_digest'], true) ? 0 : 1, (int) ($stored['threshold'] ?? 1)),
             (bool) ($stored['include_zero'] ?? false),
             $email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : '',
         );

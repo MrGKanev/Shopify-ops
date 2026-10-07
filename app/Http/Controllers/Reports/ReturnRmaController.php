@@ -27,7 +27,7 @@ class ReturnRmaController extends Controller
         $reportFailed = false;
 
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'return_rma', $report::class, [$startDate, $endDate], $startDate, $endDate);
+            $run = $reports->run($request, $store, 'return_rma', $report::class, [$startDate, $endDate, $store->returnExceptionPolicy()], $startDate, $endDate);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }

@@ -24,7 +24,7 @@
             >
                 <x-slot:heading>{{ $result->meta['shipStationTotal'] }} {{ __('ShipStation vs') }} {{ $result->meta['shopifyTotal'] }} {{ __('Shopify orders ·') }} {{ \App\Support\UiFormat::count(count($result->rows), 'orphans') }}</x-slot:heading>
 
-                <x-data-table
+                <x-data-table :remediation-actions="['tag_shipstation' => 'Tag in ShipStation']"
                     :rows="$result->rows"
                     empty="No orphan orders found."
                     :columns="[

@@ -26,11 +26,14 @@ use App\Http\Controllers\Reports\ItemMismatchController;
 use App\Http\Controllers\Reports\NoteFlagController;
 use App\Http\Controllers\Reports\NoTrackingController;
 use App\Http\Controllers\Reports\OnHoldStallController;
+use App\Http\Controllers\Reports\OperationalDigestController;
+use App\Http\Controllers\Reports\OrderContributionController;
 use App\Http\Controllers\Reports\OrderEditController;
 use App\Http\Controllers\Reports\OrphanOrderController;
 use App\Http\Controllers\Reports\PartialFulfillmentController;
 use App\Http\Controllers\Reports\PostShipAddressChangeController;
 use App\Http\Controllers\Reports\ProductCompletenessController;
+use App\Http\Controllers\Reports\RateShoppingController;
 use App\Http\Controllers\Reports\RefundTrackerController;
 use App\Http\Controllers\Reports\RepeatRefundController;
 use App\Http\Controllers\Reports\ReturnedItemsController;
@@ -100,6 +103,23 @@ return [
             'requires' => [Integration::Shopify, Integration::ShipStation],
             'custom_routes' => true,
         ],
+        'operational_digest' => [
+            'slug' => 'operational-digest',
+            'label' => 'Operational Digest',
+            'section' => 'Core Audit',
+            'description' => 'Paid pending orders, sync findings, unresolved issues and upcoming fulfillment deadlines',
+            'controller' => OperationalDigestController::class,
+            'requires' => [Integration::Shopify],
+        ],
+        'rate_shopping' => [
+            'slug' => 'rate-shopping',
+            'label' => 'Rate Shopping Audit',
+            'section' => 'Core Audit',
+            'description' => 'Captured quote decisions and clearly labelled current-rate simulations under approved service conditions',
+            'controller' => RateShoppingController::class,
+            'requires' => [Integration::ShipStation],
+            'custom_routes' => true,
+        ],
         'report_trends' => [
             'route' => 'report-trends.index',
             'label' => 'Trends',
@@ -135,7 +155,7 @@ return [
             'slug' => 'return-rma',
             'label' => 'Return / RMA Tracker',
             'section' => 'Order Issues',
-            'description' => 'Refunded orders with item-level return details and per-SKU return rate summary',
+            'description' => 'Overdue return requests, received items awaiting processing and unfinished exchanges',
             'controller' => ReturnRmaController::class,
             'requires' => [Integration::Shopify],
         ],
@@ -319,6 +339,14 @@ return [
             'description' => 'Avg delivery time, late rate, and order count grouped by carrier for a date range',
             'controller' => CarrierPerformanceController::class,
             'requires' => [Integration::ShipStation],
+        ],
+        'order_contribution' => [
+            'slug' => 'order-contribution',
+            'label' => 'Order Contribution Margin',
+            'section' => 'Carrier Analytics',
+            'description' => 'Shopify-reported net revenue and historical product costs, payment fees and matched ShipStation labels, with explicit missing costs and currency coverage',
+            'controller' => OrderContributionController::class,
+            'requires' => [Integration::Shopify],
         ],
         'shipping_margin' => [
             'slug' => 'shipping-margin',

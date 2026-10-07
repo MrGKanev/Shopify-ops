@@ -24,7 +24,7 @@
             >
                 <x-slot:heading>{{ $result->meta['shippedTotal'] }} {{ __('SS shipped orders ·') }} {{ count($result->rows) }} {{ __('Shopify sync mismatches') }}</x-slot:heading>
 
-                <x-data-table
+                <x-data-table :remediation-actions="['fulfill_tracking' => 'Sync fulfillment']"
                     :rows="$result->rows"
                     empty="All shipped orders are synced."
                     :columns="[

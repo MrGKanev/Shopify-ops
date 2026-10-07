@@ -27,6 +27,7 @@
                             <span>{{ __('Shipping:') }} {{ $row['shipping_country'] }}</span>
                             <span>{{ __($row['financial']) }} · {{ __($row['fulfillment'] ?: 'unfulfilled') }}</span>
                         </div>
+                        <x-button class="mt-3" size="sm" variant="ghost" :href="route('orders.remediation.create', ['order_number' => $row['number'], 'action' => 'hold'])">{{ __('Review hold') }}</x-button>
                         <a class="mt-3 inline-flex text-sm text-indigo-600 dark:text-indigo-400" href="{{ route('orders.spot-check', ['prefill' => ltrim($row['number'], '#')]) }}">{{ __('Open in spot-check') }}</a>
                     </x-card>
                 @empty

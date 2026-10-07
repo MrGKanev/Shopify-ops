@@ -51,10 +51,11 @@
                     @include('partials.bulk-ignore-form')
                 @endif
 
-                <x-data-table :headers="['', 'Order', 'Date', 'Email', 'Total']" :rows="$result->rows" empty="Every eligible Shopify order was found in ShipStation.">
+                <x-data-table :remediation-actions="['refresh_import' => 'Refresh import', 'push_missing' => 'Push after refresh']" :headers="['', 'Order', 'Date', 'Email', 'Total']" :rows="$result->rows" empty="Every eligible Shopify order was found in ShipStation.">
                     @foreach ($result->rows as $order)
                         @php($number = $order['name'] ?? $order['order_number'] ?? '')
                         <tr>
+                            <x-report.remediation-cell :number="$number" action="refresh_import" />
                             <x-report.ignore-checkbox :number="$number" />
                             <td class="px-4 py-3 font-semibold">{{ $number ?: '—' }}</td>
                             <td class="px-4 py-3">{{ $order['created_at'] ?? '—' }}</td>

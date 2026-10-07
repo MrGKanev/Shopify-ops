@@ -38,3 +38,6 @@ Thumbs.db
 /reports/
 /order_types.json
 /package-lock.json
+
+# Local planning files; never commit or deploy.
+/todo.md

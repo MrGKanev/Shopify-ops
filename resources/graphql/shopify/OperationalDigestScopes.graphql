@@ -1,0 +1,3 @@
+query OperationalDigestScopes {
+  currentAppInstallation { accessScopes { handle } }
+}

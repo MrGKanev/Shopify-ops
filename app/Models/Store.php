@@ -37,6 +37,8 @@ use Spatie\Activitylog\Support\LogOptions;
     'scheduled_audit_time',
     'delivery_watch_days',
     'shopify_timezone',
+    'return_exception_policy',
+    'operational_digest_policy',
 ])]
 #[Hidden(['shopify_access_token', 'shopify_webhook_secret', 'shipstation_api_key', 'shipstation_api_secret'])]
 class Store extends Model
@@ -114,10 +116,49 @@ class Store extends Model
         return $this->hasMany(OperationalIssue::class);
     }
 
+    /** @return HasMany<RateQuoteSnapshot, $this> */
+    public function rateQuoteSnapshots(): HasMany
+    {
+        return $this->hasMany(RateQuoteSnapshot::class);
+    }
+
+    /** @return HasMany<RemediationRun, $this> */
+    public function remediationRuns(): HasMany
+    {
+        return $this->hasMany(RemediationRun::class);
+    }
+
     /** @return HasMany<WebhookEvent, $this> */
     public function webhookEvents(): HasMany
     {
         return $this->hasMany(WebhookEvent::class);
+    }
+
+    /** @return array{approval_days: int, processing_days: int, exchange_days: int} */
+    public function returnExceptionPolicy(): array
+    {
+        $policy = is_array($this->return_exception_policy) ? $this->return_exception_policy : [];
+        $defaults = ['approval_days' => 2, 'processing_days' => 3, 'exchange_days' => 5];
+        foreach ($defaults as $key => $default) {
+            $value = $policy[$key] ?? $default;
+            $validated = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 90]]);
+            $defaults[$key] = $validated === false ? $default : $validated;
+        }
+
+        return $defaults;
+    }
+
+    /** @return array{sla_days: int, lookback_days: int} */
+    public function operationalDigestPolicy(): array
+    {
+        $policy = is_array($this->operational_digest_policy) ? $this->operational_digest_policy : [];
+        $defaults = ['sla_days' => 3, 'lookback_days' => 30];
+        foreach ($defaults as $key => $default) {
+            $value = filter_var($policy[$key] ?? $default, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 365]]);
+            $defaults[$key] = $value === false ? $default : $value;
+        }
+
+        return $defaults;
     }
 
     public function missingShopifyCredentials(): bool
@@ -146,6 +187,8 @@ class Store extends Model
     protected function casts(): array
     {
         return [
+            'return_exception_policy' => 'array',
+            'operational_digest_policy' => 'array',
             'shopify_access_token' => 'encrypted',
             'shopify_webhook_secret' => 'encrypted',
             'shipstation_api_key' => 'encrypted',

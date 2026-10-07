@@ -1,0 +1,3 @@
+mutation RemoveRemediationTags($id: ID!, $tags: [String!]!) {
+  tagsRemove(id: $id, tags: $tags) { node { id } userErrors { field message } }
+}
