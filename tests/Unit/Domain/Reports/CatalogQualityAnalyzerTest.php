@@ -41,6 +41,16 @@ class CatalogQualityAnalyzerTest extends TestCase
         $this->assertCount(4, $rows[0]['issues']);
     }
 
+    public function test_customs_review_is_counted_even_when_storefront_fields_are_healthy(): void
+    {
+        $product = $this->product(['id' => 'gid://shopify/Product/42']);
+
+        $rows = (new CatalogQualityAnalyzer)->analyze([$product], ['gid://shopify/Product/42']);
+
+        $this->assertSame(['Customs product defaults need review'], $rows[0]['issues']);
+        $this->assertSame('42', $rows[0]['id']);
+    }
+
     private function product(array $overrides = []): array
     {
         return array_replace(['legacyResourceId' => '42', 'title' => 'Widget', 'vendor' => 'Acme', 'productType' => 'Gadget', 'onlineStoreUrl' => 'https://example.test/products/widget', 'seo' => ['title' => 'Widget', 'description' => 'Useful widget'], 'collections' => ['nodes' => [['id' => 'gid://shopify/Collection/1']]]], $overrides);

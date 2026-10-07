@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Application\Orders\CheckOrderCustoms;
 use App\Application\Orders\PushOrderToShipStation;
 use App\Application\Orders\ShippingAddressNeedsReview;
 use App\Http\Requests\PushOrderToShipStationRequest;
@@ -27,6 +28,19 @@ class PushToShipStationController extends Controller
             Log::warning('Push to ShipStation preview failed.', ['exception_type' => $exception::class]);
 
             return response()->json(['error' => UiFormat::text($exception->getMessage())], 422);
+        }
+    }
+
+    public function customs(PushOrderToShipStationRequest $request, CheckOrderCustoms $check): View|RedirectResponse
+    {
+        try {
+            $result = $check->handle($this->resolveStore($request), (string) $request->validated('order_number'));
+
+            return view('orders.push', ['customsResult' => $result, 'customsOrderNumber' => $request->validated('order_number')]);
+        } catch (Throwable $exception) {
+            Log::warning('Customs readiness check failed.', ['exception_type' => $exception::class]);
+
+            return back()->withInput()->withErrors(['order_number' => __('Customs data could not be checked. Review API health and permissions.')]);
         }
     }
 

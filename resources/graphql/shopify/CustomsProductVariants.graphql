@@ -1,0 +1,9 @@
+query CustomsProductVariants($id: ID!, $after: String) {
+  product(id: $id) {
+    id updatedAt
+    variants(first: 100, after: $after) {
+      nodes { id title sku price inventoryItem { requiresShipping harmonizedSystemCode countryCodeOfOrigin duplicateSkuCount measurement { weight { value unit } } } }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}

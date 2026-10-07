@@ -94,6 +94,7 @@ Route::middleware('auth')->group(function (): void {
         });
         Route::get('/orders/push', [PushToShipStationController::class, 'create'])->middleware('can:run-audits')->name('orders.push.create');
         Route::post('/orders/push', [PushToShipStationController::class, 'preview'])->middleware(['can:run-audits', 'throttle:push-order'])->name('orders.push.preview');
+        Route::post('/orders/customs-check', [PushToShipStationController::class, 'customs'])->middleware(['can:run-audits', 'throttle:push-order'])->name('orders.customs.check');
         Route::post('/orders/push/confirm', [PushToShipStationController::class, 'store'])->middleware(['can:run-audits', 'throttle:push-order'])->name('orders.push.store');
         Route::post('/orders/note', [OrderNoteController::class, 'update'])->middleware(['can:run-audits', 'throttle:push-order'])->name('orders.note.update');
         Route::get('/orders/spot-check', [OrderBatchLookupController::class, 'create'])->name('orders.spot-check');

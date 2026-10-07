@@ -17,6 +17,6 @@ class CatalogQualityRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [];
+        return ['include_customs' => ['sometimes', 'boolean'], 'after' => ['nullable', 'string', 'max:512']];
     }
 }

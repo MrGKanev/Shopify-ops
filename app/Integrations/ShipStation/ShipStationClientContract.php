@@ -26,6 +26,9 @@ interface ShipStationClientContract
     /** @return array<string, mixed> */
     public function getWarehouse(int $warehouseId): array;
 
+    /** @return array{products: list<array<string, mixed>>, pages: int, truncated: bool} */
+    public function customsProducts(): array;
+
     public function healthCheck(): void;
 
     /**

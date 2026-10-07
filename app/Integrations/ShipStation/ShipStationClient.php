@@ -35,6 +35,38 @@ class ShipStationClient implements ShipStationClientContract
         private readonly ?int $storeId = null,
     ) {}
 
+    public function customsProducts(): array
+    {
+        $products = [];
+        $seen = [];
+        $page = 1;
+        do {
+            $payload = $this->get('/products', ['showInactive' => 'false', 'pageSize' => 500, 'page' => $page]);
+            if (! is_int($payload['pages'] ?? null) || $payload['pages'] < 0 || ! is_array($payload['products'] ?? null)) {
+                throw new UnexpectedResponse('ShipStation could not confirm customs product coverage.');
+            }
+            foreach ($this->items($payload, 'products') as $product) {
+                $id = $product['productId'] ?? null;
+                if (! is_scalar($id) || ! ctype_digit((string) $id) || (int) $id < 1) {
+                    throw new UnexpectedResponse('ShipStation returned an invalid customs product identity.');
+                }
+                if (isset($seen[(string) $id])) {
+                    if ($seen[(string) $id] !== $product) {
+                        throw new UnexpectedResponse('ShipStation customs product changed during pagination.');
+                    }
+
+                    continue;
+                }
+                $seen[(string) $id] = $product;
+                $products[] = $product;
+            }
+            $pages = max(1, $payload['pages']);
+            $page++;
+        } while ($page <= $pages && $page <= 20);
+
+        return ['products' => $products, 'pages' => $page - 1, 'truncated' => $page <= $pages];
+    }
+
     public function getOrder(int $orderId): array
     {
         return $this->get('/orders/'.$orderId, []);

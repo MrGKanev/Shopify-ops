@@ -25,7 +25,7 @@ class CatalogQualityController extends Controller
         $configurationError = $store->missingShopifyCredentials();
 
         if (! $configurationError) {
-            $run = $reports->run($request, $store, 'catalog_quality', $report::class, [], null, null);
+            $run = $reports->run($request, $store, 'catalog_quality', $report::class, $request->boolean('include_customs') ? [true, $request->validated('after')] : [], null, null);
             if ($reports->shouldRedirect($request, $run)) {
                 return $reports->redirectToResult($request);
             }

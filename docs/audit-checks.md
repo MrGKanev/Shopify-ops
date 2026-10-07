@@ -300,6 +300,11 @@ Finds active products with gaps that hurt storefront visibility or SEO.
 - Not published: not published to the Online Store sales channel, invisible to customers
 - Missing SEO title/description: no custom search-engine listing preview set
 - Not in any collection: customers can't discover the product by browsing
+- Optional customs scan: Shopify physical variants versus exact-SKU ShipStation account-level product defaults; HS/origin, description, positive value candidates and item weights. Compatible national HS extensions are not conflicts. Duplicate SKUs, noCustoms exemptions and partial source coverage require review.
+- Customs scans use 25-product parts with a continuation link and paginate nested variants. They do not change product defaults.
+- On Push order / fix note, **Check customs** reads pending physical Shopify items and the exact store-scoped SS order, its selected warehouse and draft customs rows. It checks row fields, quantities and parcel-weight availability. It does not create a label, alter a declaration or block a push.
+- Missing Shopify fields can be supplied by SS defaults or prepared customs rows. V1 has no guaranteed SKU link for customs rows: per-item declaration comparisons require one physical line, one customs row, matching quantities and verified SS order-item identity. Multi-item mapping remains unconfirmed.
+- Different countries do not automatically imply customs requirements. Manufacturing origin is distinct from ship-from country. HS format checks do not validate tariff classification or destination-specific rules. V1 customs rows are order drafts, not proof of the declaration transmitted with a label; SS product-default value currency and customs-row weights remain unconfirmed.
 
 ### Gift Cards
 Finds enabled gift cards with a remaining balance that are either expiring soon or have never been redeemed.

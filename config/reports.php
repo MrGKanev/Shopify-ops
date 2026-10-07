@@ -409,7 +409,7 @@ return [
             'slug' => 'catalog-quality',
             'label' => 'Catalog Quality',
             'section' => 'Products & Inventory',
-            'description' => 'Active products not published to Online Store, missing SEO fields, or not in any collection',
+            'description' => 'Active product publishing, SEO and collection gaps, with optional Shopify/ShipStation customs-default checks and source coverage',
             'controller' => CatalogQualityController::class,
             'requires' => [Integration::Shopify],
         ],

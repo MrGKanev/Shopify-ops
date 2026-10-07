@@ -12,6 +12,10 @@
             <x-alert tone="ok">{{ session('status') }}</x-alert>
         @endif
 
+        @if (isset($customsResult))
+            <x-report.customs-readiness :result="$customsResult" />
+        @endif
+
         <section class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
             <h2 class="text-xl font-bold">{{ __('Push to ShipStation') }}</h2>
             <p class="text-sm text-slate-500 dark:text-slate-400">{{ __('Fetches the order from Shopify and creates it in ShipStation as') }} <code>awaiting_shipment</code>{{ __('. This creates a real order — preview the payload first.') }}</p>
@@ -20,12 +24,13 @@
                 @csrf
                 <div class="flex grow flex-col gap-2">
                     <label class="text-sm font-medium" for="push_order_number">{{ __('Order number') }}</label>
-                    <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950" id="push_order_number" name="order_number" value="{{ old('order_number') }}" placeholder="#65075" maxlength="64" aria-invalid="{{ $errors->has('order_number') ? 'true' : 'false' }}" @if ($errors->has('order_number')) aria-describedby="push-order-number-error" @endif>
+                    <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none ring-indigo-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-950" id="push_order_number" name="order_number" value="{{ old('order_number', $customsOrderNumber ?? '') }}" placeholder="#65075" maxlength="64" aria-invalid="{{ $errors->has('order_number') ? 'true' : 'false' }}" @if ($errors->has('order_number')) aria-describedby="push-order-number-error" @endif>
                     @error('order_number')
                         <p class="text-sm text-red-600 dark:text-red-400" id="push-order-number-error" role="alert">{{ __($message) }}</p>
                     @enderror
                 </div>
                 <button class="rounded-lg border border-slate-300 px-5 py-2.5 font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800" type="button" id="push-preview-btn">{{ __('Preview payload') }}</button>
+                <x-button type="submit" variant="ghost" :formaction="route('orders.customs.check')">{{ __('Check customs') }}</x-button>
                 <button class="rounded-lg bg-amber-600 px-5 py-2.5 font-semibold text-white hover:bg-amber-500" type="submit">{{ __('Push to ShipStation') }}</button>
             </form>
             @if (session('addressIssues'))

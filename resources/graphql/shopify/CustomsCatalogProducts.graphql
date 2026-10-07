@@ -1,0 +1,7 @@
+query CustomsCatalogProducts($after: String) {
+  shop { currencyCode }
+  products(first: 25, query: "status:active", after: $after, sortKey: ID) {
+    nodes { id legacyResourceId title vendor productType onlineStoreUrl seo { title description } collections(first: 1) { nodes { id } } }
+    pageInfo { hasNextPage endCursor }
+  }
+}

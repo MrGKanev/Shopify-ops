@@ -74,7 +74,7 @@ _Generated from the tool registry in [`config/reports.php`](../config/reports.ph
 | **Inventory Aging** | Zero-stock active variants that still sold recently |
 | **Inventory Forecast** | Days until zero stock based on 30-day sell-through rate per SKU |
 | **Zombie Products** | Active products with no variants or all tracked variants permanently out of stock |
-| **Catalog Quality** | Active products not published to Online Store, missing SEO fields, or not in any collection |
+| **Catalog Quality** | Active product publishing, SEO and collection gaps, with optional Shopify/ShipStation customs-default checks and source coverage |
 
 ### Gift Cards
 
