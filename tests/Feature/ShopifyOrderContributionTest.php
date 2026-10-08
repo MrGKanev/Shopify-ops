@@ -13,6 +13,7 @@ use Mockery;
 use PHPUnit\Framework\Attributes\TestWith;
 use RuntimeException;
 use Tests\TestCase;
+use UnexpectedValueException;
 
 class ShopifyOrderContributionTest extends TestCase
 {
@@ -145,6 +146,20 @@ class ShopifyOrderContributionTest extends TestCase
 
         $this->expectException(UnexpectedResponse::class);
         (new ShipStationClient('key', 'secret'))->getOrderCostShipments(77, 12, '2026-10-01', '2026-10-07');
+    }
+
+    #[TestWith(['previous-order'])]
+    #[TestWith([null])]
+    #[TestWith([''])]
+    public function test_nonadvancing_or_missing_cursor_is_rejected_when_more_orders_are_claimed(?string $cursor): void
+    {
+        $this->travelTo('2026-10-07 12:00:00');
+        $transport = $this->mock(ShopifyTransport::class);
+        $transport->shouldReceive('graphql')->with(Mockery::any(), Mockery::pattern('/OrderContributionShop/'))->andReturn($this->shop());
+        $transport->shouldReceive('graphql')->with(Mockery::any(), Mockery::pattern('/OrderContributionOrders/'), Mockery::any())->andReturn(['data' => ['orders' => ['edges' => [], 'pageInfo' => ['hasNextPage' => true, 'endCursor' => $cursor]]]]);
+
+        $this->expectException(UnexpectedValueException::class);
+        app(ShopifyOrderContribution::class)->collect(Store::factory()->make(), '2026-10-01', '2026-10-02', 'previous-order');
     }
 
     /** @param array<string, mixed> $analytics */

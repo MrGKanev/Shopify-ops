@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-report.layout eyebrow="Audit report" title="{{ __('Billing ≠ shipping country') }}" subtitle="Manual review queue for paid orders whose billing and shipping countries differ." :report-failed="$reportFailed">
+    <x-report.layout eyebrow="Audit report" title="{{ __('Billing ≠ shipping country') }}" subtitle="Manual review queue for paid orders whose billing and shipping countries differ." :configuration-error="$configurationError" :report-failed="$reportFailed">
         <x-slot:form>
             <x-report.date-range-form :action="route('reports.country-mismatch.store')" :start-date="$startDate" :end-date="$endDate" />
         </x-slot:form>

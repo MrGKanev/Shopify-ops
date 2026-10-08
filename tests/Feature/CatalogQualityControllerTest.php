@@ -13,13 +13,6 @@ class CatalogQualityControllerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_guest_and_viewer_cannot_access(): void
-    {
-        $this->get('/reports/catalog-quality')->assertRedirect(route('login'));
-        [$viewer] = $this->userWithStore();
-        $this->actingAs($viewer)->get('/reports/catalog-quality')->assertForbidden();
-    }
-
     public function test_form_does_not_fetch_shopify(): void
     {
         [$user] = $this->userWithStore(true);

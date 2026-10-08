@@ -73,7 +73,22 @@ class OrderContributionTest extends TestCase
 
         $this->assertNull($row['contribution']);
         $this->assertSame('incomplete', $row['status']);
-        $this->assertNotEmpty($row['missing']);
+        $field = match ($source) {
+            'cost' => 'cogs', 'shipping' => 'shipping', 'fees' => 'fees',
+        };
+        $this->assertNull($row[$field]);
+        $expectedMessage = match ($source) {
+            'cost' => 'Shopify cost coverage is incomplete or zero cost cannot be distinguished from missing historical cost.',
+            'shipping' => 'Shipping cost is incomplete: missing labels, costs, currency or unconfirmed void refunds.',
+            'fees' => 'Payment fees are incomplete, unavailable or in another currency.',
+        };
+        $this->assertSame([$expectedMessage], $row['missing']);
+        $this->assertSame(110.0, $row['revenue']);
+        foreach (['cogs' => 40.0, 'fees' => 3.0, 'shipping' => 5.0] as $otherField => $amount) {
+            if ($otherField !== $field) {
+                $this->assertSame($amount, $row[$otherField]);
+            }
+        }
     }
 
     public function test_conflicting_duplicate_label_and_partial_fees_do_not_produce_complete_margin(): void

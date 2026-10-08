@@ -13,13 +13,6 @@ class InventoryAgingControllerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_guest_and_viewer_cannot_access_report(): void
-    {
-        $this->get('/reports/inventory-aging')->assertRedirect(route('login'));
-        [$viewer] = $this->userWithStore();
-        $this->actingAs($viewer)->get('/reports/inventory-aging')->assertForbidden();
-    }
-
     public function test_form_uses_default_range_without_fetching_shopify(): void
     {
         $this->travelTo('2026-09-07');

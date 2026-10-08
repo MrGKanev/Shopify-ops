@@ -49,13 +49,13 @@ class CustomsReadinessTest extends TestCase
         $this->assertContains('No positive item weight in the available sources.', $row['findings']);
     }
 
-    #[TestWith(['hs'])]
-    #[TestWith(['origin'])]
-    #[TestWith(['weight'])]
-    #[TestWith(['duplicate'])]
-    #[TestWith(['excluded'])]
-    #[TestWith(['coverage'])]
-    public function test_conflicts_and_ambiguous_defaults_are_review_signals(string $case): void
+    #[TestWith(['hs', 'Shopify and ShipStation HS codes differ; review the intended override.'])]
+    #[TestWith(['origin', 'Shopify and ShipStation origin countries differ; review the intended override.'])]
+    #[TestWith(['weight', 'Shopify and ShipStation item weights differ.'])]
+    #[TestWith(['duplicate', 'Duplicate SKU prevents choosing a ShipStation product default.'])]
+    #[TestWith(['excluded', 'ShipStation excludes this product from customs; review the exemption.'])]
+    #[TestWith(['coverage', 'ShipStation product coverage is incomplete; defaults cannot be confirmed.'])]
+    public function test_conflicts_and_ambiguous_defaults_are_review_signals(string $case, string $message): void
     {
         $product = $this->product();
         $products = [$product];
@@ -77,7 +77,7 @@ class CustomsReadinessTest extends TestCase
         $row = app(CustomsReadinessAnalyzer::class)->variant($this->variant(), $products, $complete);
 
         $this->assertSame('review', $row['status']);
-        $this->assertNotEmpty($row['findings']);
+        $this->assertSame([$message], $row['findings']);
     }
 
     public function test_prepared_declaration_supplies_fields_missing_from_defaults_without_claiming_item_mapping(): void

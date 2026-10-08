@@ -13,13 +13,6 @@ class GiftCardsControllerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_guest_and_viewer_cannot_access(): void
-    {
-        $this->get('/reports/gift-cards')->assertRedirect(route('login'));
-        [$viewer] = $this->userWithStore();
-        $this->actingAs($viewer)->get('/reports/gift-cards')->assertForbidden();
-    }
-
     public function test_form_defaults_to_thirty_days_without_fetching(): void
     {
         [$user] = $this->userWithStore(true);

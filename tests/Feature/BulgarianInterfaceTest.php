@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Application\Reports\ReportRegistry;
 use App\Models\OperationalIssue;
 use App\Models\Store;
 use App\Models\User;
@@ -24,23 +23,11 @@ class BulgarianInterfaceTest extends TestCase
         $user = User::factory()->admin()->create();
         $user->stores()->attach($store);
         $this->actingAs($user);
-        $routes = [
-            'dashboard', 'audits.index', 'orders.lookup', 'orders.compare', 'orders.timeline',
-            'orders.spot-check', 'orders.push.create', 'orders.tracking', 'orders.packing-slip',
-            'orders.tag-search', 'customers.lookup', 'metafields.index', 'global-search',
-            'operational-issues.index', 'jobs.index', 'print-queue.index', 'push-logs.index',
-            'ignored-orders.index', 'saved-reports.index', 'report-trends.index', 'run-logs.index',
-            'admin.settings', 'admin.api-health', 'admin.stores.index', 'admin.stores.create',
-            'admin.users.index', 'admin.users.create', 'admin.action-log', 'admin.banned-ips.index',
-            'admin.webhook-events', 'admin.webhook-health', 'admin.health-incidents',
-            'admin.slack-rules.edit', 'admin.discord-rules.edit', 'admin.email-rules.edit',
-        ];
-        foreach (app(ReportRegistry::class)->recordingTools() as $tool) {
-            $routes[] = $tool->route;
-        }
+        $routes = $this->applicationScreenRoutes();
+        $this->assertNotEmpty($routes);
 
         foreach (array_unique($routes) as $route) {
-            $this->get(route($route))->assertSee('<html lang="bg">', false)
+            $this->get(route($route))->assertOk()->assertSee('<html lang="bg">', false)
                 ->assertDontSeeText('No runs yet')
                 ->assertDontSeeText('Run report')
                 ->assertDontSeeText('Send test notification');

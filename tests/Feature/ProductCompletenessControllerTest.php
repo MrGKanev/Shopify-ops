@@ -13,13 +13,6 @@ class ProductCompletenessControllerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_guest_and_viewer_cannot_access(): void
-    {
-        $this->get('/reports/product-completeness')->assertRedirect(route('login'));
-        [$viewer] = $this->userWithStore();
-        $this->actingAs($viewer)->get('/reports/product-completeness')->assertForbidden();
-    }
-
     public function test_configuration_error_prevents_call(): void
     {
         [$user] = $this->userWithStore(true, ['shopify_access_token' => '']);

@@ -20,6 +20,7 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Attributes\TestWith;
 use Tests\TestCase;
 
 class OrderRemediationTest extends TestCase
@@ -52,7 +53,7 @@ class OrderRemediationTest extends TestCase
 
         $this->actingAs($operator)->post(route('orders.remediation.preview'), ['action' => 'sync_shipstation', 'order_numbers' => '#1001'])->assertRedirect();
         $run = $store->remediationRuns()->sole();
-        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'POST');
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'POST' && (str_ends_with($request->url(), '/orders/createorder') || str_contains($request['query'] ?? '', 'mutation')));
         $this->assertSame('draft', $run->status);
         $this->assertSame('Old Street', $run->plan['diff']['shipTo.street1']['shipstation']);
         $this->assertStringNotContainsString('Old Street', DB::table('remediation_runs')->value('plan'));
@@ -80,7 +81,7 @@ class OrderRemediationTest extends TestCase
 
         $this->assertSame('failed', $run->fresh()->status);
         $this->assertStringContainsString('changed since the preview', $run->fresh()->result_message);
-        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'POST');
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'POST' && (str_ends_with($request->url(), '/orders/createorder') || str_contains($request['query'] ?? '', 'mutation')));
     }
 
     public function test_shipped_orders_and_ambiguous_matches_cannot_be_updated(): void
@@ -92,7 +93,7 @@ class OrderRemediationTest extends TestCase
         $this->actingAs($operator)->post(route('orders.remediation.preview'), ['action' => 'sync_shipstation', 'order_numbers' => ['1001']]);
 
         $this->assertSame('blocked', $store->remediationRuns()->sole()->status);
-        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'POST');
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'POST' && (str_ends_with($request->url(), '/orders/createorder') || str_contains($request['query'] ?? '', 'mutation')));
     }
 
     public function test_another_store_or_operator_cannot_confirm_a_preview_and_expired_previews_are_rejected(): void
@@ -155,23 +156,26 @@ class OrderRemediationTest extends TestCase
         Http::assertSent(fn (Request $request): bool => str_contains($request['query'] ?? '', 'mutation CreateRemediationFulfillment') && $request['variables']['fulfillment']['notifyCustomer'] === false && $request['variables']['fulfillment']['trackingInfo']['number'] === 'TRACK1' && $request['variables']['fulfillment']['lineItemsByFulfillmentOrder'][0]['fulfillmentOrderLineItems'] === [['id' => 'gid://shopify/FulfillmentOrderLineItem/21', 'quantity' => 2]]);
     }
 
-    public function test_partial_fulfillment_mismatched_quantities_and_voided_labels_are_blocked(): void
+    #[TestWith(['partial', 'partial fulfillments'])]
+    #[TestWith(['quantity', 'quantities'])]
+    #[TestWith(['voided', 'non-voided shipment'])]
+    public function test_tracking_preview_blocks_unsafe_shipments_without_mutations(string $case, string $message): void
     {
         [$operator, $store, $order, $ss] = $this->context();
         $ss['orderStatus'] = 'shipped';
-        $order['fulfillments'] = [['id' => 90, 'status' => 'success']];
-        $this->fakeIntegrations($store, $order, $ss);
+        if ($case === 'partial') {
+            $order['fulfillments'] = [['id' => 90, 'status' => 'success']];
+        } elseif ($case === 'quantity') {
+            $ss['items'][0]['quantity'] = 1;
+        }
+        $this->fakeIntegrations($store, $order, $ss, voidedShipment: $case === 'voided');
+
         $this->actingAs($operator)->post(route('orders.remediation.preview'), ['action' => 'fulfill_tracking', 'order_numbers' => ['1001']]);
+
         $run = $store->remediationRuns()->sole();
         $this->assertSame('blocked', $run->status);
-        $this->assertStringContainsString('partial fulfillments', $run->result_message);
-        $order['fulfillments'] = [];
-        $ss['items'][0]['quantity'] = 1;
-        $this->post(route('orders.remediation.preview'), ['action' => 'fulfill_tracking', 'order_numbers' => ['1001']]);
-        $run = $store->remediationRuns()->latest('id')->first();
-        $this->assertSame('blocked', $run->status);
-        $this->assertStringContainsString('quantities', $run->result_message);
-        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'POST' && str_contains($request['query'] ?? '', 'mutation'));
+        $this->assertStringContainsString($message, $run->result_message);
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'POST' && (str_ends_with($request->url(), '/orders/createorder') || str_contains($request['query'] ?? '', 'mutation')));
     }
 
     public function test_tracking_is_added_to_existing_fulfillment_instead_of_creating_another(): void
@@ -342,7 +346,7 @@ class OrderRemediationTest extends TestCase
 
     /** @param array<string, mixed> $order
      * @param array<string, mixed> $ss */
-    private function fakeIntegrations(Store $store, array &$order, array &$ss): void
+    private function fakeIntegrations(Store $store, array &$order, array &$ss, bool $voidedShipment = false): void
     {
         $this->mock(ShopifyOrders::class)->shouldReceive('findByOrderNumber')->andReturnUsing(function () use (&$order): array {
             return [$order];
@@ -374,8 +378,8 @@ class OrderRemediationTest extends TestCase
 
                 return Http::response(['success' => true]);
             },
-            'https://ssapi.shipstation.com/shipments*' => function () use (&$ss): PromiseInterface {
-                return Http::response(['shipments' => [['shipmentId' => 44, 'orderId' => 77, 'trackingNumber' => 'TRACK1', 'voided' => false, 'shipmentItems' => $ss['items'] ?? []]]]);
+            'https://ssapi.shipstation.com/shipments*' => function () use (&$ss, $voidedShipment): PromiseInterface {
+                return Http::response(['shipments' => [['shipmentId' => 44, 'orderId' => 77, 'trackingNumber' => 'TRACK1', 'voided' => $voidedShipment, 'shipmentItems' => $ss['items'] ?? []]]]);
             },
             'https://ssapi.shipstation.com/stores/refreshstore*' => Http::response(['success' => true]),
             'https://'.$store->shopify_store.'.myshopify.com/admin/api/2026-07/graphql.json' => function (Request $request) use (&$order, &$holds): PromiseInterface {

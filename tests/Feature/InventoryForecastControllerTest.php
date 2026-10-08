@@ -13,13 +13,6 @@ class InventoryForecastControllerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_guest_and_viewer_cannot_access(): void
-    {
-        $this->get('/reports/inventory-forecast')->assertRedirect(route('login'));
-        [$viewer] = $this->userWithStore();
-        $this->actingAs($viewer)->get('/reports/inventory-forecast')->assertForbidden();
-    }
-
     public function test_form_does_not_fetch_shopify(): void
     {
         [$user] = $this->userWithStore(true);

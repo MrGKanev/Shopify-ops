@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Domain\Reports\RateShoppingAnalyzer;
 use App\Integrations\Exceptions\UnexpectedResponse;
 use App\Integrations\ShipStation\ShipStationClient;
+use App\Jobs\ApplyRateQuoteSelection;
 use App\Jobs\CaptureRateQuoteSnapshot;
 use App\Models\RateQuoteSnapshot;
 use App\Models\Store;
@@ -108,7 +109,7 @@ class RateShoppingTest extends TestCase
         Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/createlabel'));
     }
 
-    public function test_unapproved_services_expired_quotes_and_changed_source_data_cannot_be_applied(): void
+    public function test_unapproved_services_and_changed_source_data_cannot_be_applied(): void
     {
         [$operator, $store, $order] = $this->context();
         $this->fakeShipStation($order);
@@ -247,6 +248,68 @@ class RateShoppingTest extends TestCase
         (new ShipStationClient('key', 'secret'))->getRates(['carrierCode' => 'ups']);
     }
 
+    #[TestWith(['revoked_access', 'no longer has access'])]
+    #[TestWith(['expired_in_queue', 'Quotes expired'])]
+    public function test_queued_selection_rechecks_access_and_quote_age_before_writing(string $case, string $message): void
+    {
+        [$operator, $store, $order] = $this->context();
+        $this->fakeShipStation($order);
+        $this->actingAs($operator)->post(route('reports.rate-shopping.store'), $this->input());
+        $snapshot = $store->rateQuoteSnapshots()->sole();
+        Queue::fake([ApplyRateQuoteSelection::class]);
+        $this->post(route('rate-quote-selections.store', $snapshot->id), ['service_code' => 'ground', 'confirmed' => '1'])->assertRedirect();
+        $this->assertSame('selection_queued', $snapshot->fresh()->status);
+        Queue::assertPushed(ApplyRateQuoteSelection::class, fn (ApplyRateQuoteSelection $job): bool => $job->snapshotId === $snapshot->id);
+        if ($case === 'revoked_access') {
+            $operator->stores()->detach($store);
+        } else {
+            $this->travel(6)->minutes();
+        }
+
+        app()->call([new ApplyRateQuoteSelection($snapshot->id), 'handle']);
+
+        $this->assertSame('failed', $snapshot->fresh()->status);
+        $this->assertSame('simulation', $snapshot->fresh()->mode);
+        $this->assertNull($snapshot->fresh()->selected_at);
+        $this->assertStringContainsString($message, $snapshot->fresh()->message);
+        Http::assertNotSent(fn (Request $request): bool => $request->method() === 'POST' && str_ends_with($request->url(), '/orders/createorder'));
+    }
+
+    public function test_selection_is_not_recorded_when_shipstation_returns_different_settings_after_a_write(): void
+    {
+        [$operator, $store, $order] = $this->context();
+        $this->fakeShipStation($order, discardSelectedService: true);
+        $this->actingAs($operator)->post(route('reports.rate-shopping.store'), $this->input());
+        $snapshot = $store->rateQuoteSnapshots()->sole();
+
+        $this->post(route('rate-quote-selections.store', $snapshot->id), ['service_code' => 'express', 'confirmed' => '1'])->assertRedirect();
+
+        $this->assertSame('failed', $snapshot->fresh()->status);
+        $this->assertSame('simulation', $snapshot->fresh()->mode);
+        $this->assertNull($snapshot->fresh()->selected_at);
+        $this->assertStringContainsString('did not confirm', $snapshot->fresh()->message);
+        $this->assertSame('ground', $order['serviceCode']);
+        $this->assertCount(1, Http::recorded(fn (Request $request): bool => $request->method() === 'POST' && str_ends_with($request->url(), '/orders/createorder')));
+        $this->assertDatabaseMissing('activity_log', ['description' => 'rate_selection_confirmed', 'subject_id' => $snapshot->id]);
+    }
+
+    public function test_completed_selection_job_cannot_replay_the_shipstation_write(): void
+    {
+        [$operator, $store, $order] = $this->context();
+        $this->fakeShipStation($order);
+        $this->actingAs($operator)->post(route('reports.rate-shopping.store'), $this->input());
+        $snapshot = $store->rateQuoteSnapshots()->sole();
+        $this->post(route('rate-quote-selections.store', $snapshot->id), ['service_code' => 'express', 'confirmed' => '1']);
+        $this->assertSame('selected', $snapshot->fresh()->status);
+
+        app()->call([new ApplyRateQuoteSelection($snapshot->id), 'handle']);
+
+        $this->assertSame('selected', $snapshot->fresh()->status);
+        $this->assertSame('recorded_decision', $snapshot->fresh()->mode);
+        $this->assertCount(1, Http::recorded(fn (Request $request): bool => $request->method() === 'POST' && str_ends_with($request->url(), '/orders/createorder')));
+        $this->assertSame(1, DB::table('activity_log')->where('subject_type', RateQuoteSnapshot::class)->where('subject_id', $snapshot->id)->where('description', 'rate_selection_confirmed')->count());
+    }
+
     /** @return array{User, Store, array<string, mixed>} */
     private function context(): array
     {
@@ -271,13 +334,17 @@ class RateShoppingTest extends TestCase
     }
 
     /** @param array<string, mixed> $order */
-    private function fakeShipStation(array &$order): void
+    private function fakeShipStation(array &$order, bool $discardSelectedService = false): void
     {
         Http::preventStrayRequests();
         Http::fake([
-            'https://ssapi.shipstation.com/orders*' => function (Request $request) use (&$order): PromiseInterface {
+            'https://ssapi.shipstation.com/orders*' => function (Request $request) use (&$order, $discardSelectedService): PromiseInterface {
                 if ($request->method() === 'POST') {
+                    $previousService = $order['serviceCode'];
                     $order = $request->data();
+                    if ($discardSelectedService) {
+                        $order['serviceCode'] = $previousService;
+                    }
 
                     return Http::response($order);
                 }

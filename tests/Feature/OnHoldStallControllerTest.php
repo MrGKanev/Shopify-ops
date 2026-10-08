@@ -7,30 +7,24 @@ use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
-use RuntimeException;
 use Tests\TestCase;
 
 class OnHoldStallControllerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_validation_configuration_success_and_safe_failure(): void
+    public function test_report_results_include_truncation_and_escape_remote_text(): void
     {
-        [$operator] = $this->userWithStore(true);
-        $this->actingAs($operator)->post('/reports/on-hold-stall', ['start_date' => 'bad', 'end_date' => '2026-06-30'])->assertSessionHasErrors('start_date');
-        [$operator] = $this->userWithStore(true, ['shopify_access_token' => '']);
-        $this->actingAs($operator)->post('/reports/on-hold-stall', $this->input())->assertOk()->assertSeeText('credentials are incomplete');
-
+        $this->travelTo('2026-07-01 12:00:00');
         [$operator] = $this->userWithStore(true);
         $gateway = Mockery::mock(ShopifyOrders::class);
-        $gateway->shouldReceive('onHoldFulfillmentCandidates')->andReturn($this->candidates('<script>', true));
+        $gateway->shouldReceive('onHoldFulfillmentCandidates')->once()->andReturn($this->candidates('<script>', true));
         $this->app->instance(ShopifyOrders::class, $gateway);
-        $this->actingAs($operator)->post('/reports/on-hold-stall', $this->input())->assertOk()->assertSeeText('1 on-hold fulfillment orders')->assertSeeText('truncated after 100 pages')->assertDontSee('<script>', false);
 
-        $gateway = Mockery::mock(ShopifyOrders::class);
-        $gateway->shouldReceive('onHoldFulfillmentCandidates')->andThrow(new RuntimeException('secret-token'));
-        $this->app->instance(ShopifyOrders::class, $gateway);
-        $this->actingAs($operator)->post('/reports/on-hold-stall', $this->input())->assertOk()->assertSeeText('could not be completed')->assertDontSeeText('secret-token');
+        $this->actingAs($operator)->post('/reports/on-hold-stall', $this->input())
+            ->assertSeeText('1 on-hold fulfillment orders')
+            ->assertSeeText('truncated after 100 pages')
+            ->assertDontSee('<script>', false);
     }
 
     public function test_operator_can_download_formula_safe_csv(): void

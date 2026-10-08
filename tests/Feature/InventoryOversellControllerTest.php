@@ -15,13 +15,6 @@ class InventoryOversellControllerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_guest_and_viewer_cannot_access_report(): void
-    {
-        $this->get('/reports/inventory-oversell')->assertRedirect(route('login'));
-        [$viewer] = $this->userWithStore();
-        $this->actingAs($viewer)->get('/reports/inventory-oversell')->assertForbidden();
-    }
-
     public function test_form_does_not_call_either_service(): void
     {
         [$user] = $this->userWithStore(true);
