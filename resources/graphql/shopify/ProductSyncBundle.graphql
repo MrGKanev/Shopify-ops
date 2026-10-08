@@ -1,0 +1,9 @@
+query ProductSyncBundle($id: ID!) {
+  productVariant(id: $id) {
+    id updatedAt requiresComponents
+    productVariantComponents(first: 30) {
+      nodes { quantity productVariant { id sku requiresComponents inventoryItem { requiresShipping measurement { weight { value unit } } } } }
+      pageInfo { hasNextPage }
+    }
+  }
+}

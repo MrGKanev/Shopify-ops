@@ -256,7 +256,9 @@ class CustomsReadinessAnalyzer
             default => null,
         };
 
-        return $number !== null && $factor !== null ? $number * $factor : null;
+        $grams = $number !== null && $factor !== null ? $number * $factor : null;
+
+        return $grams !== null && is_finite($grams) ? $grams : null;
     }
 
     private function hs(mixed $value): string

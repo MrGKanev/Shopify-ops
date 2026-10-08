@@ -61,6 +61,7 @@ _Generated from the tool registry in [`config/reports.php`](../config/reports.ph
 | Page | What it does |
 | --- | --- |
 | **Carrier Performance** | Avg delivery time, late rate, and order count grouped by carrier for a date range |
+| **Financial Exceptions** | Manual Shopify Payments payout anomaly checks using included transactions and explicit thresholds |
 | **Order Contribution Margin** | Shopify-reported net revenue and historical product costs, payment fees and matched ShipStation labels, with explicit missing costs and currency coverage |
 | **Shipping Margin Erosion** | Orders where the ShipStation label cost exceeds what the customer was charged for shipping — flags orders shipped at a loss |
 
@@ -74,6 +75,7 @@ _Generated from the tool registry in [`config/reports.php`](../config/reports.ph
 | **Inventory Aging** | Zero-stock active variants that still sold recently |
 | **Inventory Forecast** | Days until zero stock based on 30-day sell-through rate per SKU |
 | **Zombie Products** | Active products with no variants or all tracked variants permanently out of stock |
+| **Product Sync & Package Weight** | Compare SKU counterparts, product customs defaults and the declared weight of a selected shipment |
 | **Catalog Quality** | Active product publishing, SEO and collection gaps, with optional Shopify/ShipStation customs-default checks and source coverage |
 
 ### Gift Cards
@@ -151,3 +153,25 @@ _Generated from the tool registry in [`config/reports.php`](../config/reports.ph
 - **Operational Digest** summarizes pending orders, synchronization findings, unresolved issues and fulfillment deadlines; delivery is configured through the existing email rules.
 
 The interface supports English and Bulgarian. Manual tools remain available independently of optional monitoring.
+
+### Product Sync & Package Weight
+
+Run this read-only report from **Audit → Products & Inventory**. Catalog mode compares Shopify variants with active account-wide SS products by exact SKU, including missing counterparts, duplicate SKUs, weight, customs-description candidates, HS codes and origin countries. Shopify catalog scans are bounded to 20 pages of 100 variants; SS defaults use the existing bounded product reader. Incomplete coverage is explicit and does not establish that a SKU is missing. An SS-only SKU may belong to another store sharing that account.
+
+Shipment mode requires an order number. Leave Shipment ID blank to choose from its non-voided outbound label shipments, then inspect one package. The report verifies the SS store and order identity and uses only the chosen shipment's items/quantities. It displays current Shopify weights, current SS product defaults, imported order item weights and reported shipment item weights separately. No missing snapshot weight is filled from a current default. Prepared customs rows belong to the current imported order; V1 does not confirm the historical label declaration.
+
+Enter package tare and its unit explicitly; blank tare remains unknown, while an explicit zero is allowed. Native bundle parents use confirmed current component quantities/weights, without adding the parent weight again. Missing, truncated, nested or ambiguous bundle mapping leaves the estimate unknown. Separate shipped component lines are counted individually. Current data does not establish historical composition or a scale measurement.
+
+Optional DIM input uses the reported dimensions and your carrier-specific divisor in cm³/kg or in³/lb. The displayed billable scenario is the larger of declared and calculated dimensional weight, without presumed carrier rounding or billing rules. Real measured weight and carrier adjustments require another authoritative source; this report does not infer a wrong product weight from a discrepancy. External writes and scheduled monitoring are not added.
+
+### Financial Exceptions
+
+This is a manually requested **Shopify-only anomaly report**, not a bank or accounting reconciliation tool. Choose a Shopify Payments payout or enter its ID, set the pending-age limit in calendar days since issue date, and choose a net tolerance in that payout's currency. An optional adjustment threshold flags absolute adjustment amounts strictly above the threshold; leaving it blank disables that rule. These inputs are saved with the result. No automatic monitoring or external writes are introduced.
+
+The report loads the actual associated balance transactions using `payments_transfer_id` and checks each transaction's payout identity. It displays signed amount, fee, net, linked order/transaction and adjustment-order details. Component totals use Shopify's signed `net` once: fees, refunds, reserve movements and adjustment-order subrows are not subtracted or added again. Payout transfer ledger rows are excluded to avoid double counting. Decimal strings use the already-installed Brick Math library rather than floating-point arithmetic.
+
+Findings cover failed/canceled Shopify statuses, pending age beyond the selected limit, adjustments over the chosen amount and net differences beyond the selected tolerance. Age is not a claim about when the status last changed. A net comparison is available only for finalized deposit payouts with complete supported transaction data in one currency. Withdrawals, missing/invalid fields, test data, unsupported transaction types and mixed currencies do not receive a confirmed comparison. Missing order links on adjustments are not automatically treated as errors.
+
+Payout selection is paginated in parts of 25. Transaction scans are bounded to 20 pages of 100, reject duplicate/nonadvancing cursors and re-read the payout to detect changes during the scan. A changed or truncated source remains incomplete. Observed partial totals are explicitly labelled; no differences are asserted from them. Shopify Payments absence or missing payout permissions is a failed/unavailable check, not zero payouts.
+
+Shopify's PAID status is displayed as Shopify's assertion, without independently verifying bank receipt. Daily sales are never compared with same-day payout totals. Bank imports, bank matching and accounting reconciliation are outside this feature. See the official [Shopify Payments account API](https://shopify.dev/docs/api/admin-graphql/latest/objects/shopifypaymentsaccount) and [balance transaction fields](https://shopify.dev/docs/api/admin-graphql/latest/objects/shopifypaymentsbalancetransaction).

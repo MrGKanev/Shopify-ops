@@ -1,0 +1,14 @@
+query ProductSyncOrderLines($id: ID!, $after: String) {
+  order(id: $id) {
+    id name updatedAt cancelledAt displayFulfillmentStatus
+    shippingAddress { countryCodeV2 }
+    lineItems(first: 100, after: $after) {
+      nodes {
+        id title sku requiresShipping currentQuantity unfulfilledQuantity
+        originalUnitPriceSet { shopMoney { amount currencyCode } }
+        variant { id updatedAt title sku requiresComponents inventoryItem { requiresShipping harmonizedSystemCode countryCodeOfOrigin duplicateSkuCount measurement { weight { value unit } } } }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}

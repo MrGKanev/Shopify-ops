@@ -1,0 +1,8 @@
+query FinancialPayouts($query: String, $after: String) {
+  shopifyPaymentsAccount {
+    payouts(first: 25, query: $query, after: $after, sortKey: ISSUED_AT, reverse: true) {
+      nodes { id legacyResourceId issuedAt status transactionType net { amount currencyCode } }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}

@@ -44,6 +44,17 @@ class ShopifyCustoms
         return ['order' => $lines['resource'], 'lines' => $lines['nodes'], 'truncated' => $lines['truncated']];
     }
 
+    /** @return array{order: array<string, mixed>, lines: list<array<string, mixed>>, truncated: bool} */
+    public function productSyncOrder(Store $store, string $id): array
+    {
+        if (preg_match('~^gid://shopify/Order/[0-9]+$~', $id) !== 1) {
+            throw new UnexpectedValueException('A valid Shopify order identity is required.');
+        }
+        $lines = $this->nested($store, 'ProductSyncOrderLines', 'order', 'lineItems', $id);
+
+        return ['order' => $lines['resource'], 'lines' => $lines['nodes'], 'truncated' => $lines['truncated']];
+    }
+
     /** @return array{resource: array<string, mixed>, nodes: list<array<string, mixed>>, pages: int, truncated: bool} */
     private function nested(Store $store, string $operation, string $root, string $field, string $id): array
     {

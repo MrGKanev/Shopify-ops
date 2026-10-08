@@ -469,6 +469,16 @@ class ShipStationMonitoringTest extends TestCase
         $this->assertArrayNotHasKey('shipstation_monitoring_token', $store->toArray());
     }
 
+    public function test_store_settings_render_the_subscription_removal_retry_action(): void
+    {
+        $store = $this->store(false);
+        $store->forceFill(['shipstation_monitoring_token' => 'private-token', 'shipstation_monitoring_status' => 'failed'])->save();
+        $admin = User::factory()->admin()->create();
+        $admin->stores()->attach($store);
+
+        $this->actingAs($admin)->get(route('admin.stores.edit', $store))->assertOk()->assertSeeText('Retry subscription removal')->assertDontSee('private-token');
+    }
+
     private function store(bool $enabled = true): Store
     {
         config(['queue.default' => 'database']);

@@ -27,7 +27,7 @@
                 <form method="POST" action="{{ route('admin.stores.shipstation-monitoring', $store) }}" class="mt-3">
                     @csrf
                     <input type="hidden" name="enabled" value="0">
-                    <x-button type="submit" variant="secondary">{{ __('Retry subscription removal') }}</x-button>
+                    <x-button type="submit" variant="ghost">{{ __('Retry subscription removal') }}</x-button>
                 </form>
             @endif
         </x-card>

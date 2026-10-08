@@ -1,0 +1,16 @@
+query FinancialPayoutTransactions($query: String!, $after: String) {
+  shopifyPaymentsAccount {
+    balanceTransactions(first: 100, query: $query, after: $after) {
+      nodes {
+        id type test transactionDate sourceType sourceId sourceOrderTransactionId adjustmentReason
+        associatedPayout { id status }
+        associatedOrder { id name }
+        amount { amount currencyCode }
+        fee { amount currencyCode }
+        net { amount currencyCode }
+        adjustmentsOrders { name orderTransactionId amount { amount currencyCode } }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}

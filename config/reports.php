@@ -14,6 +14,7 @@ use App\Http\Controllers\Reports\DisputeController;
 use App\Http\Controllers\Reports\DuplicateAddressController;
 use App\Http\Controllers\Reports\DuplicateOrderController;
 use App\Http\Controllers\Reports\EmailCheckController;
+use App\Http\Controllers\Reports\FinancialExceptionsController;
 use App\Http\Controllers\Reports\FraudRiskController;
 use App\Http\Controllers\Reports\FulfilledItemsController;
 use App\Http\Controllers\Reports\FulfillmentSlaController;
@@ -33,6 +34,7 @@ use App\Http\Controllers\Reports\OrphanOrderController;
 use App\Http\Controllers\Reports\PartialFulfillmentController;
 use App\Http\Controllers\Reports\PostShipAddressChangeController;
 use App\Http\Controllers\Reports\ProductCompletenessController;
+use App\Http\Controllers\Reports\ProductSyncController;
 use App\Http\Controllers\Reports\RateShoppingController;
 use App\Http\Controllers\Reports\RefundTrackerController;
 use App\Http\Controllers\Reports\RepeatRefundController;
@@ -340,6 +342,14 @@ return [
             'controller' => CarrierPerformanceController::class,
             'requires' => [Integration::ShipStation],
         ],
+        'financial_exceptions' => [
+            'slug' => 'financial-exceptions',
+            'label' => 'Financial Exceptions',
+            'section' => 'Carrier Analytics',
+            'description' => 'Manual Shopify Payments payout anomaly checks using included transactions and explicit thresholds',
+            'controller' => FinancialExceptionsController::class,
+            'requires' => [Integration::Shopify],
+        ],
         'order_contribution' => [
             'slug' => 'order-contribution',
             'label' => 'Order Contribution Margin',
@@ -404,6 +414,14 @@ return [
             'description' => 'Active products with no variants or all tracked variants permanently out of stock',
             'controller' => ZombieProductsController::class,
             'requires' => [Integration::Shopify],
+        ],
+        'product_sync' => [
+            'slug' => 'product-sync',
+            'label' => 'Product Sync & Package Weight',
+            'section' => 'Products & Inventory',
+            'description' => 'Compare SKU counterparts, product customs defaults and the declared weight of a selected shipment',
+            'controller' => ProductSyncController::class,
+            'requires' => [Integration::Shopify, Integration::ShipStation],
         ],
         'catalog_quality' => [
             'slug' => 'catalog-quality',

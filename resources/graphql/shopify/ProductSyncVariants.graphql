@@ -1,0 +1,10 @@
+query ProductSyncVariants($after: String) {
+  productVariants(first: 100, after: $after, sortKey: ID) {
+    nodes {
+      id updatedAt title sku requiresComponents
+      product { id title status }
+      inventoryItem { requiresShipping harmonizedSystemCode countryCodeOfOrigin duplicateSkuCount measurement { weight { value unit } } }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}
