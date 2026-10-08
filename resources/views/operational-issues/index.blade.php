@@ -38,6 +38,13 @@
                             @if ($issue->status->isActive() && in_array(data_get($issue->payload, 'shipstation_status'), ['awaiting_shipment', 'awaiting_payment', 'on_hold'], true))
                                 <x-button class="mt-2" size="sm" :href="route('orders.remediation.create', ['order_number' => data_get($issue->payload, 'order_number'), 'action' => 'sync_shipstation'])">{{ __('Review ShipStation update') }}</x-button>
                             @endif
+                        @elseif ($issue->source_tool === 'shipstation_sync')
+                            <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ __('Shipment') }} #{{ data_get($issue->payload, 'shipment_id') }} · {{ __('Tracking') }}: {{ data_get($issue->payload, 'tracking_number') ?: '—' }}</p>
+                            <ul class="mt-2 list-disc pl-4 text-xs text-slate-500 dark:text-slate-400">
+                                @foreach (data_get($issue->payload, 'findings', []) as $finding)
+                                    <li>{{ __($finding) }}</li>
+                                @endforeach
+                            </ul>
                         @elseif ($issue->source_tool === 'repeated_shipping_address')
                             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('Warning only: :count recent orders share this address; :names distinct recipient names. No orders are blocked.', ['count' => data_get($issue->payload, 'order_count'), 'names' => data_get($issue->payload, 'different_names')]) }}</p>
                             <div class="mt-1 flex flex-wrap gap-2">

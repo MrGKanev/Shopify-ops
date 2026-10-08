@@ -40,7 +40,7 @@ use Spatie\Activitylog\Support\LogOptions;
     'return_exception_policy',
     'operational_digest_policy',
 ])]
-#[Hidden(['shopify_access_token', 'shopify_webhook_secret', 'shipstation_api_key', 'shipstation_api_secret'])]
+#[Hidden(['shopify_access_token', 'shopify_webhook_secret', 'shipstation_api_key', 'shipstation_api_secret', 'shipstation_monitoring_token', 'shipstation_monitoring_subscriptions'])]
 class Store extends Model
 {
     /** @use HasFactory<StoreFactory> */
@@ -134,6 +134,17 @@ class Store extends Model
         return $this->hasMany(WebhookEvent::class);
     }
 
+    /** @return HasMany<ShipStationEvent, $this> */
+    public function shipStationEvents(): HasMany
+    {
+        return $this->hasMany(ShipStationEvent::class);
+    }
+
+    public function shipStationMonitoringCanQueue(): bool
+    {
+        return in_array(config('queue.connections.'.config('queue.default').'.driver'), ['database', 'redis', 'sqs', 'beanstalkd'], true);
+    }
+
     /** @return array{approval_days: int, processing_days: int, exchange_days: int} */
     public function returnExceptionPolicy(): array
     {
@@ -187,6 +198,11 @@ class Store extends Model
     protected function casts(): array
     {
         return [
+            'shipstation_monitoring_enabled' => 'boolean',
+            'shipstation_monitoring_token' => 'encrypted',
+            'shipstation_monitoring_subscriptions' => 'encrypted:array',
+            'shipstation_monitoring_started_at' => 'datetime',
+            'shipstation_monitoring_checked_at' => 'datetime',
             'return_exception_policy' => 'array',
             'operational_digest_policy' => 'array',
             'shopify_access_token' => 'encrypted',

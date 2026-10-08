@@ -34,6 +34,7 @@ Current scheduled work includes:
 - Backup monitoring hourly and cleanup daily
 - Activity-log cleanup and health-history pruning daily
 - Email report digest daily at 08:00
+- ShipStation subscription reconciliation and missed-shipment catch-up every 15 minutes, only for stores with monitoring explicitly enabled
 - Horizon metrics snapshot every five minutes when Redis queues are active
 
 Times use `APP_TIMEZONE`.
@@ -150,3 +151,22 @@ At minimum, production must provide:
 - `php artisan schedule-monitor:sync` after every deploy, so new or renamed scheduled tasks are monitored and reported by the Health page
 
 These are the production requirements for the current app; use your hosting provider's process manager and deployment workflow to configure them.
+
+## ShipStation monitoring operations
+
+Run migrations before using the new store setting:
+
+```bash
+php artisan migrate
+```
+
+The existing default queue worker processes subscription management, webhook resources and delayed shipment checks. Jobs retry transient failures three times with backoff. No dedicated worker queue is required.
+
+```bash
+php artisan shipstation:catch-up
+php artisan queue:failed
+```
+
+`shipstation:catch-up` queues only opted-in stores. Successful scans advance a per-store watermark with a 30-minute overlap; missed shipments receive the same deduplicated, delayed checks as webhook shipments. A failed or unconfirmed paginated scan does not advance the watermark. Monitoring scans are bounded to 20 pages and fail visibly if that limit is exceeded. Active synchronization issues are rechecked even when their shipments predate the current scan window.
+
+Disabled stores do not poll external APIs. An explicitly requested disable queues removal of that store's owned subscriptions. Failed removal requires **Retry subscription removal** from the store settings or a queue retry; callback processing remains disabled in the meantime. Protect callback URLs as secrets when configuring proxy/access logs. ShipStation event payloads and callback tokens are encrypted at rest; event rows do not store the complete order/customer resource.

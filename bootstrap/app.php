@@ -40,7 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append([AttachRequestContext::class, AddCspHeaders::class, AddSecurityHeaders::class]);
-        $middleware->validateCsrfTokens(except: ['webhooks/shopify/*']);
+        $middleware->validateCsrfTokens(except: ['webhooks/shopify/*', 'webhooks/shipstation/*']);
 
         $trustedProxies = array_values(array_filter(array_map('trim', explode(',', (string) env('TRUSTED_PROXIES', '')))));
         if ($trustedProxies !== []) {

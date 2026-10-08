@@ -37,3 +37,5 @@ Schedule::command('operations:detect-delivery-exceptions')->dailyAt('07:10')->wi
 if (config('queue.default') === 'redis') {
     Schedule::command('horizon:snapshot')->everyFiveMinutes();
 }
+
+Schedule::command('shipstation:catch-up')->everyFifteenMinutes()->withoutOverlapping()->onOneServer();

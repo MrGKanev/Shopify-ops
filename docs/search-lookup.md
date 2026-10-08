@@ -107,3 +107,9 @@ Paginates through all orders in a date range and builds a complete tag inventory
 - Identifies "orphan" tags: used only once and more than 90 days ago
 - Sorted by frequency descending
 - Each tag is a link to Tag Search for instant drill-down
+
+## Order remediation
+
+The remediation workspace lets an operator request an action for an order, inspect its preview and explicitly confirm execution. Actions include synchronizing an existing ShipStation order, refreshing a native store import, fulfilling Shopify with shipment tracking, adding tracking to an existing fulfillment, holding/releasing fulfillment, and updating tags or notes.
+
+The worker rechecks store access, preview expiry and current external state before writing. Changed data, ambiguous matches, unsafe quantities or unsupported partial fulfillment block execution. Tracking fulfillment uses the shipped quantities and does not notify the customer unless requested. Execution history records the result for review. A ShipStation monitoring issue can be investigated through its order timeline; enabling monitoring does not authorize remediation writes.

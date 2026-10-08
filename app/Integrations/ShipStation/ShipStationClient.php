@@ -35,6 +35,47 @@ class ShipStationClient implements ShipStationClientContract
         private readonly ?int $storeId = null,
     ) {}
 
+    /** @return list<array<string, mixed>> */
+    public function webhookSubscriptions(): array
+    {
+        return $this->items($this->get('/webhooks', []), 'webhooks');
+    }
+
+    public function subscribeWebhook(string $url, string $topic, int $storeId): int
+    {
+        $payload = $this->post('/webhooks/subscribe', ['target_url' => $url, 'event' => $topic, 'store_id' => $storeId, 'friendly_name' => 'Shopify Ops '.$topic]);
+        $id = filter_var($payload['WebHookID'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($id === false) {
+            throw new UnexpectedResponse('ShipStation did not confirm the webhook subscription.');
+        }
+
+        return $id;
+    }
+
+    public function unsubscribeWebhook(int $id): void
+    {
+        $response = $this->request()->delete('/webhooks/'.$id);
+        if ($response->status() === 404) {
+            return;
+        }
+        $this->checkedResponse($response);
+        if ($response->json('success') !== true) {
+            throw new UnexpectedResponse('ShipStation did not confirm webhook removal.');
+        }
+    }
+
+    public function webhookResource(string $url, string $topic, int $storeId): array
+    {
+        $resource = (new WebhookResourceUrl)->parse($url, $topic, $storeId);
+
+        return $this->paginate($resource['path'], $resource['query'], $topic === 'SHIP_NOTIFY' ? 'shipments' : 'orders', confirmPages: true, maximumPages: 20);
+    }
+
+    public function recentMonitoringShipments(int $storeId, string $since): array
+    {
+        return $this->paginate('/shipments', ['storeId' => $storeId, 'createDateStart' => $since, 'includeShipmentItems' => 'true'], 'shipments', confirmPages: true, maximumPages: 20);
+    }
+
     public function customsProducts(): array
     {
         $products = [];
@@ -307,12 +348,16 @@ class ShipStationClient implements ShipStationClientContract
             ->retry(
                 $this->retryAttempts(),
                 fn (int $attempt, mixed $exception): int => $this->retryDelayInMilliseconds($attempt, $exception),
-                when: fn (Throwable $exception, PendingRequest $request, ?string $method): bool => $method === 'GET' && $this->isTransientFailure($exception),
+                when: fn (?Throwable $exception, PendingRequest $request, ?string $method): bool => $exception !== null && $method === 'GET' && $this->isTransientFailure($exception),
                 throw: false,
             )
             ->get($path, $query);
         $this->checkedResponse($response);
         $this->pauseWhenRateLimitIsExhausted($response);
+
+        if (! $response->successful()) {
+            throw new UnexpectedResponse('ShipStation returned an unexpected HTTP status.');
+        }
 
         return $this->decode($response);
     }
@@ -371,6 +416,7 @@ class ShipStationClient implements ShipStationClientContract
 
         return $this->integrationRequest(self::BASE_URL)
             ->withBasicAuth($this->apiKey, $this->apiSecret)
+            ->withoutRedirecting()
             ->beforeSending(fn () => app(IntegrationThrottle::class)->shipStation($this->apiKey));
     }
 
@@ -378,7 +424,7 @@ class ShipStationClient implements ShipStationClientContract
      * @param  array<string, scalar>  $filters
      * @return list<array<string, mixed>>
      */
-    private function paginate(string $path, array $filters, string $itemsKey, bool $confirmPages = false): array
+    private function paginate(string $path, array $filters, string $itemsKey, bool $confirmPages = false, ?int $maximumPages = null): array
     {
         $items = [];
         $page = 1;
@@ -396,6 +442,9 @@ class ShipStationClient implements ShipStationClientContract
             array_push($items, ...$pageItems);
 
             $totalPages = max(1, (int) ($payload['pages'] ?? 1));
+            if ($maximumPages !== null && $totalPages > $maximumPages) {
+                throw new UnexpectedResponse('ShipStation monitoring pagination exceeds the safe scan limit.');
+            }
             $page++;
         } while ($page <= $totalPages);
 

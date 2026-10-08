@@ -139,3 +139,15 @@ _Generated from the tool registry in [`config/reports.php`](../config/reports.ph
 | **Banned IPs** | View and manually unban IPs locked out after repeated failed logins. |
 | **Backups** | Trigger and download database/application backups. |
 | **Health** | Framework health checks (database, cache, queue, scheduler heartbeat). |
+
+## Operational workflows
+
+- **Operational Issues** collects store-scoped findings with owners, priorities, due dates and open/in-progress/resolved/ignored states. ShipStation synchronization monitoring adds shipment-specific fulfillment/tracking findings only after explicit activation in the store settings.
+- **Order remediation** previews an operator-requested change, requires confirmation and verifies current permissions/state before writing. See [Order remediation](search-lookup.md#order-remediation).
+- **Order Contribution Margin** combines Shopify-reported revenue and product costs, payment fees and matched SS label costs. Missing or incompatible costs remain unknown rather than zero; the result is contribution on that cost basis, not accounting net profit.
+- **Catalog Quality / customs readiness** optionally checks HS codes, origin countries and weight sources. Conflicting defaults, duplicate SKUs, exclusions and incomplete source coverage are review findings, not presumed readiness.
+- **Rate Shopping Audit** distinguishes captured quote decisions from current-rate simulations. A selected service requires confirmation, access/expiry checks and verification of the ShipStation result. It does not reconstruct historical rates from current quotes.
+- **Return / RMA Tracker** identifies overdue approvals, processing after receipt and unfinished exchanges using configurable business-day deadlines.
+- **Operational Digest** summarizes pending orders, synchronization findings, unresolved issues and fulfillment deadlines; delivery is configured through the existing email rules.
+
+The interface supports English and Bulgarian. Manual tools remain available independently of optional monitoring.

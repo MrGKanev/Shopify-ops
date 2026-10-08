@@ -4,6 +4,19 @@ namespace App\Integrations\ShipStation;
 
 interface ShipStationClientContract
 {
+    /** @return list<array<string, mixed>> */
+    public function webhookSubscriptions(): array;
+
+    public function subscribeWebhook(string $url, string $topic, int $storeId): int;
+
+    public function unsubscribeWebhook(int $id): void;
+
+    /** @return list<array<string, mixed>> */
+    public function webhookResource(string $url, string $topic, int $storeId): array;
+
+    /** @return list<array<string, mixed>> */
+    public function recentMonitoringShipments(int $storeId, string $since): array;
+
     /** @return array<string, mixed> */
     public function getOrder(int $orderId): array;
 

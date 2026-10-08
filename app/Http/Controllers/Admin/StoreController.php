@@ -7,7 +7,9 @@ use App\Http\Requests\StoreStoreRequest;
 use App\Http\Requests\StoreUpdateRequest;
 use App\Models\Store;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class StoreController extends Controller
@@ -57,6 +59,8 @@ class StoreController extends Controller
      */
     public function edit(Store $store): View
     {
+        $store->loadCount(['shipStationEvents as shipstation_failed_events_count' => fn ($query) => $query->where('status', 'failed')]);
+
         return view('admin.stores.edit', compact('store'));
     }
 
@@ -78,7 +82,17 @@ class StoreController extends Controller
             }
         }
 
-        $store->update($attributes);
+        Cache::lock('shipstation-monitoring:'.$store->id, 300)->block(5, function () use ($store, $attributes): void {
+            $store->refresh();
+            if ($store->shipstation_monitoring_enabled || ! empty($store->shipstation_monitoring_subscriptions) || $store->shipstation_monitoring_token !== null) {
+                foreach (['shipstation_api_key', 'shipstation_api_secret', 'store_number', 'shopify_store', 'slug'] as $field) {
+                    if (array_key_exists($field, $attributes) && (string) $attributes[$field] !== (string) $store->{$field}) {
+                        throw ValidationException::withMessages([$field => __('Disable ShipStation monitoring and remove its subscriptions before changing the integration identity.')]);
+                    }
+                }
+            }
+            $store->update($attributes);
+        });
 
         $rotatedCredentials = array_values(array_filter(['shopify_access_token', 'shopify_webhook_secret', 'shipstation_api_key', 'shipstation_api_secret'], fn (string $credential): bool => $request->filled($credential)));
         if ($rotatedCredentials !== []) {
