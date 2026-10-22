@@ -33,6 +33,9 @@
                 <x-button type="submit" variant="ghost" :formaction="route('orders.customs.check')">{{ __('Check customs') }}</x-button>
                 <button class="rounded-lg bg-amber-600 px-5 py-2.5 font-semibold text-white hover:bg-amber-500" type="submit">{{ __('Push to ShipStation') }}</button>
             </form>
+            <x-cache-note :minutes="\App\Application\Orders\CheckOrderCustoms::PRODUCTS_CACHE_MINUTES">
+                <x-button type="submit" variant="ghost" size="sm" form="push-form" :formaction="route('orders.customs.check')" name="refresh" value="1">{{ __('Check customs with fresh data') }}</x-button>
+            </x-cache-note>
             @if (session('addressIssues'))
                 <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200" role="alert">
                     <p class="font-semibold">{{ __('Shipping address problems') }}</p>

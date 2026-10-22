@@ -34,7 +34,7 @@ class PushToShipStationController extends Controller
     public function customs(PushOrderToShipStationRequest $request, CheckOrderCustoms $check): View|RedirectResponse
     {
         try {
-            $result = $check->handle($this->resolveStore($request), (string) $request->validated('order_number'));
+            $result = $check->handle($this->resolveStore($request), (string) $request->validated('order_number'), $request->boolean('refresh'));
 
             return view('orders.push', ['customsResult' => $result, 'customsOrderNumber' => $request->validated('order_number')]);
         } catch (Throwable $exception) {

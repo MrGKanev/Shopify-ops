@@ -27,6 +27,21 @@ class ShopifyMetafieldsTest extends TestCase
         $this->assertSame([2, 1, 1, ['Happy Birthday']], [$result['scanned'], $result['with_metafield'], count($result['orders']), $result['sample_values']]);
     }
 
+    public function test_definitions_are_cached_until_refreshed(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['*' => Http::response(['data' => ['metafieldDefinitions' => ['edges' => [['node' => ['namespace' => 'custom', 'key' => 'gift']]]]]])]);
+        $client = $this->client();
+        $store = $this->store();
+
+        $client->orderMetafieldDefinitions($store);
+        $client->orderMetafieldDefinitions($store);
+        Http::assertSentCount(1);
+
+        $client->orderMetafieldDefinitions($store, refresh: true);
+        Http::assertSentCount(2);
+    }
+
     public function test_order_metafields_use_gid_and_normalize_values(): void
     {
         Http::fake(['*' => Http::response(['data' => ['order' => ['metafields' => ['pageInfo' => ['hasNextPage' => false, 'endCursor' => null], 'nodes' => [['id' => 'gid://shopify/Metafield/1', 'namespace' => 'custom', 'key' => 'gift', 'value' => '{"x":1}', 'type' => 'json']]]]]])]);

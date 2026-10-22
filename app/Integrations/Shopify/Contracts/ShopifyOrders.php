@@ -59,7 +59,7 @@ interface ShopifyOrders
     public function duplicateOrderCandidates(Store $store, string $startDate, string $endDate): array;
 
     /** @return list<array<string, mixed>> */
-    public function orderMetafieldDefinitions(Store $store): array;
+    public function orderMetafieldDefinitions(Store $store, bool $refresh = false): array;
 
     /** @return array{orders: list<array<string, mixed>>, scanned: int, with_metafield: int, sample_values: list<string>, pages: int, truncated: bool} */
     public function searchOrdersByMetafield(Store $store, string $namespace, string $key, string $value, ?string $startDate, ?string $endDate): array;

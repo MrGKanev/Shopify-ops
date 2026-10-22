@@ -4,9 +4,12 @@ namespace App\Integrations\Shopify;
 
 use App\Integrations\Shopify\Contracts\ShopifyAdminGateway;
 use App\Models\Store;
+use Illuminate\Support\Facades\Cache;
 
 class ShopifyAdminClient implements ShopifyAdminGateway
 {
+    public const DEFINITIONS_CACHE_MINUTES = 60;
+
     public const API_VERSION = ShopifyGraphqlTransport::API_VERSION;
 
     public function __construct(private readonly ShopifyClientFactory $factory) {}
@@ -101,9 +104,14 @@ class ShopifyAdminClient implements ShopifyAdminGateway
         return $this->factory->forStore($store)->customerOrderHistory($email);
     }
 
-    public function orderMetafieldDefinitions(Store $store): array
+    public function orderMetafieldDefinitions(Store $store, bool $refresh = false): array
     {
-        return $this->factory->forStore($store)->orderMetafieldDefinitions();
+        $key = "shopify:metafield-definitions:{$store->getKey()}";
+        if ($refresh) {
+            Cache::forget($key);
+        }
+
+        return Cache::remember($key, now()->addMinutes(self::DEFINITIONS_CACHE_MINUTES), fn (): array => $this->factory->forStore($store)->orderMetafieldDefinitions());
     }
 
     public function searchOrdersByMetafield(Store $store, string $namespace, string $key, string $value, ?string $startDate, ?string $endDate): array

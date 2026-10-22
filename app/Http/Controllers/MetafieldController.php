@@ -22,7 +22,7 @@ class MetafieldController extends Controller
         $loadFailed = false;
         if (! $configurationError) {
             try {
-                $definitions = $shopify->orderMetafieldDefinitions($store);
+                $definitions = $shopify->orderMetafieldDefinitions($store, $request->boolean('refresh'));
             } catch (Throwable $exception) {
                 $loadFailed = true;
                 $this->log($exception, $store);

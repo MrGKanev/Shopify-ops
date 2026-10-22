@@ -2034,5 +2034,10 @@
     "Only subscriptions visible to the current Shopify app are listed. Event API versions come from app settings and cannot be changed per subscription.": "Показват се само абонаментите, видими за текущото Shopify приложение. API версиите на събитията идват от настройките на приложението и не могат да се сменят за отделен абонамент.",
     "Use a public HTTPS APP_URL and save the Shopify app client secret as the signing secret in the store settings. API-created subscriptions use the app secret; manually created admin webhooks can use a different secret.": "Използвай публичен HTTPS APP_URL и запази client secret на Shopify приложението като signing secret в настройките на магазина. Абонаментите, създадени през API, използват secret на приложението; ръчно създадените в админа webhooks може да ползват друг secret.",
     "counts.orders ignored": "{1} :count поръчка е игнорирана.|[0,*] :count поръчки са игнорирани.",
-    "counts.orders imported": "{1} :count поръчка е импортирана.|[0,*] :count поръчки са импортирани."
+    "counts.orders imported": "{1} :count поръчка е импортирана.|[0,*] :count поръчки са импортирани.",
+    "This data is cached for up to :duration, so recent changes in Shopify or ShipStation may not show up right away.": "Тези данни се кешират до :duration, затова скорошни промени в Shopify или ShipStation може да не се покажат веднага.",
+    "Refresh definitions": "Обнови дефинициите",
+    "Check customs with fresh data": "Провери митницата с нови данни",
+    "{1} :count hour|[2,*] :count hours": "{1} :count час|[2,*] :count часа",
+    "{1} :count minute|[2,*] :count minutes": "{1} :count минута|[2,*] :count минути"
 }

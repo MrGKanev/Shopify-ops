@@ -16,6 +16,10 @@
 
         <section class="flex flex-col gap-3" aria-labelledby="definitions-heading">
             <h2 class="text-xl font-bold" id="definitions-heading">{{ __('Order definitions') }}</h2>
+            <div class="flex flex-wrap items-center gap-3">
+                <x-cache-note :minutes="\App\Integrations\Shopify\ShopifyAdminClient::DEFINITIONS_CACHE_MINUTES" />
+                <x-button variant="ghost" size="sm" :href="route('metafields.index', ['refresh' => 1])">{{ __('Refresh definitions') }}</x-button>
+            </div>
             <x-data-table :headers="['Namespace.key', 'Name', 'Type', 'Description']">
                 @forelse ($definitions as $definition)
                     <tr>

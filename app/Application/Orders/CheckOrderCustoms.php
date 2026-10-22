@@ -5,14 +5,19 @@ namespace App\Application\Orders;
 use App\Domain\Reports\CustomsReadinessAnalyzer;
 use App\Integrations\Shopify\ShopifyCustoms;
 use App\Models\Store;
+use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 class CheckOrderCustoms
 {
+    public const PRODUCTS_CACHE_MINUTES = 5;
+
+    public const WAREHOUSE_CACHE_MINUTES = 60;
+
     public function __construct(private readonly LoadOrderForRemediation $orders, private readonly ShopifyCustoms $shopify, private readonly CustomsReadinessAnalyzer $analyzer) {}
 
     /** @return array<string, mixed> */
-    public function handle(Store $store, string $number): array
+    public function handle(Store $store, string $number, bool $refresh = false): array
     {
         $base = $this->orders->shopify($store, $number);
         $order = [];
@@ -48,7 +53,11 @@ class CheckOrderCustoms
             $client = $this->orders->client($store);
             $ss = $this->orders->shipStation($store, $base);
             try {
-                $defaults = $client->customsProducts();
+                $productsKey = "customs:products:{$store->getKey()}";
+                if ($refresh) {
+                    Cache::forget($productsKey);
+                }
+                $defaults = Cache::remember($productsKey, now()->addMinutes(self::PRODUCTS_CACHE_MINUTES), fn (): array => $client->customsProducts());
                 $products = $defaults['products'];
                 $ssComplete = ! $defaults['truncated'];
             } catch (Throwable) {
@@ -56,7 +65,11 @@ class CheckOrderCustoms
             }
             $warehouseId = data_get($ss, 'advancedOptions.warehouseId');
             if (is_scalar($warehouseId) && ctype_digit((string) $warehouseId) && (int) $warehouseId > 0) {
-                $warehouse = $client->getWarehouse((int) $warehouseId);
+                $warehouseKey = "customs:warehouse:{$store->getKey()}:{$warehouseId}";
+                if ($refresh) {
+                    Cache::forget($warehouseKey);
+                }
+                $warehouse = Cache::remember($warehouseKey, now()->addMinutes(self::WAREHOUSE_CACHE_MINUTES), fn (): array => $client->getWarehouse((int) $warehouseId));
                 if ((string) ($warehouse['warehouseId'] ?? '') === (string) $warehouseId) {
                     $from = strtoupper(is_string($warehouse['originAddress']['country'] ?? null) ? $warehouse['originAddress']['country'] : '');
                 }

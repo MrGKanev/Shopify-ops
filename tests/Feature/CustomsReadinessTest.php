@@ -142,6 +142,18 @@ class CustomsReadinessTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_shipstation_reference_data_is_cached_and_refresh_bypasses_the_cache(): void
+    {
+        $this->freezeTime();
+        Http::preventStrayRequests();
+        [$operator, $store] = $this->userWithStore(true, ['store_number' => '12']);
+        $this->fakeOrderSources($store, checks: 3, referenceFetches: 2);
+
+        $this->actingAs($operator)->post(route('orders.customs.check'), ['order_number' => '#1001'])->assertOk();
+        $this->actingAs($operator)->post(route('orders.customs.check'), ['order_number' => '#1001'])->assertOk()->assertSeeText('cached for up to 5 minutes');
+        $this->actingAs($operator)->post(route('orders.customs.check'), ['order_number' => '#1001', 'refresh' => 1])->assertOk();
+    }
+
     public function test_catalog_customs_is_opt_in_queued_and_uses_shared_component_with_safe_text(): void
     {
         $this->freezeTime();
@@ -206,20 +218,20 @@ class CustomsReadinessTest extends TestCase
         return ['orderId' => 77, 'orderNumber' => '1001', 'orderStatus' => 'awaiting_shipment', 'advancedOptions' => ['storeId' => 12, 'warehouseId' => 5], 'shipTo' => ['country' => 'CA'], 'weight' => ['value' => 2, 'units' => 'ounces'], 'items' => [['lineItemKey' => '11', 'quantity' => 1]], 'internationalOptions' => ['customsItems' => [['customsItemId' => 'd1', 'description' => 'Cotton shirt', 'quantity' => 1, 'value' => 20, 'harmonizedTariffCode' => '6109100012', 'countryOfOrigin' => 'CN']]]];
     }
 
-    private function fakeOrderSources(Store $store, bool $foreignStore = false): void
+    private function fakeOrderSources(Store $store, bool $foreignStore = false, int $checks = 1, int $referenceFetches = 1): void
     {
-        $this->mock(ShopifyOrders::class)->shouldReceive('findByOrderNumber')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '1001')->andReturn([['id' => '1001', 'name' => '#1001']]);
+        $this->mock(ShopifyOrders::class)->shouldReceive('findByOrderNumber')->times($checks)->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '1001')->andReturn([['id' => '1001', 'name' => '#1001']]);
         $this->mock(ShopifyTransport::class)->shouldReceive('graphql')->with(Mockery::any(), Mockery::pattern('/CustomsOrderLines/'), ['id' => 'gid://shopify/Order/1001', 'after' => null])->andReturn(['data' => ['order' => ['id' => 'gid://shopify/Order/1001', 'name' => '#1001', 'updatedAt' => '2026-10-07T00:00:00Z', 'cancelledAt' => null, 'displayFulfillmentStatus' => 'UNFULFILLED', 'shippingAddress' => ['countryCodeV2' => 'CA'], 'lineItems' => ['nodes' => [['id' => 'gid://shopify/LineItem/11', 'title' => 'Shirt', 'sku' => 'A', 'currentQuantity' => 1, 'unfulfilledQuantity' => 1, 'requiresShipping' => true, 'originalUnitPriceSet' => ['shopMoney' => ['amount' => '20', 'currencyCode' => 'USD']], 'variant' => $this->variant()]], 'pageInfo' => ['hasNextPage' => false, 'endCursor' => null]]]]]);
         $ss = Mockery::mock(ShipStationClientContract::class);
         $candidate = $this->ssOrder();
         if ($foreignStore) {
             $candidate['advancedOptions']['storeId'] = 13;
         }
-        $ss->shouldReceive('findByOrderNumber')->once()->with('1001', 12)->andReturn([$candidate]);
+        $ss->shouldReceive('findByOrderNumber')->times($checks)->with('1001', 12)->andReturn([$candidate]);
         if (! $foreignStore) {
-            $ss->shouldReceive('getOrder')->once()->with(77)->andReturn($this->ssOrder());
-            $ss->shouldReceive('customsProducts')->once()->andReturn(['products' => [$this->product()], 'pages' => 1, 'truncated' => false]);
-            $ss->shouldReceive('getWarehouse')->once()->with(5)->andReturn(['warehouseId' => 5, 'originAddress' => ['country' => 'US']]);
+            $ss->shouldReceive('getOrder')->times($checks)->with(77)->andReturn($this->ssOrder());
+            $ss->shouldReceive('customsProducts')->times($referenceFetches)->andReturn(['products' => [$this->product()], 'pages' => 1, 'truncated' => false]);
+            $ss->shouldReceive('getWarehouse')->times($referenceFetches)->with(5)->andReturn(['warehouseId' => 5, 'originAddress' => ['country' => 'US']]);
         } else {
             $ss->shouldNotReceive('getOrder');
             $ss->shouldNotReceive('customsProducts');
