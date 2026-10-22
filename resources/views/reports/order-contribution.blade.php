@@ -48,8 +48,8 @@
                                     <div class="mt-2 text-xs">
                                         {{ $label['id'] }} · {{ $label['carrier'] }} / {{ $label['service'] }}
                                         · {{ $label['return'] === true ? __('Return label') : ($label['return'] === false ? __('Outbound label') : __('Unknown label type')) }}
-                                        · {{ $label['cost'] === null ? __('Unknown') : number_format($label['cost'], 2) }}
-                                        + {{ $label['insurance'] === null ? __('Unknown') : number_format($label['insurance'], 2) }} {{ __('insurance') }}
+                                        · {{ $label['cost'] === null ? __('Unknown') : \App\Support\UiFormat::number($label['cost'], 2) }}
+                                        + {{ $label['insurance'] === null ? __('Unknown') : \App\Support\UiFormat::number($label['insurance'], 2) }} {{ __('insurance') }}
                                         · {{ $label['currency'] ?? __('Currency unconfirmed') }}
                                         @if ($label['voided'] !== false) · {{ __('Void/refund status unconfirmed') }} @endif
                                     </div>

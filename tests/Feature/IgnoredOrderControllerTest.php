@@ -39,7 +39,7 @@ class IgnoredOrderControllerTest extends TestCase
     {
         [$operator, $store] = $this->userWithStore(true);
         $file = UploadedFile::fake()->createWithContent('orders.csv', "order_number\n#1001\n1002\n1001\n");
-        $this->actingAs($operator)->post('/ignored-orders/import', ['file' => $file, 'reason' => 'bulk'])->assertRedirect()->assertSessionHas('status', '2 orders imported.');
+        $this->actingAs($operator)->post('/ignored-orders/import', ['file' => $file, 'reason' => 'bulk'])->assertRedirect()->assertSessionHas('status', '2 orders imported');
         $this->assertSame(['1001', '1002'], $store->ignoredOrders()->orderBy('order_number')->pluck('order_number')->all());
     }
 
@@ -49,7 +49,7 @@ class IgnoredOrderControllerTest extends TestCase
 
         $this->actingAs($operator)->post('/ignored-orders/bulk', ['order_numbers' => ['#1001', '', '1002'], 'reason' => 'Repeat offender'])
             ->assertRedirect()
-            ->assertSessionHas('status', '2 orders ignored.');
+            ->assertSessionHas('status', '2 orders ignored');
 
         $this->assertSame([['1001', 'Repeat offender'], ['1002', 'Repeat offender']], $store->ignoredOrders()->orderBy('order_number')->get(['order_number', 'reason'])->map(fn ($o) => [$o->order_number, $o->reason])->all());
     }

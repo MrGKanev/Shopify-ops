@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Application\Orders\SaveOrderNote;
 use App\Http\Requests\SaveOrderNoteRequest;
 use App\Models\Store;
+use App\Support\UiFormat;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -27,7 +28,7 @@ class OrderNoteController extends Controller
         } catch (Throwable $exception) {
             Log::warning('Save order note failed.', ['exception_type' => $exception::class]);
 
-            return back()->withErrors(['note' => $exception->getMessage()]);
+            return back()->withErrors(['note' => UiFormat::text($exception->getMessage())]);
         }
     }
 

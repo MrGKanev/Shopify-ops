@@ -2026,5 +2026,13 @@
     "Missing, invalid or mixed-currency amounts prevent a confirmed comparison.": "Липсващи, невалидни суми или смесени валути пречат на потвърдено сравнение.",
     "No confirmed payout component transactions were found.": "Няма потвърдени компонентни транзакции за payout.",
     "Total comparison is limited to finalized deposit payouts; this payout is not eligible.": "Сравнението на общите суми е само за завършени deposit payouts; този payout не отговаря на условието.",
-    "Comparison tolerance or payout direction is unconfirmed.": "Толерансът на сравнението или посоката на payout е непотвърдена."
+    "Comparison tolerance or payout direction is unconfirmed.": "Толерансът на сравнението или посоката на payout е непотвърдена.",
+    "Missing SKU": "Липсва SKU",
+    "The job could not be queued.": "Задачата не можа да бъде поставена в опашката.",
+    "The webhook could not be removed. Register its replacement first; only outdated subscriptions owned by this application can be removed.": "Webhook-ът не можа да бъде премахнат. Първо регистрирай заместника му; могат да се премахват само остарели абонаменти на това приложение.",
+    "Webhooks could not all be registered. Check credentials, the app signing secret, HTTPS APP_URL and scopes, then reload to see any successful registrations.": "Не всички webhooks бяха регистрирани. Провери данните за достъп, signing secret на приложението, HTTPS APP_URL и scopes, после презареди, за да видиш успешните регистрации.",
+    "Only subscriptions visible to the current Shopify app are listed. Event API versions come from app settings and cannot be changed per subscription.": "Показват се само абонаментите, видими за текущото Shopify приложение. API версиите на събитията идват от настройките на приложението и не могат да се сменят за отделен абонамент.",
+    "Use a public HTTPS APP_URL and save the Shopify app client secret as the signing secret in the store settings. API-created subscriptions use the app secret; manually created admin webhooks can use a different secret.": "Използвай публичен HTTPS APP_URL и запази client secret на Shopify приложението като signing secret в настройките на магазина. Абонаментите, създадени през API, използват secret на приложението; ръчно създадените в админа webhooks може да ползват друг secret.",
+    "counts.orders ignored": "{1} :count поръчка е игнорирана.|[0,*] :count поръчки са игнорирани.",
+    "counts.orders imported": "{1} :count поръчка е импортирана.|[0,*] :count поръчки са импортирани."
 }

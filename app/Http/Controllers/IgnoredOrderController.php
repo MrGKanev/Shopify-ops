@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\IgnoredOrderImportRequest;
 use App\Http\Requests\IgnoredOrderRequest;
 use App\Models\IgnoredOrder;
+use App\Support\UiFormat;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -61,7 +62,7 @@ class IgnoredOrderController extends Controller
         activity('operator-actions')->causedBy($request->user())->performedOn($store)
             ->withProperties(['count' => count($entries), 'reason' => $reason])->log('bulk_ignore_orders');
 
-        return back()->with('status', count($entries).' orders ignored.');
+        return back()->with('status', UiFormat::count(count($entries), 'orders ignored'));
     }
 
     /**
@@ -116,7 +117,7 @@ class IgnoredOrderController extends Controller
         activity('operator-actions')->causedBy($request->user())->performedOn($this->resolveStore($request))
             ->withProperties(['count' => count($rows), 'reason' => trim((string) ($request->validated('reason') ?? ''))])->log('import_ignore_csv');
 
-        return back()->with('status', count($rows).' orders imported.');
+        return back()->with('status', UiFormat::count(count($rows), 'orders imported'));
     }
 
     private function normalize(string $number): string

@@ -46,15 +46,15 @@
                 @php($summary = $result->meta['summary'])
                 <x-card>
                     <h2 class="text-lg font-semibold">{{ __('Shipment') }} #{{ $result->meta['shipment_id'] }}</h2>
-                    <p class="mt-2">{{ __('Declared shipment weight') }}: {{ $summary['declared_grams'] === null ? __('Unknown') : number_format($summary['declared_grams'], 2).' g' }} · {{ __('Package tare') }}: {{ $summary['tare_grams'] === null ? __('Unknown') : number_format($summary['tare_grams'], 2).' g' }}</p>
+                    <p class="mt-2">{{ __('Declared shipment weight') }}: {{ $summary['declared_grams'] === null ? __('Unknown') : \App\Support\UiFormat::number($summary['declared_grams'], 2).' g' }} · {{ __('Package tare') }}: {{ $summary['tare_grams'] === null ? __('Unknown') : \App\Support\UiFormat::number($summary['tare_grams'], 2).' g' }}</p>
                     <x-data-table :headers="['Weight basis', 'Goods (g)', 'Goods + tare (g)', 'Declared minus expected (g)']">
                         @foreach ($summary['comparisons'] as $source => $comparison)
-                            <tr><td class="px-4 py-3">{{ __($source) }}@if($comparison['finding'])<p class="mt-1 text-xs text-amber-700 dark:text-amber-300">{{ __($comparison['finding']) }}</p>@endif</td>@foreach (['goods_grams', 'package_grams', 'delta_grams'] as $key)<td class="px-4 py-3">{{ $comparison[$key] === null ? __('Unknown') : number_format($comparison[$key], 2) }}</td>@endforeach</tr>
+                            <tr><td class="px-4 py-3">{{ __($source) }}@if($comparison['finding'])<p class="mt-1 text-xs text-amber-700 dark:text-amber-300">{{ __($comparison['finding']) }}</p>@endif</td>@foreach (['goods_grams', 'package_grams', 'delta_grams'] as $key)<td class="px-4 py-3">{{ $comparison[$key] === null ? __('Unknown') : \App\Support\UiFormat::number($comparison[$key], 2) }}</td>@endforeach</tr>
                         @endforeach
                     </x-data-table>
                     <p class="mt-2 text-sm">{{ __('Current product and imported order totals are estimates for the selected items, not historical measured weights.') }}</p>
                     @foreach ($summary['findings'] as $finding)<p class="mt-2 text-sm text-amber-700 dark:text-amber-300">{{ __($finding) }}</p>@endforeach
-                    <p class="mt-2 text-sm">{{ __('DIM scenario') }}: {{ $summary['dim_grams'] === null ? __('Unknown') : number_format($summary['dim_grams'], 2).' g' }} · {{ __('Billable weight scenario') }}: {{ $summary['billable_scenario_grams'] === null ? __('Unknown') : number_format($summary['billable_scenario_grams'], 2).' g' }}</p>
+                    <p class="mt-2 text-sm">{{ __('DIM scenario') }}: {{ $summary['dim_grams'] === null ? __('Unknown') : \App\Support\UiFormat::number($summary['dim_grams'], 2).' g' }} · {{ __('Billable weight scenario') }}: {{ $summary['billable_scenario_grams'] === null ? __('Unknown') : \App\Support\UiFormat::number($summary['billable_scenario_grams'], 2).' g' }}</p>
                     <p class="mt-2 text-sm">{{ __('DIM uses your divisor and the reported dimensions. Carrier rounding, measured weight and actual billed adjustments are not verified.') }}</p>
                 </x-card>
                 <x-card>
@@ -76,7 +76,7 @@
                             <td class="px-4 py-3"><div class="font-semibold">{{ $row['sku'] ?: __('Missing SKU') }}</div><div>{{ $row['title'] }}</div>@if(isset($row['quantity']))<div>{{ __('Quantity') }}: {{ $row['quantity'] }}</div>@endif @if(isset($row['side']))<div class="text-xs">{{ $row['side'] }} · Shopify: {{ $row['shopify_count'] }} · SS: {{ $row['ss_count'] }}</div>@endif</td>
                             <td class="px-4 py-3"><div class="flex flex-col gap-3">
                                 @foreach ($row['sources'] as $source => $values)
-                                    <div class="text-sm"><strong>{{ __($source) }}</strong><div>{{ __('Weight') }}: {{ $values['grams'] === null ? __('Unknown') : number_format($values['grams'], 2).' g' }} · HS: {{ $values['hs'] ?: '—' }} · {{ __('Origin') }}: {{ $values['origin'] ?: '—' }}</div><div>{{ $values['description'] ?: '—' }}</div></div>
+                                    <div class="text-sm"><strong>{{ __($source) }}</strong><div>{{ __('Weight') }}: {{ $values['grams'] === null ? __('Unknown') : \App\Support\UiFormat::number($values['grams'], 2).' g' }} · HS: {{ $values['hs'] ?: '—' }} · {{ __('Origin') }}: {{ $values['origin'] ?: '—' }}</div><div>{{ $values['description'] ?: '—' }}</div></div>
                                 @endforeach
                                 @foreach ($row['components'] ?? [] as $component)
                                     <div class="text-xs">{{ __('Bundle component') }}: {{ data_get($component, 'productVariant.sku') }} × {{ $component['quantity'] }}</div>
