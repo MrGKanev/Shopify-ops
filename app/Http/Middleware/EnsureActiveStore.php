@@ -20,7 +20,7 @@ class EnsureActiveStore
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $availableStores = $request->user()
+        $availableStores = ($request->user() ?? abort(401))
             ->stores()
             ->select(['stores.id', 'stores.slug', 'stores.label', 'stores.shopify_store'])
             ->orderBy('label')

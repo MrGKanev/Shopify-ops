@@ -93,10 +93,13 @@ class ApiHealthController extends Controller
         $summary = ['healthy' => 0, 'attention' => 0];
         foreach ($runs as $tool => $history) {
             $latest = $history->first();
+            if ($latest === null) {
+                continue;
+            }
             $errors = $history->filter(fn ($run): bool => $run->status === 'error' || $run->error !== '');
             $attention = $latest->status === 'error' || $latest->error !== '';
             $summary[$attention ? 'attention' : 'healthy']++;
-            $flows[] = ['tool' => (string) $tool, 'status' => $latest->status, 'runs' => $history->count(), 'errors' => $errors->count(), 'last_run_at' => $latest->created_at->toDateTimeString(), 'last_error' => (string) ($errors->first()->error ?? '')];
+            $flows[] = ['tool' => (string) $tool, 'status' => $latest->status, 'runs' => $history->count(), 'errors' => $errors->count(), 'last_run_at' => $latest->created_at?->toDateTimeString() ?? '', 'last_error' => (string) ($errors->first()->error ?? '')];
         }
 
         return compact('summary', 'flows');

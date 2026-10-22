@@ -30,7 +30,8 @@ class CaptureRateQuoteSnapshot implements ShouldQueue
         if (! in_array($snapshot->status, ['queued', 'running'], true)) {
             return;
         }
-        if ($snapshot->user === null || ! Gate::forUser($snapshot->user)->allows('run-audits') || ! $snapshot->user->stores()->whereKey($snapshot->store_id)->exists()) {
+        $store = $snapshot->store;
+        if ($store === null || $snapshot->user === null || ! Gate::forUser($snapshot->user)->allows('run-audits') || ! $snapshot->user->stores()->whereKey($snapshot->store_id)->exists()) {
             $this->failed(new RateComparisonUnavailable('The operator no longer has access to this store.'));
 
             return;
@@ -39,7 +40,7 @@ class CaptureRateQuoteSnapshot implements ShouldQueue
         $started = microtime(true);
         try {
             $capture->handle($snapshot);
-            $runs->handle($snapshot->store, ['tool' => 'rate_shopping', 'status' => 'ok', 'scanned' => count($snapshot->quoteRows()), 'rows_found' => count(array_filter($snapshot->quoteRows(), fn (array $quote): bool => $quote['eligible'])), 'duration_seconds' => round(microtime(true) - $started, 3)]);
+            $runs->handle($store, ['tool' => 'rate_shopping', 'status' => 'ok', 'scanned' => count($snapshot->quoteRows()), 'rows_found' => count(array_filter($snapshot->quoteRows(), fn (array $quote): bool => $quote['eligible'])), 'duration_seconds' => round(microtime(true) - $started, 3)]);
         } catch (RateComparisonUnavailable $exception) {
             $this->failed($exception);
         }

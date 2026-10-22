@@ -10,7 +10,7 @@ class ActiveStoreController extends Controller
 {
     public function __invoke(Request $request, Store $store): RedirectResponse
     {
-        $hasAccess = $request->user()
+        $hasAccess = $this->authenticatedUser($request)
             ->stores()
             ->whereKey($store->getKey())
             ->exists();

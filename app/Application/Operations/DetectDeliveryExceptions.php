@@ -36,8 +36,9 @@ class DetectDeliveryExceptions
 
         foreach ($exceptions as $exception) {
             if ($exception['resolved']) {
-                if ($resolvedIssues->has($exception['fingerprint'])) {
-                    $this->issues->resolve($resolvedIssues[$exception['fingerprint']]);
+                $issue = $resolvedIssues->get($exception['fingerprint']);
+                if ($issue !== null) {
+                    $this->issues->resolve($issue);
                 }
 
                 continue;

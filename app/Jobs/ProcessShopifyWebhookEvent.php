@@ -30,9 +30,10 @@ class ProcessShopifyWebhookEvent implements ShouldQueue
         }
         $orderIssues->handle($event);
         $issue = $this->issueAttributes($event);
+        $store = $event->store;
 
-        if ($issue !== null) {
-            $issues->handle($event->store, [
+        if ($issue !== null && $store !== null) {
+            $issues->handle($store, [
                 ...$issue,
                 'source_tool' => 'shopify_webhook',
                 'fingerprint' => RaiseOperationalIssue::fingerprint('webhook', "{$event->topic}|{$event->subject_id}"),

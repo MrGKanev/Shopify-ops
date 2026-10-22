@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Store;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 abstract class Controller
@@ -12,6 +13,11 @@ abstract class Controller
         /** @var Store $activeStore */
         $activeStore = $request->attributes->get('activeStore');
 
-        return $request->user()->stores()->whereKey($activeStore->getKey())->firstOrFail();
+        return $this->authenticatedUser($request)->stores()->whereKey($activeStore->getKey())->firstOrFail();
+    }
+
+    protected function authenticatedUser(Request $request): User
+    {
+        return $request->user() ?? abort(401);
     }
 }

@@ -44,7 +44,7 @@ class StoreController extends Controller
     {
         $store = DB::transaction(function () use ($request): Store {
             $store = Store::create($request->validated());
-            $request->user()->stores()->attach($store);
+            $this->authenticatedUser($request)->stores()->attach($store);
 
             return $store;
         });

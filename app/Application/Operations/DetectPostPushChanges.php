@@ -14,10 +14,12 @@ class DetectPostPushChanges
 
     public function handle(WebhookEvent $event): void
     {
-        if ($event->topic !== 'orders/updated' || $event->subject_id === null || $event->store->missingShipStationCredentials()) {
+        $store = $event->store;
+        $subjectId = $event->subject_id;
+        if ($event->topic !== 'orders/updated' || $subjectId === null || $store === null || $store->missingShipStationCredentials()) {
             return;
         }
-        $push = $event->store->pushLogs()->where('shopify_id', $event->subject_id)->where('status', 'success')->latest('pushed_at')->latest('id')->first();
+        $push = $store->pushLogs()->where('shopify_id', $subjectId)->where('status', 'success')->latest('pushed_at')->latest('id')->first();
         if ($push === null || $push->shipstation_order_id === null) {
             return;
         }
@@ -28,29 +30,29 @@ class DetectPostPushChanges
         } catch (\Exception) {
             return;
         }
-        Cache::lock('order-remediation:'.$event->store_id.':'.$event->subject_id, 300)->block(5, function () use ($event, $push): void {
-            $order = $this->orders->shopify($event->store, $push->order_number);
-            if ((string) $order['id'] !== $event->subject_id) {
+        Cache::lock('order-remediation:'.$store_id.':'.$subjectId, 300)->block(5, function () use ($event, $push, $store, $subjectId): void {
+            $order = $this->orders->shopify($store, $push->order_number);
+            if ((string) $order['id'] !== $subjectId) {
                 return;
             }
-            $actual = $this->orders->shipStation($event->store, $order);
+            $actual = $this->orders->shipStation($store, $order);
             if ($actual === null) {
                 return;
             }
-            $expected = $this->orders->client($event->store)->buildOrderPayload($order);
+            $expected = $this->orders->client($store)->buildOrderPayload($order);
             $diff = ShipStationRelevantFingerprint::diff($expected, $actual);
-            $fingerprint = RaiseOperationalIssue::fingerprint('order_changed_after_push', $event->subject_id);
+            $fingerprint = RaiseOperationalIssue::fingerprint('order_changed_after_push', $subjectId);
             if ($diff === []) {
-                $issue = $event->store->operationalIssues()->where('fingerprint', $fingerprint)->first();
+                $issue = $store->operationalIssues()->where('fingerprint', $fingerprint)->first();
                 if ($issue !== null) {
                     $this->issues->resolve($issue);
                 }
 
                 return;
             }
-            $this->issues->handle($event->store, [
+            $this->issues->handle($store, [
                 'source_tool' => 'order_changed_after_push', 'fingerprint' => $fingerprint,
-                'reference' => $event->subject_id, 'title' => 'Shopify shipping data differs from ShipStation after push',
+                'reference' => $subjectId, 'title' => 'Shopify shipping data differs from ShipStation after push',
                 'priority' => ($actual['orderStatus'] ?? '') === 'shipped' ? 'urgent' : 'high',
                 'payload' => [
                     'order_number' => $order['name'] ?? $push->order_number,

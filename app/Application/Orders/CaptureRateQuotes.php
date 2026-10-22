@@ -89,15 +89,16 @@ class CaptureRateQuotes
 
     public function handle(RateQuoteSnapshot $snapshot): void
     {
-        $context = $this->context($snapshot->store, $snapshot->input);
+        $store = $snapshot->store ?? throw new RateComparisonUnavailable('The store no longer exists.');
+        $context = $this->context($store, $snapshot->input);
         $signature = self::fingerprint($context);
-        $cached = Cache::lock('rate-quotes-lock:'.$signature, 240)->block(5, function () use ($context, $snapshot, $signature): array {
+        $cached = Cache::lock('rate-quotes-lock:'.$signature, 240)->block(5, function () use ($context, $store, $signature): array {
             $key = 'rate-quotes:'.$signature;
             $cached = Cache::get($key);
             if (is_array($cached) && isset($cached['quotes'], $cached['quoted_at'])) {
                 return $cached;
             }
-            $quotes = $this->orders->client($snapshot->store)->getRates($context['request']);
+            $quotes = $this->orders->client($store)->getRates($context['request']);
             $cached = ['quotes' => $quotes, 'quoted_at' => CarbonImmutable::now()->toIso8601String()];
             Cache::put($key, $cached, 120);
 

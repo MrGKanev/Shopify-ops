@@ -216,7 +216,7 @@ class CustomsReadinessAnalyzer
         }
         $expected = [];
         foreach ($lines as $line) {
-            $id = preg_replace('~^gid://shopify/LineItem/~', '', $this->text($line['id'] ?? null));
+            $id = preg_replace('~^gid://shopify/LineItem/~', '', $this->text($line['id'] ?? null)) ?? '';
             if ($id === '' || isset($expected[$id])) {
                 return false;
             }
@@ -230,7 +230,7 @@ class CustomsReadinessAnalyzer
             if (($item['adjustment'] ?? false) === true) {
                 continue;
             }
-            $id = preg_replace('~^gid://shopify/LineItem/~', '', $this->text($item['lineItemKey'] ?? null));
+            $id = preg_replace('~^gid://shopify/LineItem/~', '', $this->text($item['lineItemKey'] ?? null)) ?? '';
             $quantity = $item['quantity'] ?? null;
             if ($id === '' || ! is_numeric($quantity) || (float) $quantity <= 0 || floor((float) $quantity) !== (float) $quantity || isset($actual[$id])) {
                 return false;

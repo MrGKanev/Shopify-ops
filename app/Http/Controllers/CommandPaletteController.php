@@ -40,7 +40,7 @@ class CommandPaletteController extends Controller
                 ->get(['id', 'tool', 'status', 'created_at'])
                 ->map(fn ($run): array => [
                     'label' => Str::headline($run->tool),
-                    'description' => __($run->status).' · '.UiFormat::relative($run->created_at),
+                    'description' => __($run->status).' · '.($run->created_at === null ? '' : UiFormat::relative($run->created_at)),
                     'url' => route('run-logs.index', ['q' => $run->tool]),
                     'kind' => 'Run', 'kind_label' => __('Run'),
                 ]);

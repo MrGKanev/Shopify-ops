@@ -31,7 +31,8 @@ class RunQueuedReport implements ShouldQueue
     public function handle(RecordRun $runs): void
     {
         $run = ReportRun::query()->with('store')->find($this->reportRunId);
-        if ($run === null || ! $run->isPending()) {
+        $store = $run?->store;
+        if ($run === null || $store === null || ! $run->isPending()) {
             return;
         }
 
@@ -41,7 +42,7 @@ class RunQueuedReport implements ShouldQueue
         $result = null;
 
         try {
-            $result = app($run->report)->handle($run->store, ...$run->arguments);
+            $result = app($run->report)->handle($store, ...$run->arguments);
             $run->storeResult($result);
         } catch (Throwable $exception) {
             $result = null;
@@ -49,7 +50,7 @@ class RunQueuedReport implements ShouldQueue
             Log::warning('Queued report failed.', ['exception_type' => $exception::class, 'status' => $exception instanceof IntegrationException ? $exception->status : ($exception instanceof RequestException ? $exception->response->status() : null), 'store_id' => $run->store_id, 'tool' => $run->tool]);
         }
 
-        $runs->handle($run->store, [
+        $runs->handle($store, [
             'tool' => $run->tool,
             'status' => $run->hasFailed() ? 'error' : 'ok',
             'start_date' => $run->start_date?->toDateString(),

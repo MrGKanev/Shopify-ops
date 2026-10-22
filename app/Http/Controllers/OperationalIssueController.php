@@ -21,7 +21,7 @@ class OperationalIssueController extends Controller
         $issues = $store->operationalIssues()
             ->with('owner:id,name')
             ->when(IssueStatus::tryFrom($status) !== null, fn ($query) => $query->where('status', $status))
-            ->when($mine, fn ($query) => $query->where('owner_user_id', $request->user()->getKey()))
+            ->when($mine, fn ($query) => $query->where('owner_user_id', $this->authenticatedUser($request)->getKey()))
             ->when($overdue, fn ($query) => $query->whereIn('status', IssueStatus::active())->whereNotNull('due_date')->whereDate('due_date', '<', today()))
             ->when($source === 'delivery_watch', fn ($query) => $query->where('source_tool', $source))
             ->orderByRaw("case priority when 'urgent' then 1 when 'high' then 2 when 'normal' then 3 else 4 end")

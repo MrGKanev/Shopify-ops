@@ -32,8 +32,8 @@ class ProcessShipStationEvent implements ShouldQueue
         }
         Cache::lock('shipstation-monitoring:'.$event->store_id, 300)->block(5, function () use ($event, $clients, $events, $checks): void {
             $event->refresh();
-            $store = $event->store->fresh();
-            if (in_array($event->status, ['processed', 'skipped'], true)) {
+            $store = $event->store?->fresh();
+            if ($store === null || in_array($event->status, ['processed', 'skipped'], true)) {
                 return;
             }
             if (! $store->shipstation_monitoring_enabled || ! hash_equals($event->generation, hash('sha256', (string) $store->shipstation_monitoring_token))) {

@@ -25,7 +25,7 @@ class RateShoppingController extends Controller
     public function store(RateQuoteRequest $request): RedirectResponse
     {
         $store = $this->resolveStore($request);
-        $snapshot = $store->rateQuoteSnapshots()->create(['user_id' => $request->user()->id, 'order_number' => $request->validated('order_number'), 'input' => $request->validated(), 'status' => 'queued', 'mode' => 'simulation']);
+        $snapshot = $store->rateQuoteSnapshots()->create(['user_id' => $this->authenticatedUser($request)->id, 'order_number' => $request->validated('order_number'), 'input' => $request->validated(), 'status' => 'queued', 'mode' => 'simulation']);
         $this->dispatchOrFail($snapshot, 'queued', fn () => CaptureRateQuoteSnapshot::dispatch($snapshot->id), 'Rate capture could not be queued. Create a new request.');
 
         return redirect()->route('reports.rate-shopping.result', $snapshot->id);
@@ -38,7 +38,7 @@ class RateShoppingController extends Controller
         $comparison = $analyzer->compare($snapshot->quoteRows(), $reference);
         $shipDate = data_get($snapshot->context, 'source_order.shipDate');
         $dateCompatible = empty($shipDate) || (is_string($shipDate) && substr($shipDate, 0, 10) === data_get($snapshot->context, 'pricing_date'));
-        $canSelect = $dateCompatible && $snapshot->status === 'ready' && $snapshot->user_id === $request->user()->id && $snapshot->quoted_at?->gte(now()->subMinutes(5))
+        $canSelect = $dateCompatible && $snapshot->status === 'ready' && $snapshot->user_id === $this->authenticatedUser($request)->id && $snapshot->quoted_at?->gte(now()->subMinutes(5))
             && count(array_filter($snapshot->quoteRows(), fn (array $quote): bool => $quote['eligible'])) > 0
             && in_array(data_get($snapshot->context, 'source_order.orderStatus'), ['awaiting_payment', 'awaiting_shipment', 'on_hold'], true);
 
@@ -48,7 +48,7 @@ class RateShoppingController extends Controller
     public function select(SelectRateQuoteRequest $request, int $snapshot): RedirectResponse
     {
         $snapshot = $this->resolveStore($request)->rateQuoteSnapshots()->findOrFail($snapshot);
-        abort_unless($snapshot->user_id === $request->user()->id, 404);
+        abort_unless($snapshot->user_id === $this->authenticatedUser($request)->id, 404);
         abort_unless($snapshot->status === 'ready' && $snapshot->quoted_at?->gte(now()->subMinutes(5)), 409, 'Quotes expired or are no longer selectable.');
         $service = $request->validated('service_code');
         $eligible = array_find($snapshot->quotes ?? [], fn (array $quote): bool => $quote['eligible'] && $quote['service_code'] === $service);

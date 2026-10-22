@@ -104,7 +104,7 @@ class BuildRemediationPlan
                 } elseif (($order['fulfillment_status'] ?? '') === 'fulfilled') {
                     throw new RemediationUnavailable('An already fulfilled Shopify order cannot be held.');
                 }
-                $fulfillmentOrders = $this->fulfillmentOrders($store, $gid);
+                $fulfillmentOrders = $this->fulfillmentOrders($store, $gid ?? throw new RemediationUnavailable('A Shopify order is required.'));
                 foreach ($fulfillmentOrders as $fo) {
                     $holds = array_values(array_filter($fo['fulfillmentHolds'] ?? [], fn (array $hold): bool => ($hold['heldByRequestingApp'] ?? false) && ($hold['handle'] ?? '') === 'shopify-ops-review'));
                     if ($action === 'hold' && $holds === [] && in_array('HOLD', array_column($fo['supportedActions'] ?? [], 'action'), true)) {
@@ -202,7 +202,7 @@ class BuildRemediationPlan
                     if ($fulfillments !== []) {
                         throw new RemediationUnavailable('Existing partial fulfillments require manual review to avoid fulfilling items twice.');
                     }
-                    $fulfillmentOrders = $this->fulfillmentOrders($store, $gid);
+                    $fulfillmentOrders = $this->fulfillmentOrders($store, $gid ?? throw new RemediationUnavailable('A Shopify order is required.'));
                     $state['fulfillment_orders'] = $fulfillmentOrders;
                     $candidates = array_values(array_filter($fulfillmentOrders, fn (array $fo): bool => in_array('CREATE_FULFILLMENT', array_column($fo['supportedActions'] ?? [], 'action'), true)));
                     if (count($candidates) !== 1) {

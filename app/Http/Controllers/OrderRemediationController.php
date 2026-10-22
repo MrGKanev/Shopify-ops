@@ -37,7 +37,7 @@ class OrderRemediationController extends Controller
         $options = $request->safe()->only(['tag', 'tag_id', 'hold_until']);
         $runs = [];
         foreach ($request->validated('order_numbers') as $number) {
-            $runs[] = $store->remediationRuns()->create(['user_id' => $request->user()->id, 'group_uuid' => $group, 'order_number' => $number, 'action' => $action, 'status' => 'preparing', 'plan' => ['options' => $options], 'expires_at' => now()->addMinutes(15)]);
+            $runs[] = $store->remediationRuns()->create(['user_id' => $this->authenticatedUser($request)->id, 'group_uuid' => $group, 'order_number' => $number, 'action' => $action, 'status' => 'preparing', 'plan' => ['options' => $options], 'expires_at' => now()->addMinutes(15)]);
         }
         if (count($runs) === 1) {
             $prepare->handle($runs[0]);
@@ -56,7 +56,7 @@ class OrderRemediationController extends Controller
     {
         $runs = $this->resolveStore($request)->remediationRuns()->where('group_uuid', $group)->orderBy('id')->get();
         abort_if($runs->isEmpty(), 404);
-        $canConfirm = $runs->contains(fn (RemediationRun $run): bool => $run->status === 'draft') && ! $runs->contains(fn (RemediationRun $run): bool => $run->status === 'preparing') && $runs->every(fn (RemediationRun $run): bool => $run->user_id === $request->user()->id && $run->expires_at->isFuture());
+        $canConfirm = $runs->contains(fn (RemediationRun $run): bool => $run->status === 'draft') && ! $runs->contains(fn (RemediationRun $run): bool => $run->status === 'preparing') && $runs->every(fn (RemediationRun $run): bool => $run->user_id === $this->authenticatedUser($request)->id && $run->expires_at->isFuture());
 
         return view('orders.remediation-preview', ['runs' => $runs, 'group' => $group, 'canConfirm' => $canConfirm, 'actions' => BuildRemediationPlan::ACTIONS]);
     }
@@ -67,7 +67,7 @@ class OrderRemediationController extends Controller
         $group = $request->validated('group_uuid');
         $queued = DB::transaction(function () use ($store, $request, $group): array {
             $runs = $store->remediationRuns()->where('group_uuid', $group)->lockForUpdate()->get();
-            abort_if($runs->isEmpty() || $runs->contains(fn (RemediationRun $run): bool => $run->user_id !== $request->user()->id), 404);
+            abort_if($runs->isEmpty() || $runs->contains(fn (RemediationRun $run): bool => $run->user_id !== $this->authenticatedUser($request)->id), 404);
             abort_if($runs->contains(fn (RemediationRun $run): bool => $run->status === 'preparing'), 409, 'Wait for all order previews to finish.');
             $drafts = $runs->where('status', 'draft');
             abort_if($drafts->contains(fn (RemediationRun $run): bool => $run->expires_at->isPast()), 409, 'The preview expired. Review the current orders again.');

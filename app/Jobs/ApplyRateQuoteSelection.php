@@ -40,8 +40,9 @@ class ApplyRateQuoteSelection implements ShouldQueue
                 if ($snapshot->quoted_at === null || $snapshot->quoted_at->lt(now()->subMinutes(5))) {
                     throw new RateComparisonUnavailable('Quotes expired. Capture current rates before selecting a service.');
                 }
-                $context = $capture->context($snapshot->store, $snapshot->input);
-                if (! hash_equals($snapshot->signature, CaptureRateQuotes::fingerprint($context))) {
+                $store = $snapshot->store ?? throw new RateComparisonUnavailable('The store no longer exists.');
+                $context = $capture->context($store, $snapshot->input);
+                if (! hash_equals($snapshot->signature ?? '', CaptureRateQuotes::fingerprint($context))) {
                     throw new RateComparisonUnavailable('Shipping conditions changed since capture. Request a new snapshot.');
                 }
                 $order = $context['source_order'];
@@ -59,7 +60,7 @@ class ApplyRateQuoteSelection implements ShouldQueue
                 $advanced['warehouseId'] = $context['warehouse_id'];
                 $payload = ShipStationOrderUpdatePayload::build($order, ['carrierCode' => $context['carrier'], 'serviceCode' => $snapshot->selected_service, 'weight' => $context['weight'], 'dimensions' => $context['dimensions'], 'packageCode' => $context['package_code'], 'confirmation' => $context['confirmation'], 'shipTo' => $context['to'], 'advancedOptions' => $advanced]);
                 activity('operator-actions')->causedBy($snapshot->user)->performedOn($snapshot)->withProperties(['service_code' => $snapshot->selected_service])->log('rate_selection_started');
-                $client = $orders->client($snapshot->store);
+                $client = $orders->client($store);
                 $result = $client->updateOrder($payload);
                 if ((string) ($result['orderId'] ?? '') !== (string) $order['orderId']) {
                     throw new RateComparisonUnavailable('ShipStation did not confirm the expected order. Review its state before retrying.');

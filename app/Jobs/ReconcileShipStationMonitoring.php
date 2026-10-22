@@ -44,7 +44,11 @@ class ReconcileShipStationMonitoring implements ShouldBeUnique, ShouldQueue
             if (! $store->shipstation_monitoring_enabled || ! $store->shipStationMonitoringCanQueue()) {
                 return;
             }
-            $since = ($store->shipstation_monitoring_checked_at ?? $store->shipstation_monitoring_started_at)->copy()->subMinutes(30);
+            $monitoringStart = $store->shipstation_monitoring_checked_at ?? $store->shipstation_monitoring_started_at;
+            if ($monitoringStart === null) {
+                return;
+            }
+            $since = $monitoringStart->copy()->subMinutes(30);
             $scanStarted = now();
             $client = $clients->forStore($store);
             if ($client === null) {

@@ -108,12 +108,12 @@ class BackupController extends Controller
             'id' => $operationId,
             'path' => $path,
             'status' => 'queued',
-            'requested_by' => $request->user()->name,
+            'requested_by' => $this->authenticatedUser($request)->name,
             'requested_at' => now()->toIso8601String(),
         ], JSON_THROW_ON_ERROR));
         chmod($operationFile, 0600);
 
-        RestoreBackup::dispatch($operationId, $path, $verification->checksum, $request->user()->name)->onConnection('background');
+        RestoreBackup::dispatch($operationId, $path, $verification->checksum, $this->authenticatedUser($request)->name)->onConnection('background');
 
         return back()->with('status', __('Restore-ът е стартиран. Презареди страницата, за да видиш статуса.'));
     }

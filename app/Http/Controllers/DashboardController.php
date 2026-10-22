@@ -15,7 +15,8 @@ class DashboardController extends Controller
         $reports = $store->auditSnapshots()->where('tool', 'run_audit')->latest('report_date')->limit(2)->get();
         $latest = $reports->first();
         $recent = $store->auditSnapshots()->where('tool', 'run_audit')->latest('report_date')->limit(30)->get()->reverse()->values();
-        $latestMissing = is_array($latest?->result['missing'] ?? null) ? $latest->result['missing'] : [];
+        $latestMissingValue = $latest?->result['missing'] ?? null;
+        $latestMissing = is_array($latestMissingValue) ? $latestMissingValue : [];
         $latestNumbers = array_map(fn (array $order): string => (string) ($order['name'] ?? $order['order_number'] ?? ''), $latestMissing);
 
         $missingByType = [];
@@ -51,8 +52,12 @@ class DashboardController extends Controller
         $avgResolutionDays = $resolutionDays === [] ? null : round(array_sum($resolutionDays) / count($resolutionDays), 1);
 
         $cadenceGaps = [];
-        for ($i = 1; $i < $recent->count(); $i++) {
-            $cadenceGaps[] = $recent[$i - 1]->report_date->diffInDays($recent[$i]->report_date);
+        $previousSnapshot = null;
+        foreach ($recent as $snapshot) {
+            if ($previousSnapshot !== null) {
+                $cadenceGaps[] = $previousSnapshot->report_date->diffInDays($snapshot->report_date);
+            }
+            $previousSnapshot = $snapshot;
         }
         $auditCadenceDays = $cadenceGaps === [] ? null : round(array_sum($cadenceGaps) / count($cadenceGaps), 1);
         $clearAuditRate = $recent->isEmpty() ? null : round($recent->filter(fn ($snapshot): bool => (int) $snapshot->rows_found === 0)->count() / $recent->count() * 100);

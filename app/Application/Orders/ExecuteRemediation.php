@@ -17,8 +17,9 @@ class ExecuteRemediation
         if ($run->expires_at->isPast()) {
             throw new RemediationUnavailable('The preview expired. Review the current order again.');
         }
-        $approved = $run->plan;
-        $plan = $this->plans->preview($run->store, $run->order_number, $run->action, $approved['options']);
+        $store = $run->store ?? throw new RemediationUnavailable('The store no longer exists.');
+        $approved = $run->plan ?? throw new RemediationUnavailable('The approved preview is missing.');
+        $plan = $this->plans->preview($store, $run->order_number, $run->action, $approved['options']);
         if (! hash_equals($approved['fingerprint'], $plan['fingerprint'])) {
             throw new RemediationUnavailable('Order data changed since the preview. Review it again before applying changes.');
         }
@@ -27,7 +28,7 @@ class ExecuteRemediation
             activity('operator-actions')->causedBy($run->user)->performedOn($run)
                 ->withProperties(['store_id' => $run->store_id, 'action' => $run->action, 'step' => $index + 1, 'type' => $step['type']])->log('remediation_step_started');
             if ($step['type'] === 'shopify') {
-                $result = $this->mutations->handle($run->store, $step['operation'], $step['field'], $step['variables']);
+                $result = $this->mutations->handle($store, $step['operation'], $step['field'], $step['variables']);
                 $resource = match ($step['field']) {
                     'tagsAdd', 'tagsRemove' => 'node',
                     'fulfillmentOrderHold', 'fulfillmentOrderReleaseHold' => 'fulfillmentOrder',
@@ -38,7 +39,7 @@ class ExecuteRemediation
                     throw new RemediationUnavailable('Shopify did not confirm the requested change. Review the remote state before retrying.');
                 }
             } else {
-                $client ??= $this->orders->client($run->store);
+                $client ??= $this->orders->client($store);
                 switch ($step['type']) {
                     case 'ss_update':
                     case 'ss_create':
@@ -54,7 +55,7 @@ class ExecuteRemediation
                             throw new RemediationUnavailable('ShipStation shipping data differs after the update.');
                         }
                         if ($run->action === 'push_missing') {
-                            $this->pushes->handle($run->store, $run->order_number, $run->shopify_id, $result['orderId'], $step['payload']);
+                            $this->pushes->handle($store, $run->order_number, $run->shopify_id ?? throw new RemediationUnavailable('The Shopify order id is missing.'), $result['orderId'], $step['payload']);
                         }
                         break;
                     case 'ss_hold':
@@ -87,7 +88,7 @@ class ExecuteRemediation
         if (in_array($run->action, ['sync_shipstation', 'push_missing'], true)) {
             $source = $run->action === 'sync_shipstation' ? 'order_changed_after_push' : 'run_audit';
             $reference = $source === 'run_audit' ? $run->order_number : $run->shopify_id;
-            $issue = $run->store->operationalIssues()->where('fingerprint', RaiseOperationalIssue::fingerprint($source, $reference))->first();
+            $issue = $reference === null ? null : $store->operationalIssues()->where('fingerprint', RaiseOperationalIssue::fingerprint($source, $reference))->first();
             if ($issue !== null) {
                 $this->issues->resolve($issue);
             }

@@ -3,6 +3,7 @@
 namespace App\Application\Operations;
 
 use App\Domain\Reports\DuplicateAddressAnalyzer;
+use App\Models\Store;
 use App\Models\WebhookEvent;
 use Illuminate\Support\Carbon;
 
@@ -12,15 +13,16 @@ class DetectOrderWebhookIssues
 
     public function handle(WebhookEvent $event): void
     {
-        if (! str_starts_with($event->topic, 'orders/') || $event->subject_id === null || $event->payload === []) {
+        $store = $event->store;
+        if (! str_starts_with($event->topic, 'orders/') || $event->subject_id === null || $event->payload === [] || $store === null) {
             return;
         }
 
         $this->postPushChanges->handle($event);
-        $this->detectRepeatedAddress($event);
+        $this->detectRepeatedAddress($event, $store, $event->subject_id);
     }
 
-    private function detectRepeatedAddress(WebhookEvent $event): void
+    private function detectRepeatedAddress(WebhookEvent $event, Store $store, string $subjectId): void
     {
         $addressKey = $this->addresses->addressKey($event->payload);
         if ($addressKey === null || ! $this->needsFulfillment($event->payload)) {
@@ -29,23 +31,24 @@ class DetectOrderWebhookIssues
 
         $orders = [];
         $seen = [];
-        foreach ($event->store->webhookEvents()->where('topic', 'like', 'orders/%')
+        foreach ($store->webhookEvents()->where('topic', 'like', 'orders/%')
             ->where('occurred_at', '>=', now()->subDays(7))->whereNotNull('subject_id')
             ->orderByDesc('occurred_at')->orderByDesc('id')->lazy(200) as $candidate) {
+            $candidateSubjectId = (string) $candidate->subject_id;
             $order = $candidate->payload;
             $updatedAt = $this->date($order['updated_at'] ?? null) ?? $candidate->occurred_at;
-            if (isset($seen[$candidate->subject_id]) && $updatedAt->lte($seen[$candidate->subject_id])) {
+            if (isset($seen[$candidateSubjectId]) && $updatedAt->lte($seen[$candidateSubjectId])) {
                 continue;
             }
-            $seen[$candidate->subject_id] = $updatedAt;
-            unset($orders[$candidate->subject_id]);
+            $seen[$candidateSubjectId] = $updatedAt;
+            unset($orders[$candidateSubjectId]);
             if ($order === [] || ! $this->needsFulfillment($order) || $this->addresses->addressKey($order) !== $addressKey) {
                 continue;
             }
-            $orders[$candidate->subject_id] = $order;
+            $orders[$candidateSubjectId] = $order;
         }
 
-        if (! isset($orders[$event->subject_id])) {
+        if (! isset($orders[$subjectId])) {
             return;
         }
         $names = array_unique(array_filter(array_map(fn (array $order): string => $this->normalize($this->addresses->recipientName($order)), $orders)));
@@ -54,14 +57,14 @@ class DetectOrderWebhookIssues
             return;
         }
 
-        $this->issues->handle($event->store, [
+        $this->issues->handle($store, [
             'source_tool' => 'repeated_shipping_address',
             'fingerprint' => RaiseOperationalIssue::fingerprint('repeated_shipping_address', $addressKey),
-            'reference' => $event->subject_id,
+            'reference' => $subjectId,
             'title' => 'Recent unfulfilled orders share a shipping address',
             'priority' => 'normal',
             'payload' => [
-                'order_number' => $event->payload['name'] ?? $event->subject_id,
+                'order_number' => $event->payload['name'] ?? $subjectId,
                 'order_ids' => array_map('strval', array_keys($orders)),
                 'order_numbers' => array_values(array_map(fn (array $order): string => (string) ($order['name'] ?? $order['id'] ?? ''), $orders)),
                 'order_count' => count($orders),

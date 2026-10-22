@@ -14,7 +14,7 @@ class ShippingMarginAnalyzer
         $orders = array_column($orders, null, 'order_number');
         $rows = [];
         foreach ($shipments as $shipment) {
-            $number = preg_replace('/\D/', '', is_scalar($shipment['orderNumber'] ?? null) ? (string) $shipment['orderNumber'] : '');
+            $number = preg_replace('/\D/', '', is_scalar($shipment['orderNumber'] ?? null) ? (string) $shipment['orderNumber'] : '') ?? '';
             $order = $orders[$number] ?? null;
             if (! is_array($order) || ($shipment['voided'] ?? false) === true) {
                 continue;

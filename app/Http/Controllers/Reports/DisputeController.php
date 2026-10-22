@@ -18,7 +18,7 @@ class DisputeController extends ReportController
 
     public function store(Request $request, RunDisputeReport $report, QueuedReportRunner $reports): View|RedirectResponse
     {
-        abort_unless($request->user()?->can('run-audits'), 403);
+        abort_unless($this->authenticatedUser($request)->can('run-audits'), 403);
         $store = $this->resolveStore($request);
         $configurationError = $store->missingShopifyCredentials();
 
