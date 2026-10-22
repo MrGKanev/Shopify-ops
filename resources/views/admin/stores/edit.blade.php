@@ -14,7 +14,7 @@
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ __('Optional and off by default. After you enable it, shipments are checked against Shopify after a 15-minute sync grace period. Missing fulfillment or tracking creates a review issue; orders are never changed automatically.') }}</p>
             <p class="mt-2 text-sm">{{ __('Status') }}: {{ __(match ($store->shipstation_monitoring_status) { 'active' => 'Monitoring active', 'pending' => 'Setup queued', 'stopping' => 'Subscription removal queued', 'failed' => 'Monitoring needs attention', default => 'Monitoring disabled' }) }}</p>
             @if ($store->shipstation_monitoring_checked_at)
-                <p class="mt-2 text-sm">{{ __('Last catch-up') }}: {{ $store->shipstation_monitoring_checked_at->format('Y-m-d H:i') }}</p>
+                <p class="mt-2 text-sm">{{ __('Last catch-up') }}: {{ \App\Support\UiFormat::date($store->shipstation_monitoring_checked_at, true) }}</p>
             @endif
             <p class="mt-2 text-sm">{{ __('Failed events') }}: {{ $store->shipstation_failed_events_count }}</p>
             @error('shipstation_monitoring') <x-alert tone="error" class="mt-3">{{ $message }}</x-alert> @enderror
