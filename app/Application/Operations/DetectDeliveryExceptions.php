@@ -29,11 +29,15 @@ class DetectDeliveryExceptions
         $shipments = $client->fetchShipmentsByDate(now()->subDays(max(30, $threshold + 7))->toDateString(), now()->toDateString());
         $exceptions = $this->analyzer->analyze($shipments, $threshold, now()->getTimestamp());
 
+        $resolvedIssues = $store->operationalIssues()
+            ->whereIn('fingerprint', array_column(array_filter($exceptions, fn (array $exception): bool => $exception['resolved']), 'fingerprint'))
+            ->get()
+            ->keyBy('fingerprint');
+
         foreach ($exceptions as $exception) {
             if ($exception['resolved']) {
-                $issue = $store->operationalIssues()->where('fingerprint', $exception['fingerprint'])->first();
-                if ($issue !== null) {
-                    $this->issues->resolve($issue);
+                if ($resolvedIssues->has($exception['fingerprint'])) {
+                    $this->issues->resolve($resolvedIssues[$exception['fingerprint']]);
                 }
 
                 continue;

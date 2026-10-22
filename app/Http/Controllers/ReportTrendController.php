@@ -14,14 +14,13 @@ class ReportTrendController extends Controller
         $end = (string) ($validated['end_date'] ?? now()->toDateString());
         $store = $this->resolveStore($request);
         $snapshots = $store->auditSnapshots()->where('tool', 'run_audit')->whereDate('report_date', '>=', $start)->whereDate('report_date', '<=', $end)->oldest('report_date')->get();
+        $rows = [];
         $previous = null;
-        $rows = $snapshots->map(function ($snapshot) use (&$previous): array {
+        foreach ($snapshots as $snapshot) {
             $count = $snapshot->rows_found;
-            $row = ['id' => $snapshot->getKey(), 'date' => $snapshot->report_date->toDateString(), 'missing' => $count, 'delta' => $previous === null ? null : $count - $previous];
+            $rows[] = ['id' => $snapshot->getKey(), 'date' => $snapshot->report_date->toDateString(), 'missing' => $count, 'delta' => $previous === null ? null : $count - $previous];
             $previous = $count;
-
-            return $row;
-        })->all();
+        }
         $maximum = max(array_column($rows, 'missing') ?: [0]);
 
         $missingColumn = array_column($rows, 'missing');
