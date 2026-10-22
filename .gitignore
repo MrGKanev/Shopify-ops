@@ -40,4 +40,3 @@ Thumbs.db
 /package-lock.json
 
 # Local planning files; never commit or deploy.
-/todo.md
