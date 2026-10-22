@@ -5,12 +5,11 @@ namespace App\Http\Controllers\Reports;
 use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunRefundTrackerReport;
-use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
-class RefundTrackerController extends Controller
+class RefundTrackerController extends ReportController
 {
     public function create(): View
     {
@@ -24,19 +23,8 @@ class RefundTrackerController extends Controller
         $endDate = (string) $request->validated('end_date');
         $shopifyConfigurationError = $store->missingShopifyCredentials();
         $shipStationConfigurationWarning = (trim((string) $store->shipstation_api_key) === '') !== (trim((string) $store->shipstation_api_secret) === '');
-        $result = null;
-        $reportFailed = false;
 
-        if (! $shopifyConfigurationError && ! $shipStationConfigurationWarning) {
-            $run = $reports->run($request, $store, 'refund_tracker', $report::class, [$startDate, $endDate], $startDate, $endDate);
-            if ($reports->shouldRedirect($request, $run)) {
-                return $reports->redirectToResult($request);
-            }
-            $result = $run->result();
-            $reportFailed = $run->hasFailed();
-        }
-
-        return view('reports.refund-tracker', $this->viewData($startDate, $endDate, $result, $reportFailed, $shopifyConfigurationError, $shipStationConfigurationWarning));
+        return $this->runQueued($reports, $request, $store, $shopifyConfigurationError || $shipStationConfigurationWarning, 'refund_tracker', $report::class, [$startDate, $endDate], $startDate, $endDate, fn (?ReportResult $result, bool $failed) => view('reports.refund-tracker', $this->viewData($startDate, $endDate, $result, $failed, $shopifyConfigurationError, $shipStationConfigurationWarning)));
     }
 
     /**

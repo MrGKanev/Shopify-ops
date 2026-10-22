@@ -5,12 +5,11 @@ namespace App\Http\Controllers\Reports;
 use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunEmailCheckReport;
-use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
-class EmailCheckController extends Controller
+class EmailCheckController extends ReportController
 {
     public function create(): View
     {
@@ -23,18 +22,7 @@ class EmailCheckController extends Controller
         $startDate = (string) $request->validated('start_date');
         $endDate = (string) $request->validated('end_date');
         $configurationError = $store->missingShopifyCredentials();
-        $result = null;
-        $reportFailed = false;
 
-        if (! $configurationError) {
-            $run = $reports->run($request, $store, 'email_check', $report::class, [$startDate, $endDate], $startDate, $endDate);
-            if ($reports->shouldRedirect($request, $run)) {
-                return $reports->redirectToResult($request);
-            }
-            $result = $run->result();
-            $reportFailed = $run->hasFailed();
-        }
-
-        return view('reports.email-check', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result instanceof ReportResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return $this->runQueued($reports, $request, $store, $configurationError, 'email_check', $report::class, [$startDate, $endDate], $startDate, $endDate, fn (?ReportResult $result, bool $failed) => view('reports.email-check', ['startDate' => $startDate, 'endDate' => $endDate, 'result' => $result, 'reportFailed' => $failed, 'configurationError' => $configurationError]));
     }
 }

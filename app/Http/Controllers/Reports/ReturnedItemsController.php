@@ -7,7 +7,6 @@ use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunReturnedItemsReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
 use App\Models\Store;
 use Illuminate\Http\RedirectResponse;
@@ -15,7 +14,7 @@ use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
-class ReturnedItemsController extends Controller
+class ReturnedItemsController extends ReportController
 {
     use LogsReportFailure;
 
@@ -28,19 +27,8 @@ class ReturnedItemsController extends Controller
     {
         [$store, $startDate, $endDate] = $this->context($request);
         $configurationError = $this->configurationError($store);
-        $result = null;
-        $reportFailed = false;
 
-        if (! $configurationError) {
-            $run = $reports->run($request, $store, 'returned_items', $report::class, [$startDate, $endDate], $startDate, $endDate);
-            if ($reports->shouldRedirect($request, $run)) {
-                return $reports->redirectToResult($request);
-            }
-            $result = $run->result();
-            $reportFailed = $run->hasFailed();
-        }
-
-        return view('reports.returned-items', $this->viewData($startDate, $endDate, $result, $reportFailed, $configurationError));
+        return $this->runQueued($reports, $request, $store, $configurationError, 'returned_items', $report::class, [$startDate, $endDate], $startDate, $endDate, fn (?ReportResult $result, bool $failed) => view('reports.returned-items', $this->viewData($startDate, $endDate, $result, $failed, $configurationError)));
     }
 
     public function export(DateRangeReportRequest $request, RunReturnedItemsReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse

@@ -6,12 +6,11 @@ use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunTagPolicyReport;
 use App\Domain\Reports\TagPolicyAnalyzer;
-use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
-class TagPolicyController extends Controller
+class TagPolicyController extends ReportController
 {
     public function create(TagPolicyAnalyzer $analyzer): View
     {
@@ -28,18 +27,8 @@ class TagPolicyController extends Controller
         $config = $this->config();
         $configured = $analyzer->hasRules($config);
         $configurationError = $configured && $store->missingShopifyCredentials();
-        $result = null;
-        $reportFailed = false;
-        if ($configured && ! $configurationError) {
-            $run = $reports->run($request, $store, 'tag_policy', $report::class, [$startDate, $endDate, $config], $startDate, $endDate);
-            if ($reports->shouldRedirect($request, $run)) {
-                return $reports->redirectToResult($request);
-            }
-            $result = $run->result();
-            $reportFailed = $run->hasFailed();
-        }
 
-        return view('reports.tag-policy', ['startDate' => $startDate, 'endDate' => $endDate, 'configured' => $configured, 'result' => $result instanceof ReportResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return $this->runQueued($reports, $request, $store, ! $configured || $configurationError, 'tag_policy', $report::class, [$startDate, $endDate, $config], $startDate, $endDate, fn (?ReportResult $result, bool $failed) => view('reports.tag-policy', ['startDate' => $startDate, 'endDate' => $endDate, 'configured' => $configured, 'result' => $result, 'reportFailed' => $failed, 'configurationError' => $configurationError]));
     }
 
     /** @return array<string, mixed> */

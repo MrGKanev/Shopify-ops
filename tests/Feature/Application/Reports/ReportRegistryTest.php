@@ -16,7 +16,7 @@ class ReportRegistryTest extends TestCase
         $registry = app(ReportRegistry::class);
         $usedKeys = [];
         foreach (File::allFiles(app_path()) as $file) {
-            preg_match_all('/(?:->run\(\$request, \$\w+, |->completedResult\(\$\w+, |\'tool\' => )\'([a-z_]+)\'/', $file->getContents(), $matches);
+            preg_match_all('/(?:->run\(\$request, \$\w+, |->runQueued\([^\']*?|->completedResult\(\$\w+, |\'tool\' => )\'([a-z_]+)\'/', $file->getContents(), $matches);
             foreach ($matches[1] as $key) {
                 $usedKeys[$key][] = $file->getRelativePathname();
             }

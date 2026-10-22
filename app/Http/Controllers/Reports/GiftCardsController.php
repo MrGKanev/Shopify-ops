@@ -5,12 +5,11 @@ namespace App\Http\Controllers\Reports;
 use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunGiftCardsReport;
-use App\Http\Controllers\Controller;
 use App\Http\Requests\GiftCardsRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
-class GiftCardsController extends Controller
+class GiftCardsController extends ReportController
 {
     public function create(): View
     {
@@ -21,19 +20,8 @@ class GiftCardsController extends Controller
     {
         $store = $this->resolveStore($request);
         $days = (int) $request->validated('days');
-        $result = null;
-        $reportFailed = false;
         $configurationError = $store->missingShopifyCredentials();
 
-        if (! $configurationError) {
-            $run = $reports->run($request, $store, 'gift_cards', $report::class, [$days, now()->getTimestamp()], null, null);
-            if ($reports->shouldRedirect($request, $run)) {
-                return $reports->redirectToResult($request);
-            }
-            $result = $run->result();
-            $reportFailed = $run->hasFailed();
-        }
-
-        return view('reports.gift-cards', ['days' => $days, 'result' => $result instanceof ReportResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return $this->runQueued($reports, $request, $store, $configurationError, 'gift_cards', $report::class, [$days, now()->getTimestamp()], null, null, fn (?ReportResult $result, bool $failed) => view('reports.gift-cards', ['days' => $days, 'result' => $result, 'reportFailed' => $failed, 'configurationError' => $configurationError]));
     }
 }

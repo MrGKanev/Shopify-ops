@@ -5,12 +5,11 @@ namespace App\Http\Controllers\Reports;
 use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunSkuDuplicatesReport;
-use App\Http\Controllers\Controller;
 use App\Http\Requests\SkuDuplicatesRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
-class SkuDuplicatesController extends Controller
+class SkuDuplicatesController extends ReportController
 {
     public function create(): View
     {
@@ -20,19 +19,8 @@ class SkuDuplicatesController extends Controller
     public function store(SkuDuplicatesRequest $request, RunSkuDuplicatesReport $report, QueuedReportRunner $reports): View|RedirectResponse
     {
         $store = $this->resolveStore($request);
-        $result = null;
-        $reportFailed = false;
         $configurationError = $store->missingShopifyCredentials();
 
-        if (! $configurationError) {
-            $run = $reports->run($request, $store, 'sku_duplicates', $report::class, [], null, null);
-            if ($reports->shouldRedirect($request, $run)) {
-                return $reports->redirectToResult($request);
-            }
-            $result = $run->result();
-            $reportFailed = $run->hasFailed();
-        }
-
-        return view('reports.sku-duplicates', ['result' => $result instanceof ReportResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return $this->runQueued($reports, $request, $store, $configurationError, 'sku_duplicates', $report::class, [], null, null, fn (?ReportResult $result, bool $failed) => view('reports.sku-duplicates', ['result' => $result, 'reportFailed' => $failed, 'configurationError' => $configurationError]));
     }
 }
