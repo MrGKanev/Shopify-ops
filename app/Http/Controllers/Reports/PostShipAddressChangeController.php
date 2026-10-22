@@ -7,7 +7,6 @@ use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunPostShipAddressChangeReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
 use App\Models\Store;
 use Illuminate\Http\RedirectResponse;
@@ -15,7 +14,7 @@ use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
-class PostShipAddressChangeController extends Controller
+class PostShipAddressChangeController extends ReportController
 {
     use LogsReportFailure;
 
@@ -28,18 +27,8 @@ class PostShipAddressChangeController extends Controller
     {
         [$store, $startDate, $endDate] = $this->context($request);
         $configurationError = $this->configurationError($store);
-        $result = null;
-        $reportFailed = false;
-        if (! $configurationError) {
-            $run = $reports->run($request, $store, 'post_ship_address_changes', $report::class, [$startDate, $endDate], $startDate, $endDate);
-            if ($reports->shouldRedirect($request, $run)) {
-                return $reports->redirectToResult($request);
-            }
-            $result = $run->result();
-            $reportFailed = $run->hasFailed();
-        }
 
-        return view('reports.post-ship-address-changes', $this->viewData($startDate, $endDate, $result, $reportFailed, $configurationError));
+        return $this->runQueued($reports, $request, $store, $configurationError, 'post_ship_address_changes', $report::class, [$startDate, $endDate], $startDate, $endDate, fn (?ReportResult $result, bool $reportFailed) => view('reports.post-ship-address-changes', $this->viewData($startDate, $endDate, $result, $reportFailed, $configurationError)));
     }
 
     public function export(DateRangeReportRequest $request, RunPostShipAddressChangeReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse

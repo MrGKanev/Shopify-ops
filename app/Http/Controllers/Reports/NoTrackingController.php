@@ -7,7 +7,6 @@ use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunNoTrackingReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Controller;
 use App\Http\Requests\NoTrackingRequest;
 use App\Models\Store;
 use Illuminate\Http\RedirectResponse;
@@ -15,7 +14,7 @@ use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
-class NoTrackingController extends Controller
+class NoTrackingController extends ReportController
 {
     use LogsReportFailure;
 
@@ -28,18 +27,8 @@ class NoTrackingController extends Controller
     {
         [$store, $start, $end, $threshold] = $this->context($request);
         $configurationError = $this->configurationError($store);
-        $result = null;
-        $reportFailed = false;
-        if (! $configurationError) {
-            $run = $reports->run($request, $store, 'no_tracking', $report::class, [$start, $end, $threshold], $start, $end);
-            if ($reports->shouldRedirect($request, $run)) {
-                return $reports->redirectToResult($request);
-            }
-            $result = $run->result();
-            $reportFailed = $run->hasFailed();
-        }
 
-        return view('reports.no-tracking', $this->viewData($start, $end, $threshold, $result, $reportFailed, $configurationError));
+        return $this->runQueued($reports, $request, $store, $configurationError, 'no_tracking', $report::class, [$start, $end, $threshold], $start, $end, fn (?ReportResult $result, bool $reportFailed) => view('reports.no-tracking', $this->viewData($start, $end, $threshold, $result, $reportFailed, $configurationError)));
     }
 
     public function export(NoTrackingRequest $request, RunNoTrackingReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse

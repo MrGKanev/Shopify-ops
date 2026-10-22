@@ -7,14 +7,13 @@ use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunShippingMarginReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Controller;
 use App\Http\Requests\ShippingMarginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
-class ShippingMarginController extends Controller
+class ShippingMarginController extends ReportController
 {
     use LogsReportFailure;
 
@@ -30,18 +29,8 @@ class ShippingMarginController extends Controller
         $endDate = (string) $request->validated('end_date');
         $threshold = (float) $request->validated('threshold');
         $configurationError = $store->missingShopifyCredentials() || $store->missingShipStationCredentials();
-        $result = null;
-        $reportFailed = false;
-        if (! $configurationError) {
-            $run = $reports->run($request, $store, 'shipping_margin', $report::class, [$startDate, $endDate, $threshold], $startDate, $endDate);
-            if ($reports->shouldRedirect($request, $run)) {
-                return $reports->redirectToResult($request);
-            }
-            $result = $run->result();
-            $reportFailed = $run->hasFailed();
-        }
 
-        return view('reports.shipping-margin', $this->viewData($startDate, $endDate, $threshold, $result, $reportFailed, $configurationError));
+        return $this->runQueued($reports, $request, $store, $configurationError, 'shipping_margin', $report::class, [$startDate, $endDate, $threshold], $startDate, $endDate, fn (?ReportResult $result, bool $reportFailed) => view('reports.shipping-margin', $this->viewData($startDate, $endDate, $threshold, $result, $reportFailed, $configurationError)));
     }
 
     public function export(ShippingMarginRequest $request, RunShippingMarginReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse
