@@ -35,6 +35,24 @@ class RunLogTest extends TestCase
         $this->actingAs($user)->get('/run-logs')->assertOk()->assertSeeText('scan-500')->assertDontSeeText('secret')->assertDontSee('<script>', false);
     }
 
+    public function test_page_filters_by_date_range(): void
+    {
+        $store = Store::factory()->create();
+        $user = User::factory()->create();
+        $user->stores()->attach($store);
+        $recorder = app(RecordRun::class);
+        $recorder->handle($store, ['tool' => 'old-scan']);
+        $recorder->handle($store, ['tool' => 'new-scan']);
+        $store->runLogs()->where('tool', 'old-scan')->update(['created_at' => '2026-01-10 12:00:00']);
+        $store->runLogs()->where('tool', 'new-scan')->update(['created_at' => '2026-02-10 12:00:00']);
+
+        $this->actingAs($user)->get('/run-logs?from=2026-02-01&to=2026-02-10')
+            ->assertOk()->assertSeeText('new-scan')->assertDontSeeText('old-scan');
+        $this->actingAs($user)->get('/run-logs?to=2026-01-31')
+            ->assertOk()->assertSeeText('old-scan')->assertDontSeeText('new-scan');
+        $this->actingAs($user)->get('/run-logs?from=2026-02-10&to=2026-01-01')->assertSessionHasErrors('to');
+    }
+
     public function test_page_requires_authentication(): void
     {
         $this->get('/run-logs')->assertRedirect(route('login'));

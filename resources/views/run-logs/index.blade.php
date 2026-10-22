@@ -10,6 +10,14 @@
                     <label class="text-sm font-medium" for="run-search">{{ __('Tool, status, or error') }}</label>
                     <input class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="run-search" name="q" type="search" value="{{ $q }}">
                 </div>
+                <div>
+                    <label class="text-sm font-medium" for="run-from">{{ __('From') }}</label>
+                    <input class="mt-2 rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="run-from" name="from" type="date" value="{{ $from }}">
+                </div>
+                <div>
+                    <label class="text-sm font-medium" for="run-to">{{ __('To') }}</label>
+                    <input class="mt-2 rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="run-to" name="to" type="date" value="{{ $to }}">
+                </div>
                 <x-button type="submit">{{ __('Search') }}</x-button>
             </form>
         </x-card>
