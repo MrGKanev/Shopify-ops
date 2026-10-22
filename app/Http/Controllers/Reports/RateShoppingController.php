@@ -9,6 +9,7 @@ use App\Http\Requests\SelectRateQuoteRequest;
 use App\Jobs\ApplyRateQuoteSelection;
 use App\Jobs\CaptureRateQuoteSnapshot;
 use App\Models\RateQuoteSnapshot;
+use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -25,14 +26,7 @@ class RateShoppingController extends Controller
     {
         $store = $this->resolveStore($request);
         $snapshot = $store->rateQuoteSnapshots()->create(['user_id' => $request->user()->id, 'order_number' => $request->validated('order_number'), 'input' => $request->validated(), 'status' => 'queued', 'mode' => 'simulation']);
-        try {
-            CaptureRateQuoteSnapshot::dispatch($snapshot->id);
-        } catch (Throwable $exception) {
-            $snapshot->refresh();
-            if ($snapshot->status === 'queued') {
-                $snapshot->update(['status' => 'failed', 'error_category' => $exception::class, 'message' => 'Rate capture could not be queued. Create a new request.']);
-            }
-        }
+        $this->dispatchOrFail($snapshot, 'queued', fn () => CaptureRateQuoteSnapshot::dispatch($snapshot->id), 'Rate capture could not be queued. Create a new request.');
 
         return redirect()->route('reports.rate-shopping.result', $snapshot->id);
     }
@@ -61,16 +55,24 @@ class RateShoppingController extends Controller
         abort_if($eligible === null, 422, 'Select an approved quoted service.');
         abort_unless(in_array(data_get($snapshot->context, 'source_order.orderStatus'), ['awaiting_payment', 'awaiting_shipment', 'on_hold'], true), 409);
         if (RateQuoteSnapshot::whereKey($snapshot->id)->where('status', 'ready')->update(['status' => 'selection_queued', 'selected_service' => $service]) === 1) {
-            try {
-                ApplyRateQuoteSelection::dispatch($snapshot->id);
-            } catch (Throwable $exception) {
-                $snapshot->refresh();
-                if ($snapshot->status === 'selection_queued') {
-                    $snapshot->update(['status' => 'failed', 'error_category' => $exception::class, 'message' => 'Service selection could not be queued. Capture new quotes before retrying.']);
-                }
-            }
+            $this->dispatchOrFail($snapshot, 'selection_queued', fn () => ApplyRateQuoteSelection::dispatch($snapshot->id), 'Service selection could not be queued. Capture new quotes before retrying.');
         }
 
         return redirect()->route('reports.rate-shopping.result', $snapshot->id);
+    }
+
+    /**
+     * Dispatches the job, marking the snapshot failed if it is still in $pendingStatus when the queue rejects it.
+     */
+    private function dispatchOrFail(RateQuoteSnapshot $snapshot, string $pendingStatus, Closure $dispatch, string $message): void
+    {
+        try {
+            $dispatch();
+        } catch (Throwable $exception) {
+            $snapshot->refresh();
+            if ($snapshot->status === $pendingStatus) {
+                $snapshot->update(['status' => 'failed', 'error_category' => $exception::class, 'message' => $message]);
+            }
+        }
     }
 }

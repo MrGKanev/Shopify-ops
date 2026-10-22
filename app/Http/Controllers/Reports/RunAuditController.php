@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Reports;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunAudit;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
 use App\Jobs\RunAuditJob;
 use App\Models\AuditJob;
@@ -14,7 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Throwable;
 
-class RunAuditController extends Controller
+class RunAuditController extends ReportController
 {
     use LogsReportFailure;
 
@@ -62,7 +61,6 @@ class RunAuditController extends Controller
     /** @return array{Store,string,string} */
     private function context(DateRangeReportRequest $request): array
     {
-
         return [$this->resolveStore($request), (string) $request->validated('start_date'), (string) $request->validated('end_date')];
     }
 
@@ -72,7 +70,6 @@ class RunAuditController extends Controller
     }
 
     /**
-     * @param  ReportResult<array<string, mixed>>|null  $result
      * @param  ReportResult<array<string, mixed>>|null  $result
      * @return array<string,mixed>
      */
