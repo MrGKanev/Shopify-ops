@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Reports\QueuedReportRunner;
+use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunTaxAuditReport;
-use App\Http\Controllers\Controller;
 use App\Http\Requests\TaxAuditRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
-class TaxAuditController extends Controller
+class TaxAuditController extends ReportController
 {
     public function create(): View
     {
@@ -20,18 +20,8 @@ class TaxAuditController extends Controller
     {
         $store = $this->resolveStore($request);
         $data = $request->validated();
-        $result = null;
-        $failed = false;
         $configurationError = $store->missingShopifyCredentials();
-        if (! $configurationError) {
-            $run = $reports->run($request, $store, 'tax_audit', $report::class, [(string) $data['start_date'], (string) $data['end_date'], (float) $data['minimum']], (string) $data['start_date'], (string) $data['end_date']);
-            if ($reports->shouldRedirect($request, $run)) {
-                return $reports->redirectToResult($request);
-            }
-            $result = $run->result();
-            $failed = $run->hasFailed();
-        }
 
-        return view('reports.tax-audit', ['startDate' => $data['start_date'], 'endDate' => $data['end_date'], 'minimum' => $data['minimum'], 'result' => $result, 'reportFailed' => $failed, 'configurationError' => $configurationError]);
+        return $this->runQueued($reports, $request, $store, $configurationError, 'tax_audit', $report::class, [(string) $data['start_date'], (string) $data['end_date'], (float) $data['minimum']], (string) $data['start_date'], (string) $data['end_date'], fn (?ReportResult $result, bool $failed) => view('reports.tax-audit', ['startDate' => $data['start_date'], 'endDate' => $data['end_date'], 'minimum' => $data['minimum'], 'result' => $result, 'reportFailed' => $failed, 'configurationError' => $configurationError]));
     }
 }

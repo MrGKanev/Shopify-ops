@@ -7,7 +7,6 @@ use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunItemMismatchReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
 use App\Models\Store;
 use Illuminate\Http\RedirectResponse;
@@ -15,7 +14,7 @@ use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
-class ItemMismatchController extends Controller
+class ItemMismatchController extends ReportController
 {
     use LogsReportFailure;
 
@@ -28,18 +27,8 @@ class ItemMismatchController extends Controller
     {
         [$store,$start,$end] = $this->context($request);
         $configurationError = $this->configurationError($store);
-        $result = null;
-        $reportFailed = false;
-        if (! $configurationError) {
-            $run = $reports->run($request, $store, 'item_mismatch', $report::class, [$start, $end], $start, $end);
-            if ($reports->shouldRedirect($request, $run)) {
-                return $reports->redirectToResult($request);
-            }
-            $result = $run->result();
-            $reportFailed = $run->hasFailed();
-        }
 
-        return view('reports.item-mismatch', $this->viewData($start, $end, $result, $reportFailed, $configurationError));
+        return $this->runQueued($reports, $request, $store, $configurationError, 'item_mismatch', $report::class, [$start, $end], $start, $end, fn (?ReportResult $result, bool $reportFailed) => view('reports.item-mismatch', $this->viewData($start, $end, $result, $reportFailed, $configurationError)));
     }
 
     public function export(DateRangeReportRequest $request, RunItemMismatchReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse

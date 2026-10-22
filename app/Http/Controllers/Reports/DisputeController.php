@@ -5,12 +5,11 @@ namespace App\Http\Controllers\Reports;
 use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunDisputeReport;
-use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
-class DisputeController extends Controller
+class DisputeController extends ReportController
 {
     public function create(): View
     {
@@ -22,17 +21,7 @@ class DisputeController extends Controller
         abort_unless($request->user()?->can('run-audits'), 403);
         $store = $this->resolveStore($request);
         $configurationError = $store->missingShopifyCredentials();
-        $result = null;
-        $reportFailed = false;
-        if (! $configurationError) {
-            $run = $reports->run($request, $store, 'disputes', $report::class, [now()->getTimestamp()], null, null);
-            if ($reports->shouldRedirect($request, $run)) {
-                return $reports->redirectToResult($request);
-            }
-            $result = $run->result();
-            $reportFailed = $run->hasFailed();
-        }
 
-        return view('reports.disputes', ['result' => $result instanceof ReportResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return $this->runQueued($reports, $request, $store, $configurationError, 'disputes', $report::class, [now()->getTimestamp()], null, null, fn (?ReportResult $result, bool $reportFailed) => view('reports.disputes', ['result' => $result instanceof ReportResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]));
     }
 }

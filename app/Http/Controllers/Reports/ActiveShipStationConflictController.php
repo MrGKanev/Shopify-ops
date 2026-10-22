@@ -7,7 +7,6 @@ use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunActiveShipStationConflictReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
 use App\Models\Store;
 use Illuminate\Http\RedirectResponse;
@@ -15,7 +14,7 @@ use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
-class ActiveShipStationConflictController extends Controller
+class ActiveShipStationConflictController extends ReportController
 {
     use LogsReportFailure;
 
@@ -28,18 +27,8 @@ class ActiveShipStationConflictController extends Controller
     {
         [$store,$start,$end] = $this->context($request);
         $configurationError = $this->configurationError($store);
-        $result = null;
-        $reportFailed = false;
-        if (! $configurationError) {
-            $run = $reports->run($request, $store, 'active_shipstation_conflicts', $report::class, [$start, $end], $start, $end);
-            if ($reports->shouldRedirect($request, $run)) {
-                return $reports->redirectToResult($request);
-            }
-            $result = $run->result();
-            $reportFailed = $run->hasFailed();
-        }
 
-        return view('reports.active-shipstation-conflicts', $this->viewData($start, $end, $result, $reportFailed, $configurationError));
+        return $this->runQueued($reports, $request, $store, $configurationError, 'active_shipstation_conflicts', $report::class, [$start, $end], $start, $end, fn (?ReportResult $result, bool $reportFailed) => view('reports.active-shipstation-conflicts', $this->viewData($start, $end, $result, $reportFailed, $configurationError)));
     }
 
     public function export(DateRangeReportRequest $request, RunActiveShipStationConflictReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse

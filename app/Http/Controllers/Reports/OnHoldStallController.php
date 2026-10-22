@@ -7,7 +7,6 @@ use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunOnHoldStallReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
 use App\Models\Store;
 use Illuminate\Http\RedirectResponse;
@@ -15,7 +14,7 @@ use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
-class OnHoldStallController extends Controller
+class OnHoldStallController extends ReportController
 {
     use LogsReportFailure;
 
@@ -28,18 +27,8 @@ class OnHoldStallController extends Controller
     {
         [$store, $startDate, $endDate] = $this->context($request);
         $configurationError = $this->configurationError($store);
-        $result = null;
-        $reportFailed = false;
-        if (! $configurationError) {
-            $run = $reports->run($request, $store, 'on_hold_stall', $report::class, [$startDate, $endDate], $startDate, $endDate);
-            if ($reports->shouldRedirect($request, $run)) {
-                return $reports->redirectToResult($request);
-            }
-            $result = $run->result();
-            $reportFailed = $run->hasFailed();
-        }
 
-        return view('reports.on-hold-stall', $this->viewData($startDate, $endDate, $result, $reportFailed, $configurationError));
+        return $this->runQueued($reports, $request, $store, $configurationError, 'on_hold_stall', $report::class, [$startDate, $endDate], $startDate, $endDate, fn (?ReportResult $result, bool $reportFailed) => view('reports.on-hold-stall', $this->viewData($startDate, $endDate, $result, $reportFailed, $configurationError)));
     }
 
     public function export(DateRangeReportRequest $request, RunOnHoldStallReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse

@@ -5,12 +5,11 @@ namespace App\Http\Controllers\Reports;
 use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunNoteFlagReport;
-use App\Http\Controllers\Controller;
 use App\Http\Requests\NoteFlagRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
-class NoteFlagController extends Controller
+class NoteFlagController extends ReportController
 {
     private const DEFAULT_KEYWORDS = 'urgent, hold, cancel, wrong, error, stop, do not ship, dont ship, wait, attention';
 
@@ -27,17 +26,7 @@ class NoteFlagController extends Controller
         $keywordsRaw = (string) $request->validated('keywords');
         $keywords = array_values(array_filter(array_map(fn (string $keyword): string => mb_strtolower(trim($keyword)), explode(',', $keywordsRaw))));
         $configurationError = $store->missingShopifyCredentials();
-        $result = null;
-        $reportFailed = false;
-        if (! $configurationError) {
-            $run = $reports->run($request, $store, 'note_flags', $report::class, [$startDate, $endDate, $keywords], $startDate, $endDate);
-            if ($reports->shouldRedirect($request, $run)) {
-                return $reports->redirectToResult($request);
-            }
-            $result = $run->result();
-            $reportFailed = $run->hasFailed();
-        }
 
-        return view('reports.note-flags', ['startDate' => $startDate, 'endDate' => $endDate, 'keywords' => $keywordsRaw, 'result' => $result instanceof ReportResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]);
+        return $this->runQueued($reports, $request, $store, $configurationError, 'note_flags', $report::class, [$startDate, $endDate, $keywords], $startDate, $endDate, fn (?ReportResult $result, bool $reportFailed) => view('reports.note-flags', ['startDate' => $startDate, 'endDate' => $endDate, 'keywords' => $keywordsRaw, 'result' => $result instanceof ReportResult ? $result : null, 'reportFailed' => $reportFailed, 'configurationError' => $configurationError]));
     }
 }

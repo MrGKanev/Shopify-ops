@@ -5,12 +5,11 @@ namespace App\Http\Controllers\Reports;
 use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunOrderEditReport;
-use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
-class OrderEditController extends Controller
+class OrderEditController extends ReportController
 {
     public function create(): View
     {
@@ -23,17 +22,7 @@ class OrderEditController extends Controller
         $start = (string) $request->validated('start_date');
         $end = (string) $request->validated('end_date');
         $configurationError = $store->missingShopifyCredentials();
-        $result = null;
-        $reportFailed = false;
-        if (! $configurationError) {
-            $run = $reports->run($request, $store, 'order_edits', $report::class, [$start, $end], $start, $end);
-            if ($reports->shouldRedirect($request, $run)) {
-                return $reports->redirectToResult($request);
-            }
-            $result = $run->result();
-            $reportFailed = $run->hasFailed();
-        }
 
-        return view('reports.order-edits', ['startDate' => $start, 'endDate' => $end, 'result' => $result instanceof ReportResult ? $result : null, 'configurationError' => $configurationError, 'reportFailed' => $reportFailed]);
+        return $this->runQueued($reports, $request, $store, $configurationError, 'order_edits', $report::class, [$start, $end], $start, $end, fn (?ReportResult $result, bool $reportFailed) => view('reports.order-edits', ['startDate' => $start, 'endDate' => $end, 'result' => $result instanceof ReportResult ? $result : null, 'configurationError' => $configurationError, 'reportFailed' => $reportFailed]));
     }
 }

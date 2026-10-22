@@ -7,14 +7,13 @@ use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunAddressChangeReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Controller;
 use App\Http\Requests\DateRangeReportRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
-class AddressChangeController extends Controller
+class AddressChangeController extends ReportController
 {
     use LogsReportFailure;
 
@@ -29,18 +28,8 @@ class AddressChangeController extends Controller
         $start = (string) $request->validated('start_date');
         $end = (string) $request->validated('end_date');
         $configurationError = $store->missingShopifyCredentials();
-        $result = null;
-        $reportFailed = false;
-        if (! $configurationError) {
-            $run = $reports->run($request, $store, 'address_changes', $report::class, [$start, $end], $start, $end);
-            if ($reports->shouldRedirect($request, $run)) {
-                return $reports->redirectToResult($request);
-            }
-            $result = $run->result();
-            $reportFailed = $run->hasFailed();
-        }
 
-        return view('reports.address-changes', ['startDate' => $start, 'endDate' => $end, 'result' => $result instanceof ReportResult ? $result : null, 'configurationError' => $configurationError, 'reportFailed' => $reportFailed]);
+        return $this->runQueued($reports, $request, $store, $configurationError, 'address_changes', $report::class, [$start, $end], $start, $end, fn (?ReportResult $result, bool $reportFailed) => view('reports.address-changes', ['startDate' => $start, 'endDate' => $end, 'result' => $result instanceof ReportResult ? $result : null, 'configurationError' => $configurationError, 'reportFailed' => $reportFailed]));
     }
 
     public function export(DateRangeReportRequest $request, RunAddressChangeReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse

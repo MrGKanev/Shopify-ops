@@ -7,7 +7,6 @@ use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunFulfillmentSlaReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Controller;
 use App\Http\Requests\FulfillmentSlaRequest;
 use App\Models\Store;
 use Illuminate\Http\RedirectResponse;
@@ -15,7 +14,7 @@ use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
-class FulfillmentSlaController extends Controller
+class FulfillmentSlaController extends ReportController
 {
     use LogsReportFailure;
 
@@ -28,18 +27,8 @@ class FulfillmentSlaController extends Controller
     {
         [$store, $startDate, $endDate, $threshold] = $this->context($request);
         $configurationError = $this->configurationError($store);
-        $result = null;
-        $reportFailed = false;
-        if (! $configurationError) {
-            $run = $reports->run($request, $store, 'fulfillment_sla', $report::class, [$startDate, $endDate, $threshold], $startDate, $endDate);
-            if ($reports->shouldRedirect($request, $run)) {
-                return $reports->redirectToResult($request);
-            }
-            $result = $run->result();
-            $reportFailed = $run->hasFailed();
-        }
 
-        return view('reports.fulfillment-sla', $this->viewData($startDate, $endDate, $threshold, $result, $reportFailed, $configurationError));
+        return $this->runQueued($reports, $request, $store, $configurationError, 'fulfillment_sla', $report::class, [$startDate, $endDate, $threshold], $startDate, $endDate, fn (?ReportResult $result, bool $reportFailed) => view('reports.fulfillment-sla', $this->viewData($startDate, $endDate, $threshold, $result, $reportFailed, $configurationError)));
     }
 
     public function export(FulfillmentSlaRequest $request, RunFulfillmentSlaReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse

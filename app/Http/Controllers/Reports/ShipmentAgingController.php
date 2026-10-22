@@ -7,7 +7,6 @@ use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunShipmentAgingReport;
 use App\Http\Controllers\Concerns\LogsReportFailure;
-use App\Http\Controllers\Controller;
 use App\Http\Requests\ShipmentAgingRequest;
 use App\Models\Store;
 use Illuminate\Http\RedirectResponse;
@@ -15,7 +14,7 @@ use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
-class ShipmentAgingController extends Controller
+class ShipmentAgingController extends ReportController
 {
     use LogsReportFailure;
 
@@ -28,18 +27,8 @@ class ShipmentAgingController extends Controller
     {
         [$store,$threshold] = $this->context($request);
         $configurationError = $this->configurationError($store);
-        $result = null;
-        $reportFailed = false;
-        if (! $configurationError) {
-            $run = $reports->run($request, $store, 'shipment_aging', $report::class, [$threshold], null, null);
-            if ($reports->shouldRedirect($request, $run)) {
-                return $reports->redirectToResult($request);
-            }
-            $result = $run->result();
-            $reportFailed = $run->hasFailed();
-        }
 
-        return view('reports.shipment-aging', $this->viewData($threshold, $result, $reportFailed, $configurationError));
+        return $this->runQueued($reports, $request, $store, $configurationError, 'shipment_aging', $report::class, [$threshold], null, null, fn (?ReportResult $result, bool $reportFailed) => view('reports.shipment-aging', $this->viewData($threshold, $result, $reportFailed, $configurationError)));
     }
 
     public function export(ShipmentAgingRequest $request, RunShipmentAgingReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse
