@@ -20,6 +20,7 @@ use App\Models\AppSetting;
 use App\Models\User;
 use App\UserRole;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Events\NotificationFailed;
 use Illuminate\Notifications\Events\NotificationSent;
@@ -60,6 +61,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Model::preventLazyLoading(! $this->app->isProduction());
+
         View::composer(['auth.login', 'auth.forgot-password', 'auth.reset-password', 'layouts.app', 'layouts.guest', 'admin.settings'], function (ViewContract $view): void {
             $appSettings = request()->attributes->get('appSettings');
             if (! $appSettings instanceof AppSetting) {

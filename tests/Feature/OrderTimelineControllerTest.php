@@ -238,7 +238,7 @@ class OrderTimelineControllerTest extends TestCase
     public function test_upstream_failure_returns_a_safe_error_without_leaking_details(): void
     {
         [$user] = $this->makeUserAndStore();
-        $shopify = $this->createMock(ShopifyAdminGateway::class);
+        $shopify = $this->createStub(ShopifyAdminGateway::class);
         $shopify->method('findByOrderNumber')->willThrowException(new RuntimeException('secret-token'));
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
 

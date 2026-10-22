@@ -14,12 +14,13 @@ class DetectOrderWebhookIssues
     public function handle(WebhookEvent $event): void
     {
         $store = $event->store;
-        if (! str_starts_with($event->topic, 'orders/') || $event->subject_id === null || $event->payload === [] || $store === null) {
+        $subjectId = $event->subject_id;
+        if (! str_starts_with($event->topic, 'orders/') || $subjectId === null || $event->payload === [] || $store === null) {
             return;
         }
 
         $this->postPushChanges->handle($event);
-        $this->detectRepeatedAddress($event, $store, $event->subject_id);
+        $this->detectRepeatedAddress($event, $store, $subjectId);
     }
 
     private function detectRepeatedAddress(WebhookEvent $event, Store $store, string $subjectId): void

@@ -30,7 +30,7 @@ class DetectPostPushChanges
         } catch (\Exception) {
             return;
         }
-        Cache::lock('order-remediation:'.$store_id.':'.$subjectId, 300)->block(5, function () use ($event, $push, $store, $subjectId): void {
+        Cache::lock('order-remediation:'.$store->getKey().':'.$subjectId, 300)->block(5, function () use ($event, $push, $store, $subjectId): void {
             $order = $this->orders->shopify($store, $push->order_number);
             if ((string) $order['id'] !== $subjectId) {
                 return;
