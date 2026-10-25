@@ -2,6 +2,7 @@
 
 namespace App\Application\Reports;
 
+use App\Application\Orders\FilterStoreShipStationOrders;
 use App\Domain\Reports\ShippedUnfulfilledAnalyzer;
 use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyOrders;
@@ -10,13 +11,13 @@ use LogicException;
 
 class RunShippedUnfulfilledReport
 {
-    public function __construct(private readonly ShipStationClientFactory $factory, private readonly ShopifyOrders $shopify, private readonly ShippedUnfulfilledAnalyzer $analyzer) {}
+    public function __construct(private readonly ShipStationClientFactory $factory, private readonly ShopifyOrders $shopify, private readonly ShippedUnfulfilledAnalyzer $analyzer, private readonly FilterStoreShipStationOrders $storeOrders) {}
 
     /** @return ReportResult<array<string, mixed>> */
     public function handle(Store $store, string $start, string $end): ReportResult
     {
         $client = $this->factory->forStore($store) ?? throw new LogicException('ShipStation credentials are required.');
-        $ss = $client->fetchAllOrders($start, $end);
+        $ss = $this->storeOrders->handle($store, $client->fetchAllOrders($start, $end));
         $sh = $this->shopify->itemMismatchCandidates($store, $start, $end);
         $data = $this->analyzer->analyze($ss, $sh['orders']);
 

@@ -15,6 +15,7 @@ class BatchLookupOrders
         private readonly ShopifyOrders $shopify,
         private readonly ShipStationClientFactory $shipStationClients,
         private readonly OrderRiskScorer $riskScorer,
+        private readonly FindStoreShipStationOrders $findOrders,
     ) {}
 
     /** @param list<string> $orderNumbers */
@@ -44,7 +45,7 @@ class BatchLookupOrders
                 ? $this->withShopifyLinks($store, $shopifyOrdersByNumber[$orderNumber] ?? [])
                 : null;
             $shipStationOrders = $checkShipStation
-                ? $this->withShipStationLinks($shipStation->findByOrderNumber($orderNumber))
+                ? $this->withShipStationLinks($this->findOrders->handle($store, $shipStation, $orderNumber))
                 : null;
             $shopifyFound = $shopifyOrders !== null && $shopifyOrders !== [];
             $shipStationFound = $shipStationOrders !== null && $shipStationOrders !== [];

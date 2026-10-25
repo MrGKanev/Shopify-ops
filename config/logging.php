@@ -86,6 +86,7 @@ return [
 
         'slack' => [
             'driver' => 'slack',
+            'tap' => [RedactLogContext::class],
             'url' => env('LOG_SLACK_WEBHOOK_URL'),
             'username' => env('LOG_SLACK_USERNAME', env('APP_NAME', 'Laravel')),
             'emoji' => env('LOG_SLACK_EMOJI', ':boom:'),
@@ -95,6 +96,7 @@ return [
 
         'papertrail' => [
             'driver' => 'monolog',
+            'tap' => [RedactLogContext::class],
             'level' => env('LOG_LEVEL', 'debug'),
             'handler' => env('LOG_PAPERTRAIL_HANDLER', SyslogUdpHandler::class),
             'handler_with' => [
@@ -107,6 +109,7 @@ return [
 
         'stderr' => [
             'driver' => 'monolog',
+            'tap' => [RedactLogContext::class],
             'level' => env('LOG_LEVEL', 'debug'),
             'handler' => StreamHandler::class,
             'handler_with' => [
@@ -118,6 +121,7 @@ return [
 
         'syslog' => [
             'driver' => 'syslog',
+            'tap' => [RedactLogContext::class],
             'level' => env('LOG_LEVEL', 'debug'),
             'facility' => env('LOG_SYSLOG_FACILITY', LOG_USER),
             'replace_placeholders' => true,
@@ -125,12 +129,14 @@ return [
 
         'errorlog' => [
             'driver' => 'errorlog',
+            'tap' => [RedactLogContext::class],
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
         ],
 
         'null' => [
             'driver' => 'monolog',
+            'tap' => [RedactLogContext::class],
             'handler' => NullHandler::class,
         ],
 

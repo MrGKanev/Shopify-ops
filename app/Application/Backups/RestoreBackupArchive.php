@@ -27,6 +27,9 @@ class RestoreBackupArchive
             throw new RuntimeException('A temporary restore file could not be created.');
         }
 
+        $stagingDirectory = sys_get_temp_dir().'/shopify-ops-restore-'.bin2hex(random_bytes(16));
+        File::ensureDirectoryExists($stagingDirectory, 0700);
+
         try {
             $this->downloadArchive($disk, $path, $temporaryPath);
             if ($expectedChecksum !== null && ! hash_equals($expectedChecksum, (string) hash_file('sha256', $temporaryPath))) {
@@ -46,15 +49,31 @@ class RestoreBackupArchive
                 }
 
                 $databaseDump = $this->extractDatabaseDump($zip);
+                $stagedFiles = $this->stageApplicationFiles($zip, $stagingDirectory);
             } finally {
                 $zip->close();
             }
 
             $this->restoreDatabase($databaseDump['contents']);
-            $restoredFiles = $this->extractApplicationFilesFromArchive($temporaryPath);
+            $restoredFiles = 0;
+            foreach ($stagedFiles as $file) {
+                $stream = fopen($file['staged_path'], 'rb');
+                if ($stream === false) {
+                    throw new RuntimeException('A staged restore file could not be read.');
+                }
+                try {
+                    if (! Storage::disk($file['disk'])->put($file['path'], $stream)) {
+                        throw new RuntimeException('An application file could not be restored.');
+                    }
+                    $restoredFiles++;
+                } finally {
+                    fclose($stream);
+                }
+            }
 
             return ['database_dump' => $databaseDump['name'], 'restored_files' => $restoredFiles];
         } finally {
+            File::deleteDirectory($stagingDirectory);
             if (is_file($temporaryPath)) {
                 unlink($temporaryPath);
             }
@@ -100,51 +119,36 @@ class RestoreBackupArchive
         throw new RuntimeException('No database dump was found in the backup archive.');
     }
 
-    private function extractApplicationFilesFromArchive(string $archivePath): int
+    /** @return list<array{disk:string,path:string,staged_path:string}> */
+    private function stageApplicationFiles(ZipArchive $zip, string $stagingDirectory): array
     {
-        $zip = new ZipArchive;
-        $opened = $zip->open($archivePath, ZipArchive::CHECKCONS);
-        if ($opened !== true) {
-            throw new RuntimeException("ZIP integrity check failed with code {$opened}.");
-        }
-
-        $markers = [
-            'storage/app/private/' => Storage::disk('local'),
-            'storage/app/public/' => Storage::disk('public'),
-        ];
-        $restored = 0;
-
-        try {
-            for ($index = 0; $index < $zip->numFiles; $index++) {
-                $entry = $zip->statIndex($index);
-                if (! is_array($entry) || str_ends_with($entry['name'], '/')) {
-                    continue;
-                }
-
-                $marker = collect(array_keys($markers))->first(fn (string $marker): bool => str_contains($entry['name'], $marker));
-                if (! is_string($marker)) {
-                    continue;
-                }
-
-                $position = strpos($entry['name'], $marker);
-                $relative = substr($entry['name'], $position + strlen($marker));
-                if ($relative === '' || str_contains($relative, '..')) {
-                    continue;
-                }
-
-                $contents = $zip->getFromIndex($index);
-                if ($contents === false) {
-                    throw new RuntimeException("Archive entry {$entry['name']} could not be read.");
-                }
-
-                $markers[$marker]->put($relative, $contents);
-                $restored++;
+        $markers = ['storage/app/private/' => 'local', 'storage/app/public/' => 'public'];
+        $files = [];
+        for ($index = 0; $index < $zip->numFiles; $index++) {
+            $entry = $zip->statIndex($index);
+            if (! is_array($entry) || str_ends_with($entry['name'], '/')) {
+                continue;
             }
-        } finally {
-            $zip->close();
+            $marker = collect(array_keys($markers))->first(fn (string $marker): bool => str_contains($entry['name'], $marker));
+            if (! is_string($marker)) {
+                continue;
+            }
+            $relative = substr($entry['name'], strpos($entry['name'], $marker) + strlen($marker));
+            if ($relative === '' || str_contains($relative, '..') || str_contains($relative, chr(0)) || str_contains($relative, '\\')) {
+                continue;
+            }
+            $contents = $zip->getFromIndex($index);
+            if ($contents === false) {
+                throw new RuntimeException("Archive entry {$entry['name']} could not be read.");
+            }
+            $stagedPath = $stagingDirectory.'/'.$index;
+            if (File::put($stagedPath, $contents) === false) {
+                throw new RuntimeException('An application file could not be staged for restore.');
+            }
+            $files[] = ['disk' => $markers[$marker], 'path' => $relative, 'staged_path' => $stagedPath];
         }
 
-        return $restored;
+        return $files;
     }
 
     private function restoreDatabase(string $sql): void

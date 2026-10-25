@@ -45,7 +45,7 @@ class FulfilledItemsController extends ReportController
             return back()->withErrors(['export' => __('reports.export_failed')]);
         }
 
-        return $csv->download("fulfilled-items-{$startDate}-to-{$endDate}.csv", ['Product', 'Quantity'], array_map(fn (array $row): array => [$row['product'], $row['quantity']], $result->rows));
+        return $csv->download("fulfilled-items-{$startDate}-to-{$endDate}.csv", ['Product', 'Quantity', 'Master SKU', 'Source SKUs'], array_map(fn (array $row): array => [$row['product'], $row['quantity'], $row['sku'] ?? '', implode('; ', $row['source_skus'] ?? [])], $result->rows));
     }
 
     /** @return array{Store, string, string} */

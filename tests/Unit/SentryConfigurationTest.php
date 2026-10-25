@@ -3,13 +3,35 @@
 namespace Tests\Unit;
 
 use App\Support\SentryEventSanitizer;
+use RuntimeException;
 use Sentry\Breadcrumb;
 use Sentry\Event;
+use Sentry\ExceptionDataBag;
+use Sentry\Tracing\Span;
 use Sentry\UserDataBag;
 use Tests\TestCase;
 
 class SentryConfigurationTest extends TestCase
 {
+    public function test_webhook_credentials_are_removed_from_all_telemetry_text_fields(): void
+    {
+        $url = 'https://example.test/webhooks/shipstation/store/synthetic-credential';
+        $span = (new Span)->setDescription($url)->setData(['request' => $url]);
+        $event = Event::createEvent()->setRequest(['url' => $url])->setTransaction($url)
+            ->setMessage('Failed '.$url)->setExtra(['details' => $url])
+            ->setExceptions([new ExceptionDataBag(new RuntimeException($url))])->setSpans([$span])
+            ->setBreadcrumb([new Breadcrumb(Breadcrumb::LEVEL_INFO, Breadcrumb::TYPE_HTTP, 'http', message: $url)]);
+
+        $event = SentryEventSanitizer::sanitizeEvent($event);
+
+        foreach ([$event->getRequest()['url'], $event->getTransaction(), $event->getMessage(), $event->getExtra()['details'],
+            $event->getExceptions()[0]->getValue(), $event->getSpans()[0]->getDescription(), $event->getSpans()[0]->getData('request'),
+            $event->getBreadcrumbs()[0]->getMessage()] as $value) {
+            $this->assertStringNotContainsString('synthetic-credential', $value);
+            $this->assertStringContainsString('[Filtered]', $value);
+        }
+    }
+
     public function test_sentry_is_private_and_disabled_without_a_dsn(): void
     {
         $this->assertNull(config('sentry.dsn'));

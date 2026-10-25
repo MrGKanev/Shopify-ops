@@ -62,7 +62,7 @@
                 <span class="font-semibold">{{ __('Last 7 days') }}</span>
                 <span class="text-xs text-slate-500 dark:text-slate-400">— {{ __('No audit') }}</span>
             </div>
-            <div class="flex items-end gap-2" style="height:100px">
+            <div class="flex h-[100px] items-end gap-2">
                 @php($max = max(1, $sevenDayChart->max('missing')))
                 @foreach ($sevenDayChart as $point)
                     @php($pointLabel = $point['date'].': '.($point['missing'] === null ? __('No audit') : $point['missing'].' '.__('missing')))
@@ -71,7 +71,8 @@
                             @if ($point['missing'] === null)
                                 <span class="text-xs text-slate-400 dark:text-slate-500">—</span>
                             @else
-                                <div style="width:24px;height:{{ max(4, (int) ($point['missing'] / $max * 70)) }}px;background:#6366f1;border-radius:4px 4px 0 0"></div>
+                                <style nonce="{{ Vite::cspNonce() }}">#audit-chart-bar-{{ $loop->index }} { height: {{ max(4, (int) ($point['missing'] / $max * 70)) }}px; }</style>
+                                <div id="audit-chart-bar-{{ $loop->index }}" class="w-6 rounded-t bg-indigo-500"></div>
                             @endif
                         </div>
                         <span class="text-xs text-slate-500 dark:text-slate-400">{{ substr($point['date'], 5) }}</span>

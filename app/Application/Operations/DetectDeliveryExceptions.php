@@ -2,6 +2,7 @@
 
 namespace App\Application\Operations;
 
+use App\Application\Orders\VerifyShipStationShipmentOwnership;
 use App\Domain\Reports\DeliveryExceptionAnalyzer;
 use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Models\Store;
@@ -12,6 +13,7 @@ class DetectDeliveryExceptions
         private readonly ShipStationClientFactory $clients,
         private readonly DeliveryExceptionAnalyzer $analyzer,
         private readonly RaiseOperationalIssue $issues,
+        private readonly VerifyShipStationShipmentOwnership $ownership,
     ) {}
 
     public function handle(Store $store): int
@@ -20,13 +22,16 @@ class DetectDeliveryExceptions
             return 0;
         }
 
+        $storeNumber = $this->ownership->storeId($store);
+
         $threshold = max(1, min(90, (int) $store->delivery_watch_days));
         $client = $this->clients->forStore($store);
         if ($client === null) {
             return 0;
         }
 
-        $shipments = $client->fetchShipmentsByDate(now()->subDays(max(30, $threshold + 7))->toDateString(), now()->toDateString());
+        $shipments = $client->fetchShipmentsByDate(now()->subDays(max(30, $threshold + 7))->toDateString(), now()->toDateString(), (int) $storeNumber);
+        $shipments = $this->ownership->handle($store, $client, $shipments);
         $exceptions = $this->analyzer->analyze($shipments, $threshold, now()->getTimestamp());
 
         $resolvedIssues = $store->operationalIssues()

@@ -19,6 +19,9 @@ class RecordRun
      */
     public function handle(Store $store, array $attributes): RunLog
     {
+        if (($scheduleId = Context::get('report_schedule_id')) !== null) {
+            $attributes['meta'] = [...($attributes['meta'] ?? []), 'report_schedule_id' => $scheduleId];
+        }
         $attachment = $attributes['attachment'] ?? null;
         $run = $store->runLogs()->create(Arr::except($attributes, ['attachment']));
         Context::add([

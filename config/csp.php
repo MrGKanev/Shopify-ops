@@ -3,7 +3,7 @@
 use App\Support\ContentSecurityPolicy;
 use App\Support\LaravelViteNonceGenerator;
 
-$reportOnly = filter_var(env('CSP_REPORT_ONLY', true), FILTER_VALIDATE_BOOL);
+$reportOnly = filter_var(env('CSP_REPORT_ONLY', false), FILTER_VALIDATE_BOOL);
 $reportEndpoint = (string) env('CSP_REPORT_ENDPOINT', '');
 
 return [

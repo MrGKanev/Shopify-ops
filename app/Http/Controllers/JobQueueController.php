@@ -14,8 +14,9 @@ class JobQueueController extends Controller
     public function index(Request $request): View
     {
         $usingRedis = config('queue.default') === 'redis';
-        $jobs = $usingRedis ? null : DB::table('jobs')->latest('id')->paginate(100, ['*'], 'jobs');
-        $failed = DB::table('failed_jobs')->latest('id')->paginate(100, ['*'], 'failed');
+        $canManageQueue = Gate::allows('manage-administration');
+        $jobs = $usingRedis || ! $canManageQueue ? null : DB::table('jobs')->latest('id')->paginate(100, ['*'], 'jobs');
+        $failed = $canManageQueue ? DB::table('failed_jobs')->latest('id')->paginate(100, ['*'], 'failed') : null;
         $store = $request->attributes->get('activeStore');
         $auditJobs = $store->auditJobs()->latest()->limit(100)->get();
         $rowsFoundByRange = $store->runLogs()->where('tool', 'run_audit')->get()->keyBy(fn ($run): string => $run->start_date->toDateString().'|'.$run->end_date->toDateString())->map(fn ($run): int => (int) $run->rows_found);
@@ -31,6 +32,7 @@ class JobQueueController extends Controller
             'jobs' => $jobs,
             'failed' => $failed,
             'usingRedis' => $usingRedis,
+            'canManageQueue' => $canManageQueue,
             'canViewHorizon' => Gate::allows('viewHorizon'),
         ]);
     }

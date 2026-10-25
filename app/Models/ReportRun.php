@@ -63,6 +63,8 @@ class ReportRun extends Model
     {
         return [
             'arguments' => 'array',
+            'parameters' => 'array',
+            'scheduled_for' => 'immutable_datetime',
             'start_date' => 'date',
             'end_date' => 'date',
             'started_at' => 'datetime',

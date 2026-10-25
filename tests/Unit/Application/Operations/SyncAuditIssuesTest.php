@@ -25,7 +25,7 @@ class SyncAuditIssuesTest extends TestCase
         $this->assertSame(IssuePriority::High, $issue->priority);
         $this->assertSame(2, $issue->occurrences);
 
-        $sync->handle($store, []);
+        $sync->handle($store, [], [['name' => '#1001', 'match_method' => 'order_number', 'shipstation_matches' => [['orderNumber' => '1001']]]]);
 
         $this->assertSame(IssueStatus::Resolved, $issue->fresh()->status);
         $this->assertNotNull($issue->fresh()->resolved_at);

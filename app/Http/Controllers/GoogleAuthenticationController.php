@@ -56,6 +56,7 @@ class GoogleAuthenticationController extends Controller
             }
             Auth::login($user);
             $request->session()->regenerate();
+            $request->session()->put('auth.password_confirmed_at', now()->timestamp);
 
             return redirect()->intended(route('dashboard'));
         } catch (Throwable $exception) {

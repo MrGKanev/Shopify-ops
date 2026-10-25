@@ -10,7 +10,7 @@ use Throwable;
 
 class RunOrderContributionReport
 {
-    public function __construct(private readonly ShopifyOrderContribution $shopify, private readonly ShipStationClientFactory $shipStation, private readonly OrderContributionAnalyzer $analyzer) {}
+    public function __construct(private readonly ShopifyOrderContribution $shopify, private readonly ShipStationClientFactory $shipStation, private readonly OrderContributionAnalyzer $analyzer, private readonly ShippingBillingCosts $billing) {}
 
     /** @return ReportResult<array<string, mixed>> */
     public function handle(Store $store, string $startDate, string $endDate, ?string $after = null): ReportResult
@@ -79,6 +79,8 @@ class RunOrderContributionReport
             }
             $rows[] = $this->analyzer->analyze($order, $data['analytics'][$order['id']] ?? null, $shipments, $data['currency'], $problem);
         }
+
+        $rows = $this->billing->contribution($store, $rows, $data['currency']);
 
         return new ReportResult(
             rows: $rows, scanned: count($rows), pages: $data['pages'], truncated: $data['truncated'],

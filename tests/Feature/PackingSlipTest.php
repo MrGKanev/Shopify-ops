@@ -29,9 +29,9 @@ class PackingSlipTest extends TestCase
     {
         [$user, $store] = $this->makeUserAndStore();
         $client = Mockery::mock(ShipStationClientContract::class);
-        $client->shouldReceive('findByOrderNumber')->with('1001')->andReturn([['orderNumber' => 'similar'], ['orderNumber' => '1001', 'orderDate' => '2026-09-01', 'shipTo' => ['name' => '<script>x</script>'], 'items' => [['name' => 'Shirt', 'quantity' => 2, 'options' => [['name' => 'Size', 'value' => '["S","M"]']]]], 'internalNotes' => 'First<br/>Second']]);
-        $client->shouldReceive('findByOrderNumber')->with('1002')->andReturn([]);
-        $client->shouldReceive('findByOrderNumber')->with('1003')->andReturn([['orderNumber' => '1003'], ['orderNumber' => '1003']]);
+        $client->shouldReceive('findByOrderNumber')->with('1001', 42)->andReturn([['orderNumber' => 'similar'], ['orderId' => 1, 'advancedOptions' => ['storeId' => 42], 'orderNumber' => '1001', 'orderDate' => '2026-09-01', 'shipTo' => ['name' => '<script>x</script>'], 'items' => [['name' => 'Shirt', 'quantity' => 2, 'options' => [['name' => 'Size', 'value' => '["S","M"]']]]], 'internalNotes' => 'First<br/>Second']]);
+        $client->shouldReceive('findByOrderNumber')->with('1002', 42)->andReturn([]);
+        $client->shouldReceive('findByOrderNumber')->with('1003', 42)->andReturn([['orderId' => 2, 'advancedOptions' => ['storeId' => 42], 'orderNumber' => '1003'], ['orderId' => 3, 'advancedOptions' => ['storeId' => 42], 'orderNumber' => '1003']]);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->times(3)->with(Mockery::on(fn (Store $received): bool => $received->is($store)))->andReturn($client);
         $this->app->instance(ShipStationClientFactory::class, $factory);
@@ -53,7 +53,7 @@ class PackingSlipTest extends TestCase
     private function makeUserAndStore(): array
     {
         $user = User::factory()->create();
-        $store = Store::factory()->create();
+        $store = Store::factory()->create(['store_number' => '42']);
         $user->stores()->attach($store);
 
         return [$user, $store];

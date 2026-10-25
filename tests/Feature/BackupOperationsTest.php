@@ -3,11 +3,34 @@
 namespace Tests\Feature;
 
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\Facades\Event;
+use Spatie\Backup\Events\BackupManifestWasCreated;
 use Spatie\Backup\Notifications\Notifications\BackupHasFailedNotification;
+use Spatie\Backup\Tasks\Backup\Manifest;
 use Tests\TestCase;
 
 class BackupOperationsTest extends TestCase
 {
+    public function test_production_backup_creation_refuses_an_empty_encryption_password(): void
+    {
+        $this->app['env'] = 'production';
+        config()->set('backup.backup.password', null);
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('BACKUP_ARCHIVE_PASSWORD is required');
+
+        Event::dispatch(new BackupManifestWasCreated(\Mockery::mock(Manifest::class)));
+    }
+
+    public function test_production_backup_creation_accepts_an_explicit_encryption_password(): void
+    {
+        $this->app['env'] = 'production';
+        config()->set('backup.backup.password', 'synthetic-archive-password');
+        $manifest = \Mockery::mock(Manifest::class);
+        Event::listen(BackupManifestWasCreated::class, fn (): string => 'accepted');
+
+        $this->assertContains('accepted', Event::dispatch(new BackupManifestWasCreated($manifest)));
+    }
+
     public function test_backups_use_a_dedicated_verified_destination(): void
     {
         $this->assertSame(['backups'], config('backup.backup.destination.disks'));

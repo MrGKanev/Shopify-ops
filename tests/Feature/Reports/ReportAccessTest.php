@@ -22,8 +22,8 @@ class ReportAccessTest extends TestCase
         Queue::fake();
         $tool = app(ReportRegistry::class)->find($key);
         $snapshot = $key === 'rate_shopping' ? RateQuoteSnapshot::factory()->create() : null;
-        $endpoints = [['GET', $tool->route], ['POST', $tool->route.'.store']];
-        foreach (['result', 'export', 'queue'] as $action) {
+        $endpoints = [['GET', $tool->route]];
+        foreach (['store', 'result', 'export', 'queue'] as $action) {
             if (Route::has($tool->route.'.'.$action)) {
                 $endpoints[] = [$action === 'result' ? 'GET' : 'POST', $tool->route.'.'.$action];
             }

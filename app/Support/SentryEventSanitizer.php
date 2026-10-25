@@ -36,6 +36,31 @@ class SentryEventSanitizer
         ]));
         $event->setUser(null);
         $event->setExtra(self::sanitizeArray($event->getExtra()));
+        $event->setTags(self::sanitizeArray($event->getTags()));
+        if ($event->getTransaction() !== null) {
+            $event->setTransaction(self::sanitizeText($event->getTransaction()));
+        }
+        if ($event->getMessage() !== null) {
+            $event->setMessage(self::sanitizeText($event->getMessage()), self::sanitizeArray($event->getMessageParams()),
+                $event->getMessageFormatted() === null ? null : self::sanitizeText($event->getMessageFormatted()));
+        }
+        foreach ($event->getExceptions() as $exception) {
+            $exception->setValue(self::sanitizeText($exception->getValue()));
+            foreach ($exception->getStacktrace()?->getFrames() ?? [] as $frame) {
+                $frame->setVars(self::sanitizeArray($frame->getVars()));
+            }
+        }
+        foreach ($event->getStacktrace()?->getFrames() ?? [] as $frame) {
+            $frame->setVars(self::sanitizeArray($frame->getVars()));
+        }
+        foreach ($event->getSpans() as $span) {
+            if ($span->getDescription() !== null) {
+                $span->setDescription(self::sanitizeText($span->getDescription()));
+            }
+            $span->setData(self::sanitizeArray($span->getData()));
+            $span->setTags(self::sanitizeArray($span->getTags()));
+        }
+        $event->setBreadcrumb(array_map(self::sanitizeBreadcrumb(...), $event->getBreadcrumbs()));
 
         foreach ($event->getContexts() as $name => $context) {
             $event->setContext($name, self::sanitizeArray($context));
@@ -46,6 +71,9 @@ class SentryEventSanitizer
 
     public static function sanitizeBreadcrumb(Breadcrumb $breadcrumb): Breadcrumb
     {
+        if ($breadcrumb->getMessage() !== null) {
+            $breadcrumb = $breadcrumb->withMessage(self::sanitizeText($breadcrumb->getMessage()));
+        }
         foreach (self::sanitizeArray($breadcrumb->getMetadata()) as $key => $value) {
             $breadcrumb = $breadcrumb->withMetadata($key, $value);
         }
@@ -72,10 +100,25 @@ class SentryEventSanitizer
 
             if (is_string($value) && self::isUrlKey((string) $key)) {
                 $values[$key] = self::withoutQueryString($value);
+            } elseif (is_string($value)) {
+                $values[$key] = self::sanitizeText($value);
+            } elseif ($value instanceof \Throwable) {
+                $values[$key] = ['exception_type' => $value::class, 'message' => self::sanitizeText($value->getMessage())];
             }
         }
 
         return $values;
+    }
+
+    public static function sanitizeText(string $text): string
+    {
+        return preg_replace([
+            '~(/webhooks/shipstation/[^/\s?#]+/)[^\s/?#"\'<>]+~i',
+            '~(/reset-password/)[^\s/?#"\'<>]+~i',
+            '~(https://hooks\.slack\.com/services/)[^\s"\'<>]+~i',
+            '~(https://(?:discord\.com|discordapp\.com)/api/webhooks/)[^\s"\'<>]+~i',
+            '~([?&](?:token|key|api_key|access_token|secret|password)=)[^&\s"\'<>]+~i',
+        ], '$1'.self::REDACTED, $text) ?? self::REDACTED;
     }
 
     private static function isSensitiveKey(string $key): bool
@@ -103,6 +146,6 @@ class SentryEventSanitizer
             return null;
         }
 
-        return strtok($url, '?') ?: $url;
+        return self::sanitizeText(strtok($url, '?') ?: $url);
     }
 }

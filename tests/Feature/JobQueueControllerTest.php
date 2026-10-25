@@ -19,10 +19,11 @@ class JobQueueControllerTest extends TestCase
         $this->get('/jobs')->assertRedirect(route('login'));
         [$viewer] = $this->userWithStore();
         $this->actingAs($viewer)->get('/jobs')->assertForbidden();
-        [$operator] = $this->userWithStore(true);
         DB::table('jobs')->insert(['queue' => 'default', 'payload' => json_encode(['displayName' => '<script>Pending</script>']), 'attempts' => 1, 'available_at' => time(), 'created_at' => time()]);
         DB::table('failed_jobs')->insert(['uuid' => 'job-1', 'connection' => 'database', 'queue' => 'default', 'payload' => json_encode(['displayName' => '<img>Failed</img>']), 'exception' => 'secret-token']);
-        $this->actingAs($operator)->get('/jobs')->assertOk()->assertSeeText('Pending · 1')->assertSeeText('Failed · 1')->assertDontSee('<script>', false)->assertDontSee('<img>', false)->assertDontSeeText('secret-token');
+        $admin = User::factory()->admin()->create();
+        $admin->stores()->attach(Store::factory()->create());
+        $this->actingAs($admin)->get('/jobs')->assertOk()->assertSeeText('Pending · 1')->assertSeeText('Failed · 1')->assertDontSee('<script>', false)->assertDontSee('<img>', false)->assertDontSeeText('secret-token');
     }
 
     public function test_admin_sees_a_horizon_link_instead_of_the_pending_table_when_queue_is_redis(): void
@@ -39,7 +40,7 @@ class JobQueueControllerTest extends TestCase
             ->assertSee(url(config('horizon.path')));
     }
 
-    public function test_non_admin_sees_an_admin_only_notice_instead_of_the_pending_table_when_queue_is_redis(): void
+    public function test_non_admin_cannot_see_global_queue_details_when_queue_is_redis(): void
     {
         config(['queue.default' => 'redis']);
         [$operator] = $this->userWithStore(true);
@@ -48,18 +49,19 @@ class JobQueueControllerTest extends TestCase
             ->assertOk()
             ->assertDontSeeText('Pending · 0')
             ->assertDontSee(url(config('horizon.path')))
-            ->assertSeeText('Pending job details are only visible to administrators in the Horizon dashboard.');
+            ->assertDontSeeText('Failed jobs');
     }
 
     public function test_retry_and_forget_only_existing_failed_jobs(): void
     {
-        [$operator] = $this->userWithStore(true);
+        $admin = User::factory()->admin()->create();
+        $admin->stores()->attach(Store::factory()->create());
         DB::table('failed_jobs')->insert(['uuid' => 'job-1', 'connection' => 'database', 'queue' => 'default', 'payload' => '{}', 'exception' => 'x']);
         Artisan::shouldReceive('call')->once()->with('queue:retry', ['id' => ['job-1']])->andReturn(0);
-        $this->actingAs($operator)->post('/jobs/failed/job-1/retry')->assertRedirect();
+        $this->actingAs($admin)->post('/jobs/failed/job-1/retry')->assertRedirect();
         Artisan::shouldReceive('call')->once()->with('queue:forget', ['id' => 'job-1'])->andReturn(0);
-        $this->actingAs($operator)->delete('/jobs/failed/job-1')->assertRedirect();
-        $this->actingAs($operator)->post('/jobs/failed/missing/retry')->assertNotFound();
+        $this->actingAs($admin)->delete('/jobs/failed/job-1')->assertRedirect();
+        $this->actingAs($admin)->post('/jobs/failed/missing/retry')->assertNotFound();
     }
 
     public function test_page_shows_only_the_active_stores_audit_execution_statuses(): void
@@ -74,6 +76,21 @@ class JobQueueControllerTest extends TestCase
             ->assertSeeText('Audit executions')
             ->assertSeeText('2026-09-01 → 2026-09-12')
             ->assertDontSeeText('2026-08-01 → 2026-08-31');
+    }
+
+    public function test_operator_cannot_see_global_jobs_or_retry_or_remove_a_foreign_failure(): void
+    {
+        [$operator] = $this->userWithStore(true);
+        DB::table('jobs')->insert(['queue' => 'default', 'payload' => json_encode(['displayName' => 'ForeignPendingJob']), 'attempts' => 0, 'available_at' => time(), 'created_at' => time()]);
+        DB::table('failed_jobs')->insert(['uuid' => 'foreign-job', 'connection' => 'database', 'queue' => 'default', 'payload' => '{}', 'exception' => 'private-error']);
+        Artisan::shouldReceive('call')->never();
+
+        $this->actingAs($operator)->get('/jobs')->assertOk()
+            ->assertDontSeeText('ForeignPendingJob')->assertDontSeeText('foreign-job')
+            ->assertDontSeeText('Failed jobs')->assertDontSeeText('Pending · 1');
+        $this->post('/jobs/failed/foreign-job/retry')->assertForbidden();
+        $this->delete('/jobs/failed/foreign-job')->assertForbidden();
+        $this->assertDatabaseHas('failed_jobs', ['uuid' => 'foreign-job']);
     }
 
     public function test_completed_audit_execution_shows_rows_found_and_failed_shows_error_category(): void

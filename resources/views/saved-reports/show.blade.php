@@ -20,11 +20,12 @@
         @if ($history->isNotEmpty())
             <x-card>
                 <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">{{ __('Last') }} {{ \App\Support\UiFormat::count($history->count(), 'audits') }}</h2>
-                <div class="flex items-end gap-2" style="height: 60px">
+                <div class="flex h-[60px] items-end gap-2">
                     @php($max = max(1, $history->max('rows_found')))
                     @foreach ($history as $point)
                         <a class="flex flex-col items-center gap-1" href="{{ route('saved-reports.show', $point) }}" title="{{ \App\Support\UiFormat::date($point->report_date) }}: {{ $point->rows_found }} missing">
-                            <div class="rounded-t bg-indigo-300 dark:bg-indigo-700" style="width: 16px; height: {{ max(4, (int) ($point->rows_found / $max * 50)) }}px; @if ($point->is($report)) background: #4f46e5; @endif"></div>
+                            <style nonce="{{ Vite::cspNonce() }}">#history-chart-bar-{{ $loop->index }} { height: {{ max(4, (int) ($point->rows_found / $max * 50)) }}px; }</style>
+                            <div id="history-chart-bar-{{ $loop->index }}" class="w-4 rounded-t {{ $point->is($report) ? 'bg-indigo-600' : 'bg-indigo-300 dark:bg-indigo-700' }}"></div>
                         </a>
                     @endforeach
                 </div>

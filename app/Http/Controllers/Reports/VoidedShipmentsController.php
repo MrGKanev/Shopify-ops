@@ -44,9 +44,9 @@ class VoidedShipmentsController extends ReportController
 
             return back()->withErrors(['export' => __('reports.export_failed')]);
         }
-        $rows = array_map(fn (array $row): array => [$row['order_number'], $row['shipment_id'], $row['void_date'], $row['ship_date'], $row['carrier'], $row['service'], $row['tracking'], $row['ship_to_name'], $row['ship_to_city'], $row['ship_to_state'], $row['ship_to_zip'], $row['ship_to_country']], $result->rows);
+        $rows = array_map(fn (array $row): array => [$row['order_number'], $row['shipment_id'], $row['void_date'], $row['ship_date'], $row['carrier'], $row['service'], $row['tracking'], $row['ship_to_name'], $row['ship_to_city'], $row['ship_to_state'], $row['ship_to_zip'], $row['ship_to_country'], $row['refund_billing']['currency'] ?? null, $row['refund_billing']['expected_refund'] ?? null, $row['refund_billing']['refunds'] ?? null, $row['refund_billing']['outstanding_refund'] ?? null, $row['refund_billing']['refund_status'] ?? 'unconfirmed'], $result->rows);
 
-        return $csv->download("voided-shipments-{$startDate}-to-{$endDate}.csv", ['Order', 'Shipment ID', 'Void date', 'Ship date', 'Carrier', 'Service', 'Tracking', 'Ship-to name', 'City', 'State', 'Postal code', 'Country'], $rows);
+        return $csv->download("voided-shipments-{$startDate}-to-{$endDate}.csv", ['Order', 'Shipment ID', 'Void date', 'Ship date', 'Carrier', 'Service', 'Tracking', 'Ship-to name', 'City', 'State', 'Postal code', 'Country', 'Billing currency', 'Expected refund', 'Recorded label refunds', 'Outstanding refund', 'Refund status'], $rows);
     }
 
     /** @return array{Store, string, string} */

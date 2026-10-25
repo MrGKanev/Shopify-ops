@@ -47,7 +47,7 @@ class ShopifyGraphqlTransport
             ->retry(
                 $this->retryAttempts(),
                 fn (int $attempt, mixed $exception): int => $this->retryDelayInMilliseconds($attempt, $exception),
-                when: fn (Throwable $exception): bool => $this->isTransientFailure($exception),
+                when: fn (?Throwable $exception): bool => $exception !== null && $this->isTransientFailure($exception),
                 throw: false,
             )
             ->get($this->resourcePath($resource), $query);
@@ -136,7 +136,7 @@ class ShopifyGraphqlTransport
             ->when(! str_contains($query, 'mutation'), fn (PendingRequest $request): PendingRequest => $request->retry(
                 $this->retryAttempts(),
                 fn (int $attempt, mixed $exception): int => $this->retryDelayInMilliseconds($attempt, $exception),
-                when: fn (Throwable $exception): bool => $this->isTransientFailure($exception),
+                when: fn (?Throwable $exception): bool => $exception !== null && $this->isTransientFailure($exception),
                 throw: false,
             ))
             ->post('graphql.json', $payload);
@@ -229,6 +229,7 @@ class ShopifyGraphqlTransport
         Context::add('store_id', $store->getKey());
 
         return $this->integrationRequest($this->baseUrl($store))
+            ->withoutRedirecting()
             ->withHeader('X-Shopify-Access-Token', $accessToken);
     }
 

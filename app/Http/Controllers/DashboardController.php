@@ -88,7 +88,7 @@ class DashboardController extends Controller
             'pushesMonth' => $store->pushLogs()->where('pushed_at', '>=', now()->subDays(30))->count(),
             'openIssueCount' => $store->operationalIssues()->whereIn('status', IssueStatus::active())->count(),
             'overdueIssueCount' => $store->operationalIssues()->whereIn('status', IssueStatus::active())->whereNotNull('due_date')->whereDate('due_date', '<', today())->count(),
-            'deliveryExceptionCount' => $store->operationalIssues()->where('source_tool', 'delivery_watch')->whereIn('status', IssueStatus::active())->count(),
+            'deliveryExceptionCount' => $store->operationalIssues()->whereIn('source_tool', ['delivery_watch', 'shipment_movement'])->whereIn('status', IssueStatus::active())->count(),
             'missingOrders' => array_slice($latestMissing, 0, 10),
             'missingByType' => $missingByType,
             'oldestMissingAge' => $oldestMissingAge,

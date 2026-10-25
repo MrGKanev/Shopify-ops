@@ -1,0 +1,10 @@
+query ShopifyBacklogLineItems($id: ID!, $after: String!) {
+  fulfillmentOrder(id: $id) {
+    id
+    lineItems(first: 100, after: $after) {
+      pageInfo { hasNextPage endCursor }
+      nodes { id remainingQuantity totalQuantity requiresShipping
+          lineItem { id discountedUnitPriceAfterAllDiscountsSet { presentmentMoney { amount currencyCode } } } }
+    }
+  }
+}

@@ -46,7 +46,7 @@ class ShippingMarginController extends ReportController
             return back()->withErrors(['export' => __('reports.export_failed')]);
         }
 
-        return $csv->download("shipping-margin-{$startDate}-to-{$endDate}.csv", ['Order', 'Ship date', 'Carrier', 'Service', 'Ship cost', 'Shipping charged', 'Loss', 'Email', 'Order total'], array_map(fn (array $row): array => [$row['order_number'], $row['ship_date'], $row['carrier'], $row['service'], $row['ship_cost'], $row['shipping_charged'], $row['loss'], $row['email'], $row['total']], $result->rows));
+        return $csv->download("shipping-margin-{$startDate}-to-{$endDate}.csv", ['Order', 'Ship date', 'Carrier', 'Service', 'Ship cost', 'Shipping charged', 'Loss', 'Email', 'Order total', 'Cost basis', 'Reported label costs', 'Imported billing cost', 'Billing currency', 'Loss on imported billing'], array_map(fn (array $row): array => [$row['order_number'], $row['ship_date'], $row['carrier'], $row['service'], $row['ship_cost'], $row['shipping_charged_exact'] ?? $row['shipping_charged'], $row['imported_loss'] ?? $row['loss'], $row['email'], $row['total'], ($row['imported_cost'] ?? null) === null ? 'Label costs' : 'Imported billing', $row['label_cost'] ?? $row['ship_cost'], $row['imported_cost'] ?? null, $row['billing_currency'] ?? null, $row['imported_loss'] ?? null], $result->rows));
     }
 
     /**

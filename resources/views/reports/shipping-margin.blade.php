@@ -19,6 +19,8 @@
             />
         </x-slot:form>
 
+        <x-alert tone="warn">{{ __('Customer shipping charges are counted once per order across the selected labels. Imported billing is used only when all selected labels have matching order and currency coverage. Other shipments and unimported postings may be missing; this is not a final invoice.') }}</x-alert>
+        <div><x-button variant="ghost" :href="route('shipping-billing.index')">{{ __('Shipping Billing Audit') }}</x-button></div>
         @if ($result)
             <x-report.results
                 export-route="reports.shipping-margin.export"
@@ -49,6 +51,7 @@
                         'Ship date' => 'ship_date',
                         'Carrier / service' => fn (array $row): string => $row['carrier'].($row['service'] ? ' / '.$row['service'] : ''),
                         'Ship cost' => fn (array $row): string => '$'.\App\Support\UiFormat::number($row['ship_cost'], 2),
+                        'Cost basis' => fn (array $row): string => ($row['imported_cost'] ?? null) === null ? __('Label costs') : __('Imported billing').' '.$row['billing_currency'],
                         'Charged' => fn (array $row): string => '$'.\App\Support\UiFormat::number($row['shipping_charged'], 2),
                         'Loss' => ['value' => fn (array $row): string => '$'.\App\Support\UiFormat::number($row['loss'], 2), 'class' => 'font-semibold text-red-600 dark:text-red-400'],
                         'Email' => fn (array $row): string => $row['email'] ?: '—',

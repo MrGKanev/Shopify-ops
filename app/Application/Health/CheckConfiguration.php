@@ -53,6 +53,17 @@ class CheckConfiguration
         if (config('app.env') === 'production' && ! config('security.hsts')) {
             $issues[] = 'HSTS_ENABLED must be enabled after HTTPS proxy verification.';
         }
+        if (config('app.env') === 'production') {
+            if (trim((string) config('backup.backup.password')) === '') {
+                $issues[] = 'BACKUP_ARCHIVE_PASSWORD must be set in production.';
+            }
+            if (config('csp.presets') === [] || ! config('csp.enabled')) {
+                $issues[] = 'Content Security Policy must be enforced in production.';
+            }
+            if (config('filesystems.disks.backups.root') === storage_path('app/backups') && config('backup.backup.destination.disks') === ['backups']) {
+                $issues[] = 'An offsite backup destination must be configured and tested.';
+            }
+        }
         $google = array_filter([(string) config('services.google.client_id'), (string) config('services.google.client_secret'), (string) config('services.google.allowed_domains')]);
         if ($google !== [] && count($google) !== 3) {
             $issues[] = 'Google sign-in configuration is incomplete.';

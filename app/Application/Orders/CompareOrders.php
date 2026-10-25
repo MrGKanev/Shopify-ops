@@ -14,6 +14,7 @@ class CompareOrders
         private readonly ShopifyOrders $shopify,
         private readonly ShipStationClientFactory $shipStationClients,
         private readonly ShopifyOrderComparator $comparator,
+        private readonly FindStoreShipStationOrders $findOrders,
     ) {}
 
     public function handle(Store $store, string $numberA, string $numberB): OrderComparisonResult
@@ -23,8 +24,8 @@ class CompareOrders
         $orderA = count($shopifyMatchesA) === 1 ? $shopifyMatchesA[0] : null;
         $orderB = count($shopifyMatchesB) === 1 ? $shopifyMatchesB[0] : null;
         $shipStation = $this->shipStationClients->forStore($store);
-        $shipStationStatusA = $this->shipStationStatus($shipStation, $numberA);
-        $shipStationStatusB = $this->shipStationStatus($shipStation, $numberB);
+        $shipStationStatusA = $this->shipStationStatus($store, $shipStation, $numberA);
+        $shipStationStatusB = $this->shipStationStatus($store, $shipStation, $numberB);
         $comparison = $this->comparator->compare($orderA, $orderB, $numberA, $numberB, $shipStation !== null, $shipStationStatusA, $shipStationStatusB);
 
         return new OrderComparisonResult(
@@ -42,13 +43,13 @@ class CompareOrders
         );
     }
 
-    private function shipStationStatus(?ShipStationClientContract $client, string $orderNumber): ?string
+    private function shipStationStatus(Store $store, ?ShipStationClientContract $client, string $orderNumber): ?string
     {
         if ($client === null) {
             return null;
         }
 
-        $matches = $client->findByOrderNumber($orderNumber);
+        $matches = $this->findOrders->handle($store, $client, $orderNumber);
 
         if ($matches === []) {
             return 'Not found';

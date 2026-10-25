@@ -104,6 +104,7 @@ class OrderTimelineControllerTest extends TestCase
     {
         [$user, $store] = $this->makeUserAndStore([
             'shipstation_api_key' => 'key',
+            'store_number' => '42',
             'shipstation_api_secret' => 'secret',
         ]);
         $order = $this->order();
@@ -131,12 +132,16 @@ class OrderTimelineControllerTest extends TestCase
         $this->app->instance(ShopifyAdminGateway::class, $shopify);
 
         $shipStation = $this->createMock(ShipStationClientContract::class);
-        $shipStation->expects($this->once())->method('findByOrderNumber')->with('65075')->willReturn([[
+        $shipStation->expects($this->once())->method('findByOrderNumber')->with('65075', 42)->willReturn([[
             'orderId' => 99,
+            'orderNumber' => '65075',
+            'advancedOptions' => ['storeId' => 42],
             'orderStatus' => 'awaiting_shipment',
             'createDate' => '2026-06-02T10:00:00Z',
         ]]);
-        $shipStation->expects($this->once())->method('getOrderShipments')->with('65075')->willReturn([[
+        $shipStation->expects($this->once())->method('getOrderShipments')->with('65075', true)->willReturn([[
+            'orderId' => 99,
+            'shipmentId' => 1,
             'shipDate' => '2026-06-03T10:00:00Z',
             'carrierCode' => 'ups',
             'trackingNumber' => 'SS-TRACK',
@@ -214,6 +219,7 @@ class OrderTimelineControllerTest extends TestCase
         $otherStore = Store::factory()->create();
         $selectedStore = Store::factory()->create([
             'shipstation_api_key' => null,
+            'store_number' => '42',
             'shipstation_api_secret' => null,
         ]);
         $user->stores()->attach([$otherStore->getKey(), $selectedStore->getKey()]);
@@ -257,6 +263,7 @@ class OrderTimelineControllerTest extends TestCase
             'shopify_store' => 'acme',
             'shopify_access_token' => 'shopify-token',
             'shipstation_api_key' => null,
+            'store_number' => '42',
             'shipstation_api_secret' => null,
             ...$attributes,
         ]);

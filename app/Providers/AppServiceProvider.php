@@ -19,12 +19,15 @@ use App\Listeners\LogNotificationDelivery;
 use App\Models\AppSetting;
 use App\Models\User;
 use App\UserRole;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\SessionGuard;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Events\NotificationFailed;
 use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
@@ -32,6 +35,9 @@ use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\View\View as ViewContract;
+use Spatie\Backup\Events\BackupManifestWasCreated;
+use Spatie\Backup\Events\DumpingDatabase;
+use Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumAgeInDays;
 use Spatie\Health\Checks\Checks\BackupsCheck;
 use Spatie\Health\Checks\Checks\CacheCheck;
 use Spatie\Health\Checks\Checks\DatabaseCheck;
@@ -61,6 +67,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Event::listen([DumpingDatabase::class, BackupManifestWasCreated::class], function (): void {
+            if ($this->app->isProduction() && trim((string) config('backup.backup.password')) === '') {
+                throw new \RuntimeException('BACKUP_ARCHIVE_PASSWORD is required for production backups.');
+            }
+        });
+        Event::listen(Login::class, function (Login $event): void {
+            $guard = Auth::guard($event->guard);
+            if ($guard instanceof SessionGuard && request()->hasSession()) {
+                request()->session()->put('password_hash_'.$event->guard, $guard->hashPasswordForCookie($event->user->getAuthPassword()));
+            }
+        });
+
         Model::preventLazyLoading(! $this->app->isProduction());
 
         View::composer(['auth.login', 'auth.forgot-password', 'auth.reset-password', 'layouts.app', 'layouts.guest', 'admin.settings'], function (ViewContract $view): void {
@@ -83,7 +101,7 @@ class AppServiceProvider extends ServiceProvider
             BackupsCheck::new()
                 ->onDisk((string) config('backup.backup.destination.disks.0', 'backups'))
                 ->locatedAt((string) config('backup.backup.name'))
-                ->youngestBackShouldHaveBeenMadeBefore(now()->subDays((int) env('BACKUP_MAX_AGE_DAYS', 2))),
+                ->youngestBackShouldHaveBeenMadeBefore(now()->subDays((int) config('backup.monitor_backups.0.health_checks.'.MaximumAgeInDays::class, 2))),
             UsedDiskSpaceCheck::new()->warnWhenUsedSpaceIsAbovePercentage(80)->failWhenUsedSpaceIsAbovePercentage(90),
             ScheduleCheck::new()->heartbeatMaxAgeInMinutes(5),
             ScheduledTasksHealthCheck::new(),

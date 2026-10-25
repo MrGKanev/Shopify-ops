@@ -30,7 +30,7 @@ abstract class TestCase extends BaseTestCase
             if (! $authenticated || ! in_array('GET', $route->methods(), true) || str_contains($route->uri(), '{') || ! is_string($name)) {
                 continue;
             }
-            if ($name === 'command-palette' || str_ends_with($name, '.result')) {
+            if ($name === 'command-palette' || str_ends_with($name, '.result') || str_ends_with($name, '.export') || str_ends_with($name, '.template')) {
                 continue;
             }
             if (str_starts_with($action, 'App\\Http\\Controllers\\') || str_starts_with($action, 'Illuminate\\Routing\\ViewController')) {

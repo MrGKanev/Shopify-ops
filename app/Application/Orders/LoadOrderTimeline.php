@@ -17,6 +17,8 @@ class LoadOrderTimeline
         private readonly OrderTimelineBuilder $timelineBuilder,
         private readonly OrderTimelineRiskAnalyzer $riskAnalyzer,
         private readonly OrderRiskScorer $riskScorer,
+        private readonly FindStoreShipStationOrders $findOrders,
+        private readonly LoadStoreShipStationShipments $loadShipments,
     ) {}
 
     public function handle(Store $store, string $orderNumber): OrderTimelineResult
@@ -46,8 +48,8 @@ class LoadOrderTimeline
         $orderId = trim((string) ($order['admin_graphql_api_id'] ?? $order['id'] ?? ''));
         $events = $this->shopify->getOrderEvents($store, $orderId);
         $shipStation = $this->shipStationClients->forStore($store);
-        $shipStationOrders = $shipStation?->findByOrderNumber($orderNumber) ?? [];
-        $shipStationShipments = $shipStation?->getOrderShipments($orderNumber) ?? [];
+        $shipStationOrders = $shipStation === null ? [] : $this->findOrders->handle($store, $shipStation, $orderNumber);
+        $shipStationShipments = $shipStation === null ? [] : $this->loadShipments->handle($store, $shipStation, $orderNumber, $shipStationOrders);
         $shopifyIds = array_values(array_unique(array_filter([
             trim((string) ($order['id'] ?? '')),
             preg_match('~/([0-9]+)$~', $orderId, $matches) === 1 ? $matches[1] : null,

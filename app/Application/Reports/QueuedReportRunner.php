@@ -5,8 +5,11 @@ namespace App\Application\Reports;
 use App\Jobs\RunQueuedReport;
 use App\Models\ReportRun;
 use App\Models\Store;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Runs reports on the queue instead of inside the web request.
@@ -39,12 +42,21 @@ class QueuedReportRunner
         ?string $endDate = null,
     ): ReportRun {
         $hash = $this->hash($tool, $report, $arguments);
+        $selectedRun = $request->isMethod('GET') ? $request->query('report_run') : null;
+        if ($selectedRun !== null) {
+            $selectedId = filter_var($selectedRun, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            abort_if($selectedId === false, 404);
+
+            return $store->reportRuns()->where('tool', $tool)->where('report', $report)->where('status', 'completed')->whereKey($selectedId)->firstOrFail();
+        }
         $run = $request->isMethod('GET')
             ? $this->latest($store, $tool, $hash, now()->subHours(self::RESULT_LIFETIME_HOURS))
             : $this->latest($store, $tool, $hash, now()->subMinutes(self::PENDING_REUSE_MINUTES), pendingOnly: true);
 
         if ($run === null) {
+            abort_if($request->isMethod('GET'), 404);
             $run = $this->createRun($store, $tool, $report, $arguments, $startDate, $endDate, $request->user()?->getAuthIdentifier());
+            $run->forceFill(['parameters' => $request instanceof FormRequest ? $request->validated() : []])->save();
             RunQueuedReport::dispatch($run->getKey());
             $run->refresh();
         }
@@ -64,10 +76,19 @@ class QueuedReportRunner
      * @param list<mixed> $arguments */
     public function createRun(Store $store, string $tool, string $report, array $arguments, ?string $startDate, ?string $endDate, int|string|null $userId = null): ReportRun
     {
-        return $store->reportRuns()->create([
-            'user_id' => $userId, 'tool' => $tool, 'report' => $report, 'arguments' => $arguments,
-            'arguments_hash' => $this->hash($tool, $report, $arguments), 'start_date' => $startDate, 'end_date' => $endDate, 'status' => 'queued',
-        ]);
+        try {
+            return Cache::lock('report-dispatch:'.$store->getKey(), 10)->block(3, function () use ($store, $tool, $report, $arguments, $startDate, $endDate, $userId): ReportRun {
+                abort_if($store->reportRuns()->whereIn('status', ['queued', 'running'])->count() >= max(1, (int) config('security.report_pending_limit', 10)), 429);
+                abort_if($store->reportRuns()->where('created_at', '>=', now('UTC')->startOfDay())->count() >= max(1, (int) config('security.report_daily_limit', 500)), 429);
+
+                return $store->reportRuns()->create([
+                    'user_id' => $userId, 'tool' => $tool, 'report' => $report, 'arguments' => $arguments,
+                    'arguments_hash' => $this->hash($tool, $report, $arguments), 'start_date' => $startDate, 'end_date' => $endDate, 'status' => 'queued',
+                ]);
+            });
+        } catch (LockTimeoutException) {
+            abort(429);
+        }
     }
 
     /**
@@ -99,6 +120,12 @@ class QueuedReportRunner
      * @return ReportResult<array<string, mixed>>|null */
     public function completedResult(Store $store, string $tool, string $report, array $arguments): ?ReportResult
     {
+        if (($selectedRun = request()->input('report_run')) !== null) {
+            $selectedId = filter_var($selectedRun, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            abort_if($selectedId === false, 404);
+
+            return $store->reportRuns()->where('tool', $tool)->where('report', $report)->where('status', 'completed')->whereKey($selectedId)->firstOrFail()->result();
+        }
         $run = $this->latest($store, $tool, $this->hash($tool, $report, $arguments), now()->subHours(self::RESULT_LIFETIME_HOURS));
 
         return $run?->result();

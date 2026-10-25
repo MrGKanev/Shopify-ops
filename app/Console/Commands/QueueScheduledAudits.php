@@ -23,6 +23,7 @@ class QueueScheduledAudits extends Command
 
         Store::query()
             ->where('scheduled_audit_enabled', true)
+            ->whereDoesntHave('reportSchedules', fn ($query) => $query->where('tool', 'run_audit'))
             ->whereTime('scheduled_audit_time', $time)
             ->each(function (Store $store) use (&$queued): void {
                 if ($store->missingShopifyCredentials() || $store->missingShipStationCredentials()) {

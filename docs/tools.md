@@ -14,6 +14,9 @@ _Generated from the tool registry in [`config/reports.php`](../config/reports.ph
 | **Run Audit** | Compare Shopify vs ShipStation for any date range |
 | **Operational Digest** | Paid pending orders, sync findings, unresolved issues and upcoming fulfillment deadlines |
 | **Rate Shopping Audit** | Captured quote decisions and clearly labelled current-rate simulations under approved service conditions |
+| **Order arrivals and carrier acceptance** | Measured Shopify order creations and recorded carrier acceptance events, with explicit coverage |
+| **Shipment movement monitoring** | Bounded tracking cohort checks with verified access, shared UTC daily budget and fair rotation |
+| **Shipment movement check** | Manual carrier tracking checks for acceptance, stalled progress and exceptions |
 | **Trends** | Aggregated stats across all audit reports |
 
 ### Order Issues
@@ -61,6 +64,7 @@ _Generated from the tool registry in [`config/reports.php`](../config/reports.ph
 | Page | What it does |
 | --- | --- |
 | **Carrier Performance** | Avg delivery time, late rate, and order count grouped by carrier for a date range |
+| **Shipping Billing Audit** | Imported carrier charges, credits, disputes and expected label refunds |
 | **Financial Exceptions** | Manual Shopify Payments payout anomaly checks using included transactions and explicit thresholds |
 | **Order Contribution Margin** | Shopify-reported net revenue and historical product costs, payment fees and matched ShipStation labels, with explicit missing costs and currency coverage |
 | **Shipping Margin Erosion** | Orders where the ShipStation label cost exceeds what the customer was charged for shipping — flags orders shipped at a loss |

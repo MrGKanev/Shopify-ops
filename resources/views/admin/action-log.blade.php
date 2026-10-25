@@ -8,7 +8,7 @@
             <form class="flex flex-wrap items-end gap-3" method="GET">
                 <div class="flex flex-col gap-2">
                     <label class="text-sm font-medium" for="category">{{ __('Category') }}</label>
-                    <select class="rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="category" name="category" onchange="this.form.submit()">
+                    <select class="rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="category" name="category" data-submit-on-change>
                         <option value="administration" @selected($category === 'administration')>{{ __('Administration') }}</option>
                         <option value="operator" @selected($category === 'operator')>{{ __('Operator activity') }}</option>
                         <option value="all" @selected($category === 'all')>{{ __('All') }}</option>

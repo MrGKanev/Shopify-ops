@@ -46,9 +46,9 @@ class ReturnedItemsController extends ReportController
             return back()->withErrors(['export' => __('reports.export_failed')]);
         }
 
-        $rows = array_map(fn (array $row): array => [$row['product'], $row['quantity']], $result->rows);
+        $rows = array_map(fn (array $row): array => [$row['product'], $row['quantity'], $row['sku'] ?? '', implode('; ', $row['source_skus'] ?? [])], $result->rows);
 
-        return $csv->download("returned-items-{$startDate}-to-{$endDate}.csv", ['Product', 'Quantity'], $rows);
+        return $csv->download("returned-items-{$startDate}-to-{$endDate}.csv", ['Product', 'Quantity', 'Master SKU', 'Source SKUs'], $rows);
     }
 
     /** @return array{Store, string, string} */

@@ -1,0 +1,14 @@
+query ShopifyBacklogCandidates($after: String) {
+  fulfillmentOrders(first: 20, after: $after, includeClosed: false) {
+    pageInfo { hasNextPage endCursor }
+    edges { node {
+      id status
+      order { id name cancelledAt test presentmentCurrencyCode taxesIncluded }
+      lineItems(first: 10) {
+        pageInfo { hasNextPage endCursor }
+        nodes { id remainingQuantity totalQuantity requiresShipping
+          lineItem { id discountedUnitPriceAfterAllDiscountsSet { presentmentMoney { amount currencyCode } } } }
+      }
+    } }
+  }
+}

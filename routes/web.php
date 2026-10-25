@@ -14,8 +14,10 @@ use App\Http\Controllers\Admin\DiscordRulesController;
 use App\Http\Controllers\Admin\EmailRulesController;
 use App\Http\Controllers\Admin\HealthIncidentController;
 use App\Http\Controllers\Admin\OperationalHealthController;
+use App\Http\Controllers\Admin\ReportScheduleController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\ShipStationMonitoringController;
+use App\Http\Controllers\Admin\SkuAliasController;
 use App\Http\Controllers\Admin\SlackRulesController;
 use App\Http\Controllers\Admin\StoreController;
 use App\Http\Controllers\Admin\UserController;
@@ -52,10 +54,12 @@ use App\Http\Controllers\Reports\RunAuditController;
 use App\Http\Controllers\ReportTrendController;
 use App\Http\Controllers\RunLogController;
 use App\Http\Controllers\SavedReportController;
+use App\Http\Controllers\ShippingBillingController;
 use App\Http\Controllers\ShipStationWebhookController;
 use App\Http\Controllers\ShopifyWebhookController;
 use App\Http\Controllers\StatusController;
 use App\Http\Controllers\TwoFactorSettingsController;
+use App\Http\Middleware\EnsureInstallationAuthorized;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard');
@@ -65,8 +69,10 @@ Route::get('/metrics', MetricsController::class)->name('metrics');
 Route::post('/webhooks/shipstation/{store:slug}/{token}', ShipStationWebhookController::class)->middleware('throttle:120,1')->name('webhooks.shipstation');
 
 Route::post('/webhooks/shopify/{store:slug}', ShopifyWebhookController::class)->middleware('throttle:120,1')->name('webhooks.shopify');
-Route::get('/install', [InstallApplicationController::class, 'create'])->name('install.create');
-Route::post('/install', [InstallApplicationController::class, 'store'])->middleware('throttle:installation')->name('install.store');
+Route::middleware([EnsureInstallationAuthorized::class, 'throttle:installation'])->group(function (): void {
+    Route::get('/install', [InstallApplicationController::class, 'create'])->name('install.create');
+    Route::post('/install', [InstallApplicationController::class, 'store'])->name('install.store');
+});
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
@@ -83,7 +89,7 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::middleware('auth')->group(function (): void {
-    Route::get('/security/two-factor', TwoFactorSettingsController::class)->middleware('active.store')->name('two-factor.settings');
+    Route::get('/security/two-factor', TwoFactorSettingsController::class)->middleware(['active.store', 'password.confirm'])->name('two-factor.settings');
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::post('/stores/{store}/active', ActiveStoreController::class)->name('stores.active');
 
@@ -130,6 +136,14 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/issues', [OperationalIssueController::class, 'index'])->middleware('can:run-audits')->name('operational-issues.index');
         Route::put('/issues/{issue}', [OperationalIssueController::class, 'update'])->whereNumber('issue')->middleware('can:run-audits')->name('operational-issues.update');
         Route::get('/run-logs', RunLogController::class)->name('run-logs.index');
+        Route::middleware('can:run-audits')->group(function (): void {
+            Route::get('/shipping-billing', [ShippingBillingController::class, 'index'])->name('shipping-billing.index');
+            Route::get('/shipping-billing/export', [ShippingBillingController::class, 'export'])->name('shipping-billing.export');
+            Route::get('/shipping-billing/template', [ShippingBillingController::class, 'template'])->name('shipping-billing.template');
+            Route::post('/shipping-billing/preview', [ShippingBillingController::class, 'preview'])->middleware('throttle:audit-report')->name('shipping-billing.preview');
+            Route::post('/shipping-billing/import', [ShippingBillingController::class, 'store'])->middleware('throttle:audit-report')->name('shipping-billing.store');
+            Route::put('/shipping-billing/{entry}', [ShippingBillingController::class, 'update'])->whereNumber('entry')->name('shipping-billing.update');
+        });
         Route::get('/saved-reports', [SavedReportController::class, 'index'])->middleware('can:run-audits')->name('saved-reports.index');
         Route::get('/report-trends', ReportTrendController::class)->middleware('can:run-audits')->name('report-trends.index');
         Route::get('/saved-reports/{report}', [SavedReportController::class, 'show'])->whereNumber('report')->middleware('can:run-audits')->name('saved-reports.show');
@@ -139,8 +153,8 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/print-queue', [PrintQueueController::class, 'store'])->middleware('can:run-audits')->name('print-queue.store');
         Route::delete('/print-queue', [PrintQueueController::class, 'clear'])->middleware('can:run-audits')->name('print-queue.clear');
         Route::delete('/print-queue/{item}', [PrintQueueController::class, 'destroy'])->whereNumber('item')->middleware('can:run-audits')->name('print-queue.destroy');
-        Route::post('/jobs/failed/{uuid}/retry', [JobQueueController::class, 'retry'])->middleware('can:run-audits')->name('jobs.retry');
-        Route::delete('/jobs/failed/{uuid}', [JobQueueController::class, 'destroy'])->middleware('can:run-audits')->name('jobs.destroy');
+        Route::post('/jobs/failed/{uuid}/retry', [JobQueueController::class, 'retry'])->middleware('can:manage-administration')->name('jobs.retry');
+        Route::delete('/jobs/failed/{uuid}', [JobQueueController::class, 'destroy'])->middleware('can:manage-administration')->name('jobs.destroy');
         Route::middleware('can:run-audits')->group(function (): void {
             Route::get('/reports/rate-shopping', [RateShoppingController::class, 'create'])->name('reports.rate-shopping');
             Route::post('/reports/rate-shopping', [RateShoppingController::class, 'store'])->middleware('throttle:audit-report')->name('reports.rate-shopping.store');
@@ -173,6 +187,16 @@ Route::middleware('auth')->group(function (): void {
             ->group(function (): void {
                 Route::get('/api-health', [ApiHealthController::class, 'show'])->name('api-health');
                 Route::get('/settings', SettingsController::class)->name('settings');
+                Route::get('/sku-aliases', [SkuAliasController::class, 'edit'])->name('sku-aliases.edit');
+                Route::put('/sku-aliases', [SkuAliasController::class, 'update'])->name('sku-aliases.update');
+                Route::get('/report-schedules', [ReportScheduleController::class, 'index'])->name('report-schedules.index');
+                Route::get('/report-schedules/create', [ReportScheduleController::class, 'create'])->name('report-schedules.create');
+                Route::post('/report-schedules', [ReportScheduleController::class, 'store'])->name('report-schedules.store');
+                Route::get('/report-schedules/{schedule}/edit', [ReportScheduleController::class, 'edit'])->whereNumber('schedule')->name('report-schedules.edit');
+                Route::put('/report-schedules/{schedule}', [ReportScheduleController::class, 'update'])->whereNumber('schedule')->name('report-schedules.update');
+                Route::post('/report-schedules/{schedule}/toggle', [ReportScheduleController::class, 'toggle'])->whereNumber('schedule')->name('report-schedules.toggle');
+                Route::post('/report-schedules/{schedule}/run', [ReportScheduleController::class, 'run'])->whereNumber('schedule')->middleware('throttle:audit-report')->name('report-schedules.run');
+                Route::get('/report-schedules/{schedule}/runs/{run}', [ReportScheduleController::class, 'result'])->whereNumber(['schedule', 'run'])->name('report-schedules.result');
                 Route::put('/appearance', [AppearanceSettingsController::class, 'update'])->name('appearance.update');
                 Route::get('/config-check', ConfigCheckController::class)->name('config-check');
                 Route::post('/stores/{store}/shipstation-monitoring', ShipStationMonitoringController::class)->middleware('throttle:api-health')->name('stores.shipstation-monitoring');

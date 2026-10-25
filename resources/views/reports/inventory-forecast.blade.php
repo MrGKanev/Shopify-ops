@@ -39,10 +39,13 @@
                     </x-alert>
                 @endif
 
+                @if (! empty($result->meta['aliasConflicts']))
+                    <x-alert tone="warn">{{ __('Forecast excluded mapped SKUs with missing or ambiguous master inventory:') }} {{ implode(', ', $result->meta['aliasConflicts']) }}</x-alert>
+                @endif
                 <x-data-table :headers="['SKU', 'Product / variant', 'Stock', 'Sold', 'Daily rate', 'Days to zero']" :rows="$result->rows" empty="No stock-out risk was detected.">
                     @foreach ($result->rows as $row)
                         <tr class="{{ $row['days_to_zero'] !== null && $row['days_to_zero'] < 7 ? 'bg-red-50 dark:bg-red-950/30' : ($row['days_to_zero'] !== null && $row['days_to_zero'] < 14 ? 'bg-amber-50 dark:bg-amber-950/30' : '') }}">
-                            <td class="px-4 py-3 font-mono">{{ $row['sku'] ?: '—' }}</td>
+                            <td class="px-4 py-3 font-mono">{{ $row['sku'] ?: '—' }}@if (! empty($row['source_skus']))<div class="text-xs text-slate-500">{{ __('Source SKUs') }}: {{ implode('; ', $row['source_skus']) }}</div>@endif</td>
                             <td class="px-4 py-3">
                                 <x-report.shopify-link resource="products" :id="$row['product_id']" class="font-semibold">{{ $row['product_title'] ?: __('Untitled product') }}</x-report.shopify-link>
                                 <div class="text-slate-500">{{ $row['variant_title'] ?: __('Default') }}</div>

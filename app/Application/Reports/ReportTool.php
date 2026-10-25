@@ -14,6 +14,7 @@ final readonly class ReportTool
 {
     /**
      * @param  class-string|null  $controller
+     * @param  class-string|null  $scheduleAction
      * @param  list<Integration>  $requires
      */
     public function __construct(
@@ -27,10 +28,11 @@ final readonly class ReportTool
         public array $requires = [],
         public ?string $catalogLabel = null,
         public bool $customRoutes = false,
+        public ?string $scheduleAction = null,
     ) {}
 
     /**
-     * @param  array{slug?: string, route?: string, label: string, catalog_label?: string, section?: string|null, description: string, controller?: class-string, requires?: list<Integration>, custom_routes?: bool}  $definition
+     * @param  array{slug?: string, route?: string, label: string, catalog_label?: string, section?: string|null, description: string, controller?: class-string, requires?: list<Integration>, custom_routes?: bool, schedule_action?: class-string}  $definition
      */
     public static function fromArray(string $key, array $definition): self
     {
@@ -47,6 +49,7 @@ final readonly class ReportTool
             requires: $definition['requires'] ?? [],
             catalogLabel: $definition['catalog_label'] ?? null,
             customRoutes: $definition['custom_routes'] ?? false,
+            scheduleAction: $definition['schedule_action'] ?? null,
         );
     }
 

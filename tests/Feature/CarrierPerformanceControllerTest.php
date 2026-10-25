@@ -22,9 +22,10 @@ class CarrierPerformanceControllerTest extends TestCase
         [$operator] = $this->userWithStore(true, ['shipstation_api_key' => '']);
         $this->actingAs($operator)->post('/reports/carrier-performance', ['start_date' => '2026-06-01', 'end_date' => '2026-06-30'])->assertOk()->assertSeeText('credentials are incomplete');
 
-        [$operator] = $this->userWithStore(true);
+        [$operator, $store] = $this->userWithStore(true);
         $client = Mockery::mock(ShipStationClientContract::class);
-        $client->shouldReceive('fetchShipmentsByDate')->once()->with('2026-06-01', '2026-06-30')->andReturn([['carrierCode' => '<script>', 'shipDate' => '2026-06-01', 'deliveryDate' => '2026-06-03']]);
+        $client->shouldReceive('fetchShipmentsByDate')->once()->with('2026-06-01', '2026-06-30', (int) $store->store_number)->andReturn([['shipmentId' => 1, 'orderId' => 1, 'orderNumber' => '1001', 'carrierCode' => '<script>', 'shipDate' => '2026-06-01', 'deliveryDate' => '2026-06-03']]);
+        $client->shouldReceive('getOrder')->once()->with(1)->andReturn(['orderId' => 1, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => (int) $store->store_number]]);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->once()->andReturn($client);
         $this->app->instance(ShipStationClientFactory::class, $factory);

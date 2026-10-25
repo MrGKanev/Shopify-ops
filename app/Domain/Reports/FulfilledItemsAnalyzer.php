@@ -6,13 +6,15 @@ class FulfilledItemsAnalyzer
 {
     /**
      * @param  list<array<string, mixed>>  $orders
-     * @return list<array{product: string, quantity: int}>
+     * @param  list<array{alias: string, master: string}>  $aliases
+     * @return list<array<string, mixed>>
      */
-    public function analyze(array $orders, string $startDate, string $endDate): array
+    public function analyze(array $orders, string $startDate, string $endDate, array $aliases = []): array
     {
         $start = $startDate.'T00:00:00Z';
         $end = $endDate.'T23:59:59Z';
         $totals = [];
+        $skuMap = new SkuAliasMap($aliases);
 
         foreach ($orders as $order) {
             foreach (is_array($order['fulfillments'] ?? null) ? $order['fulfillments'] : [] as $fulfillment) {
@@ -26,14 +28,14 @@ class FulfilledItemsAnalyzer
                     $title = trim(is_scalar($item['title'] ?? null) ? (string) $item['title'] : '');
                     $variant = trim(is_scalar($item['variant_title'] ?? null) ? (string) $item['variant_title'] : '');
                     $product = trim($title.($variant !== '' && $variant !== 'Default Title' ? ' '.$variant : ''));
-                    if ($product !== '') {
-                        $totals[$product] = ($totals[$product] ?? 0) + (is_numeric($item['quantity'] ?? null) ? (int) $item['quantity'] : 0);
+                    $sku = trim(is_scalar($item['sku'] ?? null) ? (string) $item['sku'] : '');
+                    if ($product !== '' || $sku !== '') {
+                        $skuMap->add($totals, $product, $sku, is_numeric($item['quantity'] ?? null) ? (int) $item['quantity'] : 0);
                     }
                 }
             }
         }
-        ksort($totals);
 
-        return array_map(fn (string $product, int $quantity): array => compact('product', 'quantity'), array_keys($totals), array_values($totals));
+        return $skuMap->rows($totals);
     }
 }

@@ -12,6 +12,11 @@
     'pages' => null,
 ])
 <section {{ $attributes->merge(['class' => 'flex flex-col gap-4']) }}>
+    @can('manage-administration')
+        @if ($sourceRun = request()->attributes->get('scheduleSourceRun'))
+            <div><x-button variant="ghost" :href="route('admin.report-schedules.create', ['source_run_id' => $sourceRun->id])">{{ __('Schedule with these filters') }}</x-button></div>
+        @endif
+    @endcan
     @if (isset($heading) || $exportRoute)
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -23,6 +28,7 @@
             @if ($exportRoute)
                 <form method="POST" action="{{ route($exportRoute) }}">
                     @csrf
+                    @if (request()->query('report_run'))<input type="hidden" name="report_run" value="{{ request()->query('report_run') }}">@endif
                     @foreach ($exportParams as $name => $value)
                         @continue($value === null)
                         <input type="hidden" name="{{ $name }}" value="{{ is_bool($value) ? (int) $value : $value }}">

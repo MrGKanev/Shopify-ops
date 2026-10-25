@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -10,9 +11,35 @@ class ReportTrendController extends Controller
     public function __invoke(Request $request): View
     {
         $validated = $request->validate(['start_date' => ['nullable', 'date_format:Y-m-d'], 'end_date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:start_date']]);
-        $start = (string) ($validated['start_date'] ?? now()->subDays(30)->toDateString());
-        $end = (string) ($validated['end_date'] ?? now()->toDateString());
         $store = $this->resolveStore($request);
+        $today = CarbonImmutable::now($store->shopTimezone());
+        $start = (string) ($validated['start_date'] ?? $today->subDays(30)->toDateString());
+        $end = (string) ($validated['end_date'] ?? $today->toDateString());
+        $backlogHistory = $store->auditSnapshots()->where('tool', 'shipment_backlog')->whereDate('report_date', '>=', CarbonImmutable::parse($start)->subWeek()->toDateString())->whereDate('report_date', '<=', $end)->oldest('report_date')->get();
+        $backlogByDate = $backlogHistory->keyBy(fn ($snapshot): string => $snapshot->report_date->toDateString());
+        $backlogRows = [];
+        foreach ($backlogHistory as $snapshot) {
+            $date = $snapshot->report_date->toDateString();
+            if ($date < $start) {
+                continue;
+            }
+            $previousWeek = $backlogByDate->get($snapshot->report_date->copy()->subWeek()->toDateString());
+            $backlogRows[] = ['id' => $snapshot->getKey(), 'date' => $date, 'total' => $snapshot->rows_found, 'weekly_delta' => $previousWeek === null ? null : $snapshot->rows_found - $previousWeek->rows_found, ...$snapshot->result];
+        }
+        $shopifyHistory = $store->auditSnapshots()->where('tool', 'shopify_backlog')->whereDate('report_date', '>=', CarbonImmutable::parse($start)->subWeek()->toDateString())->whereDate('report_date', '<=', $end)->oldest('report_date')->get();
+        $shopifyByDate = $shopifyHistory->keyBy(fn ($snapshot): string => $snapshot->report_date->toDateString());
+        $shopifyBacklogRows = [];
+        foreach ($shopifyHistory as $snapshot) {
+            $date = $snapshot->report_date->toDateString();
+            if ($date < $start) {
+                continue;
+            }
+            $data = $snapshot->result;
+            $previous = $shopifyByDate->get($snapshot->report_date->copy()->subWeek()->toDateString());
+            $comparable = isset($data['account_fingerprint'], $data['scopes'], $data['timezone']) && $previous !== null && ($previous->result['account_fingerprint'] ?? null) === $data['account_fingerprint']
+                && ($previous->result['scopes'] ?? null) === $data['scopes'] && ($previous->result['timezone'] ?? null) === $data['timezone'];
+            $shopifyBacklogRows[] = ['id' => $snapshot->getKey(), 'date' => $date, ...$data, 'weekly_units_delta' => $comparable ? $data['remaining_units'] - $previous->result['remaining_units'] : null];
+        }
         $snapshots = $store->auditSnapshots()->where('tool', 'run_audit')->whereDate('report_date', '>=', $start)->whereDate('report_date', '<=', $end)->oldest('report_date')->get();
         $rows = [];
         $previous = null;
@@ -41,6 +68,6 @@ class ReportTrendController extends Controller
         $uniqueMissingCount = count($missingCounts);
         $repeatOffenders = collect($missingCounts)->filter(fn (int $count): bool => $count >= 2)->map(fn (int $count, string $number): array => ['number' => $number, 'count' => $count])->values()->all();
 
-        return view('saved-reports.trends', compact('rows', 'maximum', 'avgMissing', 'clearReportCount', 'worstReport', 'uniqueMissingCount', 'repeatOffenders') + ['startDate' => $start, 'endDate' => $end]);
+        return view('saved-reports.trends', compact('rows', 'maximum', 'avgMissing', 'clearReportCount', 'worstReport', 'uniqueMissingCount', 'repeatOffenders', 'backlogRows', 'shopifyBacklogRows') + ['startDate' => $start, 'endDate' => $end]);
     }
 }

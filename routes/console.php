@@ -31,6 +31,7 @@ Schedule::command('backup:clean')->dailyAt('03:30')->withoutOverlapping();
 Schedule::command('backup:verify-latest')->weeklyOn(0, '03:00')->withoutOverlapping()->onOneServer();
 Schedule::command('reports:email-digest')->dailyAt('08:00')->withoutOverlapping();
 Schedule::command('reports:queue-scheduled-audits')->everyMinute()->withoutOverlapping()->onOneServer();
+Schedule::command('reports:queue-scheduled-reports')->everyMinute()->withoutOverlapping()->onOneServer();
 Schedule::command('operations:detect-anomalies')->hourlyAt(10)->withoutOverlapping()->onOneServer();
 Schedule::command('operations:detect-delivery-exceptions')->dailyAt('07:10')->withoutOverlapping()->onOneServer();
 

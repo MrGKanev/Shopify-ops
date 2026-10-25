@@ -23,7 +23,7 @@ class OperationalIssueController extends Controller
             ->when(IssueStatus::tryFrom($status) !== null, fn ($query) => $query->where('status', $status))
             ->when($mine, fn ($query) => $query->where('owner_user_id', $this->authenticatedUser($request)->getKey()))
             ->when($overdue, fn ($query) => $query->whereIn('status', IssueStatus::active())->whereNotNull('due_date')->whereDate('due_date', '<', today()))
-            ->when($source === 'delivery_watch', fn ($query) => $query->where('source_tool', $source))
+            ->when($source === 'delivery_watch', fn ($query) => $query->whereIn('source_tool', ['delivery_watch', 'shipment_movement']))
             ->orderByRaw("case priority when 'urgent' then 1 when 'high' then 2 when 'normal' then 3 else 4 end")
             ->latest('last_seen_at')
             ->paginate(50)

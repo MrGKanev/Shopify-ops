@@ -88,6 +88,7 @@ class OrderLookupControllerTest extends TestCase
             'https://ssapi.shipstation.com/orders*' => Http::response([
                 'orders' => [[
                     'orderId' => 42,
+                    'advancedOptions' => ['storeId' => 42],
                     'orderNumber' => '65075',
                     'orderStatus' => 'awaiting_shipment',
                     'customerEmail' => '<script>alert("ss")</script>',
@@ -98,6 +99,7 @@ class OrderLookupControllerTest extends TestCase
             'https://ssapi.shipstation.com/shipments*' => Http::response([
                 'shipments' => [[
                     'shipmentId' => 91,
+                    'orderId' => 42,
                     'carrierCode' => 'ups',
                     'trackingNumber' => '<script>alert("tracking")</script>',
                 ]],
@@ -336,7 +338,7 @@ class OrderLookupControllerTest extends TestCase
             ->assertSeeText('No ShipStation order found.')
             ->assertSeeText('Comparison unavailable because the order was not found in Shopify.')
             ->assertDontSee('The order lookup could not be completed.');
-        Http::assertSentCount(3);
+        Http::assertSentCount(2);
     }
 
     public function test_missing_shipstation_order_is_a_valid_comparison_state(): void
@@ -360,7 +362,7 @@ class OrderLookupControllerTest extends TestCase
             ->assertOk()
             ->assertSeeText('Comparison unavailable because the order was not found in ShipStation.')
             ->assertDontSee('The order lookup could not be completed.');
-        Http::assertSentCount(3);
+        Http::assertSentCount(2);
     }
 
     public function test_incomplete_shipstation_credentials_return_a_safe_error(): void
@@ -417,6 +419,7 @@ class OrderLookupControllerTest extends TestCase
             'shopify_access_token' => 'shopify-active-token',
             'shipstation_api_key' => 'shipstation-active-key',
             'shipstation_api_secret' => 'shipstation-active-secret',
+            'store_number' => '42',
             ...$storeAttributes,
         ]);
         $user->stores()->attach($store);
@@ -482,6 +485,7 @@ class OrderLookupControllerTest extends TestCase
     {
         return [
             'orderId' => 42,
+            'advancedOptions' => ['storeId' => 42],
             'orderNumber' => '65075',
             'orderStatus' => 'shipped',
             'customerEmail' => 'buyer@example.com',

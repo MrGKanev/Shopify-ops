@@ -53,7 +53,7 @@
             <pre id="push-preview-output" class="hidden overflow-x-auto rounded-lg bg-slate-50 p-3 text-xs dark:bg-slate-950"></pre>
         </section>
 
-        <script>
+        <script @cspNonce>
             document.getElementById('push-preview-btn')?.addEventListener('click', async () => {
                 const form = document.getElementById('push-form');
                 const output = document.getElementById('push-preview-output');

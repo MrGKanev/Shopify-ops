@@ -25,7 +25,7 @@ final class ReportRegistry
     public function __construct(private readonly array $definitions)
     {
         foreach ($definitions['tools'] as $key => $definition) {
-            /** @var array{slug?: string, route?: string, label: string, catalog_label?: string, section?: string|null, description: string, controller?: class-string, requires?: list<Integration>, custom_routes?: bool} $definition */
+            /** @var array{slug?: string, route?: string, label: string, catalog_label?: string, section?: string|null, description: string, controller?: class-string, requires?: list<Integration>, custom_routes?: bool, schedule_action?: class-string} $definition */
             $this->tools[$key] = ReportTool::fromArray($key, $definition);
         }
     }

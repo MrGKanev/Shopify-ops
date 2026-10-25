@@ -23,6 +23,33 @@ class QueuedReportRunTest extends TestCase
 
     private const array INPUT = ['start_date' => '2026-06-01', 'end_date' => '2026-06-30'];
 
+    public function test_get_result_never_creates_or_dispatches_reports(): void
+    {
+        Queue::fake([RunQueuedReport::class]);
+        [$operator] = $this->userWithStore(true);
+        $this->actingAs($operator);
+        for ($day = 1; $day <= 15; $day++) {
+            $date = sprintf('2026-06-%02d', $day);
+            $this->get(route('reports.on-hold-stall.result', ['start_date' => $date, 'end_date' => $date]))->assertNotFound();
+        }
+        $this->assertDatabaseCount('report_runs', 0);
+        Queue::assertNothingPushed();
+    }
+
+    public function test_store_pending_and_daily_report_budgets_are_enforced(): void
+    {
+        Queue::fake([RunQueuedReport::class]);
+        config(['security.report_pending_limit' => 1, 'security.report_daily_limit' => 1]);
+        [$operator] = $this->userWithStore(true);
+        $this->actingAs($operator)->post(route('reports.on-hold-stall.store'), self::INPUT)->assertRedirect();
+        $otherInput = ['start_date' => '2026-06-02', 'end_date' => '2026-06-03'];
+        $this->post(route('reports.on-hold-stall.store'), $otherInput)->assertTooManyRequests();
+        ReportRun::query()->sole()->update(['status' => 'completed']);
+        $this->post(route('reports.on-hold-stall.store'), $otherInput)->assertTooManyRequests();
+        $this->assertDatabaseCount('report_runs', 1);
+        Queue::assertPushed(RunQueuedReport::class, 1);
+    }
+
     public function test_a_submitted_report_runs_on_the_queue_and_its_result_url_waits_then_shows_the_result(): void
     {
         Queue::fake();
@@ -82,10 +109,9 @@ class QueuedReportRunTest extends TestCase
         $this->assertStringNotContainsString('legacyResourceId', (string) ReportRun::query()->sole()->getRawOriginal('result'), 'Results are stored encrypted.');
 
         [$otherOperator] = $this->userWithStore(true);
-        $this->fakeShopify(times: 1);
-        $this->actingAs($otherOperator)->get(route('reports.on-hold-stall.result', self::INPUT))->assertOk();
+        $this->actingAs($otherOperator)->get(route('reports.on-hold-stall.result', self::INPUT))->assertNotFound();
 
-        $this->assertSame(2, ReportRun::query()->count(), 'Another store never reuses this store\'s run.');
+        $this->assertSame(1, ReportRun::query()->count(), 'A GET cannot create a run or reuse another store’s run.');
         $this->assertSame(1, $ownerStore->reportRuns()->count());
     }
 

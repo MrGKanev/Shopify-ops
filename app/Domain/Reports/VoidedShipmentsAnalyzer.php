@@ -18,7 +18,7 @@ class VoidedShipmentsAnalyzer
             $address = is_array($shipment['shipTo'] ?? null) ? $shipment['shipTo'] : [];
 
             return [
-                'order_number' => $this->text($shipment['orderNumber'] ?? ''), 'shipment_id' => $shipment['shipmentId'] ?? '',
+                'order_number' => $this->text($shipment['orderNumber'] ?? ''), 'shipment_id' => $shipment['shipmentId'] ?? '', 'ss_order_id' => $this->text($shipment['orderId'] ?? ''),
                 'tracking' => $this->text($shipment['trackingNumber'] ?? ''), 'carrier' => $this->text($shipment['carrierCode'] ?? ''),
                 'service' => $this->text($shipment['serviceCode'] ?? ''), 'ship_date' => substr($this->text($shipment['shipDate'] ?? ''), 0, 10),
                 'void_date' => substr($this->text($shipment['voidDate'] ?? ''), 0, 10), 'ship_to_name' => $this->text($address['name'] ?? ''),

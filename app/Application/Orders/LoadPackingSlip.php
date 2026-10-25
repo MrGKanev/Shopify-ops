@@ -9,7 +9,7 @@ use LogicException;
 
 class LoadPackingSlip
 {
-    public function __construct(private readonly ShipStationClientFactory $clients, private readonly PackingSlipBuilder $builder) {}
+    public function __construct(private readonly ShipStationClientFactory $clients, private readonly PackingSlipBuilder $builder, private readonly FindStoreShipStationOrders $findOrders) {}
 
     /** @return array{status: string, slip: array<string, mixed>|null} */
     public function handle(Store $store, string $number): array
@@ -18,7 +18,7 @@ class LoadPackingSlip
         if ($client === null) {
             throw new LogicException('ShipStation is not configured for this store.');
         }
-        $matches = array_values(array_filter($client->findByOrderNumber($number), fn (array $order): bool => trim((string) ($order['orderNumber'] ?? '')) === $number));
+        $matches = $this->findOrders->handle($store, $client, $number);
 
         return match (count($matches)) {
             0 => ['status' => 'not_found', 'slip' => null],

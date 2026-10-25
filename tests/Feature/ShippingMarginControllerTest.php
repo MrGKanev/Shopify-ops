@@ -23,9 +23,10 @@ class ShippingMarginControllerTest extends TestCase
         [$operator] = $this->userWithStore(true, ['shipstation_api_secret' => '']);
         $this->actingAs($operator)->post('/reports/shipping-margin', $this->input())->assertOk()->assertSeeText('credentials are incomplete');
 
-        [$operator] = $this->userWithStore(true);
+        [$operator, $store] = $this->userWithStore(true);
         $client = Mockery::mock(ShipStationClientContract::class);
-        $client->shouldReceive('fetchShipmentsByDate')->andReturn([['orderId' => 1, 'orderNumber' => '1001', 'shipDate' => '2026-06-10', 'carrierCode' => '<script>', 'shipmentCost' => 40, 'insuranceCost' => 0, 'voided' => false]]);
+        $client->shouldReceive('fetchShipmentsByDate')->andReturn([['shipmentId' => 1, 'orderId' => 1, 'orderNumber' => '1001', 'shipDate' => '2026-06-10', 'carrierCode' => '<script>', 'shipmentCost' => 40, 'insuranceCost' => 0, 'voided' => false]]);
+        $client->shouldReceive('getOrder')->with(1)->andReturn(['orderId' => 1, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => (int) $store->store_number]]);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->andReturn($client);
         $shopify = Mockery::mock(ShopifyOrders::class);
@@ -42,9 +43,10 @@ class ShippingMarginControllerTest extends TestCase
 
     public function test_operator_can_download_formula_safe_csv(): void
     {
-        [$operator] = $this->userWithStore(true);
+        [$operator, $store] = $this->userWithStore(true);
         $client = Mockery::mock(ShipStationClientContract::class);
-        $client->shouldReceive('fetchShipmentsByDate')->andReturn([['orderNumber' => '1001', 'carrierCode' => '=bad', 'shipmentCost' => 40, 'voided' => false]]);
+        $client->shouldReceive('fetchShipmentsByDate')->andReturn([['shipmentId' => 1, 'orderId' => 1, 'orderNumber' => '1001', 'carrierCode' => '=bad', 'shipmentCost' => 40, 'voided' => false]]);
+        $client->shouldReceive('getOrder')->with(1)->andReturn(['orderId' => 1, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => (int) $store->store_number]]);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->andReturn($client);
         $shopify = Mockery::mock(ShopifyOrders::class);

@@ -45,6 +45,7 @@ class ConfigCheckControllerTest extends TestCase
 
     public function test_contract_allows_production_without_a_reverse_proxy(): void
     {
+        config(['backup.backup.password' => 'synthetic-backup-password', 'filesystems.disks.backups.root' => '/mnt/offsite/backups']);
         $store = Store::factory()->create();
         config(['app.env' => 'production', 'app.debug' => false, 'app.url' => 'https://ops.example.com', 'security.trusted_proxies' => [], 'security.hsts' => true, 'session.secure' => true, 'cache.default' => 'redis', 'cache.prefix' => 'shopify_ops_prod:', 'queue.default' => 'redis']);
 
@@ -52,6 +53,17 @@ class ConfigCheckControllerTest extends TestCase
 
         $this->assertTrue($results['Application']['ok']);
         $this->assertEmpty($results['Application']['issues']);
+    }
+
+    public function test_production_configuration_identifies_missing_backup_encryption_and_offsite_storage(): void
+    {
+        config(['app.env' => 'production', 'backup.backup.password' => null, 'filesystems.disks.backups.root' => storage_path('app/backups'), 'backup.backup.destination.disks' => ['backups']]);
+        $store = Store::factory()->create();
+
+        $application = collect(app(CheckConfiguration::class)->handle($store))->keyBy('name')['Application'];
+
+        $this->assertContains('BACKUP_ARCHIVE_PASSWORD must be set in production.', $application['issues']);
+        $this->assertContains('An offsite backup destination must be configured and tested.', $application['issues']);
     }
 
     public function test_contract_reports_healthy_mail_and_configured_notification_channels(): void

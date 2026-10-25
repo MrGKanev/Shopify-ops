@@ -9,6 +9,18 @@ use Tests\TestCase;
 
 class RedactLogContextTest extends TestCase
 {
+    public function test_webhook_and_password_reset_credentials_are_redacted_from_messages_and_exceptions(): void
+    {
+        $url = 'https://example.test/webhooks/shipstation/store/synthetic-credential';
+        $record = new LogRecord(now()->toDateTimeImmutable(), 'test', Level::Warning,
+            'Request failed '.$url, ['exception' => new \RuntimeException('GET /reset-password/reset-credential')]);
+
+        $redacted = (new RedactLogContext)->redact($record);
+
+        $this->assertStringNotContainsString('synthetic-credential', $redacted->message);
+        $this->assertStringNotContainsString('reset-credential', json_encode($redacted->context));
+    }
+
     public function test_sensitive_context_is_filtered_and_urls_lose_query_strings(): void
     {
         $record = new LogRecord(now()->toDateTimeImmutable(), 'test', Level::Warning, 'Failed', [

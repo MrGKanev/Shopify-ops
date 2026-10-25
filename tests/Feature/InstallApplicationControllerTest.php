@@ -6,6 +6,8 @@ use App\Models\Store;
 use App\Models\User;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Schema;
+use RuntimeException;
 use Tests\TestCase;
 
 class InstallApplicationControllerTest extends TestCase
@@ -17,6 +19,9 @@ class InstallApplicationControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        config()->set('security.installation_token', 'test-setup-token');
+        $this->withBasicAuth('setup', 'test-setup-token');
 
         $this->environmentPath = storage_path('framework/testing/installer-'.bin2hex(random_bytes(8)));
         app(Filesystem::class)->ensureDirectoryExists($this->environmentPath);
@@ -38,6 +43,58 @@ class InstallApplicationControllerTest extends TestCase
             ->assertOk()
             ->assertViewIs('install.create')
             ->assertSeeText('Set up your application');
+    }
+
+    public function test_web_installation_is_disabled_without_a_configured_setup_secret(): void
+    {
+        config()->set('security.installation_token', '');
+        $this->get(route('install.create'))->assertNotFound();
+        $this->post(route('install.store'), $this->installationPayload())->assertNotFound();
+        $this->assertFileDoesNotExist(app()->environmentFilePath());
+        $this->assertDatabaseCount('users', 0);
+    }
+
+    public function test_setup_secret_is_required_for_both_form_and_submission(): void
+    {
+        $this->withBasicAuth('setup', 'incorrect-secret');
+        $this->get(route('install.create'))->assertUnauthorized();
+        $this->post(route('install.store'), $this->installationPayload())->assertUnauthorized();
+        $this->assertFileDoesNotExist(app()->environmentFilePath());
+        $this->assertDatabaseCount('users', 0);
+    }
+
+    public function test_database_failure_does_not_reopen_the_installer(): void
+    {
+        Schema::shouldReceive('hasTable')->with('users')->twice()->andThrow(new RuntimeException('Database unavailable'));
+        $this->get(route('install.create'))->assertNotFound();
+        $this->post(route('install.store'), $this->installationPayload())->assertNotFound();
+        $this->assertFileDoesNotExist(app()->environmentFilePath());
+    }
+
+    public function test_installation_marker_keeps_setup_closed_even_when_database_is_empty(): void
+    {
+        app(Filesystem::class)->put($this->environmentPath.'/.installed', 'installed');
+        $this->get(route('install.create'))->assertNotFound();
+        $this->post(route('install.store'), $this->installationPayload())->assertNotFound();
+        $this->assertDatabaseCount('users', 0);
+        $this->assertFileDoesNotExist(app()->environmentFilePath());
+    }
+
+    public function test_another_installation_cannot_change_configuration_while_setup_is_running(): void
+    {
+        $lock = fopen($this->environmentPath.'/.installation.lock', 'c');
+        $this->assertIsResource($lock);
+        $this->assertTrue(flock($lock, LOCK_EX | LOCK_NB));
+
+        try {
+            $this->from(route('install.create'))->post(route('install.store'), $this->installationPayload())
+                ->assertRedirect(route('install.create'))->assertSessionHasErrors('installation');
+            $this->assertFileDoesNotExist(app()->environmentFilePath());
+            $this->assertDatabaseCount('users', 0);
+        } finally {
+            flock($lock, LOCK_UN);
+            fclose($lock);
+        }
     }
 
     public function test_installation_creates_the_administrator_and_first_store_then_locks_the_installer(): void
@@ -63,6 +120,7 @@ class InstallApplicationControllerTest extends TestCase
             'store_id' => Store::query()->sole()->id,
         ]);
         $this->assertStringContainsString('DB_CONNECTION=sqlite', app(Filesystem::class)->get(app()->environmentFilePath()));
+        $this->assertFileExists($this->environmentPath.'/.installed');
 
         $this->get(route('install.create'))->assertNotFound();
     }

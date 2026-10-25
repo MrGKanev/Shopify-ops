@@ -16,6 +16,45 @@ class RestoreBackupArchiveTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
+    public function test_encrypted_full_backup_restores_database_and_files(): void
+    {
+        User::factory()->create();
+        Storage::fake('backups');
+        Storage::fake('local');
+        config()->set('backup.backup.password', 'test-archive-password');
+        $path = $this->createZip('encrypted.zip', [
+            'db-dumps/sqlite.sql' => 'DELETE FROM users;',
+            'storage/app/private/report.csv' => 'private report contents',
+        ], 'test-archive-password');
+
+        $result = app(RestoreBackupArchive::class)->handle($path);
+
+        $this->assertDatabaseCount('users', 0);
+        $this->assertSame(1, $result['restored_files']);
+        $this->assertSame('private report contents', Storage::disk('local')->get('report.csv'));
+    }
+
+    public function test_unreadable_encrypted_file_is_rejected_before_database_replacement(): void
+    {
+        $user = User::factory()->create();
+        Storage::fake('backups');
+        Storage::fake('local');
+        config()->set('backup.backup.password', 'database-password');
+        $path = $this->createZip('unreadable-file.zip', [
+            'db-dumps/sqlite.sql' => 'DELETE FROM users;',
+            'storage/app/private/report.csv' => 'private report contents',
+        ], 'database-password', 'different-file-password');
+
+        try {
+            app(RestoreBackupArchive::class)->handle($path);
+            $this->fail('An unreadable archive must be rejected before restore.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('could not be read', $exception->getMessage());
+        }
+        $this->assertModelExists($user);
+        Storage::disk('local')->assertMissing('report.csv');
+    }
+
     public function test_it_restores_the_database_dump_and_application_files(): void
     {
         User::factory()->create(['email' => 'before-restore@example.com']);
@@ -148,7 +187,7 @@ class RestoreBackupArchiveTest extends TestCase
     }
 
     /** @param array<string, string> $entries */
-    private function createZip(string $name, array $entries): string
+    private function createZip(string $name, array $entries, ?string $password = null, ?string $filePassword = null): string
     {
         $folder = (string) config('backup.backup.name');
         $path = "{$folder}/{$name}";
@@ -160,6 +199,10 @@ class RestoreBackupArchiveTest extends TestCase
         $this->assertTrue($zip->open($absolutePath, ZipArchive::CREATE | ZipArchive::OVERWRITE));
         foreach ($entries as $entry => $contents) {
             $this->assertTrue($zip->addFromString($entry, $contents));
+            if ($password !== null) {
+                $this->assertTrue($zip->setEncryptionName($entry, ZipArchive::EM_AES_256,
+                    str_starts_with($entry, 'storage/') ? ($filePassword ?? $password) : $password));
+            }
         }
         $this->assertTrue($zip->close());
 

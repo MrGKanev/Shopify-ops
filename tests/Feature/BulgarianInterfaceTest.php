@@ -22,7 +22,7 @@ class BulgarianInterfaceTest extends TestCase
         $store = Store::factory()->create();
         $user = User::factory()->admin()->create();
         $user->stores()->attach($store);
-        $this->actingAs($user);
+        $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()]);
         $routes = $this->applicationScreenRoutes();
         $this->assertNotEmpty($routes);
 
@@ -40,7 +40,7 @@ class BulgarianInterfaceTest extends TestCase
         config(['services.google.login_only' => false]);
 
         $this->post(route('login.store'), ['email' => 'absent@example.com', 'password' => 'incorrect-password'])
-            ->assertSessionHasErrors(['email' => 'Неправилен имейл или парола. Остават 2 опита.']);
+            ->assertSessionHasErrors(['email' => 'Неправилен имейл или парола.']);
     }
 
     public function test_triage_translates_dynamic_titles_filters_counts_and_accessibility_text(): void

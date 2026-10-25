@@ -10,11 +10,11 @@ class RunFulfilledItemsReport extends RunScanReport
 {
     public function __construct(private readonly ShopifyOrders $shopify, private readonly FulfilledItemsAnalyzer $analyzer) {}
 
-    /** @return ReportResult<array{product: string, quantity: int}> */
+    /** @return ReportResult<array<string, mixed>> */
     public function handle(Store $store, string $startDate, string $endDate): ReportResult
     {
         $candidates = $this->shopify->fulfilledItemCandidates($store, $startDate);
 
-        return $this->scanResult($candidates, 'orders', $this->analyzer->analyze($candidates['orders'], $startDate, $endDate), ['startDate' => $startDate, 'endDate' => $endDate]);
+        return $this->scanResult($candidates, 'orders', $this->analyzer->analyze($candidates['orders'], $startDate, $endDate, $store->activeSkuAliases()), ['startDate' => $startDate, 'endDate' => $endDate, 'skuAliasesEnabled' => $store->activeSkuAliases() !== []]);
     }
 }

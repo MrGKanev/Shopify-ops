@@ -39,7 +39,7 @@ class RefundTrackerControllerTest extends TestCase
             'truncated' => true,
         ]);
         $client = Mockery::mock(ShipStationClientContract::class);
-        $client->shouldReceive('fetchAllOrders')->once()->with('2026-01-01', '2026-02-07')->andReturn([['orderNumber' => '1001', 'orderStatus' => 'awaiting_shipment']]);
+        $client->shouldReceive('fetchAllOrders')->once()->with('2026-01-01', '2026-02-07')->andReturn([['orderId' => 1, 'advancedOptions' => ['storeId' => (int) $store->store_number], 'orderNumber' => '1001', 'orderStatus' => 'awaiting_shipment']]);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)))->andReturn($client);
         $this->app->instance(ShopifyPayments::class, $gateway);

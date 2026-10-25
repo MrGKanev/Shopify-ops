@@ -66,13 +66,16 @@ interface ShipStationClientContract
     public function fetchAwaitingOrders(): array;
 
     /** @return list<array<string, mixed>> */
+    public function fetchBacklogOrders(int $storeId): array;
+
+    /** @return list<array<string, mixed>> */
     public function fetchActiveOrders(): array;
 
     /** @return list<array<string, mixed>> */
-    public function fetchShipmentsByDate(string $startDate, string $endDate): array;
+    public function fetchShipmentsByDate(string $startDate, string $endDate, ?int $storeId = null): array;
 
     /** @return list<array<string, mixed>> */
-    public function fetchVoidedShipments(string $startDate, string $endDate): array;
+    public function fetchVoidedShipments(string $startDate, string $endDate, ?int $storeId = null): array;
 
     /**
      * @param  array<string, mixed>  $shopifyOrder

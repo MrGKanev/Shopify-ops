@@ -14,8 +14,8 @@ class RunInventoryForecastReport
     public function handle(Store $store, string $startDate, string $endDate): ReportResult
     {
         $candidates = $this->shopify->inventoryForecastCandidates($store, $startDate, $endDate);
-        $analysis = $this->analyzer->analyze($candidates['products'], $candidates['orders']);
+        $analysis = $this->analyzer->analyze($candidates['products'], $candidates['orders'], $store->activeSkuAliases());
 
-        return new ReportResult(rows: $analysis['rows'], scanned: count($candidates['orders']), pages: $candidates['product_pages'], truncated: ($candidates['products_truncated']) || ($candidates['orders_truncated']), params: ['startDate' => $startDate, 'endDate' => $endDate], meta: ['products' => count($candidates['products']), 'variants' => $analysis['variants'], 'orders' => count($candidates['orders']), 'critical' => $analysis['critical'], 'warning' => $analysis['warning'], 'productPages' => $candidates['product_pages'], 'orderPages' => $candidates['order_pages'], 'productsTruncated' => $candidates['products_truncated'], 'ordersTruncated' => $candidates['orders_truncated']]);
+        return new ReportResult(rows: $analysis['rows'], scanned: count($candidates['orders']), pages: $candidates['product_pages'], truncated: ($candidates['products_truncated']) || ($candidates['orders_truncated']), params: ['startDate' => $startDate, 'endDate' => $endDate], meta: ['aliasConflicts' => $analysis['alias_conflicts'], 'products' => count($candidates['products']), 'variants' => $analysis['variants'], 'orders' => count($candidates['orders']), 'critical' => $analysis['critical'], 'warning' => $analysis['warning'], 'productPages' => $candidates['product_pages'], 'orderPages' => $candidates['order_pages'], 'productsTruncated' => $candidates['products_truncated'], 'ordersTruncated' => $candidates['orders_truncated']]);
     }
 }

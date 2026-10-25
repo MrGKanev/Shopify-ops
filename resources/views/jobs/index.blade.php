@@ -52,6 +52,7 @@
             </x-data-table>
         </x-card>
 
+        @if ($canManageQueue)
         @if ($usingRedis)
             <x-card>
                 <div class="flex flex-wrap items-center justify-between gap-4">
@@ -90,5 +91,6 @@
             </x-data-table>
             {{ $failed->links() }}
         </x-card>
+        @endif
     </div>
 @endsection

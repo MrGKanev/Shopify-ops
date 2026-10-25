@@ -23,9 +23,10 @@ class VoidedShipmentsControllerTest extends TestCase
         [$operator] = $this->userWithStore(true, ['shipstation_api_key' => '']);
         $this->actingAs($operator)->post('/reports/voided-shipments', $this->input())->assertOk()->assertSeeText('credentials are incomplete');
 
-        [$operator] = $this->userWithStore(true);
+        [$operator, $store] = $this->userWithStore(true);
         $client = Mockery::mock(ShipStationClientContract::class);
-        $client->shouldReceive('fetchVoidedShipments')->andReturn([['orderNumber' => '<script>', 'voidDate' => '2026-06-10']]);
+        $client->shouldReceive('fetchVoidedShipments')->andReturn([['shipmentId' => 1, 'orderId' => 1, 'orderNumber' => '<script>', 'voidDate' => '2026-06-10']]);
+        $client->shouldReceive('getOrder')->with(1)->andReturn(['orderId' => 1, 'orderNumber' => '<script>', 'advancedOptions' => ['storeId' => (int) $store->store_number]]);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->andReturn($client);
         $this->app->instance(ShipStationClientFactory::class, $factory);
@@ -39,9 +40,10 @@ class VoidedShipmentsControllerTest extends TestCase
 
     public function test_operator_can_download_formula_safe_csv(): void
     {
-        [$operator] = $this->userWithStore(true);
+        [$operator, $store] = $this->userWithStore(true);
         $client = Mockery::mock(ShipStationClientContract::class);
-        $client->shouldReceive('fetchVoidedShipments')->andReturn([['orderNumber' => '=bad', 'voidDate' => '2026-06-10']]);
+        $client->shouldReceive('fetchVoidedShipments')->andReturn([['shipmentId' => 1, 'orderId' => 1, 'orderNumber' => '=bad', 'voidDate' => '2026-06-10']]);
+        $client->shouldReceive('getOrder')->with(1)->andReturn(['orderId' => 1, 'orderNumber' => '=bad', 'advancedOptions' => ['storeId' => (int) $store->store_number]]);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->andReturn($client);
         $this->app->instance(ShipStationClientFactory::class, $factory);

@@ -24,6 +24,38 @@ class RestoreBackupJobTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_restore_failure_leaves_maintenance_enabled_and_records_the_safety_backup(): void
+    {
+        Storage::fake('backups');
+        $folder = (string) config('backup.backup.name');
+        $target = $folder.'/target.zip';
+        $safety = $folder.'/safety.zip';
+        Storage::disk('backups')->put($target, 'target');
+        $checksum = hash('sha256', 'target');
+        $verifier = $this->mock(VerifyBackupArchive::class);
+        $verifier->shouldReceive('handle')->once()->with($target)->andReturn(BackupVerification::factory()->make(['status' => 'verified', 'checksum' => $checksum]));
+        $verifier->shouldReceive('handle')->once()->with($safety)->andReturn(BackupVerification::factory()->make(['status' => 'verified', 'checksum' => hash('sha256', 'safety')]));
+        $restorer = $this->mock(RestoreBackupArchive::class);
+        $restorer->shouldReceive('handle')->once()->with($target, $checksum)->andThrow(new \RuntimeException('Restore write failed'));
+        Artisan::shouldReceive('call')->once()->with('backup:run', ['--isolated' => true, '--disable-notifications' => true])->andReturnUsing(function () use ($safety): int {
+            Storage::disk('backups')->put($safety, 'safety');
+
+            return 0;
+        });
+        Artisan::shouldReceive('call')->once()->with('down', ['--retry' => 60])->andReturn(0);
+        Artisan::shouldReceive('call')->with('up')->never();
+        $path = storage_path('app/backup-operations/failed-operation.json');
+        File::ensureDirectoryExists(dirname($path), 0700);
+        File::put($path, json_encode(['id' => 'failed-operation', 'status' => 'queued']));
+
+        (new RestoreBackup('failed-operation', $target, $checksum, 'Admin'))->handle($verifier, $restorer);
+
+        $operation = json_decode(File::get($path), true);
+        $this->assertSame('failed', $operation['status']);
+        $this->assertTrue($operation['maintenance_required']);
+        $this->assertSame($safety, $operation['safety_backup']);
+    }
+
     public function test_it_verifies_a_safety_backup_before_restoring_and_records_the_result_outside_the_database(): void
     {
         Storage::fake('backups');

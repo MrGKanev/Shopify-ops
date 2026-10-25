@@ -1,0 +1,6 @@
+query ShipmentArrivalCandidates($search: String!, $after: String) {
+  orders(first: 250, after: $after, sortKey: CREATED_AT, query: $search) {
+    pageInfo { hasNextPage endCursor }
+    edges { node { id createdAt test } }
+  }
+}

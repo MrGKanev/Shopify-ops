@@ -4,6 +4,7 @@ namespace App\Integrations\Shopify;
 
 use App\Integrations\Shopify\Exceptions\ShopifyGraphqlException;
 use App\Models\Store;
+use Carbon\CarbonImmutable;
 use Closure;
 use Generator;
 use InvalidArgumentException;
@@ -414,6 +415,101 @@ class ShopifyClient
     public function returnedItemCandidates(string $startDate): array
     {
         return $this->refundCandidates(OrderSearch::anyStatus()->refundedOrPartiallyRefunded()->updatedSince($this->store, $startDate));
+    }
+
+    /** @return array{orders: list<array<string, mixed>>, scopes: list<string>, pages: int, truncated: bool} */
+    public function shipmentArrivalCandidates(string $startDate, string $endDate): array
+    {
+        $access = $this->graphql(ShopifyQueries::get('ShopifyBacklogAccess'));
+        $grants = $access['data']['currentAppInstallation']['accessScopes'] ?? null;
+        if (! is_array($grants) || ! array_is_list($grants)) {
+            throw new ShopifyGraphqlException([], 'Shopify order access coverage could not be confirmed.');
+        }
+        $scopes = [];
+        foreach ($grants as $grant) {
+            if (! is_array($grant) || ! is_string($grant['handle'] ?? null)) {
+                throw new ShopifyGraphqlException([], 'Shopify order access coverage could not be confirmed.');
+            }
+            $scopes[] = $grant['handle'];
+        }
+        if (array_intersect($scopes, ['read_orders', 'write_orders']) === []) {
+            throw new ShopifyGraphqlException([], 'Shopify order read access is required.');
+        }
+        if (CarbonImmutable::parse($startDate, $this->store->shopTimezone())->startOfDay()->utc()->lt(CarbonImmutable::now('UTC')->subDays(60)) && ! in_array('read_all_orders', $scopes, true)) {
+            throw new ShopifyGraphqlException([], 'Full Shopify order history access is required for this period.');
+        }
+        sort($scopes, SORT_STRING);
+        $result = $this->paginateOrderNodes('ShipmentArrivalCandidates', OrderSearch::anyStatus()->createdBetween($this->store, $startDate, $endDate), map: fn (array $node): array => $node);
+
+        return [...$result, 'scopes' => array_values(array_unique($scopes))];
+    }
+
+    /** @return array{fulfillment_orders: list<array<string, mixed>>, scopes: list<string>, pages: int, truncated: bool} */
+    public function shipmentBacklogCandidates(): array
+    {
+        $access = $this->graphql(ShopifyQueries::get('ShopifyBacklogAccess'));
+        $grants = $access['data']['currentAppInstallation']['accessScopes'] ?? null;
+        if (! is_array($grants) || ! array_is_list($grants)) {
+            throw new ShopifyGraphqlException([], 'Shopify backlog access scopes could not be confirmed.');
+        }
+        $scopes = [];
+        $hasFulfillmentAccess = false;
+        foreach ($grants as $grant) {
+            if (! is_array($grant) || ! is_string($grant['handle'] ?? null)) {
+                throw new ShopifyGraphqlException([], 'Shopify backlog access scopes could not be confirmed.');
+            }
+            $scope = $grant['handle'];
+            if (preg_match('/^(?:read|write)_(?:assigned|merchant_managed|third_party|marketplace)_fulfillment_orders$/D', $scope)) {
+                $hasFulfillmentAccess = true;
+                $scopes[] = $scope;
+            } elseif (in_array($scope, ['read_orders', 'write_orders', 'read_all_orders'], true)) {
+                $scopes[] = $scope;
+            }
+        }
+        if (! $hasFulfillmentAccess) {
+            throw new ShopifyGraphqlException([], 'Shopify fulfillment-order read access is required for backlog history.');
+        }
+        $scopes = array_values(array_unique($scopes));
+        sort($scopes, SORT_STRING);
+        $result = $this->paginateGraphql(ShopifyQueries::get('ShopifyBacklogCandidates'), 'fulfillmentOrders', [], 100);
+        if ($result['truncated']) {
+            throw new ShopifyGraphqlException([], 'Shopify backlog pagination exceeded its page limit.');
+        }
+        $orders = [];
+        foreach ($this->nodes($result['edges'], 'ShopifyBacklogCandidates') as $node) {
+            $id = $node['id'] ?? null;
+            if (! is_string($id) || ! preg_match('~^gid://shopify/FulfillmentOrder/[1-9][0-9]*$~D', $id)) {
+                throw new ShopifyGraphqlException([], 'Shopify backlog returned an invalid fulfillment order identity.');
+            }
+            $connection = $node['lineItems'] ?? null;
+            $items = [];
+            $cursors = [];
+            $pages = 0;
+            do {
+                if (! is_array($connection) || ! is_array($connection['nodes'] ?? null) || ! array_is_list($connection['nodes']) || ! is_bool($connection['pageInfo']['hasNextPage'] ?? null)) {
+                    throw new ShopifyGraphqlException([], 'Shopify backlog returned an invalid line item connection.');
+                }
+                $items = [...$items, ...$connection['nodes']];
+                $pages++;
+                if (! $connection['pageInfo']['hasNextPage']) {
+                    break;
+                }
+                $cursor = $connection['pageInfo']['endCursor'] ?? null;
+                if ($pages >= 20 || ! is_string($cursor) || $cursor === '' || isset($cursors[$cursor])) {
+                    throw new ShopifyGraphqlException([], 'Shopify backlog line item pagination could not be completed.');
+                }
+                $cursors[$cursor] = true;
+                $next = $this->graphql(ShopifyQueries::get('ShopifyBacklogLineItems'), ['id' => $id, 'after' => $cursor])['data']['fulfillmentOrder'] ?? null;
+                if (! is_array($next) || ($next['id'] ?? null) !== $id) {
+                    throw new ShopifyGraphqlException([], 'Shopify backlog returned a different fulfillment order.');
+                }
+                $connection = $next['lineItems'] ?? null;
+            } while (true);
+            $node['lineItems'] = ['nodes' => $items, 'pageInfo' => ['hasNextPage' => false]];
+            $orders[] = $node;
+        }
+
+        return ['fulfillment_orders' => $orders, 'scopes' => $scopes, 'pages' => $result['pages'], 'truncated' => false];
     }
 
     /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */

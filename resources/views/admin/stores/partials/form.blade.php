@@ -49,6 +49,38 @@
     </div>
 
     <div class="flex flex-col gap-2 sm:col-span-2">
+        <label class="text-sm font-medium" for="shipstation_v2_api_key">{{ __('ShipStation V2 tracking API key') }}</label>
+        <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="shipstation_v2_api_key" name="shipstation_v2_api_key" type="password" autocomplete="new-password">
+        <p class="text-xs text-slate-500 dark:text-slate-400">{{ __('Optional separate V2 key for manual movement checks. Requires tracking API access. Leave blank to keep the key. Checks may count against your API plan.') }}</p>
+        @if ($store !== null)<label class="flex items-center gap-2 text-sm"><input type="checkbox" name="forget_shipstation_v2_api_key" value="1">{{ __('Remove V2 tracking key') }}</label>@endif
+        @error('shipstation_v2_api_key')<p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>@enderror
+    </div>
+
+    <x-card class="sm:col-span-2">
+        <h2 class="text-lg font-semibold">{{ __('Tracking monitoring limits') }}</h2>
+        @php
+            $movementPolicy = $store?->movementPolicy() ?? (new \App\Models\Store)->movementPolicy();
+            $submittedCarriers = old('movement_policy.carriers', $movementPolicy['carriers']);
+            $movementCarriers = is_array($submittedCarriers) ? $submittedCarriers : [];
+        @endphp
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ __('Automatic checks are controlled separately in Report schedules. The UTC daily cap counts manual and automatic tracking attempts, including failed requests. Zero disables all new tracking reads.') }}</p>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+            @foreach (['lookback_days' => ['Label lookback (days)', 1, 90], 'acceptance_hours' => ['Acceptance grace (hours from label creation)', 1, 720], 'stale_hours' => ['No-progress threshold (hours)', 1, 2160], 'max_labels' => ['Maximum labels per monitoring run', 1, 10], 'daily_limit' => ['Daily tracking-read cap (UTC)', 0, 1000]] as $field => [$label, $min, $max])
+                @php($movementValue = old('movement_policy.'.$field, $movementPolicy[$field]))
+                <label class="flex flex-col gap-2 text-sm">{{ __($label) }}<input class="rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" name="movement_policy[{{ $field }}]" type="number" min="{{ $min }}" max="{{ $max }}" required value="{{ is_scalar($movementValue) ? $movementValue : $movementPolicy[$field] }}"></label>
+            @endforeach
+        </div>
+        <fieldset class="mt-4 flex flex-wrap gap-3"><legend>{{ __('Verified tracking carriers') }}</legend>
+            @foreach (['ups', 'fedex', 'usps', 'stamps_com', 'dhl_express', 'dhl_global_mail', 'ontrac'] as $carrier)
+                <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="movement_policy[carriers][]" value="{{ $carrier }}" @checked(in_array($carrier, $movementCarriers, true))>{{ $carrier }}</label>
+            @endforeach
+        </fieldset>
+        <input type="hidden" name="movement_policy[access_verified]" value="0">
+        <label class="mt-4 flex items-center gap-2 text-sm"><input type="checkbox" name="movement_policy[access_verified]" value="1" @checked(old('movement_policy.access_verified', $movementPolicy['access_verified']))>{{ __('I verified tracking access, selected carrier coverage and API costs for this key.') }}</label>
+        <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ __('Changing ShipStation credentials or store identity resets this verification. Save the key first, verify it, then confirm here.') }}</p>
+    </x-card>
+
+    <div class="flex flex-col gap-2 sm:col-span-2">
         <label class="text-sm font-medium" for="store_number">{{ __('ShipStation store number') }}</label>
         <input class="rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" id="store_number" name="store_number" value="{{ old('store_number', $store?->store_number) }}">
         @error('store_number') <p class="text-sm text-red-600 dark:text-red-400">{{ __($message) }}</p> @enderror

@@ -3,6 +3,7 @@
 namespace Tests\Unit\Domain\Reports;
 
 use App\Domain\Reports\InventoryForecastAnalyzer;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 class InventoryForecastAnalyzerTest extends TestCase
@@ -55,6 +56,31 @@ class InventoryForecastAnalyzerTest extends TestCase
         $this->assertSame(30, $result['rows'][0]['sold_30d']);
         $this->assertSame('', $result['rows'][0]['product_id']);
         $this->assertSame('<script>x</script>', $result['rows'][0]['product_title']);
+    }
+
+    #[DataProvider('ambiguousInventory')]
+    public function test_mapped_demand_does_not_duplicate_or_invent_inventory(array $variants): void
+    {
+        $result = (new InventoryForecastAnalyzer)->analyze([$this->product($variants)], [$this->order([['sku' => 'OLD', 'quantity' => 30]])], [['alias' => 'OLD', 'master' => 'MASTER']]);
+
+        $this->assertSame([], $result['rows']);
+        $this->assertSame(['MASTER'], $result['alias_conflicts']);
+        $this->assertSame(0, $result['critical']);
+    }
+
+    public static function ambiguousInventory(): array
+    {
+        $master = ['sku' => 'MASTER', 'inventoryQuantity' => 10, 'inventoryPolicy' => 'DENY', 'inventoryItem' => ['tracked' => true]];
+        $alias = [...$master, 'sku' => 'OLD'];
+
+        return [
+            'separate alias stock' => [[$master, $alias]],
+            'duplicate master stock' => [[$master, $master]],
+            'alias only' => [[$alias]],
+            'missing catalog variant' => [[]],
+            'untracked master' => [[array_replace($master, ['inventoryItem' => ['tracked' => false]])]],
+            'overselling master' => [[array_replace($master, ['inventoryPolicy' => 'CONTINUE'])]],
+        ];
     }
 
     private function product(array $variants): array

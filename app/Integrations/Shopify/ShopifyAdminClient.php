@@ -154,6 +154,16 @@ class ShopifyAdminClient implements ShopifyAdminGateway
         return $this->factory->forStore($store)->returnedItemCandidates($startDate);
     }
 
+    public function shipmentArrivalCandidates(Store $store, string $startDate, string $endDate): array
+    {
+        return $this->factory->forStore($store)->shipmentArrivalCandidates($startDate, $endDate);
+    }
+
+    public function shipmentBacklogCandidates(Store $store): array
+    {
+        return $this->factory->forStore($store)->shipmentBacklogCandidates();
+    }
+
     public function fulfilledItemCandidates(Store $store, string $startDate): array
     {
         return $this->factory->forStore($store)->fulfilledItemCandidates($startDate);

@@ -24,12 +24,12 @@ class SendReportDigest extends Command
                 if ($tool === 'operational_digest') {
                     continue;
                 }
-                $run = $store->runLogs()->where('tool', $tool)->where('status', '!=', 'error')->where('created_at', '>=', today())->latest('id')->first();
+                $run = $store->runLogs()->where('tool', $tool)->where('status', '!=', 'error')->whereNull('meta->report_schedule_id')->where('created_at', '>=', today())->latest('id')->first();
                 if ($run !== null) {
                     $sections[] = ['tool' => $tool, 'rows' => (int) $run->rows_found];
                 }
             }
-            if ($notifier->hasDigestRule($store, 'operational_digest')) {
+            if ($notifier->hasDigestRule($store, 'operational_digest') && ! $store->reportSchedules()->where('tool', 'operational_digest')->exists()) {
                 $date = CarbonImmutable::now($store->shopTimezone());
                 $policy = $store->operationalDigestPolicy();
                 $start = $date->subDays($policy['lookback_days'] - 1)->toDateString();

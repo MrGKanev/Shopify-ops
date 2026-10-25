@@ -156,6 +156,50 @@ class ShipStationClientTest extends TestCase
         });
     }
 
+    public function test_store_scoped_shipment_fetch_sends_the_store_filter_and_requires_pagination_metadata(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['https://ssapi.shipstation.com/shipments*' => Http::sequence()
+            ->push(['shipments' => [['shipmentId' => 1]], 'pages' => 1])
+            ->push(['shipments' => []])]);
+        $this->assertSame([['shipmentId' => 1]], $this->client()->fetchShipmentsByDate('2026-06-01', '2026-06-30', 42));
+        Http::assertSent(fn (Request $request): bool => (string) $request['storeId'] === '42');
+
+        $this->expectException(UnexpectedResponse::class);
+        $this->client()->fetchShipmentsByDate('2026-06-01', '2026-06-30', 42);
+    }
+
+    public function test_store_scoped_shipment_fetch_rejects_a_scan_above_the_page_limit(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['https://ssapi.shipstation.com/shipments*' => Http::response(['shipments' => [], 'pages' => 21])]);
+
+        $this->expectException(UnexpectedResponse::class);
+        $this->client()->fetchShipmentsByDate('2026-06-01', '2026-06-30', 42);
+    }
+
+    public function test_store_scoped_voided_shipment_fetch_sends_the_store_and_documented_void_date_filters(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['https://ssapi.shipstation.com/shipments*' => Http::response(['shipments' => [['shipmentId' => 1]], 'pages' => 1])]);
+
+        $this->assertSame([['shipmentId' => 1]], $this->client()->fetchVoidedShipments('2026-06-01', '2026-06-30', 42));
+
+        Http::assertSent(fn (Request $request): bool => (string) $request['storeId'] === '42'
+            && $request['voidDateStart'] === '2026-05-31 17:00:00'
+            && $request['voidDateEnd'] === '2026-06-30 16:59:59'
+            && ! isset($request['voidDate_start']) && ! isset($request['voidDate_end']));
+    }
+
+    public function test_store_scoped_voided_shipment_fetch_does_not_treat_missing_pagination_as_zero(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['https://ssapi.shipstation.com/shipments*' => Http::response(['shipments' => []])]);
+
+        $this->expectException(UnexpectedResponse::class);
+        $this->client()->fetchVoidedShipments('2026-06-01', '2026-06-30', 42);
+    }
+
     public function test_voided_shipment_fetch_uses_void_dates_and_paginates(): void
     {
         Http::preventStrayRequests();
@@ -167,7 +211,7 @@ class ShipStationClientTest extends TestCase
         Http::assertSent(function (Request $request): bool {
             parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
 
-            return $query === ['voidDate_start' => '2026-05-31 17:00:00', 'voidDate_end' => '2026-06-30 16:59:59', 'pageSize' => '500', 'page' => '1'];
+            return $query === ['voidDateStart' => '2026-05-31 17:00:00', 'voidDateEnd' => '2026-06-30 16:59:59', 'pageSize' => '500', 'page' => '1'];
         });
         Http::assertSent(fn (Request $request): bool => str_contains($request->url(), 'page=2'));
     }

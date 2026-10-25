@@ -96,6 +96,20 @@ class GoogleAuthenticationControllerTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_fresh_google_login_allows_mfa_enrollment_then_confirmation_expires(): void
+    {
+        $this->freezeTime();
+        config()->set('services.google.login_only', true);
+        $user = AppUser::factory()->create(['email' => 'person@example.com']);
+        Socialite::fake('google', $this->identity());
+
+        $this->get(route('auth.google.callback'))->assertRedirect(route('dashboard'));
+        $this->postJson('/user/two-factor-authentication')->assertSuccessful();
+        $this->assertNotNull($user->fresh()->two_factor_secret);
+        $this->travel(301)->seconds();
+        $this->getJson('/user/two-factor-secret-key')->assertStatus(423);
+    }
+
     /** @param array<string, mixed> $overrides */
     private function identity(array $overrides = []): SocialiteUser
     {

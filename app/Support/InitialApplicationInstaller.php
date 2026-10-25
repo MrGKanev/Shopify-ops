@@ -23,6 +23,10 @@ class InitialApplicationInstaller
 
     public function isInstalled(): bool
     {
+        if ($this->files->exists($this->app->environmentPath().'/.installed')) {
+            return true;
+        }
+
         try {
             if (! Schema::hasTable('users') || ! Schema::hasTable('stores')) {
                 return false;
@@ -30,7 +34,7 @@ class InitialApplicationInstaller
 
             return User::query()->exists() || Store::query()->exists();
         } catch (Throwable) {
-            return false;
+            return true;
         }
     }
 
@@ -38,6 +42,27 @@ class InitialApplicationInstaller
      * @param  array{name:string,email:string,password:string,label:string,slug:string,shopify_store:string,shopify_access_token:string,shipstation_api_key:?string,shipstation_api_secret:?string,store_number:?string,db_connection:string,database:string,db_host:?string,db_port:?string,db_username:?string,db_password:?string,mail_mailer:string,mail_host:?string,mail_port:?string,mail_username:?string,mail_password:?string,mail_encryption:string,mail_from_address:?string,mail_from_name:?string,slack_webhook_url:?string,discord_webhook_url:?string}  $data
      */
     public function install(array $data): void
+    {
+        $lock = fopen($this->app->environmentPath().'/.installation.lock', 'c');
+        if ($lock === false) {
+            throw new RuntimeException('The installation lock could not be created.');
+        }
+        try {
+            if (! flock($lock, LOCK_EX | LOCK_NB) || $this->isInstalled()) {
+                throw new RuntimeException('Installation is unavailable or already running.');
+            }
+            $this->performInstallation($data);
+            $this->files->put($this->app->environmentPath().'/.installed', now()->toIso8601String());
+        } finally {
+            flock($lock, LOCK_UN);
+            fclose($lock);
+        }
+    }
+
+    /**
+     * @param  array{name:string,email:string,password:string,label:string,slug:string,shopify_store:string,shopify_access_token:string,shipstation_api_key:?string,shipstation_api_secret:?string,store_number:?string,db_connection:string,database:string,db_host:?string,db_port:?string,db_username:?string,db_password:?string,mail_mailer:string,mail_host:?string,mail_port:?string,mail_username:?string,mail_password:?string,mail_encryption:string,mail_from_address:?string,mail_from_name:?string,slack_webhook_url:?string,discord_webhook_url:?string}  $data
+     */
+    private function performInstallation(array $data): void
     {
         $this->configureDatabase($data);
         $this->prepareSqliteDatabase($data);
@@ -128,7 +153,7 @@ class InitialApplicationInstaller
     }
 
     /**
-     * @param  array{db_connection:string,database:string,db_host:?string,db_port:?string,db_username:?string,db_password:?string,mail_mailer:string,mail_host:?string,mail_port:?string,mail_username:?string,mail_password:?string,mail_encryption:string,mail_from_address:?string,mail_from_name:?string,slack_webhook_url:?string,discord_webhook_url:?string}  $data
+     * @param  array{label:string,db_connection:string,database:string,db_host:?string,db_port:?string,db_username:?string,db_password:?string,mail_mailer:string,mail_host:?string,mail_port:?string,mail_username:?string,mail_password:?string,mail_encryption:string,mail_from_address:?string,mail_from_name:?string,slack_webhook_url:?string,discord_webhook_url:?string}  $data
      */
     private function writeEnvironment(array $data, string $applicationKey): void
     {

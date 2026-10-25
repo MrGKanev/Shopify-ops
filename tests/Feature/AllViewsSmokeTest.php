@@ -24,7 +24,7 @@ class AllViewsSmokeTest extends TestCase
         $this->app->instance(ShopifyTransport::class, $shopify);
         Cache::put('health:checks:schedule:latestHeartbeatAt', now()->timestamp);
 
-        $this->actingAs($admin);
+        $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()]);
         $screens = $this->applicationScreenRoutes();
         $this->assertNotEmpty($screens);
         foreach ($screens as $name) {

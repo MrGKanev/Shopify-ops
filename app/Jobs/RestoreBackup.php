@@ -79,6 +79,7 @@ class RestoreBackup implements ShouldQueue
                 throw new RuntimeException('The application could not be placed in maintenance mode.');
             }
             $maintenanceEnabled = true;
+            $this->updateOperation($operationPath, ['safety_backup' => $safetyPath]);
 
             $result = $restorer->handle($this->path, $this->expectedChecksum);
             if (Artisan::call('up') !== 0) {
@@ -99,13 +100,10 @@ class RestoreBackup implements ShouldQueue
                 'requested_by' => $this->requestedBy,
             ]);
         } catch (Throwable $exception) {
-            if ($maintenanceEnabled && Artisan::call('up') === 0) {
-                $maintenanceEnabled = false;
-            }
-
             $this->updateOperation($operationPath, [
                 'status' => 'failed',
                 'error' => $exception->getMessage(),
+                'maintenance_required' => $maintenanceEnabled,
                 'finished_at' => now()->toIso8601String(),
             ]);
             Log::error('Backup restore from the administration panel failed.', [
@@ -115,9 +113,6 @@ class RestoreBackup implements ShouldQueue
                 'exception' => $exception,
             ]);
         } finally {
-            if ($maintenanceEnabled) {
-                Artisan::call('up');
-            }
             flock($lock, LOCK_UN);
             fclose($lock);
         }

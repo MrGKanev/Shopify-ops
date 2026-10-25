@@ -15,14 +15,16 @@ class LookupOrder
         private readonly ShipStationClientFactory $shipStationClients,
         private readonly ShipStationOrderNormalizer $shipStationOrderNormalizer,
         private readonly OrderChannelComparator $comparator,
+        private readonly FindStoreShipStationOrders $findOrders,
+        private readonly LoadStoreShipStationShipments $loadShipments,
     ) {}
 
     public function handle(Store $store, string $orderNumber): OrderLookupResult
     {
         $shopifyOrders = $this->shopify->findByOrderNumber($store, $orderNumber);
         $shipStation = $this->shipStationClients->forStore($store);
-        $shipStationOrders = $shipStation?->findByOrderNumber($orderNumber) ?? [];
-        $shipStationShipments = $shipStation?->getOrderShipments($orderNumber) ?? [];
+        $shipStationOrders = $shipStation === null ? [] : $this->findOrders->handle($store, $shipStation, $orderNumber);
+        $shipStationShipments = $shipStation === null ? [] : $this->loadShipments->handle($store, $shipStation, $orderNumber, $shipStationOrders);
         $normalizedShipStationOrders = $this->normalizeShipStationOrders($shipStationOrders, $shipStationShipments);
         $comparisonState = $this->comparisonState($shopifyOrders, $normalizedShipStationOrders, $shipStation !== null);
         $comparison = $comparisonState === 'ready'
@@ -47,12 +49,11 @@ class LookupOrder
      */
     private function normalizeShipStationOrders(array $orders, array $shipments): array
     {
-        return array_map(function (array $order) use ($orders, $shipments): array {
+        return array_map(function (array $order) use ($shipments): array {
             $orderId = (string) ($order['orderId'] ?? '');
             $matchingShipments = array_values(array_filter(
                 $shipments,
-                fn (array $shipment): bool => (string) ($shipment['orderId'] ?? '') === $orderId
-                    || (count($orders) === 1 && ! array_key_exists('orderId', $shipment)),
+                fn (array $shipment): bool => (string) ($shipment['orderId'] ?? '') === $orderId,
             ));
 
             return $this->shipStationOrderNormalizer->normalize($order, $matchingShipments);

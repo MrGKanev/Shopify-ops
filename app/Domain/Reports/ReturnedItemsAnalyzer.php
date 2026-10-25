@@ -10,13 +10,15 @@ class ReturnedItemsAnalyzer
 
     /**
      * @param  list<array<string, mixed>>  $orders
-     * @return list<array{product: string, quantity: int}>
+     * @param  list<array{alias: string, master: string}>  $aliases
+     * @return list<array<string, mixed>>
      */
-    public function analyze(array $orders, string $startDate, string $endDate): array
+    public function analyze(array $orders, string $startDate, string $endDate, array $aliases = []): array
     {
         $rangeStart = $startDate.'T00:00:00Z';
         $rangeEnd = $endDate.'T23:59:59Z';
         $totals = [];
+        $skuMap = new SkuAliasMap($aliases);
 
         foreach ($orders as $order) {
             foreach (is_array($order['refunds'] ?? null) ? $order['refunds'] : [] as $refund) {
@@ -36,18 +38,17 @@ class ReturnedItemsAnalyzer
 
                     $lineItem = is_array($refundLineItem['line_item'] ?? null) ? $refundLineItem['line_item'] : [];
                     $product = $this->text($lineItem['name'] ?? $lineItem['title'] ?? '');
-                    if ($product === '') {
+                    $sku = $this->text($lineItem['sku'] ?? '');
+                    if ($product === '' && $sku === '') {
                         continue;
                     }
 
                     $quantity = is_numeric($refundLineItem['quantity'] ?? null) ? (int) $refundLineItem['quantity'] : 0;
-                    $totals[$product] = ($totals[$product] ?? 0) + $quantity;
+                    $skuMap->add($totals, $product, $sku, $quantity);
                 }
             }
         }
 
-        ksort($totals);
-
-        return array_map(fn (string $product, int $quantity): array => ['product' => $product, 'quantity' => $quantity], array_keys($totals), array_values($totals));
+        return $skuMap->rows($totals);
     }
 }

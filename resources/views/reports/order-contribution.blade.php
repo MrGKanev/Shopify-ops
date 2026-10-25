@@ -6,7 +6,8 @@
             <x-report.date-range-form :action="route('reports.order-contribution.store')" :start-date="$startDate" :end-date="$endDate" />
             <p class="text-xs text-slate-500 dark:text-slate-400">{{ __('Select order creation dates. Analytics include subsequent sales adjustments through today in the Shopify reporting timezone. Each part examines up to 25 orders; use Next part to continue.') }}</p>
         </x-slot:form>
-        <x-alert tone="warn">{{ __('This is contribution on the reported cost basis, not accounting net profit. Overhead, advertising, carrier billing adjustments, chargebacks and unverified label refunds are excluded. Missing costs are never zero.') }}</x-alert>
+        <x-alert tone="warn">{{ __('The original contribution uses reported label costs. Imported billing is a separate observed basis, including imported charges and credits only. Neither basis is accounting net profit or proof of complete carrier billing.') }}</x-alert>
+        <div><x-button variant="ghost" :href="route('shipping-billing.index')">{{ __('Shipping Billing Audit') }}</x-button></div>
         @if ($result)
             <x-report.results :truncated="$result->truncated" truncated-message="This part does not cover the whole selection. Continue with Next part or review older-order access." :pages="$result->pages">
                 <x-slot:heading>{{ __('Snapshot checked at :time (:timezone)', ['time' => \App\Support\UiFormat::date($result->meta['checkedAt'], true, $result->meta['timezone']), 'timezone' => $result->meta['timezone']]) }}</x-slot:heading>
@@ -57,6 +58,7 @@
                             </td>
                             <td class="px-4 py-3">
                                 {{ $row['contribution'] === null ? __('Incomplete') : \App\Support\UiFormat::number($row['contribution'], 2).' '.$row['currency'] }}
+                                @if (($row['contribution_on_imported_billing'] ?? null) !== null)<div class="mt-2 text-xs">{{ __('Contribution on imported billing') }}: {{ $row['contribution_on_imported_billing'] }} {{ $row['currency'] }}<br>{{ __('Imported shipping costs') }}: {{ $row['imported_shipping'] }}</div>@endif
                                 @if ($row['contribution'] === null && $row['shopify_contribution'] !== null)<div class="mt-2 text-xs">{{ __('Shopify basis before ShipStation costs: :amount', ['amount' => \App\Support\UiFormat::number($row['shopify_contribution'], 2).' '.$row['currency']]) }}</div>@endif
                             </td>
                             <td class="px-4 py-3">

@@ -35,9 +35,9 @@ class RunAuditControllerTest extends TestCase
         Notification::fake();
         config()->set('services.slack.notifications.webhook_url', 'https://hooks.slack.com/services/T/B/test');
         config()->set('services.discord.notifications.webhook_url', 'https://discord.com/api/webhooks/1/test');
-        [$operator, $store] = $this->userWithStore(true);
+        [$operator, $store] = $this->userWithStore(true, ['store_number' => '42']);
         $client = Mockery::mock(ShipStationClientContract::class);
-        $client->shouldReceive('fetchAllOrders')->twice()->with('2026-06-01', '2026-07-07')->andReturn([['orderNumber' => '1001']]);
+        $client->shouldReceive('fetchAllOrders')->twice()->with('2026-06-01', '2026-07-07')->andReturn([['orderNumber' => '1001', 'orderId' => 1, 'advancedOptions' => ['storeId' => 42]]]);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->twice()->andReturn($client);
         $gateway = Mockery::mock(ShopifyOrders::class);
@@ -52,14 +52,14 @@ class RunAuditControllerTest extends TestCase
         $this->actingAs($operator)->post('/reports/run-audit', $this->input())->assertOk()->assertSeeText('2 Shopify orders · 1 missing')->assertSeeText('data was truncated')->assertDontSee('<script>', false)->assertSee(route('ignored-orders.bulk-store'), false)->assertSee('name="order_numbers[]"', false);
         $this->assertDatabaseHas('run_logs', ['store_id' => $store->getKey(), 'tool' => 'run_audit', 'status' => 'issues_found', 'rows_found' => 1]);
         $this->assertTrue($store->auditSnapshots()->where('tool', 'run_audit')->whereDate('report_date', now()->toDateString())->where('rows_found', 1)->exists());
-        $this->actingAs($operator)->post('/reports/run-audit', $this->input())->assertOk();
+        $this->actingAs($operator)->post('/reports/run-audit', $this->input())->assertOk()->assertSeeText('2 Shopify orders · 1 missing');
         $this->assertSame(1, $store->auditSnapshots()->count());
         Notification::assertSentOnDemand(AuditFinishedNotification::class, fn (AuditFinishedNotification $notification, array $channels): bool => $channels === [SlackWebhookChannel::class, DiscordWebhookChannel::class]);
     }
 
     public function test_it_shows_the_inline_duplicates_panel(): void
     {
-        [$operator] = $this->userWithStore(true);
+        [$operator] = $this->userWithStore(true, ['store_number' => '42']);
         $client = Mockery::mock(ShipStationClientContract::class);
         $client->shouldReceive('fetchAllOrders')->once()->andReturn([]);
         $factory = Mockery::mock(ShipStationClientFactory::class);
@@ -79,9 +79,9 @@ class RunAuditControllerTest extends TestCase
     public function test_it_shows_the_ok_state_when_nothing_is_missing(): void
     {
         Notification::fake();
-        [$operator, $store] = $this->userWithStore(true);
+        [$operator, $store] = $this->userWithStore(true, ['store_number' => '42']);
         $client = Mockery::mock(ShipStationClientContract::class);
-        $client->shouldReceive('fetchAllOrders')->once()->andReturn([['orderNumber' => '1001']]);
+        $client->shouldReceive('fetchAllOrders')->once()->andReturn([['orderNumber' => '1001', 'orderId' => 1, 'advancedOptions' => ['storeId' => 42]]]);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->once()->andReturn($client);
         $gateway = Mockery::mock(ShopifyOrders::class);

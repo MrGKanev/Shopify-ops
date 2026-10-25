@@ -18,11 +18,11 @@ class ShippedUnfulfilledControllerTest extends TestCase
 
     public function test_validation_configuration_success_and_safe_failure(): void
     {
-        [$operator] = $this->userWithStore(true);
+        [$operator] = $this->userWithStore(true, ['store_number' => '42']);
         $this->actingAs($operator)->post('/reports/shipped-unfulfilled', ['start_date' => 'bad', 'end_date' => '2026-06-30'])->assertSessionHasErrors('start_date');
         [$operator] = $this->userWithStore(true, ['shopify_access_token' => '']);
         $this->actingAs($operator)->post('/reports/shipped-unfulfilled', $this->input())->assertOk()->assertSeeText('credentials are required');
-        [$operator] = $this->userWithStore(true);
+        [$operator] = $this->userWithStore(true, ['store_number' => '42']);
         $this->bindSuccess('<script>', true);
         $this->actingAs($operator)->post('/reports/shipped-unfulfilled', $this->input())->assertOk()->assertSeeText('1 SS shipped orders')->assertSeeText('Review selected')->assertSee('name="order_numbers[]"', false)->assertSeeText('truncated after 100 pages')->assertDontSee('<script>', false);
         $factory = Mockery::mock(ShipStationClientFactory::class);
@@ -33,7 +33,7 @@ class ShippedUnfulfilledControllerTest extends TestCase
 
     public function test_operator_can_download_formula_safe_csv(): void
     {
-        [$operator] = $this->userWithStore(true);
+        [$operator] = $this->userWithStore(true, ['store_number' => '42']);
         $this->bindSuccess('=bad');
         $response = $this->actingAs($operator)->post(route('reports.shipped-unfulfilled.export'), $this->input());
         $response->assertOk();
@@ -43,7 +43,7 @@ class ShippedUnfulfilledControllerTest extends TestCase
     private function bindSuccess(string $email, bool $truncated = false): void
     {
         $client = Mockery::mock(ShipStationClientContract::class);
-        $client->shouldReceive('fetchAllOrders')->andReturn([['orderId' => 1, 'orderNumber' => '1001', 'orderStatus' => 'shipped', 'orderDate' => '2026-06-01', 'customerEmail' => $email]]);
+        $client->shouldReceive('fetchAllOrders')->andReturn([['orderId' => 1, 'advancedOptions' => ['storeId' => 42], 'orderNumber' => '1001', 'orderStatus' => 'shipped', 'orderDate' => '2026-06-01', 'customerEmail' => $email]]);
         $factory = Mockery::mock(ShipStationClientFactory::class);
         $factory->shouldReceive('forStore')->andReturn($client);
         $gateway = Mockery::mock(ShopifyOrders::class);

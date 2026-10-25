@@ -16,7 +16,10 @@
             >
                 <x-slot:heading>{{ $result->scanned }} {{ __('orders scanned ·') }} {{ \App\Support\UiFormat::count(count($result->rows), 'products') }}</x-slot:heading>
 
-                <x-data-table :rows="$result->rows" empty="No fulfilled items found." :columns="['Product' => ['value' => 'product', 'class' => 'font-semibold'], 'Quantity' => 'quantity']" />
+                @if ($result->params['skuAliasesEnabled'] ?? false)
+                    <x-alert>{{ __('Explicit SKU aliases were applied. Unmapped codes remain separate; items without a SKU retain their product label.') }}</x-alert>
+                @endif
+                <x-data-table :rows="$result->rows" empty="No fulfilled items found." :columns="['Product' => ['value' => 'product', 'class' => 'font-semibold'], 'Quantity' => 'quantity', 'Master SKU' => 'sku', 'Source SKUs' => ['value' => fn ($row) => implode('; ', $row['source_skus'] ?? [])]]" />
             </x-report.results>
         @endif
     </x-report.layout>

@@ -122,9 +122,9 @@ class ActionLogInstrumentationTest extends TestCase
     {
         [$admin] = $this->makeUserAndStore(true, admin: true);
         $throttle = app(LoginThrottle::class);
-        $throttle->recordFailureMessage('1.2.3.4');
-        $throttle->recordFailureMessage('1.2.3.4');
-        $throttle->recordFailureMessage('1.2.3.4');
+        for ($attempt = 0; $attempt < 100; $attempt++) {
+            $throttle->recordFailureMessage('1.2.3.4');
+        }
 
         $this->actingAs($admin)->delete(route('admin.banned-ips.destroy'), ['ip' => '1.2.3.4'])->assertRedirect();
 

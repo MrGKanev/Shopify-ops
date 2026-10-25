@@ -15,6 +15,10 @@ class AddSecurityHeaders
      */
     public function handle(Request $request, Closure $next): Response
     {
+        if (config('csp.nonce_enabled')) {
+            app()->forgetInstance('csp-nonce');
+            app('csp-nonce');
+        }
         $response = $next($request);
         $response->headers->set('X-Frame-Options', 'DENY');
         $response->headers->set('X-Content-Type-Options', 'nosniff');

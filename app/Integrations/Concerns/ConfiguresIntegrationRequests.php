@@ -3,6 +3,7 @@
 namespace App\Integrations\Concerns;
 
 use App\Integrations\Exceptions\IntegrationException;
+use App\Integrations\Exceptions\UnexpectedResponse;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -21,6 +22,9 @@ trait ConfiguresIntegrationRequests
 
     private function checkedResponse(Response $response): Response
     {
+        if ($response->redirect()) {
+            throw new UnexpectedResponse('The integration returned an unexpected redirect.');
+        }
         if ($response->failed()) {
             throw IntegrationException::forResponse($response);
         }

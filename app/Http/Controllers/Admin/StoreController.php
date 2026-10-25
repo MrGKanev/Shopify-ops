@@ -74,12 +74,18 @@ class StoreController extends Controller
             'shopify_webhook_secret',
             'shipstation_api_key',
             'shipstation_api_secret',
+            'shipstation_v2_api_key',
+            'forget_shipstation_v2_api_key',
         ]);
 
-        foreach (['shopify_access_token', 'shopify_webhook_secret', 'shipstation_api_key', 'shipstation_api_secret'] as $credential) {
+        foreach (['shopify_access_token', 'shopify_webhook_secret', 'shipstation_api_key', 'shipstation_api_secret', 'shipstation_v2_api_key'] as $credential) {
             if ($request->filled($credential)) {
                 $attributes[$credential] = $request->validated($credential);
             }
+        }
+
+        if ($request->boolean('forget_shipstation_v2_api_key')) {
+            $attributes['shipstation_v2_api_key'] = null;
         }
 
         Cache::lock('shipstation-monitoring:'.$store->id, 300)->block(5, function () use ($store, $attributes): void {
@@ -94,7 +100,10 @@ class StoreController extends Controller
             $store->update($attributes);
         });
 
-        $rotatedCredentials = array_values(array_filter(['shopify_access_token', 'shopify_webhook_secret', 'shipstation_api_key', 'shipstation_api_secret'], fn (string $credential): bool => $request->filled($credential)));
+        $rotatedCredentials = array_values(array_filter(['shopify_access_token', 'shopify_webhook_secret', 'shipstation_api_key', 'shipstation_api_secret', 'shipstation_v2_api_key'], fn (string $credential): bool => $request->filled($credential) && ($credential !== 'shipstation_v2_api_key' || ! $request->boolean('forget_shipstation_v2_api_key'))));
+        if ($request->boolean('forget_shipstation_v2_api_key')) {
+            activity('administration')->causedBy($request->user())->performedOn($store)->event('credentials_removed')->withProperties(['credential_fields' => ['shipstation_v2_api_key']])->log('V2 tracking key removed');
+        }
         if ($rotatedCredentials !== []) {
             activity('administration')->causedBy($request->user())->performedOn($store)->event('credentials_rotated')->withProperties(['store_id' => $store->getKey(), 'credential_fields' => $rotatedCredentials])->log('Store credentials rotated');
         }

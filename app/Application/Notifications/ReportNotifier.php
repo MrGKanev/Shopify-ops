@@ -2,12 +2,14 @@
 
 namespace App\Application\Notifications;
 
+use App\Models\ReportSchedule;
 use App\Models\Store;
 use App\Notifications\AuditFinishedNotification;
 use App\Notifications\ReportDigestNotification;
 use App\Notifications\ReportEmailNotification;
 use App\Notifications\ScanFinishedNotification;
 use Illuminate\Notifications\AnonymousNotifiable;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Notification;
 
 /**
@@ -21,6 +23,9 @@ class ReportNotifier
      */
     public function scanFinished(Store $store, string $tool, int $rows, float $durationSeconds): void
     {
+        if (Context::get('report_schedule_id') !== null) {
+            return;
+        }
         $slackRules = $store->slack_rules;
         $routes = $this->chatRoutes(
             $slackRules->scan->matches($rows),
@@ -40,6 +45,9 @@ class ReportNotifier
      */
     public function auditFinished(Store $store, string $period, array $missingOrders, array $counts, float $durationSeconds): void
     {
+        if (Context::get('report_schedule_id') !== null) {
+            return;
+        }
         $missing = count($missingOrders);
         $slackRules = $store->slack_rules;
         $routes = $this->chatRoutes(
@@ -59,7 +67,16 @@ class ReportNotifier
      */
     public function emailImmediately(Store $store, string $tool, int $rows, ?string $startDate, ?string $endDate, ?array $attachment = null): void
     {
-        $rule = $store->email_rules->forTool($tool);
+        $scheduleId = Context::get('report_schedule_id');
+        if ($scheduleId !== null) {
+            $schedule = ReportSchedule::query()->where('store_id', $store->id)->whereKey($scheduleId)->first();
+            if ($schedule === null || ! $schedule->notification_enabled) {
+                return;
+            }
+            $rule = EmailRule::fromArray($tool, ['mode' => 'immediate', 'threshold' => $schedule->notification_threshold, 'include_zero' => false, 'email' => $schedule->notification_email]);
+        } else {
+            $rule = $store->email_rules->forTool($tool);
+        }
         if ($rule === null || $rule->mode !== 'immediate' || ! $this->emailRuleMatches($rule, $rows)) {
             return;
         }

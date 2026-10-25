@@ -16,6 +16,7 @@ use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
 /**
+ * @property list<array{alias: string, master: string}>|null $sku_aliases
  * @property ChatRules $slack_rules
  * @property ChatRules $discord_rules
  * @property EmailRules $email_rules
@@ -28,6 +29,7 @@ use Spatie\Activitylog\Support\LogOptions;
     'shopify_webhook_secret',
     'shipstation_api_key',
     'shipstation_api_secret',
+    'shipstation_v2_api_key',
     'store_number',
     'slack_rules',
     'email_rules',
@@ -39,8 +41,11 @@ use Spatie\Activitylog\Support\LogOptions;
     'shopify_timezone',
     'return_exception_policy',
     'operational_digest_policy',
+    'sku_aliases',
+    'sku_aliases_enabled',
+    'movement_policy',
 ])]
-#[Hidden(['shopify_access_token', 'shopify_webhook_secret', 'shipstation_api_key', 'shipstation_api_secret', 'shipstation_monitoring_token', 'shipstation_monitoring_subscriptions'])]
+#[Hidden(['shipstation_v2_api_key', 'shopify_access_token', 'shopify_webhook_secret', 'shipstation_api_key', 'shipstation_api_secret', 'shipstation_monitoring_token', 'shipstation_monitoring_subscriptions'])]
 class Store extends Model
 {
     /** @use HasFactory<StoreFactory> */
@@ -49,10 +54,39 @@ class Store extends Model
     protected static function booted(): void
     {
         static::saving(function (Store $store): void {
+            if ($store->exists && $store->isDirty(['shipstation_api_key', 'shipstation_api_secret', 'shipstation_v2_api_key', 'store_number'])) {
+                $policy = $store->movementPolicy();
+                $policy['access_verified'] = false;
+                $store->movement_policy = $policy;
+            }
+            if ($store->exists && $store->isDirty('shopify_store')) {
+                $store->sku_aliases_enabled = false;
+            }
             if ($store->exists && $store->isDirty('shopify_store') && ! $store->isDirty('shopify_timezone')) {
                 $store->shopify_timezone = null;
             }
         });
+    }
+
+    /** @return list<array{alias: string, master: string}> */
+    public function activeSkuAliases(): array
+    {
+        return $this->sku_aliases_enabled ? ($this->sku_aliases ?? []) : [];
+    }
+
+    /** @return array{access_verified: bool, lookback_days: int, acceptance_hours: int, stale_hours: int, max_labels: int, daily_limit: int, carriers: list<string>} */
+    public function movementPolicy(): array
+    {
+        $policy = is_array($this->movement_policy) ? $this->movement_policy : [];
+
+        return ['access_verified' => ($policy['access_verified'] ?? false) === true || ($policy['access_verified'] ?? null) === '1' || ($policy['access_verified'] ?? null) === 1,
+            'lookback_days' => max(1, min(90, (int) ($policy['lookback_days'] ?? 30))), 'acceptance_hours' => max(1, min(720, (int) ($policy['acceptance_hours'] ?? 48))), 'stale_hours' => max(1, min(2160, (int) ($policy['stale_hours'] ?? 72))), 'max_labels' => max(1, min(10, (int) ($policy['max_labels'] ?? 5))), 'daily_limit' => max(0, min(1000, (int) ($policy['daily_limit'] ?? 100))), 'carriers' => array_values($policy['carriers'] ?? ['ups', 'fedex', 'usps', 'stamps_com'])];
+    }
+
+    /** @return HasMany<ShipmentMovementObservation, $this> */
+    public function shipmentMovementObservations(): HasMany
+    {
+        return $this->hasMany(ShipmentMovementObservation::class);
     }
 
     public function getActivitylogOptions(): LogOptions
@@ -102,6 +136,18 @@ class Store extends Model
     public function auditSnapshots(): HasMany
     {
         return $this->hasMany(AuditSnapshot::class);
+    }
+
+    /** @return HasMany<ShippingBillingEntry, $this> */
+    public function shippingBillingEntries(): HasMany
+    {
+        return $this->hasMany(ShippingBillingEntry::class);
+    }
+
+    /** @return HasMany<ReportSchedule, $this> */
+    public function reportSchedules(): HasMany
+    {
+        return $this->hasMany(ReportSchedule::class);
     }
 
     /** @return HasMany<PrintQueueItem, $this> */
@@ -205,10 +251,14 @@ class Store extends Model
             'shipstation_monitoring_checked_at' => 'datetime',
             'return_exception_policy' => 'array',
             'operational_digest_policy' => 'array',
+            'sku_aliases' => 'array',
+            'sku_aliases_enabled' => 'boolean',
+            'movement_policy' => 'array',
             'shopify_access_token' => 'encrypted',
             'shopify_webhook_secret' => 'encrypted',
             'shipstation_api_key' => 'encrypted',
             'shipstation_api_secret' => 'encrypted',
+            'shipstation_v2_api_key' => 'encrypted',
             'slack_rules' => AsNotificationRules::class.':chat',
             'email_rules' => AsNotificationRules::class.':email',
             'discord_rules' => AsNotificationRules::class.':discord',

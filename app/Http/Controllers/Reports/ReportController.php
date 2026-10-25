@@ -26,6 +26,9 @@ abstract class ReportController extends Controller
             return $view(null, false);
         }
         $run = $reports->run($request, $store, $tool, $report, $arguments, $startDate, $endDate);
+        if ($run->status === 'completed' && config('reports.tools.'.$tool.'.schedule_action') === $report && ! $run->result()?->truncated) {
+            request()->attributes->set('scheduleSourceRun', $run);
+        }
         if ($reports->shouldRedirect($request, $run)) {
             return $reports->redirectToResult($request);
         }

@@ -31,4 +31,18 @@ class ShippingMarginAnalyzerTest extends TestCase
     {
         return ['orderId' => 1, 'orderNumber' => $number, 'shipDate' => '2026-06-10T00:00:00Z', 'carrierCode' => $carrier, 'serviceCode' => 'ground', 'shipmentCost' => $cost, 'insuranceCost' => $insurance, 'voided' => $voided];
     }
+
+    public function test_imported_cost_thresholds_use_exact_decimals_and_order_prefixes_are_not_stripped(): void
+    {
+        $analyzer = new ShippingMarginAnalyzer;
+        $label = [...$this->shipment('WEB-1001', 1, 0, 'ups'), 'shipmentId' => '1', 'imported_billing_cost' => '100000000001.123456', 'imported_billing_currency' => 'USD'];
+        $order = ['order_number' => 'WEB-1001', 'currency' => 'USD', 'shipping_lines' => [['price' => '100000000000.123456']]];
+
+        $rows = $analyzer->analyze([$label], [$order], 0.999999);
+
+        $this->assertSame('1.000000', $rows[0]['imported_loss']);
+        $this->assertSame('100000000001.123456', $rows[0]['imported_cost']);
+        $this->assertSame([], $analyzer->analyze([$label], [array_replace($order, ['order_number' => '1001'])], 0));
+        $this->assertSame([], $analyzer->analyze([$label], [$order], 1.0));
+    }
 }

@@ -15,6 +15,7 @@ class RedactLogContext
     public function redact(LogRecord $record): LogRecord
     {
         return $record->with(
+            message: SentryEventSanitizer::sanitizeText($record->message),
             context: SentryEventSanitizer::sanitizeArray($record->context),
             extra: SentryEventSanitizer::sanitizeArray($record->extra),
         );

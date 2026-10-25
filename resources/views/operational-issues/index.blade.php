@@ -26,6 +26,11 @@
                         @if ($issue->source_tool === 'return_exceptions')
                             <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ __(data_get($issue->payload, 'next_action', '')) }} · {{ \App\Support\UiFormat::date(data_get($issue->payload, 'due_at'), true) }}</p>
                             <x-button class="mt-2" size="sm" variant="ghost" :href="route('reports.return-rma.result', ['start_date' => data_get($issue->payload, 'start_date'), 'end_date' => data_get($issue->payload, 'end_date')]).'#return-'.basename($issue->reference).'-'.data_get($issue->payload, 'kind')">{{ __('Open return exception') }}</x-button>
+                        @elseif ($issue->source_tool === 'shipment_movement')
+                            <x-badge tone="warn">{{ __(data_get($issue->payload, 'classification', 'movement_unknown')) }}</x-badge>
+                            <p class="mt-1 text-xs">{{ __('Tracking') }}: {{ data_get($issue->payload, 'tracking_number') }} · {{ data_get($issue->payload, 'carrier') }}</p>
+                            <p class="text-xs">{{ __('Last carrier progress') }}: {{ data_get($issue->payload, 'last_progress_at') ?? '—' }}</p>
+                            <p class="text-xs">{{ __('Set the due date from the actual carrier claim policy. No deadline is inferred automatically.') }}</p>
                         @elseif ($issue->source_tool === 'order_changed_after_push')
                             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('Verify the items and shipping details in ShipStation before fulfillment.') }}</p>
                             @if (data_get($issue->payload, 'diff'))

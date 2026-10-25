@@ -18,9 +18,10 @@ class RouteAuthorizationTest extends TestCase
         foreach (app('router')->getRoutes()->getRoutes() as $route) {
             $name = (string) $route->getName();
             $gate = match (true) {
+                in_array($name, ['jobs.retry', 'jobs.destroy'], true) => 'can:manage-administration',
                 str_starts_with($name, 'reports.') => 'can:run-audits',
                 str_starts_with($name, 'admin.') => 'can:manage-administration',
-                in_array($name, ['ignored-orders.store', 'ignored-orders.bulk-destroy', 'ignored-orders.import', 'ignored-orders.destroy', 'jobs.retry', 'jobs.destroy', 'print-queue.index', 'print-queue.store', 'print-queue.clear', 'print-queue.destroy', 'orders.push.create', 'orders.push.preview', 'orders.push.store', 'orders.note.update'], true) => 'can:run-audits',
+                in_array($name, ['ignored-orders.store', 'ignored-orders.bulk-destroy', 'ignored-orders.import', 'ignored-orders.destroy', 'print-queue.index', 'print-queue.store', 'print-queue.clear', 'print-queue.destroy', 'orders.push.create', 'orders.push.preview', 'orders.push.store', 'orders.note.update'], true) => 'can:run-audits',
                 default => null,
             };
             if ($gate && ! $this->hasMiddleware($route, $gate)) {

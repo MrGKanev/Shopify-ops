@@ -57,7 +57,7 @@ class AuthenticatedSessionControllerTest extends TestCase
         $response
             ->assertRedirect(route('login'))
             ->assertSessionHasErrors([
-                'email' => 'Incorrect email or password. 2 attempts remaining.',
+                'email' => 'Incorrect email or password.',
             ]);
         $this->assertGuest();
     }
@@ -97,22 +97,15 @@ class AuthenticatedSessionControllerTest extends TestCase
         ])->assertTooManyRequests();
     }
 
-    public function test_third_failed_attempt_bans_the_ip_and_blocks_further_attempts_even_with_the_right_password(): void
+    public function test_three_failed_attempts_do_not_block_colleagues_on_the_same_network(): void
     {
-        $this->travelTo(now());
-        User::factory()->create(['email' => 'operator@example.com', 'password' => 'correct-password']);
-
-        $this->from(route('login'))->post(route('login.store'), ['email' => 'operator@example.com', 'password' => 'wrong'])
-            ->assertSessionHasErrors(['email' => 'Incorrect email or password. 2 attempts remaining.']);
-        $this->from(route('login'))->post(route('login.store'), ['email' => 'operator@example.com', 'password' => 'wrong'])
-            ->assertSessionHasErrors(['email' => 'Incorrect email or password. 1 attempt remaining.']);
-        $this->from(route('login'))->post(route('login.store'), ['email' => 'operator@example.com', 'password' => 'wrong'])
-            ->assertSessionHasErrors(['email' => 'Too many failed attempts. Account locked for 1 week. Contact your administrator.']);
-
-        $response = $this->from(route('login'))->post(route('login.store'), ['email' => 'operator@example.com', 'password' => 'correct-password']);
-
-        $response->assertSessionHasErrors(['email' => 'Too many failed attempts. Try again in 7 days.']);
-        $this->assertGuest();
+        $user = User::factory()->create(['email' => 'operator@example.com', 'password' => 'correct-password']);
+        $colleague = User::factory()->create(['email' => 'colleague@example.com', 'password' => 'colleague-password']);
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            $this->post(route('login.store'), ['email' => $user->email, 'password' => 'wrong'])->assertSessionHasErrors('email');
+        }
+        $this->post(route('login.store'), ['email' => $colleague->email, 'password' => 'colleague-password'])->assertRedirect(route('dashboard'));
+        $this->assertAuthenticatedAs($colleague);
     }
 
     public function test_authenticated_user_is_redirected_away_from_the_login_form(): void
@@ -130,7 +123,7 @@ class AuthenticatedSessionControllerTest extends TestCase
         $store = Store::factory()->create();
         $user->stores()->attach($store);
 
-        $this->actingAs($user)->get(route('two-factor.settings'))
+        $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()])->get(route('two-factor.settings'))
             ->assertOk()
             ->assertSeeText('Two-factor authentication');
     }
@@ -146,7 +139,7 @@ class AuthenticatedSessionControllerTest extends TestCase
             'two_factor_confirmed_at' => now(),
         ])->save();
 
-        $this->actingAs($user)->get(route('two-factor.settings'))
+        $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()])->get(route('two-factor.settings'))
             ->assertOk()
             ->assertSeeText('Two-factor authentication is enabled.')
             ->assertSeeText('recovery-code-one')

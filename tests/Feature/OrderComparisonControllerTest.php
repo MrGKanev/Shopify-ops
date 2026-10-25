@@ -102,8 +102,8 @@ class OrderComparisonControllerTest extends TestCase
                     'displayFulfillmentStatus' => 'UNFULFILLED',
                 ]))),
             'https://ssapi.shipstation.com/orders*' => Http::sequence()
-                ->push(['orders' => [['orderStatus' => 'shipped']], 'pages' => 1])
-                ->push(['orders' => [['orderStatus' => 'on_hold']], 'pages' => 1]),
+                ->push(['orders' => [['orderId' => 1, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 42], 'orderStatus' => 'shipped']], 'pages' => 1])
+                ->push(['orders' => [['orderId' => 2, 'orderNumber' => '1002', 'advancedOptions' => ['storeId' => 42], 'orderStatus' => 'on_hold']], 'pages' => 1]),
         ]);
 
         $response = $this->actingAs($user)
@@ -166,8 +166,8 @@ class OrderComparisonControllerTest extends TestCase
                 ->push($this->shopifyResponse($this->orderNode('#1002'))),
             'https://ssapi.shipstation.com/orders*' => Http::sequence()
                 ->push(['orders' => [
-                    ['orderStatus' => 'shipped'],
-                    ['orderStatus' => 'on_hold'],
+                    ['orderId' => 1, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 42], 'orderStatus' => 'shipped'],
+                    ['orderId' => 2, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 42], 'orderStatus' => 'on_hold'],
                 ], 'pages' => 1])
                 ->push(['orders' => [], 'pages' => 1]),
         ]);
@@ -245,6 +245,7 @@ class OrderComparisonControllerTest extends TestCase
             'shopify_access_token' => 'active-shopify-token',
             'shipstation_api_key' => 'active-ss-key',
             'shipstation_api_secret' => 'active-ss-secret',
+            'store_number' => '42',
             ...$storeAttributes,
         ]);
         $user->stores()->attach($store);

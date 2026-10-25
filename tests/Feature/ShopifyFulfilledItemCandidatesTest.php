@@ -24,7 +24,7 @@ class ShopifyFulfilledItemCandidatesTest extends TestCase
                 'status' => 'SUCCESS',
                 'displayStatus' => 'FULFILLED',
                 'fulfillmentLineItems' => ['edges' => [[
-                    'node' => ['quantity' => 2, 'lineItem' => ['id' => 'gid://shopify/LineItem/3', 'title' => 'Widget', 'name' => 'Widget Blue', 'variantTitle' => 'Blue']],
+                    'node' => ['quantity' => 2, 'lineItem' => ['id' => 'gid://shopify/LineItem/3', 'title' => 'Widget', 'name' => 'Widget Blue', 'variantTitle' => 'Blue', 'sku' => 'OLD-BLUE']],
                 ]]],
             ]],
         ];
@@ -33,6 +33,7 @@ class ShopifyFulfilledItemCandidatesTest extends TestCase
         $result = (app(ShopifyAdminClient::class))->fulfilledItemCandidates(new Store(['shopify_store' => 'acme', 'shopify_access_token' => 'token']), '2026-07-01');
 
         $this->assertSame(2, $result['orders'][0]['fulfillments'][0]['line_items'][0]['quantity']);
-        Http::assertSent(fn (Request $request): bool => $request['variables']['search'] === 'status:any updated_at:>=2026-07-01T00:00:00Z' && ! str_contains($request['variables']['search'], 'created_at:') && str_contains((string) $request['query'], 'fulfillmentLineItems'));
+        $this->assertSame('OLD-BLUE', $result['orders'][0]['fulfillments'][0]['line_items'][0]['sku']);
+        Http::assertSent(fn (Request $request): bool => $request['variables']['search'] === 'status:any updated_at:>=2026-07-01T00:00:00Z' && ! str_contains($request['variables']['search'], 'created_at:') && str_contains((string) $request['query'], 'fulfillmentLineItems') && str_contains((string) $request['query'], 'variantTitle sku'));
     }
 }

@@ -245,6 +245,40 @@ class ShipStationClient implements ShipStationClientContract
         ], 'orders');
     }
 
+    public function fetchBacklogOrders(int $storeId): array
+    {
+        $orders = [];
+        foreach (['awaiting_shipment', 'on_hold'] as $status) {
+            $expectedPages = null;
+            $expectedTotal = null;
+            $statusCount = 0;
+            for ($page = 1; $page <= ($expectedPages ?? 1); $page++) {
+                $payload = $this->get('/orders', ['storeId' => $storeId, 'orderStatus' => $status, 'sortBy' => 'OrderDate', 'sortDir' => 'ASC', 'pageSize' => self::PAGE_SIZE, 'page' => $page]);
+                $pages = $payload['pages'] ?? null;
+                $total = $payload['total'] ?? null;
+                if (! is_int($pages) || $pages < 0 || $pages > 20 || ($payload['page'] ?? null) !== $page || ! is_array($payload['orders'] ?? null)
+                    || ! is_int($total) || $total < 0 || ($expectedTotal !== null && $total !== $expectedTotal)
+                    || ($pages === 0 && $payload['orders'] !== []) || ($pages > 1 && $payload['orders'] === []) || ($expectedPages !== null && $pages !== $expectedPages)) {
+                    throw new UnexpectedResponse('ShipStation could not confirm backlog pagination.');
+                }
+                $expectedPages = max(1, $pages);
+                $expectedTotal = $total;
+                foreach ($this->items($payload, 'orders') as $order) {
+                    if ((string) ($order['advancedOptions']['storeId'] ?? '') !== (string) $storeId || ($order['orderStatus'] ?? null) !== $status) {
+                        throw new UnexpectedResponse('ShipStation returned an unexpected backlog store or status.');
+                    }
+                    $orders[] = $order;
+                    $statusCount++;
+                }
+            }
+            if ($statusCount !== $expectedTotal) {
+                throw new UnexpectedResponse('ShipStation returned an incomplete backlog count.');
+            }
+        }
+
+        return $orders;
+    }
+
     public function fetchActiveOrders(): array
     {
         $orders = [];
@@ -255,22 +289,38 @@ class ShipStationClient implements ShipStationClientContract
         return $orders;
     }
 
-    public function fetchShipmentsByDate(string $startDate, string $endDate): array
+    public function fetchShipmentsByDate(string $startDate, string $endDate, ?int $storeId = null): array
     {
-        return $this->paginate('/shipments', [
+        $filters = [
             'shipDateStart' => $this->dayStart($startDate),
             'shipDateEnd' => $this->dayEnd($endDate),
             'sortBy' => 'ShipDate',
             'sortDir' => 'ASC',
-        ], 'shipments');
+        ];
+        if ($storeId !== null) {
+            if ($storeId < 1) {
+                throw new \InvalidArgumentException('A positive ShipStation store number is required.');
+            }
+            $filters['storeId'] = $storeId;
+        }
+
+        return $this->paginate('/shipments', $filters, 'shipments', confirmPages: $storeId !== null, maximumPages: $storeId === null ? null : 20);
     }
 
-    public function fetchVoidedShipments(string $startDate, string $endDate): array
+    public function fetchVoidedShipments(string $startDate, string $endDate, ?int $storeId = null): array
     {
-        return $this->paginate('/shipments', [
-            'voidDate_start' => $this->dayStart($startDate),
-            'voidDate_end' => $this->dayEnd($endDate),
-        ], 'shipments');
+        $filters = [
+            'voidDateStart' => $this->dayStart($startDate),
+            'voidDateEnd' => $this->dayEnd($endDate),
+        ];
+        if ($storeId !== null) {
+            if ($storeId < 1) {
+                throw new \InvalidArgumentException('A positive ShipStation store number is required.');
+            }
+            $filters['storeId'] = $storeId;
+        }
+
+        return $this->paginate('/shipments', $filters, 'shipments', confirmPages: $storeId !== null, maximumPages: $storeId === null ? null : 20);
     }
 
     public function buildOrderPayload(array $shopifyOrder): array
