@@ -85,7 +85,9 @@ Route::middleware('guest')->group(function (): void {
     Route::post('/reset-password', [PasswordResetController::class, 'update'])->middleware('throttle:password-reset')->name('password.update');
     Route::get('/auth/google/redirect', [GoogleAuthenticationController::class, 'redirect'])->middleware('throttle:oauth')->name('auth.google.redirect');
     Route::get('/auth/google/callback', [GoogleAuthenticationController::class, 'callback'])->middleware('throttle:oauth')->name('auth.google.callback');
-    Route::post('/dev-login/{role}', [AuthenticatedSessionController::class, 'devLogin'])->whereIn('role', ['admin', 'operator'])->name('dev-login');
+    if (app()->environment(['local', 'testing'])) {
+        Route::post('/dev-login/{role}', [AuthenticatedSessionController::class, 'devLogin'])->whereIn('role', ['admin', 'operator'])->name('dev-login');
+    }
 });
 
 Route::middleware('auth')->group(function (): void {

@@ -184,6 +184,7 @@ class InitialApplicationInstaller
             ]);
         }
 
+        $variables['SESSION_ENCRYPT'] = 'true';
         $variables['MAIL_MAILER'] = $data['mail_mailer'];
         if ($data['mail_mailer'] === 'smtp') {
             $variables = array_merge($variables, [
