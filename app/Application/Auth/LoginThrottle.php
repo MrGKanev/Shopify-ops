@@ -9,11 +9,11 @@ use Illuminate\Support\Facades\DB;
 
 class LoginThrottle
 {
-    private const int MAX_ATTEMPTS = 100;
+    private const int MAX_ATTEMPTS = 10;
 
     private const int ATTEMPT_WINDOW_SECONDS = 60;
 
-    private const int BAN_SECONDS = 60;
+    private const int BAN_SECONDS = 900;
 
     /** Message describing the remaining ban, or null if the IP isn't currently banned. */
     public function bannedMessage(string $ip): ?string

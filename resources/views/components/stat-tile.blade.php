@@ -10,6 +10,6 @@
     <div class="text-sm font-medium text-slate-500 dark:text-slate-400">{{ __($label) }}</div>
     <div class="mt-1 text-2xl font-bold">{{ $value }}</div>
     @isset($sub)
-        <div class="mt-1 text-sm text-slate-500 dark:text-slate-400">{!! $sub !!}</div>
+        <div class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ $sub }}</div>
     @endisset
 </article>

@@ -32,49 +32,49 @@ class LoginThrottleTest extends TestCase
         $this->assertSame('Incorrect email or password.', $throttle->recordFailureMessage('1.2.3.4'));
     }
 
-    public function test_one_hundred_failures_block_the_ip_for_one_minute(): void
+    public function test_ten_failures_block_the_ip_for_fifteen_minutes(): void
     {
         $throttle = new LoginThrottle;
-        for ($attempt = 0; $attempt < 99; $attempt++) {
+        for ($attempt = 0; $attempt < 9; $attempt++) {
             $throttle->recordFailureMessage('1.2.3.4');
         }
         $message = $throttle->recordFailureMessage('1.2.3.4');
 
-        $this->assertSame('Too many failed attempts. Try again in 60 seconds.', $message);
+        $this->assertSame('Too many failed attempts. Try again in 900 seconds.', $message);
         $entry = LoginAttempt::where('ip', '1.2.3.4')->firstOrFail();
-        $this->assertTrue($entry->banned_until->isSameMinute(now()->addMinute()));
+        $this->assertTrue($entry->banned_until->isSameMinute(now()->addMinutes(15)));
     }
 
     public function test_banned_message_shows_seconds_remaining(): void
     {
         $this->travelTo(now());
         $throttle = new LoginThrottle;
-        for ($attempt = 0; $attempt < 100; $attempt++) {
+        for ($attempt = 0; $attempt < 10; $attempt++) {
             $throttle->recordFailureMessage('1.2.3.4');
         }
 
-        $this->assertSame('Too many failed attempts. Try again in 60 seconds.', $throttle->bannedMessage('1.2.3.4'));
+        $this->assertSame('Too many failed attempts. Try again in 900 seconds.', $throttle->bannedMessage('1.2.3.4'));
     }
 
     public function test_banned_message_counts_down_seconds(): void
     {
         $this->travelTo(now());
         $throttle = new LoginThrottle;
-        for ($attempt = 0; $attempt < 100; $attempt++) {
+        for ($attempt = 0; $attempt < 10; $attempt++) {
             $throttle->recordFailureMessage('1.2.3.4');
         }
         $this->travelTo(now()->addSeconds(30));
 
-        $this->assertSame('Too many failed attempts. Try again in 30 seconds.', $throttle->bannedMessage('1.2.3.4'));
+        $this->assertSame('Too many failed attempts. Try again in 870 seconds.', $throttle->bannedMessage('1.2.3.4'));
     }
 
-    public function test_ban_expires_after_one_minute(): void
+    public function test_ban_expires_after_fifteen_minutes(): void
     {
         $throttle = new LoginThrottle;
-        for ($attempt = 0; $attempt < 100; $attempt++) {
+        for ($attempt = 0; $attempt < 10; $attempt++) {
             $throttle->recordFailureMessage('1.2.3.4');
         }
-        $this->travelTo(now()->addMinute()->addSecond());
+        $this->travelTo(now()->addMinutes(15)->addSecond());
 
         $this->assertNull($throttle->bannedMessage('1.2.3.4'));
     }
@@ -106,7 +106,7 @@ class LoginThrottleTest extends TestCase
     public function test_different_ips_are_tracked_independently(): void
     {
         $throttle = new LoginThrottle;
-        for ($attempt = 0; $attempt < 100; $attempt++) {
+        for ($attempt = 0; $attempt < 10; $attempt++) {
             $throttle->recordFailureMessage('1.2.3.4');
         }
 
@@ -117,7 +117,7 @@ class LoginThrottleTest extends TestCase
     public function test_banned_ips_lists_only_currently_banned_entries(): void
     {
         $throttle = new LoginThrottle;
-        for ($attempt = 0; $attempt < 100; $attempt++) {
+        for ($attempt = 0; $attempt < 10; $attempt++) {
             $throttle->recordFailureMessage('1.2.3.4');
         }
         $throttle->recordFailureMessage('5.6.7.8');
@@ -131,7 +131,7 @@ class LoginThrottleTest extends TestCase
     public function test_unban_removes_the_ban_immediately(): void
     {
         $throttle = new LoginThrottle;
-        for ($attempt = 0; $attempt < 100; $attempt++) {
+        for ($attempt = 0; $attempt < 10; $attempt++) {
             $throttle->recordFailureMessage('1.2.3.4');
         }
 
