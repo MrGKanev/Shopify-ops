@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Application\Exports\CsvExporter;
 use App\Application\Reports\ImportShippingBilling;
 use App\Models\ShippingBillingEntry;
+use App\Models\Store;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Validation\ValidationException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -92,6 +94,15 @@ class ShippingBillingTest extends TestCase
         $this->assertDatabaseCount('shipping_billing_entries', 0);
     }
 
+    public function test_utf8_bom_from_spreadsheet_exports_is_accepted(): void
+    {
+        $this->travelTo('2026-10-23 12:00:00 UTC');
+        [$operator] = $this->userWithStore(true, ['store_number' => '12']);
+        $csv = "\xEF\xBB\xBF".implode(',', ImportShippingBilling::HEADERS)."\n".implode(',', array_values($this->row()))."\n";
+
+        $this->actingAs($operator)->post('/shipping-billing/preview', ['file' => UploadedFile::fake()->createWithContent('billing.csv', $csv), 'source_account' => 'ups-123', 'statement_reference' => 'Statement'])->assertSessionDoesntHaveErrors();
+    }
+
     public function test_preview_is_user_scoped_expires_and_rechecks_account_settings(): void
     {
         $this->travelTo('2026-10-23 12:00:00 UTC');
@@ -156,6 +167,114 @@ class ShippingBillingTest extends TestCase
         $response->assertViewHas('entries', fn ($entries): bool => $entries->count() === 1);
         $this->assertSame('0.000000', $response->viewData('groups')[0]['observed_net']);
         $this->assertSame('10.100000', $response->viewData('groups')[0]['charges']);
+    }
+
+    private function parse(Store $store, array $rows): array
+    {
+        return app(ImportShippingBilling::class)->parse($this->input($rows)['file'], $store);
+    }
+
+    public function test_duplicate_or_missing_header_names_are_rejected(): void
+    {
+        $this->travelTo('2026-10-23 12:00:00 UTC');
+        [, $store] = $this->userWithStore(true, ['store_number' => '12']);
+        $headers = ImportShippingBilling::HEADERS;
+        $duplicated = [...array_slice($headers, 0, -1), $headers[0]];
+        $values = array_values($this->row());
+        $content = fn (array $names): UploadedFile => UploadedFile::fake()->createWithContent('billing.csv', app(CsvExporter::class)->content($names, [$values]));
+
+        foreach ([$duplicated, array_slice($headers, 1), [...$headers, $headers[1]]] as $names) {
+            try {
+                app(ImportShippingBilling::class)->parse($content($names), $store);
+                $this->fail('The header row must match the template exactly.');
+            } catch (ValidationException $exception) {
+                $this->assertArrayHasKey('file', $exception->errors());
+            }
+        }
+    }
+
+    public function test_the_row_ceiling_allows_five_thousand_rows_and_rejects_the_next_one(): void
+    {
+        $this->travelTo('2026-10-23 12:00:00 UTC');
+        [, $store] = $this->userWithStore(true, ['store_number' => '12']);
+        $rows = array_map(fn (int $number): array => $this->row(['transaction_id' => "tx-{$number}"]), range(1, 5000));
+
+        $this->assertCount(5000, $this->parse($store, $rows));
+
+        $this->expectException(ValidationException::class);
+        $this->parse($store, [...$rows, $this->row(['transaction_id' => 'tx-5001'])]);
+    }
+
+    public function test_hash_prefixes_are_removed_from_order_numbers_and_a_bare_hash_is_rejected(): void
+    {
+        $this->travelTo('2026-10-23 12:00:00 UTC');
+        [, $store] = $this->userWithStore(true, ['store_number' => '12']);
+
+        $this->assertSame('1001', $this->parse($store, [$this->row(['order_number' => '#1001'])])[0]['order_number']);
+        $this->assertSame('1001', $this->parse($store, [$this->row(['order_number' => ' ##1001 '])])[0]['order_number']);
+        $this->assertSame('10#01', $this->parse($store, [$this->row(['order_number' => '#10#01'])])[0]['order_number']);
+        $this->expectException(ValidationException::class);
+        $this->parse($store, [$this->row(['order_number' => '#'])]);
+    }
+
+    public function test_posted_at_may_be_today_in_the_store_timezone_but_not_tomorrow(): void
+    {
+        // 2026-10-22 23:00 UTC is already 2026-10-23 in Auckland (UTC+13) and still the 22nd in UTC.
+        $this->travelTo('2026-10-22 23:00:00 UTC');
+        [, $auckland] = $this->userWithStore(true, ['store_number' => '12', 'shopify_timezone' => 'Pacific/Auckland']);
+        [, $utc] = $this->userWithStore(true, ['store_number' => '12', 'shopify_timezone' => 'UTC']);
+
+        $this->assertCount(1, $this->parse($auckland, [$this->row(['posted_at' => '2026-10-23'])]));
+        $this->assertCount(1, $this->parse($utc, [$this->row(['posted_at' => '2026-10-22'])]));
+        try {
+            $this->parse($auckland, [$this->row(['posted_at' => '2026-10-24'])]);
+            $this->fail('A posting date after the store day must be rejected.');
+        } catch (ValidationException) {
+        }
+        $this->expectException(ValidationException::class);
+        $this->parse($utc, [$this->row(['posted_at' => '2026-10-23'])]);
+    }
+
+    public function test_the_same_transaction_id_in_another_store_or_source_account_is_a_separate_entry(): void
+    {
+        $this->travelTo('2026-10-23 12:00:00 UTC');
+        [, $store] = $this->userWithStore(true, ['store_number' => '12']);
+        [, $otherStore] = $this->userWithStore(true, ['store_number' => '12']);
+        $import = app(ImportShippingBilling::class);
+        $rows = $this->parse($store, [$this->row()]);
+
+        $this->assertSame(['created' => 1, 'duplicates' => 0], $import->handle($store, $rows, 'ups-123', 'S1', str_repeat('a', 64)));
+        $this->assertSame(['created' => 1, 'duplicates' => 0], $import->handle($store, $rows, 'ups-456', 'S1', str_repeat('a', 64)));
+        $this->assertSame(['created' => 1, 'duplicates' => 0], $import->handle($otherStore, $rows, 'ups-123', 'S1', str_repeat('a', 64)));
+        $this->assertSame(['created' => 0, 'duplicates' => 1], $import->handle($store, $rows, 'ups-123', 'S2', str_repeat('b', 64)));
+
+        $this->assertSame(3, ShippingBillingEntry::query()->where('transaction_id', 'tx-1')->count());
+        $this->assertSame(2, $store->shippingBillingEntries()->count());
+    }
+
+    public function test_a_conflict_inside_one_file_rolls_back_every_row(): void
+    {
+        $this->travelTo('2026-10-23 12:00:00 UTC');
+        [, $store] = $this->userWithStore(true, ['store_number' => '12']);
+        $rows = $this->parse($store, [$this->row(['transaction_id' => 'first']), $this->row(['transaction_id' => 'twice']), $this->row(['transaction_id' => 'twice', 'amount' => '99'])]);
+
+        try {
+            app(ImportShippingBilling::class)->handle($store, $rows, 'ups-123', 'S1', str_repeat('a', 64));
+            $this->fail('Conflicting rows with one transaction ID must fail the whole import.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('import', $exception->errors());
+        }
+
+        $this->assertSame(0, $store->shippingBillingEntries()->count());
+    }
+
+    public function test_identical_rows_repeated_in_one_file_count_as_one_entry_and_one_duplicate(): void
+    {
+        $this->travelTo('2026-10-23 12:00:00 UTC');
+        [, $store] = $this->userWithStore(true, ['store_number' => '12']);
+        $rows = $this->parse($store, [$this->row(), $this->row()]);
+
+        $this->assertSame(['created' => 1, 'duplicates' => 1], app(ImportShippingBilling::class)->handle($store, $rows, 'ups-123', 'S1', str_repeat('a', 64)));
     }
 
     private function input(array $rows): array

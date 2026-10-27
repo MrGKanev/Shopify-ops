@@ -4,6 +4,7 @@ namespace Tests\Feature\Application\Backups;
 
 use App\Application\Backups\RestoreBackupArchive;
 use App\Models\User;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Facades\Process;
@@ -186,7 +187,95 @@ class RestoreBackupArchiveTest extends TestCase
         app(RestoreBackupArchive::class)->handle((string) config('backup.backup.name').'/missing.zip');
     }
 
+    public function test_it_skips_hostile_names_but_restores_legitimate_double_dot_file_names_to_the_right_disk(): void
+    {
+        Storage::fake('backups');
+        Storage::fake('local');
+        Storage::fake('public');
+        $path = $this->createZip('hostile.zip', [
+            'db-dumps/sqlite-database.sql' => 'SELECT 1;',
+            'storage/app/private/back\\slash.csv' => 'backslash',
+            'storage/app/private/nul'."\0".'.csv' => 'nul',
+            'storage/app/private/../escape.csv' => 'parent',
+            'storage/app/private/dir/../escape.csv' => 'inner parent',
+            'storage/app/private/a..b.csv' => 'legitimate',
+            'storage/app/public/dots..txt' => 'public legitimate',
+            'storage/app/public/storage/app/private/nested.txt' => 'public nested',
+            'storage/app/private//absolute.csv' => 'absolute',
+        ]);
+
+        $result = app(RestoreBackupArchive::class)->handle($path);
+
+        Storage::disk('local')->assertExists('a..b.csv');
+        Storage::disk('public')->assertExists('dots..txt');
+        Storage::disk('public')->assertExists('storage/app/private/nested.txt');
+        Storage::disk('local')->assertMissing('nested.txt');
+        Storage::disk('local')->assertMissing('escape.csv');
+        Storage::disk('local')->assertMissing('back\\slash.csv');
+        $this->assertSame([], array_values(array_filter(Storage::disk('local')->allFiles(), fn (string $file): bool => str_contains($file, 'escape') || str_contains($file, 'back') || str_contains($file, "\0"))));
+        $this->assertFileDoesNotExist(dirname(Storage::disk('local')->path('x'), 2).'/escape.csv');
+        $this->assertGreaterThanOrEqual(4, $result['restored_files']);
+    }
+
+    public function test_it_reports_a_failed_file_write_after_the_database_was_replaced_and_cleans_temporary_files(): void
+    {
+        User::factory()->create();
+        Storage::fake('backups');
+        $path = $this->createZip('put-fails.zip', [
+            'db-dumps/sqlite-database.sql' => "DELETE FROM users;\nINSERT INTO users (id, name, email, password, role, created_at, updated_at) VALUES (7, 'Restored', 'put-fails@example.com', 'hash', 'admin', '2026-01-01 00:00:00', '2026-01-01 00:00:00');",
+            'storage/app/private/reports/one.csv' => 'one',
+        ]);
+        $failing = \Mockery::mock(Filesystem::class);
+        $failing->shouldReceive('put')->once()->andReturn(false);
+        Storage::set('local', $failing);
+        $before = glob(sys_get_temp_dir().'/shopify-ops-restore-*') ?: [];
+
+        try {
+            app(RestoreBackupArchive::class)->handle($path);
+            $this->fail('A failed file write must surface as an exception.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame('An application file could not be restored.', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('users', ['email' => 'put-fails@example.com']);
+        $this->assertSame($before, glob(sys_get_temp_dir().'/shopify-ops-restore-*') ?: []);
+    }
+
+    public function test_it_removes_temporary_files_after_success_and_after_a_rejected_archive(): void
+    {
+        Storage::fake('backups');
+        Storage::fake('local');
+        $before = glob(sys_get_temp_dir().'/shopify-ops-restore-*') ?: [];
+        $good = $this->createZip('clean.zip', ['db-dumps/sqlite-database.sql' => 'SELECT 1;', 'storage/app/private/a.csv' => 'a']);
+        $bad = $this->createZip('clean-bad.zip', ['storage/app/private/a.csv' => 'a']);
+
+        app(RestoreBackupArchive::class)->handle($good);
+        try {
+            app(RestoreBackupArchive::class)->handle($bad);
+            $this->fail('An archive without a dump must be rejected.');
+        } catch (RuntimeException) {
+        }
+
+        $this->assertSame($before, glob(sys_get_temp_dir().'/shopify-ops-restore-*') ?: []);
+    }
+
     /** @param array<string, string> $entries */
+    public function test_database_dump_directory_entry_is_not_treated_as_the_dump(): void
+    {
+        $user = User::factory()->create();
+        Storage::fake('backups');
+        Storage::fake('local');
+        $path = $this->createZip('directory-entry.zip', ['db-dumps/' => '']);
+
+        try {
+            app(RestoreBackupArchive::class)->handle($path);
+            $this->fail('An archive without a database dump must be rejected.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('No database dump', $exception->getMessage());
+        }
+        $this->assertModelExists($user);
+    }
+
     private function createZip(string $name, array $entries, ?string $password = null, ?string $filePassword = null): string
     {
         $folder = (string) config('backup.backup.name');

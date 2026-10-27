@@ -20,20 +20,30 @@ class LoginThrottle
     {
         $entry = LoginAttempt::where('ip', $ip)->first();
 
-        if ($entry === null || $entry->banned_until === null || $entry->banned_until->isPast()
-            || $entry->first_attempt_at->lt(now()->subSeconds(self::ATTEMPT_WINDOW_SECONDS + self::BAN_SECONDS))) {
+        $bannedUntil = $this->activeBanUntil($entry);
+
+        if ($bannedUntil === null) {
             return null;
         }
 
-        return $this->formatBanMessage($entry->banned_until->min(now()->addSeconds(self::BAN_SECONDS)));
+        return $this->formatBanMessage($bannedUntil->min(now()->addSeconds(self::BAN_SECONDS)));
     }
 
     /** Records a failed attempt and returns the message to show the user. */
     public function recordFailureMessage(string $ip): string
     {
-        $attempts = DB::transaction(function () use ($ip): int {
+        $activeBan = null;
+        $attempts = DB::transaction(function () use ($ip, &$activeBan): int {
             $now = Carbon::now()->startOfSecond();
             $entry = LoginAttempt::where('ip', $ip)->lockForUpdate()->first();
+
+            $bannedUntil = $this->activeBanUntil($entry);
+
+            if ($bannedUntil !== null) {
+                $activeBan = $bannedUntil;
+
+                return self::MAX_ATTEMPTS;
+            }
 
             if ($entry === null || $entry->first_attempt_at->lt($now->clone()->subSeconds(self::ATTEMPT_WINDOW_SECONDS))) {
                 $entry = LoginAttempt::updateOrCreate(['ip' => $ip], ['attempts' => 0, 'first_attempt_at' => $now, 'banned_until' => null]);
@@ -49,6 +59,10 @@ class LoginThrottle
 
             return $entry->attempts;
         });
+
+        if ($activeBan !== null) {
+            return $this->formatBanMessage($activeBan->min(now()->addSeconds(self::BAN_SECONDS)));
+        }
 
         if ($attempts < self::MAX_ATTEMPTS) {
             return __('Incorrect email or password.');
@@ -72,6 +86,20 @@ class LoginThrottle
     public function unban(string $ip): void
     {
         LoginAttempt::where('ip', $ip)->delete();
+    }
+
+    /** A failure recorded while a ban runs must neither reset nor extend it. */
+    private function activeBanUntil(?LoginAttempt $entry): ?\Carbon\Carbon
+    {
+        if ($entry === null || $entry->banned_until === null || ! $entry->banned_until->isFuture()) {
+            return null;
+        }
+
+        if ($entry->first_attempt_at->lt(now()->subSeconds(self::ATTEMPT_WINDOW_SECONDS + self::BAN_SECONDS))) {
+            return null;
+        }
+
+        return $entry->banned_until;
     }
 
     private function formatBanMessage(\Carbon\Carbon $bannedUntil): string

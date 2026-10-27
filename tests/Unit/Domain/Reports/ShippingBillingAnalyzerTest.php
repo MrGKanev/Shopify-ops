@@ -146,6 +146,29 @@ class ShippingBillingAnalyzerTest extends TestCase
         $this->assertSame('7', $rows[1]['net']);
     }
 
+    public function test_refund_status_follows_exact_credited_partial_and_overdue_amounts(): void
+    {
+        $due = fn (string $date): array => ['expected_refund' => '10', 'refund_due_at' => $date];
+        $now = CarbonImmutable::parse('2026-10-25T12:00:00Z');
+
+        $exact = $this->analyze([$this->entry($due('2026-10-20')), $this->entry(['type' => 'label_refund', 'amount' => '10'])], $now);
+        $partial = $this->analyze([$this->entry($due('2026-10-30')), $this->entry(['type' => 'label_refund', 'amount' => '4'])], $now);
+        $partialLate = $this->analyze([$this->entry($due('2026-10-20')), $this->entry(['type' => 'label_refund', 'amount' => '4'])], $now);
+        $reversedBackToDue = $this->analyze([$this->entry($due('2026-10-30')), $this->entry(['type' => 'label_refund', 'amount' => '10']), $this->entry(['type' => 'label_refund_reversal', 'amount' => '10'])], $now);
+
+        $this->assertSame(['credited', '0'], [$exact[0]['refund_status'], (string) $exact[0]['outstanding_refund']]);
+        $this->assertSame(['partially_credited', '6'], [$partial[0]['refund_status'], (string) $partial[0]['outstanding_refund']]);
+        $this->assertSame(['overdue', '6'], [$partialLate[0]['refund_status'], (string) $partialLate[0]['outstanding_refund']]);
+        $this->assertSame(['awaiting_credit', '10'], [$reversedBackToDue[0]['refund_status'], (string) $reversedBackToDue[0]['outstanding_refund']]);
+    }
+
+    public function test_negative_postings_are_never_presented_as_a_credit(): void
+    {
+        $rows = $this->analyze([$this->entry(['expected_refund' => '10']), $this->entry(['type' => 'label_refund', 'amount' => '-3'])]);
+
+        $this->assertSame('review_required', $rows[0]['refund_status']);
+    }
+
     /** @param list<array<string, mixed>> $entries
      * @return list<array<string, mixed>> */
     private function analyze(array $entries, ?CarbonImmutable $now = null): array

@@ -104,6 +104,11 @@ class ShopifyAdminClient implements ShopifyAdminGateway
         return $this->factory->forStore($store)->customerOrderHistory($email);
     }
 
+    public function customerFulfillmentHistory(Store $store, string $email): array
+    {
+        return $this->factory->forStore($store)->customerFulfillmentHistory($email);
+    }
+
     public function orderMetafieldDefinitions(Store $store, bool $refresh = false): array
     {
         $key = "shopify:metafield-definitions:{$store->getKey()}";

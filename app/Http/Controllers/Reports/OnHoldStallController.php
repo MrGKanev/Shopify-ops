@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
+use App\Application\Orders\OperationalFieldExportColumns;
 use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunOnHoldStallReport;
@@ -31,7 +32,7 @@ class OnHoldStallController extends ReportController
         return $this->runQueued($reports, $request, $store, $configurationError, 'on_hold_stall', $report::class, [$startDate, $endDate], $startDate, $endDate, fn (?ReportResult $result, bool $reportFailed) => view('reports.on-hold-stall', $this->viewData($startDate, $endDate, $result, $reportFailed, $configurationError)));
     }
 
-    public function export(DateRangeReportRequest $request, RunOnHoldStallReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse
+    public function export(DateRangeReportRequest $request, RunOnHoldStallReport $report, CsvExporter $csv, QueuedReportRunner $reports, OperationalFieldExportColumns $operationalFields): StreamedResponse|RedirectResponse
     {
         [$store, $startDate, $endDate] = $this->context($request);
         if ($this->configurationError($store)) {
@@ -44,9 +45,10 @@ class OnHoldStallController extends ReportController
 
             return back()->withErrors(['export' => __('reports.export_failed')]);
         }
-        $rows = array_map(fn (array $row): array => [$row['order_number'], $row['created_at'], $row['days_waiting'], $row['hold_reason'], $row['hold_notes'], $row['email'], $row['total'], $row['financial'], $row['fulfillment']], $result->rows);
+        $extra = $request->boolean('operational_fields') ? $operationalFields->handle($store, array_column($result->rows, 'order_number')) : ['headers' => [], 'cells' => [], 'fallback' => []];
+        $rows = array_map(fn (array $row): array => [$row['order_number'], $row['created_at'], $row['days_waiting'], $row['hold_reason'], $row['hold_notes'], $row['email'], $row['total'], $row['financial'], $row['fulfillment'], ...($extra['cells'][$row['order_number']] ?? $extra['fallback'])], $result->rows);
 
-        return $csv->download("on-hold-stalls-{$startDate}-to-{$endDate}.csv", ['Order', 'Placed', 'Days waiting', 'Hold reason', 'Notes', 'Email', 'Total', 'Financial status', 'Fulfillment status'], $rows);
+        return $csv->download("on-hold-stalls-{$startDate}-to-{$endDate}.csv", ['Order', 'Placed', 'Days waiting', 'Hold reason', 'Notes', 'Email', 'Total', 'Financial status', 'Fulfillment status', ...$extra['headers']], $rows);
     }
 
     /** @return array{Store, string, string} */

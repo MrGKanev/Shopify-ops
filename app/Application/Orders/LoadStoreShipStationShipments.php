@@ -17,18 +17,20 @@ class LoadStoreShipStationShipments
         if ($orders === []) {
             return [];
         }
-        $orderIds = array_map(fn (array $order): string => (string) $order['orderId'], $orders);
+        $orderIds = array_map(fn (array $order): ?int => ShipStationIdentifier::positiveInt($order['orderId'] ?? null), $orders);
+        $storeId = ShipStationIdentifier::positiveInt((string) $store->store_number);
         $shipments = [];
         foreach ($client->getOrderShipments($number, true) as $shipment) {
-            if (! is_scalar($shipment['orderId'] ?? null)) {
+            $shipmentOrderId = ShipStationIdentifier::positiveInt($shipment['orderId'] ?? null);
+            if ($shipmentOrderId === null) {
                 throw new UnexpectedResponse('ShipStation shipment ownership could not be confirmed.');
             }
-            if (! in_array((string) $shipment['orderId'], $orderIds, true)) {
+            if (! in_array($shipmentOrderId, $orderIds, true)) {
                 continue;
             }
-            $id = (string) ($shipment['shipmentId'] ?? '');
-            if (! ctype_digit($id) || (int) $id < 1
-                || (isset($shipment['advancedOptions']['storeId']) && (string) $shipment['advancedOptions']['storeId'] !== (string) $store->store_number)
+            $id = ShipStationIdentifier::positiveInt($shipment['shipmentId'] ?? null);
+            if ($id === null
+                || (isset($shipment['advancedOptions']['storeId']) && ($storeId === null || ShipStationIdentifier::positiveInt($shipment['advancedOptions']['storeId']) !== $storeId))
                 || (isset($shipments[$id]) && $shipments[$id] !== $shipment)) {
                 throw new UnexpectedResponse('ShipStation shipment identity could not be confirmed.');
             }

@@ -1,0 +1,6 @@
+query CustomerFulfillmentHistory($search: String!, $after: String) {
+  orders(first: 25, after: $after, sortKey: CREATED_AT, reverse: true, query: $search) {
+    pageInfo { hasNextPage endCursor }
+    edges { node { legacyResourceId name createdAt cancelledAt test customer { id } lineItems(first: 30) { pageInfo { hasNextPage } edges { node { sku quantity } } } } }
+  }
+}

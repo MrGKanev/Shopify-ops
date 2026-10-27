@@ -296,6 +296,43 @@ class ShopifyClient
         return ['orders' => $result['orders'], 'customer' => $customer, 'pages' => $result['pages'], 'truncated' => $result['truncated']];
     }
 
+    /**
+     * Compact per-order history for fulfillment context: purchased SKUs and whether the line items were fully read.
+     *
+     * @return array{orders: list<array{name: string, created_at: string, cancelled: bool, test: bool, customer_id: string, skus: list<string>, lines_complete: bool}>, pages: int, truncated: bool}
+     */
+    public function customerFulfillmentHistory(string $email): array
+    {
+        $orders = [];
+        $result = $this->paginateOrderNodes('CustomerFulfillmentHistory', OrderSearch::anyStatus()->email($email), 40, function (array $node) use (&$orders): array {
+            $lines = $node['lineItems'] ?? null;
+            if (! is_array($lines) || ! is_array($lines['edges'] ?? null)) {
+                throw new ShopifyGraphqlException([], 'Shopify customer history returned an unexpected response shape.');
+            }
+            $skus = [];
+            foreach ($lines['edges'] as $edge) {
+                $sku = is_array($edge['node'] ?? null) ? ($edge['node']['sku'] ?? null) : null;
+                if (is_string($sku) && trim($sku) !== '') {
+                    $skus[mb_strtolower(trim($sku))] = true;
+                }
+            }
+
+            $orders[] = [
+                'name' => (string) ($node['name'] ?? ''),
+                'created_at' => (string) ($node['createdAt'] ?? ''),
+                'cancelled' => ($node['cancelledAt'] ?? null) !== null,
+                'test' => ($node['test'] ?? false) === true,
+                'customer_id' => is_array($node['customer'] ?? null) ? (string) ($node['customer']['id'] ?? '') : '',
+                'skus' => array_map('strval', array_keys($skus)),
+                'lines_complete' => ($lines['pageInfo']['hasNextPage'] ?? true) === false,
+            ];
+
+            return $orders[array_key_last($orders)];
+        });
+
+        return ['orders' => $orders, 'pages' => $result['pages'], 'truncated' => $result['truncated']];
+    }
+
     /** @return list<array<string, mixed>> */
     public function orderMetafieldDefinitions(): array
     {

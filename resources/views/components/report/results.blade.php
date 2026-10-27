@@ -7,6 +7,7 @@
 @props([
     'exportRoute' => null,
     'exportParams' => [],
+    'operationalFields' => false,
     'truncated' => false,
     'truncatedMessage' => 'Results are incomplete: orders truncated after :pages pages.',
     'pages' => null,
@@ -33,6 +34,9 @@
                         @continue($value === null)
                         <input type="hidden" name="{{ $name }}" value="{{ is_bool($value) ? (int) $value : $value }}">
                     @endforeach
+                    @if ($operationalFields && ($activeStore = request()->attributes->get('activeStore')) && $activeStore->operationalFields()->exists())
+                        <label class="mr-2 text-sm"><input type="checkbox" name="operational_fields" value="1"> {{ __('Include operational fields (up to :max orders)', ['max' => \App\Application\Orders\OperationalFieldExportColumns::MAX_ORDERS]) }}</label>
+                    @endif
                     <x-button type="submit" variant="ghost">{{ __('Download CSV') }}</x-button>
                 </form>
             @endif

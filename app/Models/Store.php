@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
@@ -53,6 +54,9 @@ class Store extends Model
 
     protected static function booted(): void
     {
+        static::deleted(function (Store $store): void {
+            Storage::disk(CarrierClaimDocument::DISK)->deleteDirectory(CarrierClaimDocument::directory($store->getKey()));
+        });
         static::saving(function (Store $store): void {
             if ($store->exists && $store->isDirty(['shipstation_api_key', 'shipstation_api_secret', 'shipstation_v2_api_key', 'store_number'])) {
                 $policy = $store->movementPolicy();
@@ -148,6 +152,48 @@ class Store extends Model
     public function reportSchedules(): HasMany
     {
         return $this->hasMany(ReportSchedule::class);
+    }
+
+    /** @return HasMany<CustomerContextFilter, $this> */
+    public function customerContextFilters(): HasMany
+    {
+        return $this->hasMany(CustomerContextFilter::class);
+    }
+
+    /** @return HasMany<CarrierClaimPolicy, $this> */
+    public function carrierClaimPolicies(): HasMany
+    {
+        return $this->hasMany(CarrierClaimPolicy::class);
+    }
+
+    /** @return HasMany<CarrierClaim, $this> */
+    public function carrierClaims(): HasMany
+    {
+        return $this->hasMany(CarrierClaim::class);
+    }
+
+    /** @return HasMany<OperationalField, $this> */
+    public function operationalFields(): HasMany
+    {
+        return $this->hasMany(OperationalField::class);
+    }
+
+    /** @return HasMany<OperationalFieldFilter, $this> */
+    public function operationalFieldFilters(): HasMany
+    {
+        return $this->hasMany(OperationalFieldFilter::class);
+    }
+
+    /** @return HasMany<PickListSnapshot, $this> */
+    public function pickListSnapshots(): HasMany
+    {
+        return $this->hasMany(PickListSnapshot::class);
+    }
+
+    /** @return HasMany<PickListTemplate, $this> */
+    public function pickListTemplates(): HasMany
+    {
+        return $this->hasMany(PickListTemplate::class);
     }
 
     /** @return HasMany<PrintQueueItem, $this> */

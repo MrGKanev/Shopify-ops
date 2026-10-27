@@ -23,6 +23,8 @@ use Tests\TestCase;
 
 class ShipmentMovementTest extends TestCase
 {
+    private bool $voidShipment = false;
+
     use LazilyRefreshDatabase;
 
     #[DataProvider('states')]
@@ -85,6 +87,22 @@ class ShipmentMovementTest extends TestCase
         app(RunShipmentMovementReport::class)->handle($store, '1001', 48, 72);
         $this->assertSame(IssueStatus::Resolved, $issue->fresh()->status);
         $this->assertSame(1, $issue->fresh()->occurrences);
+    }
+
+    public function test_voiding_the_label_resolves_its_open_movement_issue(): void
+    {
+        $this->travelTo('2026-10-24 12:00:00 UTC');
+        $store = Store::factory()->create(['store_number' => '42', 'shipstation_v2_api_key' => 'v2-secret']);
+        $this->fake($this->tracking('NY'));
+        app(RunShipmentMovementReport::class)->handle($store, '1001', 48, 72);
+        $issue = $store->operationalIssues()->where('source_tool', 'shipment_movement')->sole();
+        $this->assertSame(IssueStatus::Open, $issue->status);
+
+        $this->voidShipment = true;
+        $this->fake($this->tracking('NY'));
+        app(RunShipmentMovementReport::class)->handle($store, '1001', 48, 72);
+
+        $this->assertSame(IssueStatus::Resolved, $issue->fresh()->status);
     }
 
     public function test_failed_or_foreign_tracking_never_writes_a_partial_issue(): void
@@ -228,7 +246,7 @@ class ShipmentMovementTest extends TestCase
                 $this->assertSame('42', (string) $request['storeId']);
                 $this->assertSame('1', (string) $request['orderId']);
 
-                return Http::response($this->page([['shipmentId' => 1, 'orderId' => 1, 'orderNumber' => '1001', 'carrierCode' => 'ups', 'trackingNumber' => 'TRACK-1', 'createDate' => '2026-10-10T12:00:00Z']]));
+                return Http::response($this->page([['shipmentId' => 1, 'orderId' => 1, 'orderNumber' => '1001', 'carrierCode' => 'ups', 'trackingNumber' => 'TRACK-1', 'createDate' => '2026-10-10T12:00:00Z'] + ($this->voidShipment ? ['voidDate' => '2026-10-12T12:00:00Z'] : [])]));
             },
             'api.shipstation.com/v2/tracking*' => function (Request $request) use (&$trackingResponses) {
                 $this->assertTrue($request->hasHeader('API-Key', 'v2-secret'));

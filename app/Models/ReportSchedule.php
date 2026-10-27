@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
+ * @property Store $store
  * @property list<mixed> $arguments
  * @property array<string, mixed> $parameters
  */

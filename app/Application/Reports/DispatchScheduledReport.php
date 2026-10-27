@@ -30,7 +30,7 @@ class DispatchScheduledReport
                 return null;
             }
             $input = $this->plan->inputs($locked, $now);
-            $store = $locked->store ?? throw new \LogicException('The scheduled store no longer exists.');
+            $store = $locked->store;
             $action = $this->plan->action($locked, $store, requireCredentials: false);
             $run = $this->reports->createRun($store, $locked->tool, $action, $input['arguments'], $input['start'], $input['end'], $locked->user_id);
             $run->forceFill(['report_schedule_id' => $locked->getKey(), 'scheduled_for' => $manual ? null : $locked->next_run_at, 'parameters' => $input['parameters']])->save();

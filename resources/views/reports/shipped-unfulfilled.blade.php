@@ -17,6 +17,7 @@
         @if ($result)
             <x-report.results
                 export-route="reports.shipped-unfulfilled.export"
+                :operational-fields="true"
                 :export-params="['start_date' => $result->params['startDate'], 'end_date' => $result->params['endDate']]"
                 :truncated="$result->meta['shopifyTruncated']"
                 truncated-message="Results are incomplete: Shopify orders were truncated after :pages pages."

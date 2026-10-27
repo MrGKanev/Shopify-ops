@@ -27,6 +27,7 @@ class PackingSlipRequest extends FormRequest
     {
         return [
             'order_number' => ['required', 'string', 'max:64', $this->orderNumberRule()],
+            'customer_context' => ['sometimes', 'boolean'],
         ];
     }
 

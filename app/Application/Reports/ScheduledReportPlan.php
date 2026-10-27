@@ -40,18 +40,21 @@ class ScheduledReportPlan
     public function nextRun(ReportSchedule $schedule, CarbonImmutable $after): CarbonImmutable
     {
         $local = $after->setTimezone($schedule->timezone);
-        $candidate = $local->setTimeFromTimeString($schedule->time);
+        $day = $local->startOfDay();
+        // Every candidate is built from a calendar day plus the wall-clock time, so a time skipped by a DST gap on one day is not carried to the next.
+        $at = fn (CarbonImmutable $date): CarbonImmutable => $date->setTimeFromTimeString($schedule->time);
         if ($schedule->frequency === 'weekly') {
-            $candidate = $candidate->addDays(($schedule->weekday - $candidate->dayOfWeek + 7) % 7);
+            $day = $day->addDays(($schedule->weekday - $day->dayOfWeek + 7) % 7);
         } elseif ($schedule->frequency === 'monthly') {
-            $candidate = $candidate->setDay($schedule->month_day);
+            $day = $day->setDay($schedule->month_day);
         }
+        $candidate = $at($day);
         if ($candidate->lte($local)) {
-            $candidate = match ($schedule->frequency) {
-                'weekly' => $candidate->addWeek(),
-                'monthly' => $candidate->addMonthNoOverflow(),
-                default => $candidate->addDay(),
-            };
+            $candidate = $at(match ($schedule->frequency) {
+                'weekly' => $day->addWeek(),
+                'monthly' => $day->addMonthNoOverflow(),
+                default => $day->addDay(),
+            });
         }
 
         return $candidate->utc();

@@ -11,12 +11,8 @@ class VerifyShipStationShipmentOwnership
 {
     public function storeId(Store $store): int
     {
-        $number = (string) $store->store_number;
-        if (! ctype_digit($number) || (int) $number < 1) {
-            throw new LogicException('A ShipStation store number is required for shipment reports.');
-        }
-
-        return (int) $number;
+        return ShipStationIdentifier::positiveInt((string) $store->store_number)
+            ?? throw new LogicException('A ShipStation store number is required for shipment reports.');
     }
 
     /**
@@ -25,20 +21,19 @@ class VerifyShipStationShipmentOwnership
      */
     public function handle(Store $store, ShipStationClientContract $client, array $shipments): array
     {
-        $storeNumber = (string) $this->storeId($store);
+        $storeId = $this->storeId($store);
         $confirmed = [];
         $parents = [];
         foreach ($shipments as $shipment) {
-            $id = (string) ($shipment['shipmentId'] ?? '');
-            $orderId = (string) ($shipment['orderId'] ?? '');
-            if (! ctype_digit($id) || (int) $id < 1 || ! ctype_digit($orderId) || (int) $orderId < 1
-                || (isset($confirmed[$id]) && $confirmed[$id] !== $shipment)) {
+            $id = ShipStationIdentifier::positiveInt($shipment['shipmentId'] ?? null);
+            $orderId = ShipStationIdentifier::positiveInt($shipment['orderId'] ?? null);
+            if ($id === null || $orderId === null || (isset($confirmed[$id]) && $confirmed[$id] !== $shipment)) {
                 throw new UnexpectedResponse('Shipment identity could not be confirmed.');
             }
-            $parent = $parents[$orderId] ??= $client->getOrder((int) $orderId);
-            if ((string) ($parent['orderId'] ?? '') !== $orderId
-                || (string) ($parent['advancedOptions']['storeId'] ?? '') !== $storeNumber
-                || (isset($shipment['advancedOptions']['storeId']) && (string) $shipment['advancedOptions']['storeId'] !== $storeNumber)
+            $parent = $parents[$orderId] ??= $client->getOrder($orderId);
+            if (ShipStationIdentifier::positiveInt($parent['orderId'] ?? null) !== $orderId
+                || ShipStationIdentifier::positiveInt($parent['advancedOptions']['storeId'] ?? null) !== $storeId
+                || (isset($shipment['advancedOptions']['storeId']) && ShipStationIdentifier::positiveInt($shipment['advancedOptions']['storeId']) !== $storeId)
                 || ltrim((string) ($parent['orderNumber'] ?? ''), '#') !== ltrim((string) ($shipment['orderNumber'] ?? ''), '#')) {
                 throw new UnexpectedResponse('Shipment parent ownership could not be confirmed.');
             }

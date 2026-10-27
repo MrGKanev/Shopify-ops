@@ -140,4 +140,39 @@ class LoginThrottleTest extends TestCase
         $this->assertNull($throttle->bannedMessage('1.2.3.4'));
         $this->assertCount(0, $throttle->bannedIps());
     }
+
+    public function test_a_failure_during_an_active_ban_neither_resets_nor_extends_it(): void
+    {
+        $this->travelTo(now()->startOfSecond());
+        $throttle = new LoginThrottle;
+        for ($attempt = 0; $attempt < 99; $attempt++) {
+            $throttle->recordFailureMessage('1.2.3.4');
+        }
+        $this->travelTo(now()->addSeconds(59));
+        $throttle->recordFailureMessage('1.2.3.4');
+        $bannedUntil = LoginAttempt::where('ip', '1.2.3.4')->firstOrFail()->banned_until;
+
+        $this->travelTo(now()->addSeconds(5));
+        $message = $throttle->recordFailureMessage('1.2.3.4');
+
+        $entry = LoginAttempt::where('ip', '1.2.3.4')->firstOrFail();
+        $this->assertSame(100, $entry->attempts);
+        $this->assertTrue($entry->banned_until->equalTo($bannedUntil));
+        $this->assertStringContainsString('Try again in', $message);
+        $this->assertNotNull($throttle->bannedMessage('1.2.3.4'));
+    }
+
+    public function test_the_ninety_ninth_failure_does_not_ban_and_the_hundredth_does(): void
+    {
+        $throttle = new LoginThrottle;
+        for ($attempt = 0; $attempt < 99; $attempt++) {
+            $throttle->recordFailureMessage('1.2.3.4');
+        }
+        $this->assertNull($throttle->bannedMessage('1.2.3.4'));
+        $this->assertNull(LoginAttempt::where('ip', '1.2.3.4')->firstOrFail()->banned_until);
+
+        $throttle->recordFailureMessage('1.2.3.4');
+
+        $this->assertNotNull($throttle->bannedMessage('1.2.3.4'));
+    }
 }

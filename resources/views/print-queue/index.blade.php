@@ -28,6 +28,9 @@
         <section class="flex flex-col gap-4" aria-labelledby="queued-heading">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <h2 class="text-2xl font-bold" id="queued-heading">{{ $items->count() }} {{ __('queued') }}</h2>
+                <a class="font-medium text-indigo-600 hover:underline dark:text-indigo-400" href="{{ route('print-queue.pick-list') }}">{{ __('Pick list') }}</a>
+                <a class="font-medium text-indigo-600 hover:underline dark:text-indigo-400" href="{{ route('print-queue.customer-context') }}">{{ __('Customer context') }}</a>
+                <a class="font-medium text-indigo-600 hover:underline dark:text-indigo-400" href="{{ route('operational-fields.index') }}">{{ __('Operational fields') }}</a>
                 @if ($items->isNotEmpty())
                     <form method="POST" action="{{ route('print-queue.clear') }}">
                         @csrf

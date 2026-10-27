@@ -104,7 +104,7 @@ class RestoreBackupArchive
     {
         for ($index = 0; $index < $zip->numFiles; $index++) {
             $entry = $zip->statIndex($index);
-            if (! is_array($entry) || ! str_starts_with($entry['name'], 'db-dumps/')) {
+            if (! is_array($entry) || ! str_starts_with($entry['name'], 'db-dumps/') || str_ends_with($entry['name'], '/')) {
                 continue;
             }
 
@@ -129,12 +129,20 @@ class RestoreBackupArchive
             if (! is_array($entry) || str_ends_with($entry['name'], '/')) {
                 continue;
             }
-            $marker = collect(array_keys($markers))->first(fn (string $marker): bool => str_contains($entry['name'], $marker));
-            if (! is_string($marker)) {
+            $marker = null;
+            $markerPosition = PHP_INT_MAX;
+            foreach (array_keys($markers) as $candidate) {
+                $position = strpos($entry['name'], $candidate);
+                if ($position !== false && $position < $markerPosition) {
+                    $marker = $candidate;
+                    $markerPosition = $position;
+                }
+            }
+            if ($marker === null) {
                 continue;
             }
-            $relative = substr($entry['name'], strpos($entry['name'], $marker) + strlen($marker));
-            if ($relative === '' || str_contains($relative, '..') || str_contains($relative, chr(0)) || str_contains($relative, '\\')) {
+            $relative = substr($entry['name'], $markerPosition + strlen($marker));
+            if ($relative === '' || str_contains($relative, chr(0)) || str_contains($relative, '\\') || in_array('..', explode('/', $relative), true)) {
                 continue;
             }
             $contents = $zip->getFromIndex($index);

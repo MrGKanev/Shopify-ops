@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
+use App\Application\Orders\OperationalFieldExportColumns;
 use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunShippedUnfulfilledReport;
@@ -31,7 +32,7 @@ class ShippedUnfulfilledController extends ReportController
         return $this->runQueued($reports, $request, $store, $configurationError, 'shipped_unfulfilled', $report::class, [$start, $end], $start, $end, fn (?ReportResult $result, bool $reportFailed) => view('reports.shipped-unfulfilled', $this->viewData($start, $end, $result, $reportFailed, $configurationError)));
     }
 
-    public function export(DateRangeReportRequest $request, RunShippedUnfulfilledReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse
+    public function export(DateRangeReportRequest $request, RunShippedUnfulfilledReport $report, CsvExporter $csv, QueuedReportRunner $reports, OperationalFieldExportColumns $operationalFields): StreamedResponse|RedirectResponse
     {
         [$store,$start,$end] = $this->context($request);
         if ($this->configurationError($store)) {
@@ -43,9 +44,10 @@ class ShippedUnfulfilledController extends ReportController
 
             return back()->withErrors(['export' => __('reports.export_failed')]);
         }
-        $rows = array_map(fn (array $row): array => [$row['order_number'], $row['order_date'], $row['customer'], $row['email'], 'shipped', $row['sh_fulfillment'], $row['sh_financial'], $row['total']], $result->rows);
+        $extra = $request->boolean('operational_fields') ? $operationalFields->handle($store, array_column($result->rows, 'order_number')) : ['headers' => [], 'cells' => [], 'fallback' => []];
+        $rows = array_map(fn (array $row): array => [$row['order_number'], $row['order_date'], $row['customer'], $row['email'], 'shipped', $row['sh_fulfillment'], $row['sh_financial'], $row['total'], ...($extra['cells'][$row['order_number']] ?? $extra['fallback'])], $result->rows);
 
-        return $csv->download("shipped-unfulfilled-{$start}-to-{$end}.csv", ['Order', 'Date', 'Customer', 'Email', 'ShipStation status', 'Shopify fulfillment', 'Shopify financial', 'Total'], $rows);
+        return $csv->download("shipped-unfulfilled-{$start}-to-{$end}.csv", ['Order', 'Date', 'Customer', 'Email', 'ShipStation status', 'Shopify fulfillment', 'Shopify financial', 'Total', ...$extra['headers']], $rows);
     }
 
     /** @return array{Store,string,string} */

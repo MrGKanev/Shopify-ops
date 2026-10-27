@@ -9,26 +9,27 @@ use LogicException;
 
 class FindStoreShipStationOrders
 {
-    /** @return list<array<string, mixed>> */
+    /**
+     * Only orders carrying the requested number are examined: others returned by a fuzzy search are not part of this lookup, so their ownership is irrelevant.
+     * Every order that does carry the number must prove it belongs to this store, otherwise the lookup fails instead of guessing.
+     *
+     * @return list<array<string, mixed>>
+     */
     public function handle(Store $store, ShipStationClientContract $client, string $number): array
     {
-        $storeNumber = (string) $store->store_number;
-        if (! ctype_digit($storeNumber) || (int) $storeNumber < 1) {
-            throw new LogicException('A ShipStation store number is required for order lookups.');
-        }
+        $storeNumber = ShipStationIdentifier::positiveInt((string) $store->store_number)
+            ?? throw new LogicException('A ShipStation store number is required for order lookups.');
         $matches = [];
-        foreach ($client->findByOrderNumber($number, (int) $storeNumber) as $order) {
+        foreach ($client->findByOrderNumber($number, $storeNumber) as $order) {
             if (ltrim((string) ($order['orderNumber'] ?? ''), '#') !== ltrim($number, '#')) {
                 continue;
             }
-            $ownerStoreId = $order['advancedOptions']['storeId'] ?? null;
-            if (! is_scalar($ownerStoreId) || ! ctype_digit((string) $ownerStoreId) || (int) $ownerStoreId < 1) {
-                throw new UnexpectedResponse('ShipStation order store identity could not be confirmed.');
-            }
-            if ((string) $ownerStoreId !== $storeNumber) {
+            $ownerStoreId = ShipStationIdentifier::positiveInt($order['advancedOptions']['storeId'] ?? null)
+                ?? throw new UnexpectedResponse('ShipStation order store identity could not be confirmed.');
+            if ($ownerStoreId !== $storeNumber) {
                 continue;
             }
-            if (! ctype_digit((string) ($order['orderId'] ?? '')) || (int) $order['orderId'] < 1) {
+            if (ShipStationIdentifier::positiveInt($order['orderId'] ?? null) === null) {
                 throw new UnexpectedResponse('ShipStation order identity could not be confirmed.');
             }
             $matches[] = $order;

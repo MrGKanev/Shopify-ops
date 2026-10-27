@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\LoginAttempt;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -106,6 +107,54 @@ class AuthenticatedSessionControllerTest extends TestCase
         }
         $this->post(route('login.store'), ['email' => $colleague->email, 'password' => 'colleague-password'])->assertRedirect(route('dashboard'));
         $this->assertAuthenticatedAs($colleague);
+    }
+
+    public function test_the_hundredth_failure_over_http_bans_the_ip_and_a_correct_login_during_the_ban_does_not_reset_it(): void
+    {
+        $user = User::factory()->create(['email' => 'operator@example.com', 'password' => 'correct-password']);
+        for ($attempt = 1; $attempt <= 99; $attempt++) {
+            $this->post(route('login.store'), ['email' => "nobody{$attempt}@example.com", 'password' => 'wrong'])->assertSessionHasErrors('email');
+        }
+        $this->assertSame(99, LoginAttempt::where('ip', '127.0.0.1')->firstOrFail()->attempts);
+        $this->assertNull(LoginAttempt::where('ip', '127.0.0.1')->firstOrFail()->banned_until);
+
+        $this->post(route('login.store'), ['email' => 'nobody100@example.com', 'password' => 'wrong'])
+            ->assertSessionHasErrors(['email' => 'Too many failed attempts. Try again in 60 seconds.']);
+        $this->assertNotNull(LoginAttempt::where('ip', '127.0.0.1')->firstOrFail()->banned_until);
+
+        $this->post(route('login.store'), ['email' => $user->email, 'password' => 'correct-password'])->assertSessionHasErrors('email');
+        $this->post(route('login.store'), ['email' => 'nobody101@example.com', 'password' => 'wrong'])->assertSessionHasErrors('email');
+        $this->assertGuest();
+        $entry = LoginAttempt::where('ip', '127.0.0.1')->firstOrFail();
+        $this->assertSame(100, $entry->attempts);
+        $this->assertTrue($entry->banned_until->isFuture());
+    }
+
+    public function test_the_ninety_ninth_failure_over_http_still_allows_a_correct_login_which_clears_the_counter(): void
+    {
+        $user = User::factory()->create(['email' => 'operator@example.com', 'password' => 'correct-password']);
+        for ($attempt = 1; $attempt <= 99; $attempt++) {
+            $this->post(route('login.store'), ['email' => "nobody{$attempt}@example.com", 'password' => 'wrong']);
+        }
+
+        $this->post(route('login.store'), ['email' => $user->email, 'password' => 'correct-password'])->assertRedirect(route('dashboard'));
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertDatabaseMissing('login_attempts', ['ip' => '127.0.0.1']);
+    }
+
+    public function test_a_correct_password_for_a_two_factor_account_does_not_clear_the_failure_counter(): void
+    {
+        $user = User::factory()->create(['email' => 'operator@example.com', 'password' => 'correct-password']);
+        $user->forceFill(['two_factor_secret' => encrypt('secret'), 'two_factor_recovery_codes' => encrypt(json_encode(['code'])), 'two_factor_confirmed_at' => now()])->save();
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            $this->post(route('login.store'), ['email' => "nobody{$attempt}@example.com", 'password' => 'wrong']);
+        }
+
+        $this->post(route('login.store'), ['email' => $user->email, 'password' => 'correct-password'])->assertRedirect(route('two-factor.login'));
+
+        $this->assertGuest();
+        $this->assertSame(3, LoginAttempt::where('ip', '127.0.0.1')->firstOrFail()->attempts);
     }
 
     public function test_authenticated_user_is_redirected_away_from_the_login_form(): void

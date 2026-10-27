@@ -65,6 +65,9 @@
                     <td class="px-4 py-3">{{ \App\Support\UiFormat::relative($issue->last_seen_at) }}</td>
                     <td class="px-4 py-3">{{ __($issue->status->label()) }}</td>
                     <td class="px-4 py-3">
+                        @if (in_array($issue->source_tool, ['delivery_watch', 'shipment_movement'], true) && $issue->status->isActive())
+                            <x-button class="mb-2" size="sm" :href="route('carrier-claims.create', ['issue' => $issue->id])">{{ __('Open carrier claim') }}</x-button>
+                        @endif
                         @if ($issue->source_tool === 'run_audit' && $issue->status->isActive())
                             <x-button class="mb-2" size="sm" :href="route('orders.remediation.create', ['order_number' => $issue->reference, 'action' => 'refresh_import'])">{{ __('Refresh import / review push') }}</x-button>
                         @endif

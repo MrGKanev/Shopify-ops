@@ -35,8 +35,11 @@ class CheckShipmentMovements
         $observations = [];
         $active = [];
         $trackingNumbers = [];
+        $voided = [];
         foreach ($labels as $id => $shipment) {
             if (! empty($shipment['voidDate']) || ($shipment['voided'] ?? false) === true) {
+                $voided[] = RaiseOperationalIssue::fingerprint('shipment_movement', ShipmentMovementObservation::shipmentIdentity($store, $shipment));
+
                 continue;
             }
             $carrier = $shipment['carrierCode'] ?? null;
@@ -63,7 +66,13 @@ class CheckShipmentMovements
             $rows[] = [...$analysis, 'identity' => $identity, 'fingerprint' => RaiseOperationalIssue::fingerprint('shipment_movement', $identity), 'shipment_id' => (string) $shipment['shipmentId'], 'order_number' => $shipment['orderNumber'], 'tracking_number' => $shipment['trackingNumber'], 'carrier' => $shipment['carrierCode'], 'source_status' => $observation['tracking']['status_code'], 'captured_at' => $capturedAt->toIso8601String(), 'acceptance_hours' => $acceptanceHours, 'stale_hours' => $staleHours];
         }
         usort($rows, fn (array $a, array $b): int => $a['identity'] <=> $b['identity']);
-        DB::transaction(function () use ($store, $rows): void {
+        DB::transaction(function () use ($store, $rows, $voided): void {
+            foreach ($voided as $fingerprint) {
+                $issue = $store->operationalIssues()->where('source_tool', 'shipment_movement')->where('fingerprint', $fingerprint)->first();
+                if ($issue !== null) {
+                    $this->issues->resolve($issue);
+                }
+            }
             foreach ($rows as $row) {
                 $observation = $store->shipmentMovementObservations()->firstOrCreate(['identity' => $row['identity']], ['account_fingerprint' => ShipmentMovementObservation::accountFingerprint($store), 'shipment_id' => $row['shipment_id'], 'order_number' => $row['order_number'], 'carrier' => $row['carrier'], 'tracking_number' => $row['tracking_number'], 'classification' => $row['classification'], 'checked_at' => $row['captured_at']]);
                 $observation = $store->shipmentMovementObservations()->whereKey($observation->id)->lockForUpdate()->firstOrFail();

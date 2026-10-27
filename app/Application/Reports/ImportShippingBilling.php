@@ -28,7 +28,7 @@ class ImportShippingBilling
         if (! mb_check_encoding($content, 'UTF-8')) {
             throw ValidationException::withMessages(['file' => __('Use a UTF-8 CSV file.')]);
         }
-        $reader = Reader::fromString($content);
+        $reader = Reader::fromString(str_starts_with($content, "\xEF\xBB\xBF") ? substr($content, 3) : $content);
         $reader->setEscape('');
         $header = null;
         $rows = [];

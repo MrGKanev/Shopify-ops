@@ -43,6 +43,18 @@ class ScheduledReportPlanTest extends TestCase
             'US spring DST changes UTC run hour' => [['timezone' => 'America/New_York', 'time' => '07:00'], '2026-03-07T12:00:00Z', '2026-03-08 11:00:00 +00:00'],
             'European spring DST changes UTC run hour' => [['timezone' => 'Europe/Sofia', 'time' => '07:00'], '2026-03-28T05:00:00Z', '2026-03-29 04:00:00 +00:00'],
             'Sofia fall DST changes UTC run hour' => [['timezone' => 'Europe/Sofia', 'time' => '07:00'], '2026-10-24T04:00:00Z', '2026-10-25 05:00:00 +00:00'],
+            'US spring gap time moves to the first valid minute' => [['timezone' => 'America/New_York', 'time' => '02:30'], '2026-03-08T05:00:00Z', '2026-03-08 07:30:00 +00:00'],
+            'US spring gap slot already passed rolls to next day' => [['timezone' => 'America/New_York', 'time' => '02:30'], '2026-03-08T07:30:00Z', '2026-03-09 06:30:00 +00:00'],
+            'US fall ambiguous time runs once on the first occurrence' => [['timezone' => 'America/New_York', 'time' => '01:30'], '2026-11-01T04:00:00Z', '2026-11-01 05:30:00 +00:00'],
+            'US fall second occurrence of the slot does not replay it' => [['timezone' => 'America/New_York', 'time' => '01:30'], '2026-11-01T05:30:00Z', '2026-11-02 06:30:00 +00:00'],
+            'US fall after the repeated hour rolls to next day' => [['timezone' => 'America/New_York', 'time' => '01:30'], '2026-11-01T06:45:00Z', '2026-11-02 06:30:00 +00:00'],
+            'weekly exact slot across US spring DST' => [['timezone' => 'America/New_York', 'time' => '07:00', 'frequency' => 'weekly', 'weekday' => 0], '2026-03-01T12:00:00Z', '2026-03-08 11:00:00 +00:00'],
+            'weekly slot right after US spring DST keeps the local hour' => [['timezone' => 'America/New_York', 'time' => '07:00', 'frequency' => 'weekly', 'weekday' => 0], '2026-03-08T11:00:00Z', '2026-03-15 11:00:00 +00:00'],
+            'weekly exact slot across US fall DST' => [['timezone' => 'America/New_York', 'time' => '07:00', 'frequency' => 'weekly', 'weekday' => 0], '2026-10-25T11:00:00Z', '2026-11-01 12:00:00 +00:00'],
+            'weekly after the slot on the same weekday rolls a full week' => [['frequency' => 'weekly', 'weekday' => 1], '2026-12-28T07:00:01Z', '2027-01-04 07:00:00 +00:00'],
+            'monthly slot later on the European fall DST day' => [['timezone' => 'Europe/Sofia', 'time' => '07:00', 'frequency' => 'monthly', 'month_day' => 25], '2026-10-25T04:00:00Z', '2026-10-25 05:00:00 +00:00'],
+            'monthly exact slot on the European fall DST day' => [['timezone' => 'Europe/Sofia', 'time' => '07:00', 'frequency' => 'monthly', 'month_day' => 25], '2026-10-25T05:00:00Z', '2026-11-25 05:00:00 +00:00'],
+            'daily gap time created later on the spring DST day is not shifted to the next day' => [['timezone' => 'America/New_York', 'time' => '02:30'], '2026-03-08T16:00:00Z', '2026-03-09 06:30:00 +00:00'],
         ];
     }
 

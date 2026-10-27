@@ -15,6 +15,9 @@ interface ShopifyCustomers
     /** @return array{orders: list<array<string, mixed>>, customer: array<string, mixed>|null, pages: int, truncated: bool} */
     public function customerOrderHistory(Store $store, string $email): array;
 
+    /** @return array{orders: list<array{name: string, created_at: string, cancelled: bool, test: bool, customer_id: string, skus: list<string>, lines_complete: bool}>, pages: int, truncated: bool} */
+    public function customerFulfillmentHistory(Store $store, string $email): array;
+
     /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
     public function consentAuditCandidates(Store $store, string $startDate, string $endDate): array;
 }

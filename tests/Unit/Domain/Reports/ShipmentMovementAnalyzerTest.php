@@ -112,6 +112,32 @@ class ShipmentMovementAnalyzerTest extends TestCase
         return ['before label' => ['2026-09-30T12:00:00Z'], 'future' => ['2026-10-26T12:00:00Z'], 'missing timezone' => ['2026-10-24T12:00:00'], 'invalid calendar' => ['2026-02-30T12:00:00Z']];
     }
 
+    #[DataProvider('statusesWithFutureLabel')]
+    public function test_a_label_created_after_the_check_time_is_never_classified(string $status): void
+    {
+        $actual = (new ShipmentMovementAnalyzer)->analyze(['status_code' => $status, 'events' => [], 'actual_delivery_date' => '2026-10-25T11:00:00Z'], '2026-10-25T12:00:01Z', 48, 72, CarbonImmutable::parse('2026-10-25T12:00:00Z'));
+
+        $this->assertSame('movement_unknown', $actual['classification']);
+        $this->assertFalse($actual['actionable']);
+        $this->assertFalse($actual['resolves']);
+        $this->assertNull($actual['carrier_acceptance_at']);
+    }
+
+    public static function statusesWithFutureLabel(): array
+    {
+        return ['not yet' => ['NY'], 'exception' => ['EX'], 'delivered' => ['DE'], 'in transit' => ['IT']];
+    }
+
+    public function test_delivered_without_events_accepts_a_delivery_date_exactly_at_the_label_and_at_the_check_time(): void
+    {
+        foreach (['2026-10-01T00:00:00Z', '2026-10-25T12:00:00Z'] as $deliveredAt) {
+            $actual = $this->analyze(['status_code' => 'DE', 'events' => [], 'actual_delivery_date' => $deliveredAt]);
+
+            $this->assertSame('delivered', $actual['classification']);
+            $this->assertTrue($actual['resolves']);
+        }
+    }
+
     /** @param array<string, mixed> $tracking
      * @return array<string, mixed> */
     private function analyze(array $tracking): array

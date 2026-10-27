@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Application\Exports\CsvExporter;
+use App\Application\Orders\OperationalFieldExportColumns;
 use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunNoTrackingReport;
@@ -31,7 +32,7 @@ class NoTrackingController extends ReportController
         return $this->runQueued($reports, $request, $store, $configurationError, 'no_tracking', $report::class, [$start, $end, $threshold], $start, $end, fn (?ReportResult $result, bool $reportFailed) => view('reports.no-tracking', $this->viewData($start, $end, $threshold, $result, $reportFailed, $configurationError)));
     }
 
-    public function export(NoTrackingRequest $request, RunNoTrackingReport $report, CsvExporter $csv, QueuedReportRunner $reports): StreamedResponse|RedirectResponse
+    public function export(NoTrackingRequest $request, RunNoTrackingReport $report, CsvExporter $csv, QueuedReportRunner $reports, OperationalFieldExportColumns $operationalFields): StreamedResponse|RedirectResponse
     {
         [$store, $start, $end, $threshold] = $this->context($request);
         if ($this->configurationError($store)) {
@@ -44,14 +45,15 @@ class NoTrackingController extends ReportController
 
             return back()->withErrors(['export' => __('reports.export_failed')]);
         }
+        $extra = $request->boolean('operational_fields') ? $operationalFields->handle($store, array_column($result->rows, 'order_number')) : ['headers' => [], 'cells' => [], 'fallback' => []];
         $rows = [];
         foreach ($result->rows as $row) {
             foreach ($row['missing'] as $missing) {
-                $rows[] = [$row['order_number'], $row['created_at'], $missing['created_at'], $missing['hours_ago'], $missing['company'], $missing['status'], $row['email'], $row['total']];
+                $rows[] = [$row['order_number'], $row['created_at'], $missing['created_at'], $missing['hours_ago'], $missing['company'], $missing['status'], $row['email'], $row['total'], ...($extra['cells'][$row['order_number']] ?? $extra['fallback'])];
             }
         }
 
-        return $csv->download("fulfilled-without-tracking-{$start}-to-{$end}.csv", ['Order', 'Placed', 'Fulfillment date', 'Hours since', 'Carrier', 'Status', 'Email', 'Total'], $rows);
+        return $csv->download("fulfilled-without-tracking-{$start}-to-{$end}.csv", ['Order', 'Placed', 'Fulfillment date', 'Hours since', 'Carrier', 'Status', 'Email', 'Total', ...$extra['headers']], $rows);
     }
 
     /** @return array{Store, string, string, int} */
