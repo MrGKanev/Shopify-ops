@@ -3,8 +3,6 @@
 namespace Tests\Feature;
 
 use App\Domain\Reports\CustomsReadinessAnalyzer;
-use App\Integrations\ShipStation\ShipStationClientContract;
-use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Integrations\Shopify\Contracts\ShopifyTransport;
 use App\Models\Store;
@@ -13,6 +11,7 @@ use Illuminate\Support\Facades\Http;
 use Mockery;
 use PHPUnit\Framework\Attributes\TestWith;
 use RuntimeException;
+use Tests\Support\ShipStationFixtures;
 use Tests\TestCase;
 
 class CustomsReadinessTest extends TestCase
@@ -161,9 +160,8 @@ class CustomsReadinessTest extends TestCase
         $transport = $this->mock(ShopifyTransport::class);
         $transport->shouldReceive('graphql')->with(Mockery::any(), Mockery::pattern('/CustomsCatalogProducts/'), ['after' => null])->andReturn(['data' => ['products' => ['nodes' => [['id' => 'gid://shopify/Product/1', 'legacyResourceId' => '1', 'title' => '<script>x</script>', 'onlineStoreUrl' => 'https://example.test', 'seo' => ['title' => 'x', 'description' => 'x'], 'collections' => ['nodes' => [['id' => 'c1']]]]], 'pageInfo' => ['hasNextPage' => false, 'endCursor' => null]]]]);
         $transport->shouldReceive('graphql')->with(Mockery::any(), Mockery::pattern('/CustomsProductVariants/'), Mockery::any())->andReturn(['data' => ['product' => ['id' => 'gid://shopify/Product/1', 'updatedAt' => '2026-10-07T00:00:00Z', 'variants' => ['nodes' => [$this->variant()], 'pageInfo' => ['hasNextPage' => false, 'endCursor' => null]]]]]);
-        $ss = Mockery::mock(ShipStationClientContract::class);
+        $ss = ShipStationFixtures::bindClient();
         $ss->shouldReceive('customsProducts')->once()->andReturn(['products' => [$this->product()], 'pages' => 1, 'truncated' => false]);
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->andReturn($ss);
 
         $this->actingAs($operator)->post(route('reports.catalog-quality.store'), ['include_customs' => 1])
             ->assertSeeText('Customs readiness')->assertSeeText('Default fields available')->assertDontSee('<script>x</script>', false)->assertSee('&lt;script&gt;x&lt;/script&gt;', false);
@@ -222,7 +220,7 @@ class CustomsReadinessTest extends TestCase
     {
         $this->mock(ShopifyOrders::class)->shouldReceive('findByOrderNumber')->times($checks)->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '1001')->andReturn([['id' => '1001', 'name' => '#1001']]);
         $this->mock(ShopifyTransport::class)->shouldReceive('graphql')->with(Mockery::any(), Mockery::pattern('/CustomsOrderLines/'), ['id' => 'gid://shopify/Order/1001', 'after' => null])->andReturn(['data' => ['order' => ['id' => 'gid://shopify/Order/1001', 'name' => '#1001', 'updatedAt' => '2026-10-07T00:00:00Z', 'cancelledAt' => null, 'displayFulfillmentStatus' => 'UNFULFILLED', 'shippingAddress' => ['countryCodeV2' => 'CA'], 'lineItems' => ['nodes' => [['id' => 'gid://shopify/LineItem/11', 'title' => 'Shirt', 'sku' => 'A', 'currentQuantity' => 1, 'unfulfilledQuantity' => 1, 'requiresShipping' => true, 'originalUnitPriceSet' => ['shopMoney' => ['amount' => '20', 'currencyCode' => 'USD']], 'variant' => $this->variant()]], 'pageInfo' => ['hasNextPage' => false, 'endCursor' => null]]]]]);
-        $ss = Mockery::mock(ShipStationClientContract::class);
+        $ss = ShipStationFixtures::bindClient();
         $candidate = $this->ssOrder();
         if ($foreignStore) {
             $candidate['advancedOptions']['storeId'] = 13;
@@ -237,6 +235,5 @@ class CustomsReadinessTest extends TestCase
             $ss->shouldNotReceive('customsProducts');
             $ss->shouldNotReceive('getWarehouse');
         }
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->andReturn($ss);
     }
 }

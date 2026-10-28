@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class ReturnedItemsControllerTest extends TestCase
@@ -23,7 +24,7 @@ class ReturnedItemsControllerTest extends TestCase
 
         [$operator, $store] = $this->userWithStore(true);
         $gateway = Mockery::mock(ShopifyPayments::class);
-        $gateway->shouldReceive('returnedItemCandidates')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '2026-07-01')->andReturn(['orders' => [['refunds' => [['created_at' => '2026-07-10T00:00:00Z', 'refund_line_items' => [['quantity' => 2, 'line_item' => ['name' => '<script>']]]]]]], 'pages' => 100, 'truncated' => true]);
+        $gateway->shouldReceive('returnedItemCandidates')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '2026-07-01')->andReturn(ShopifyFixtures::history([['refunds' => [['created_at' => '2026-07-10T00:00:00Z', 'refund_line_items' => [['quantity' => 2, 'line_item' => ['name' => '<script>']]]]]]], true, 100));
         $this->app->instance(ShopifyPayments::class, $gateway);
         $this->actingAs($operator)->post('/reports/returned-items', ['start_date' => '2026-07-01', 'end_date' => '2026-07-31'])->assertOk()->assertSeeText('1 orders scanned · 1 products')->assertSeeText('truncated after 100 pages')->assertDontSee('<script>', false);
 
@@ -37,7 +38,7 @@ class ReturnedItemsControllerTest extends TestCase
     {
         [$operator] = $this->userWithStore(true);
         $gateway = Mockery::mock(ShopifyPayments::class);
-        $gateway->shouldReceive('returnedItemCandidates')->once()->andReturn(['orders' => [['refunds' => [['created_at' => '2026-07-10T00:00:00Z', 'refund_line_items' => [['quantity' => 2, 'line_item' => ['name' => '=HYPERLINK("bad")']]]]]]], 'pages' => 1, 'truncated' => false]);
+        $gateway->shouldReceive('returnedItemCandidates')->once()->andReturn(ShopifyFixtures::history([['refunds' => [['created_at' => '2026-07-10T00:00:00Z', 'refund_line_items' => [['quantity' => 2, 'line_item' => ['name' => '=HYPERLINK("bad")']]]]]]]));
         $this->app->instance(ShopifyPayments::class, $gateway);
 
         $response = $this->actingAs($operator)->post(route('reports.returned-items.export'), ['start_date' => '2026-07-01', 'end_date' => '2026-07-31']);

@@ -2,13 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Integrations\ShipStation\ShipStationClientContract;
-use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
-use Mockery;
 use RuntimeException;
+use Tests\Support\ShipStationFixtures;
 use Tests\TestCase;
 
 class ShipmentAgingControllerTest extends TestCase
@@ -22,26 +20,18 @@ class ShipmentAgingControllerTest extends TestCase
         [$operator] = $this->userWithStore(true, ['shipstation_api_key' => '']);
         $this->actingAs($operator)->post('/reports/shipment-aging', ['threshold' => 3])->assertOk()->assertSeeText('credentials are incomplete');
         [$operator] = $this->userWithStore(true);
-        $client = Mockery::mock(ShipStationClientContract::class);
+        $client = ShipStationFixtures::bindClient();
         $client->shouldReceive('fetchAwaitingOrders')->andReturn([$this->order('<script>')]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andReturn($client);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
         $this->actingAs($operator)->post('/reports/shipment-aging', ['threshold' => 3])->assertOk()->assertSeeText('1 awaiting orders scanned')->assertDontSee('<script>', false);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andThrow(new RuntimeException('secret-token'));
-        $this->app->instance(ShipStationClientFactory::class, $factory);
+        ShipStationFixtures::bindFailure(new RuntimeException('secret-token'));
         $this->actingAs($operator)->post('/reports/shipment-aging', ['threshold' => 3])->assertOk()->assertSeeText('could not be completed')->assertDontSeeText('secret-token');
     }
 
     public function test_operator_can_download_formula_safe_csv(): void
     {
         [$operator] = $this->userWithStore(true);
-        $client = Mockery::mock(ShipStationClientContract::class);
+        $client = ShipStationFixtures::bindClient();
         $client->shouldReceive('fetchAwaitingOrders')->andReturn([$this->order('=bad')]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andReturn($client);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
         $response = $this->actingAs($operator)->post(route('reports.shipment-aging.export'), ['threshold' => 3]);
         $response->assertOk();
         $this->assertStringContainsString("'=bad", $response->streamedContent());
@@ -52,11 +42,8 @@ class ShipmentAgingControllerTest extends TestCase
         [$operator] = $this->userWithStore(true);
         $order = $this->order('123');
         $order['items'] = [['sku' => '12345', 'name' => 'Widget', 'quantity' => 2]];
-        $client = Mockery::mock(ShipStationClientContract::class);
+        $client = ShipStationFixtures::bindClient();
         $client->shouldReceive('fetchAwaitingOrders')->once()->andReturn([$order]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andReturn($client);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
 
         $response = $this->actingAs($operator)->post(route('reports.shipment-aging.export'), ['threshold' => 3]);
 

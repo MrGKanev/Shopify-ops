@@ -22,7 +22,7 @@ class BulgarianInterfaceTest extends TestCase
         $store = Store::factory()->create();
         $user = User::factory()->admin()->create();
         $user->stores()->attach($store);
-        $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()]);
+        $this->actingAs($user)->withSession(['auth.password_confirmed_at' => now()->timestamp]);
         $routes = $this->applicationScreenRoutes();
         $this->assertNotEmpty($routes);
 

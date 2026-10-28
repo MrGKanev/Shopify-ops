@@ -76,6 +76,12 @@ interface ShopifyOrders
     /** @return array{orders: list<array<string, mixed>>, pages: int, truncated: bool} */
     public function noteFlagCandidates(Store $store, string $startDate, string $endDate): array;
 
+    /**
+     * @param  list<string>  $orderNumbers
+     * @return array<string, list<array{id: string, cancelled: bool, complete: bool, has_fulfillment_orders: bool, remaining: array<string, int>, unidentified_lines: bool, address: array<string, string|null>}>>
+     */
+    public function preShipmentRemainingItems(Store $store, array $orderNumbers): array;
+
     /** @return array{fulfillment_orders: list<array<string, mixed>>, scopes: list<string>, pages: int, truncated: bool} */
     public function shipmentBacklogCandidates(Store $store): array;
 

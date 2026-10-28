@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class OrderTagSearchControllerTest extends TestCase
@@ -77,7 +78,7 @@ class OrderTagSearchControllerTest extends TestCase
     {
         [$user] = $this->makeUserAndStore();
         $shopify = Mockery::mock(ShopifyOrders::class);
-        $shopify->shouldReceive('searchOrdersByTag')->once()->andReturn(['orders' => [], 'pages' => 1, 'truncated' => false]);
+        $shopify->shouldReceive('searchOrdersByTag')->once()->andReturn(ShopifyFixtures::history([]));
         $shopify->shouldReceive('searchOrdersByTag')->once()->andThrow(new RuntimeException('private-token'));
         $this->app->instance(ShopifyOrders::class, $shopify);
 
@@ -100,7 +101,7 @@ class OrderTagSearchControllerTest extends TestCase
     {
         [$user] = $this->makeUserAndStore();
         $shopify = Mockery::mock(ShopifyOrders::class);
-        $shopify->shouldReceive('searchOrdersByTag')->times(10)->andReturn(['orders' => [], 'pages' => 1, 'truncated' => false]);
+        $shopify->shouldReceive('searchOrdersByTag')->times(10)->andReturn(ShopifyFixtures::history([]));
         $this->app->instance(ShopifyOrders::class, $shopify);
 
         foreach (range(1, 10) as $attempt) {

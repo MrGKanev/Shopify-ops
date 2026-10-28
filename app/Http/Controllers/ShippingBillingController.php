@@ -37,7 +37,7 @@ class ShippingBillingController extends Controller
         $grouped = $analyzer->grouped($groups, $dimension);
         $truncated = $data['truncated'] || $entries->count() > 500;
 
-        return view('shipping-billing.index', ['entries' => $entries->take(500), 'groups' => $groups, 'grouped' => $grouped, 'startDate' => $start, 'endDate' => $end, 'dimension' => $dimension, 'truncated' => $truncated, 'shipStationStoreNumber' => $store->store_number]);
+        return view('shipping-billing.index', ['entries' => $entries->take(500), 'groups' => $groups, 'grouped' => $grouped, 'benchmarks' => $analyzer->benchmarks($groups), 'startDate' => $start, 'endDate' => $end, 'dimension' => $dimension, 'truncated' => $truncated, 'shipStationStoreNumber' => $store->store_number]);
     }
 
     public function export(Request $request, CsvExporter $csv): StreamedResponse

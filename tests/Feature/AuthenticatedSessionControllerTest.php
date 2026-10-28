@@ -109,31 +109,31 @@ class AuthenticatedSessionControllerTest extends TestCase
         $this->assertAuthenticatedAs($colleague);
     }
 
-    public function test_the_hundredth_failure_over_http_bans_the_ip_and_a_correct_login_during_the_ban_does_not_reset_it(): void
+    public function test_the_tenth_failure_over_http_bans_the_ip_and_a_correct_login_during_the_ban_does_not_reset_it(): void
     {
         $user = User::factory()->create(['email' => 'operator@example.com', 'password' => 'correct-password']);
-        for ($attempt = 1; $attempt <= 99; $attempt++) {
+        for ($attempt = 1; $attempt <= 9; $attempt++) {
             $this->post(route('login.store'), ['email' => "nobody{$attempt}@example.com", 'password' => 'wrong'])->assertSessionHasErrors('email');
         }
-        $this->assertSame(99, LoginAttempt::where('ip', '127.0.0.1')->firstOrFail()->attempts);
+        $this->assertSame(9, LoginAttempt::where('ip', '127.0.0.1')->firstOrFail()->attempts);
         $this->assertNull(LoginAttempt::where('ip', '127.0.0.1')->firstOrFail()->banned_until);
 
-        $this->post(route('login.store'), ['email' => 'nobody100@example.com', 'password' => 'wrong'])
-            ->assertSessionHasErrors(['email' => 'Too many failed attempts. Try again in 60 seconds.']);
+        $this->post(route('login.store'), ['email' => 'nobody10@example.com', 'password' => 'wrong'])
+            ->assertSessionHasErrors(['email' => 'Too many failed attempts. Try again in 900 seconds.']);
         $this->assertNotNull(LoginAttempt::where('ip', '127.0.0.1')->firstOrFail()->banned_until);
 
         $this->post(route('login.store'), ['email' => $user->email, 'password' => 'correct-password'])->assertSessionHasErrors('email');
-        $this->post(route('login.store'), ['email' => 'nobody101@example.com', 'password' => 'wrong'])->assertSessionHasErrors('email');
+        $this->post(route('login.store'), ['email' => 'nobody11@example.com', 'password' => 'wrong'])->assertSessionHasErrors('email');
         $this->assertGuest();
         $entry = LoginAttempt::where('ip', '127.0.0.1')->firstOrFail();
-        $this->assertSame(100, $entry->attempts);
+        $this->assertSame(10, $entry->attempts);
         $this->assertTrue($entry->banned_until->isFuture());
     }
 
-    public function test_the_ninety_ninth_failure_over_http_still_allows_a_correct_login_which_clears_the_counter(): void
+    public function test_the_ninth_failure_over_http_still_allows_a_correct_login_which_clears_the_counter(): void
     {
         $user = User::factory()->create(['email' => 'operator@example.com', 'password' => 'correct-password']);
-        for ($attempt = 1; $attempt <= 99; $attempt++) {
+        for ($attempt = 1; $attempt <= 9; $attempt++) {
             $this->post(route('login.store'), ['email' => "nobody{$attempt}@example.com", 'password' => 'wrong']);
         }
 
@@ -172,7 +172,7 @@ class AuthenticatedSessionControllerTest extends TestCase
         $store = Store::factory()->create();
         $user->stores()->attach($store);
 
-        $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()])->get(route('two-factor.settings'))
+        $this->actingAs($user)->withSession(['auth.password_confirmed_at' => now()->timestamp])->get(route('two-factor.settings'))
             ->assertOk()
             ->assertSeeText('Two-factor authentication');
     }
@@ -188,7 +188,7 @@ class AuthenticatedSessionControllerTest extends TestCase
             'two_factor_confirmed_at' => now(),
         ])->save();
 
-        $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()])->get(route('two-factor.settings'))
+        $this->actingAs($user)->withSession(['auth.password_confirmed_at' => now()->timestamp])->get(route('two-factor.settings'))
             ->assertOk()
             ->assertSeeText('Two-factor authentication is enabled.')
             ->assertSeeText('recovery-code-one')

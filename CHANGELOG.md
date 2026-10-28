@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented here. Versions match the git tags.
 
+## [3.1.0] - 2026-10-28
+
+### Added
+
+- **Pre-shipment drift check** (print queue): compares the oldest 50 open ShipStation orders with the quantities Shopify still needs shipped, read from fulfillment orders per SKU. Open ShipStation orders sharing a number are summed, so valid partial and split orders are not compared with the whole original order. Reports items ShipStation would still ship that Shopify no longer needs, items Shopify still needs that ShipStation lacks, cancelled orders, and shipping address differences (formatting changes are separated from substantive ones such as a dropped second address line). Re-check flags for weight/package and customs appear when items differ. Orders that cannot be read completely, are ambiguous or lack SKUs are shown as unknown, never as a match.
+- **Order consolidation review** (print queue): lists open orders from the same customer, recipient and full destination that could ship together, with per-order allocations, a configurable waiting window, ship-from/service/confirmation matching, and explicit reasons for every excluded order. Orders with paid shipping, customs data, insurance, gift or special handling stay out until marked reviewed; operators can also exclude an order (saved per store). Optional savings use two operator-entered cost assumptions, never guessed package sizes. CSV export included. Nothing is merged, held or delayed.
+- **Import freshness** (issue triage): ages the expected-but-absent orders found by Run Audit against a per-store grace window (default 6 hours, 1-720), shows the latest and last successful audit, and can read the ShipStation refresh status on request, displayed as reported and never used to label a connection failed. A single alert per store is raised through the existing operational alerts while orders stay absent beyond the window; quiet stores never alert.
+- **Billing cost benchmarks** on the Shipping Billing Audit: observed cost per SKU set and service in each currency with label count, sample size and coverage, median, mean, min and max, a small-sample marker and the source shipment IDs. Only single-charge, single-identity labels are sampled, and a mixed basket's postage is never attributed to one SKU.
+
+### Changed
+
+- `OrderChannelComparator` gained `addressDifferences()`, reused by the drift check.
+- The admin appearance test reads the expected version from `package.json` instead of a hard-coded number.
+
+### Fixed
+
+- Import-freshness ages are never negative when a first-seen time is ahead of the clock.
+
 ## [3.0.0] - 2026-10-27
 
 The legacy PHP system was replaced by a Laravel application (cutover on 2026-09-15). Everything below is new since 2.2.0.

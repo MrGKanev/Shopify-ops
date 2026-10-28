@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Integrations\ShipStation\ShipStationClientContract;
 use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyCatalog;
 use App\Models\Store;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
+use Tests\Support\ShipStationFixtures;
 use Tests\TestCase;
 
 class InventoryOversellControllerTest extends TestCase
@@ -50,12 +50,9 @@ class InventoryOversellControllerTest extends TestCase
             'pages' => 100,
             'truncated' => true,
         ]);
-        $client = Mockery::mock(ShipStationClientContract::class);
+        $client = ShipStationFixtures::bindClient(1, $store);
         $client->shouldReceive('fetchAwaitingOrders')->once()->andReturn([['items' => [['sku' => '<img src=x>', 'quantity' => 3]]]]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->once()->with(Mockery::on(fn (Store $selected): bool => $selected->is($store)))->andReturn($client);
         $this->app->instance(ShopifyCatalog::class, $shopify);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
 
         $this->actingAs($user)->post(route('reports.inventory-oversell.store'), ['store_id' => 999])->assertOk()
             ->assertSeeText('1 products · 1 awaiting orders')->assertSeeText('product catalogue truncated after 100 pages')

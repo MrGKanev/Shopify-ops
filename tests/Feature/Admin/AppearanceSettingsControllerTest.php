@@ -37,7 +37,7 @@ class AppearanceSettingsControllerTest extends TestCase
             ->assertSeeText('Handbook')
             ->assertSeeText('Runbook')
             ->assertSeeText('Admin docs')
-            ->assertSeeText('v2.2.0 · GitHub');
+            ->assertSeeText('v'.json_decode((string) file_get_contents(base_path('package.json')), true)['version'].' · GitHub');
     }
 
     public function test_custom_links_respect_the_configured_audience_and_escape_labels(): void

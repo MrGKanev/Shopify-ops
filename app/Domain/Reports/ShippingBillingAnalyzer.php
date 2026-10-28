@@ -3,6 +3,7 @@
 namespace App\Domain\Reports;
 
 use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
 use Carbon\CarbonImmutable;
 
 class ShippingBillingAnalyzer
@@ -84,5 +85,63 @@ class ShippingBillingAnalyzer
         }
 
         return array_values($rows);
+    }
+
+    /**
+     * Observed single-label cost distribution per SKU set and service, kept per currency.
+     *
+     * Only shipments with exactly one label charge, one order identity, one SKU set and one service are
+     * sampled; the full postage of a mixed basket is never attributed to one SKU. Cohorts have no quantity
+     * or destination data, so the denominator is always shipments, not units or regions.
+     *
+     * @param  list<array<string, mixed>>  $groups  rows returned by analyze()
+     * @return list<array{basis: string, skus: string, service: string, currency: string, shipments: int, sampled: int, coverage: float, small_sample: bool, median: ?string, mean: ?string, min: ?string, max: ?string, shipment_ids: list<string>}>
+     */
+    public function benchmarks(array $groups, int $minimumSample = 5): array
+    {
+        $cohorts = [];
+        foreach ($groups as $group) {
+            $skus = (string) $group['skus'];
+            $service = (string) $group['service'];
+            $key = $skus.'|'.$service.'|'.$group['currency'];
+            $cohorts[$key] ??= ['skus' => $skus, 'service' => $service, 'currency' => (string) $group['currency'], 'shipments' => 0, 'costs' => [], 'shipment_ids' => []];
+            $cohorts[$key]['shipments']++;
+            $ambiguous = str_contains($skus, '; ') || str_contains($service, '; ');
+            if ($group['billed_cost'] !== null && ! $ambiguous && $skus !== '' && $service !== '') {
+                $cohorts[$key]['costs'][] = BigDecimal::of($group['billed_cost']);
+                $cohorts[$key]['shipment_ids'][] = (string) $group['shipment_id'];
+            }
+        }
+        $rows = [];
+        foreach ($cohorts as $cohort) {
+            $costs = $cohort['costs'];
+            usort($costs, fn (BigDecimal $a, BigDecimal $b): int => $a->compareTo($b));
+            $sampled = count($costs);
+            $middle = intdiv($sampled, 2);
+            $median = match (true) {
+                $sampled === 0 => null,
+                $sampled % 2 === 1 => $costs[$middle],
+                default => $costs[$middle - 1]->plus($costs[$middle])->dividedBy(2, 6, RoundingMode::HalfUp),
+            };
+            $sum = array_reduce($costs, fn (BigDecimal $carry, BigDecimal $cost): BigDecimal => $carry->plus($cost), BigDecimal::zero());
+            $rows[] = [
+                'basis' => $sampled > 0 && ! str_contains($cohort['skus'], ';') ? 'single_sku' : 'sku_set',
+                'skus' => $cohort['skus'],
+                'service' => $cohort['service'],
+                'currency' => $cohort['currency'],
+                'shipments' => $cohort['shipments'],
+                'sampled' => $sampled,
+                'coverage' => round($sampled / $cohort['shipments'], 4),
+                'small_sample' => $sampled < $minimumSample,
+                'median' => $median === null ? null : (string) $median->toScale(4, RoundingMode::HalfUp),
+                'mean' => $sampled === 0 ? null : (string) $sum->dividedBy($sampled, 4, RoundingMode::HalfUp),
+                'min' => $sampled === 0 ? null : (string) $costs[0],
+                'max' => $sampled === 0 ? null : (string) $costs[$sampled - 1],
+                'shipment_ids' => $cohort['shipment_ids'],
+            ];
+        }
+        usort($rows, fn (array $a, array $b): int => [$b['sampled'], $a['skus'], $a['service'], $a['currency']] <=> [$a['sampled'], $b['skus'], $b['service'], $b['currency']]);
+
+        return $rows;
     }
 }

@@ -3,10 +3,9 @@
 namespace Tests\Feature\Application\Reports;
 
 use App\Application\Reports\RunVoidedShipmentsReport;
-use App\Integrations\ShipStation\ShipStationClientContract;
-use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Models\Store;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Tests\Support\ShipStationFixtures;
 use Tests\TestCase;
 
 class RunVoidedShipmentsReportTest extends TestCase
@@ -17,11 +16,10 @@ class RunVoidedShipmentsReportTest extends TestCase
     {
         $store = Store::factory()->create(['store_number' => '42']);
         $shipments = [['shipmentId' => 1, 'orderId' => 1, 'orderNumber' => '#1', 'voidDate' => '2026-06-10'], ['shipmentId' => 2, 'orderId' => 2, 'orderNumber' => '#2', 'voidDate' => '2026-06-11']];
-        $client = $this->mock(ShipStationClientContract::class);
+        $client = ShipStationFixtures::bindClient(1, $store);
         $client->shouldReceive('fetchVoidedShipments')->once()->with('2026-06-01', '2026-06-30', 42)->andReturn($shipments);
-        $client->shouldReceive('getOrder')->with(1)->once()->andReturn(['orderId' => 1, 'orderNumber' => '#1', 'advancedOptions' => ['storeId' => 42]]);
-        $client->shouldReceive('getOrder')->with(2)->once()->andReturn(['orderId' => 2, 'orderNumber' => '#2', 'advancedOptions' => ['storeId' => 42]]);
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->with($store)->andReturn($client);
+        $client->shouldReceive('getOrder')->with(1)->once()->andReturn(ShipStationFixtures::lookupOrder(1, '#1'));
+        $client->shouldReceive('getOrder')->with(2)->once()->andReturn(ShipStationFixtures::lookupOrder(2, '#2'));
 
         $result = app(RunVoidedShipmentsReport::class)->handle($store, '2026-06-01', '2026-06-30');
 

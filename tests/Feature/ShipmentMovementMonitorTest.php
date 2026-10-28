@@ -7,8 +7,6 @@ use App\Application\Reports\TrackingReadBudget;
 use App\Integrations\Exceptions\IntegrationException;
 use App\Integrations\Exceptions\TrackingReadLimitExceeded;
 use App\Integrations\Exceptions\UnexpectedResponse;
-use App\Integrations\ShipStation\ShipStationClientContract;
-use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\ShipStation\ShipStationTrackingClient;
 use App\Models\ShipmentMovementObservation;
 use App\Models\Store;
@@ -17,6 +15,7 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use LogicException;
+use Tests\Support\ShipStationFixtures;
 use Tests\TestCase;
 
 class ShipmentMovementMonitorTest extends TestCase
@@ -108,10 +107,9 @@ class ShipmentMovementMonitorTest extends TestCase
         $store = $this->store(['carriers' => ['ups']]);
         $shipment = $this->shipment(1);
         ShipmentMovementObservation::factory()->forAccount($store)->create(['identity' => ShipmentMovementObservation::shipmentIdentity($store, $shipment), 'shipment_id' => '1', 'classification' => 'delivered']);
-        $client = $this->mock(ShipStationClientContract::class);
+        $client = ShipStationFixtures::bindClient(1);
         $client->shouldReceive('recentMonitoringShipments')->once()->andReturn([$shipment, [...$this->shipment(2), 'carrierCode' => 'fedex']]);
         $client->shouldNotReceive('getOrder');
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andReturn($client);
         Http::preventStrayRequests();
 
         $result = app(RunShipmentMovementMonitorReport::class)->handle($store);
@@ -200,10 +198,9 @@ class ShipmentMovementMonitorTest extends TestCase
 
     private function cohort(array $ids, int $storeId = 42): void
     {
-        $client = $this->mock(ShipStationClientContract::class);
+        $client = ShipStationFixtures::bindClient();
         $client->shouldReceive('recentMonitoringShipments')->andReturn(array_map(fn (int $id): array => $this->shipment($id), $ids));
-        $client->shouldReceive('getOrder')->andReturnUsing(fn (int $id): array => ['orderId' => $id, 'orderNumber' => (string) (1000 + $id), 'advancedOptions' => ['storeId' => $storeId]]);
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->andReturn($client);
+        $client->shouldReceive('getOrder')->andReturnUsing(fn (int $id): array => ShipStationFixtures::lookupOrder($id, (string) (1000 + $id), $storeId));
     }
 
     private function tracking(): void

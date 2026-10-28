@@ -7,6 +7,7 @@ use App\Models\Store;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class TagPolicyControllerTest extends TestCase
@@ -32,7 +33,7 @@ class TagPolicyControllerTest extends TestCase
         $this->actingAs($missing)->post('/reports/tag-policy', ['start_date' => '2026-09-01', 'end_date' => '2026-09-07'])->assertOk()->assertSeeText('credentials are incomplete');
         [$operator, $store] = $this->userWithStore(true);
         $shopify = Mockery::mock(ShopifyOrders::class);
-        $shopify->shouldReceive('tagPolicyCandidates')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '2026-09-01', '2026-09-07')->andReturn(['orders' => [['id' => '42', 'name' => '#<script>', 'created_at' => '2026-09-02', 'email' => '<img>@x.com', 'tags' => ['vip']]], 'pages' => 100, 'truncated' => true]);
+        $shopify->shouldReceive('tagPolicyCandidates')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '2026-09-01', '2026-09-07')->andReturn(ShopifyFixtures::history([['id' => '42', 'name' => '#<script>', 'created_at' => '2026-09-02', 'email' => '<img>@x.com', 'tags' => ['vip']]], true, 100));
         $this->app->instance(ShopifyOrders::class, $shopify);
         $this->actingAs($operator)->post('/reports/tag-policy', ['start_date' => '2026-09-01', 'end_date' => '2026-09-07'])->assertOk()->assertSeeText('1 scanned · 1 policy violations')->assertSeeText('VIP policy')->assertSeeText('truncated after 100 pages')->assertDontSee('<script>', false)->assertDontSee('<img>', false);
         $shopify = Mockery::mock(ShopifyOrders::class);

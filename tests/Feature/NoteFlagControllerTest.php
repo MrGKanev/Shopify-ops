@@ -7,6 +7,7 @@ use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class NoteFlagControllerTest extends TestCase
@@ -21,7 +22,7 @@ class NoteFlagControllerTest extends TestCase
         $user->stores()->attach($store);
         $this->actingAs($user)->post('/reports/note-flags', ['start_date' => '2026-01-01', 'end_date' => '2026-01-02', 'keywords' => ' , '])->assertSessionHasErrors('keywords');
         $gateway = Mockery::mock(ShopifyOrders::class);
-        $gateway->shouldReceive('noteFlagCandidates')->once()->andReturn(['orders' => [['id' => '1', 'name' => '#<script>', 'created_at' => '2026-01-01', 'email' => '<img>@x.com', 'note' => 'Please HOLD']], 'pages' => 100, 'truncated' => true]);
+        $gateway->shouldReceive('noteFlagCandidates')->once()->andReturn(ShopifyFixtures::history([['id' => '1', 'name' => '#<script>', 'created_at' => '2026-01-01', 'email' => '<img>@x.com', 'note' => 'Please HOLD']], true, 100));
         $this->app->instance(ShopifyOrders::class, $gateway);
         $this->actingAs($user)->post('/reports/note-flags', ['start_date' => '2026-01-01', 'end_date' => '2026-01-02', 'keywords' => 'hold'])->assertOk()->assertSeeText('1 scanned · 1 flagged notes')->assertSeeText('truncated after 100 pages')->assertDontSee('<script>', false)->assertDontSee('<img>', false);
     }

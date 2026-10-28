@@ -2,14 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Integrations\ShipStation\ShipStationClientContract;
-use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
-use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
+use Tests\Support\ShipStationFixtures;
 use Tests\TestCase;
 
 class VoidedShipmentsControllerTest extends TestCase
@@ -24,29 +22,21 @@ class VoidedShipmentsControllerTest extends TestCase
         $this->actingAs($operator)->post('/reports/voided-shipments', $this->input())->assertOk()->assertSeeText('credentials are incomplete');
 
         [$operator, $store] = $this->userWithStore(true);
-        $client = Mockery::mock(ShipStationClientContract::class);
+        $client = ShipStationFixtures::bindClient();
         $client->shouldReceive('fetchVoidedShipments')->andReturn([['shipmentId' => 1, 'orderId' => 1, 'orderNumber' => '<script>', 'voidDate' => '2026-06-10']]);
-        $client->shouldReceive('getOrder')->with(1)->andReturn(['orderId' => 1, 'orderNumber' => '<script>', 'advancedOptions' => ['storeId' => (int) $store->store_number]]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andReturn($client);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
+        $client->shouldReceive('getOrder')->with(1)->andReturn(ShipStationFixtures::lookupOrder(1, '<script>', (int) $store->store_number));
         $this->actingAs($operator)->post('/reports/voided-shipments', $this->input())->assertOk()->assertSeeText('1 voided shipments')->assertDontSee('<script>', false);
 
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andThrow(new RuntimeException('secret-token'));
-        $this->app->instance(ShipStationClientFactory::class, $factory);
+        ShipStationFixtures::bindFailure(new RuntimeException('secret-token'));
         $this->actingAs($operator)->post('/reports/voided-shipments', $this->input())->assertOk()->assertSeeText('could not be completed')->assertDontSeeText('secret-token');
     }
 
     public function test_operator_can_download_formula_safe_csv(): void
     {
         [$operator, $store] = $this->userWithStore(true);
-        $client = Mockery::mock(ShipStationClientContract::class);
+        $client = ShipStationFixtures::bindClient();
         $client->shouldReceive('fetchVoidedShipments')->andReturn([['shipmentId' => 1, 'orderId' => 1, 'orderNumber' => '=bad', 'voidDate' => '2026-06-10']]);
-        $client->shouldReceive('getOrder')->with(1)->andReturn(['orderId' => 1, 'orderNumber' => '=bad', 'advancedOptions' => ['storeId' => (int) $store->store_number]]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andReturn($client);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
+        $client->shouldReceive('getOrder')->with(1)->andReturn(ShipStationFixtures::lookupOrder(1, '=bad', (int) $store->store_number));
 
         $response = $this->actingAs($operator)->post(route('reports.voided-shipments.export'), $this->input());
         $response->assertOk()->assertDownload('voided-shipments-2026-06-01-to-2026-06-30.csv');
@@ -59,7 +49,7 @@ class VoidedShipmentsControllerTest extends TestCase
         app()->setLocale($locale);
         [$operator] = $this->userWithStore(true, $configured ? [] : ['shipstation_api_key' => '']);
         if ($configured) {
-            $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andThrow(new RuntimeException('secret-token'));
+            ShipStationFixtures::bindFailure(new RuntimeException('secret-token'), 1);
         }
 
         $response = $this->actingAs($operator)->post(route('reports.voided-shipments.export'), $this->input());

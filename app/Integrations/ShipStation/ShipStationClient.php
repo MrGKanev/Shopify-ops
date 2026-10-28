@@ -149,6 +149,19 @@ class ShipStationClient implements ShipStationClientContract
         $this->pauseWhenRateLimitIsExhausted($response);
     }
 
+    public function refreshStatus(int $storeId): array
+    {
+        $payload = $this->get('/stores/getrefreshstatus', ['storeId' => $storeId]);
+        $reportedStore = $payload['storeId'] ?? null;
+        if ($reportedStore !== null && (string) $reportedStore !== (string) $storeId) {
+            throw new UnexpectedResponse('ShipStation returned the refresh status of a different store.');
+        }
+        $status = $payload['status'] ?? null;
+        $date = $payload['refreshDate'] ?? null;
+
+        return ['status' => is_scalar($status) && trim((string) $status) !== '' ? trim((string) $status) : null, 'refresh_date' => is_string($date) && trim($date) !== '' ? trim($date) : null];
+    }
+
     public function getRates(array $request): array
     {
         $response = $this->request()->post('/shipments/getrates', $request);

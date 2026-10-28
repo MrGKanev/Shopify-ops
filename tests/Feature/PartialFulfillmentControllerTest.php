@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class PartialFulfillmentControllerTest extends TestCase
@@ -47,7 +48,7 @@ class PartialFulfillmentControllerTest extends TestCase
 
     private function candidates(string $name, bool $truncated = false): array
     {
-        return ['orders' => [['name' => $name, 'created_at' => now()->subDays(10)->toIso8601String(), 'financial_status' => 'paid', 'line_items' => [['name' => 'Widget', 'fulfillable_quantity' => 1]]]], 'pages' => $truncated ? 100 : 1, 'truncated' => $truncated];
+        return ShopifyFixtures::history([['name' => $name, 'created_at' => now()->subDays(10)->toIso8601String(), 'financial_status' => 'paid', 'line_items' => [['name' => 'Widget', 'fulfillable_quantity' => 1]]]], $truncated, $truncated ? 100 : 1);
     }
 
     private function input(): array

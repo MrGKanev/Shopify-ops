@@ -7,6 +7,7 @@ use App\Models\Store;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class HighValueNoPhoneControllerTest extends TestCase
@@ -37,7 +38,7 @@ class HighValueNoPhoneControllerTest extends TestCase
     {
         [$user, $store] = $this->userWithStore(operator: true);
         $shopify = Mockery::mock(ShopifyOrders::class);
-        $shopify->shouldReceive('highValueOrderCandidates')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '2026-09-01', '2026-09-06')->andReturn(['orders' => [['id' => 42, 'name' => '#1001<script>x</script>', 'created_at' => '2026-09-02', 'email' => '<img src=x>', 'total_price' => '500.50', 'currency' => 'USD', 'shipping_address' => ['phone' => '', 'first_name' => '<b>Ada</b>', 'address1' => '1 Main']]], 'pages' => 100, 'truncated' => true]);
+        $shopify->shouldReceive('highValueOrderCandidates')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '2026-09-01', '2026-09-06')->andReturn(ShopifyFixtures::history([['id' => 42, 'name' => '#1001<script>x</script>', 'created_at' => '2026-09-02', 'email' => '<img src=x>', 'total_price' => '500.50', 'currency' => 'USD', 'shipping_address' => ['phone' => '', 'first_name' => '<b>Ada</b>', 'address1' => '1 Main']]], true, 100));
         $this->app->instance(ShopifyOrders::class, $shopify);
 
         $response = $this->actingAs($user)->post(route('reports.high-value-no-phone.store'), ['start_date' => '2026-09-01', 'end_date' => '2026-09-06', 'minimum' => '200.25', 'currency' => 'usd']);
@@ -49,10 +50,10 @@ class HighValueNoPhoneControllerTest extends TestCase
     {
         [$user, $store] = $this->userWithStore(operator: true);
         $shopify = Mockery::mock(ShopifyOrders::class);
-        $shopify->shouldReceive('highValueOrderCandidates')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '2026-09-01', '2026-09-06')->andReturn(['orders' => [
+        $shopify->shouldReceive('highValueOrderCandidates')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '2026-09-01', '2026-09-06')->andReturn(ShopifyFixtures::history([
             ['id' => 1, 'name' => '#1', 'created_at' => '2026-09-02', 'email' => 'a@example.com', 'total_price' => '500.00', 'currency' => 'USD', 'shipping_address' => ['phone' => '']],
             ['id' => 2, 'name' => '#2', 'created_at' => '2026-09-02', 'email' => 'b@example.com', 'total_price' => '500.00', 'currency' => 'EUR', 'shipping_address' => ['phone' => '']],
-        ], 'pages' => 1, 'truncated' => false]);
+        ]));
         $this->app->instance(ShopifyOrders::class, $shopify);
 
         $response = $this->actingAs($user)->post(route('reports.high-value-no-phone.store'), ['start_date' => '2026-09-01', 'end_date' => '2026-09-06', 'minimum' => 200, 'currency' => 'ALL']);

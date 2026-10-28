@@ -3,12 +3,10 @@
 namespace Tests\Feature;
 
 use App\Domain\Orders\PickListBuilder;
-use App\Integrations\ShipStation\ShipStationClientContract;
-use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Models\PickListSnapshot;
 use App\Models\PickListTemplate;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
-use Mockery;
+use Tests\Support\ShipStationFixtures;
 use Tests\TestCase;
 
 class PickListTest extends TestCase
@@ -76,14 +74,11 @@ class PickListTest extends TestCase
         foreach (['1001', '1002', '1003'] as $number) {
             $store->printQueueItems()->create(['order_number' => $number]);
         }
-        $client = Mockery::mock(ShipStationClientContract::class);
-        $order = fn (string $number, int $quantity): array => ['orderId' => (int) $number, 'orderNumber' => $number, 'advancedOptions' => ['storeId' => 42], 'items' => [['sku' => '=CMD', 'name' => 'Formula', 'quantity' => $quantity, 'warehouseLocation' => 'B1']]];
+        $client = ShipStationFixtures::bindClient();
+        $order = fn (string $number, int $quantity): array => ShipStationFixtures::order($number, ['items' => [['sku' => '=CMD', 'name' => 'Formula', 'quantity' => $quantity, 'warehouseLocation' => 'B1']]]);
         $client->shouldReceive('findByOrderNumber')->with('1001', 42)->andReturn([$order('1001', 2)]);
         $client->shouldReceive('findByOrderNumber')->with('1002', 42)->andReturn([$order('1002', 1)]);
         $client->shouldReceive('findByOrderNumber')->with('1003', 42)->andReturn([]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andReturn($client);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
 
         $this->actingAs($operator)->get(route('print-queue.pick-list', ['generate' => 1]))->assertOk()->assertSeeText('2 orders')->assertSeeText('3 units')->assertSeeText('Not found in ShipStation')->assertSeeText('1003')->assertSeeText('1001 × 2');
 
@@ -103,19 +98,16 @@ class PickListTest extends TestCase
     /** @param array<string, list<array<string, mixed>>> $ordersByNumber */
     private function fakeShipStation(array $ordersByNumber): void
     {
-        $client = Mockery::mock(ShipStationClientContract::class);
+        $client = ShipStationFixtures::bindClient();
         foreach ($ordersByNumber as $number => $orders) {
             $client->shouldReceive('findByOrderNumber')->with((string) $number, 42)->andReturn($orders);
         }
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andReturn($client);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
     }
 
     /** @return array<string, mixed> */
     private function shipStationOrder(string $number, int $quantity, string $bin): array
     {
-        return ['orderId' => (int) $number, 'orderNumber' => $number, 'advancedOptions' => ['storeId' => 42], 'items' => [['sku' => 'SKU-A', 'name' => 'Widget', 'quantity' => $quantity, 'warehouseLocation' => $bin]]];
+        return ShipStationFixtures::order($number, ['items' => [['sku' => 'SKU-A', 'name' => 'Widget', 'quantity' => $quantity, 'warehouseLocation' => $bin]]]);
     }
 
     public function test_the_extra_large_size_is_accepted_rendered_and_unknown_sizes_are_rejected(): void

@@ -30,6 +30,31 @@ class ShipStationClientTest extends TestCase
         });
     }
 
+    public function test_refresh_status_reads_the_reported_status_for_one_store_only(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['https://ssapi.shipstation.com/stores/getrefreshstatus*' => Http::response(['storeId' => 42, 'status' => ' Complete ', 'refreshDate' => '2026-10-28T10:00:00'])]);
+
+        $status = $this->client()->refreshStatus(42);
+
+        $this->assertSame(['status' => 'Complete', 'refresh_date' => '2026-10-28T10:00:00'], $status);
+        Http::assertSent(function (Request $request): bool {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+            return $request->method() === 'GET' && $query === ['storeId' => '42'];
+        });
+    }
+
+    public function test_refresh_status_tolerates_missing_fields_but_rejects_another_store(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['https://ssapi.shipstation.com/stores/getrefreshstatus*' => Http::sequence()->push(['status' => ''])->push(['storeId' => 7, 'status' => 'Complete'])]);
+
+        $this->assertSame(['status' => null, 'refresh_date' => null], $this->client()->refreshStatus(42));
+        $this->expectException(UnexpectedResponse::class);
+        $this->client()->refreshStatus(42);
+    }
+
     public function test_order_lookup_returns_raw_orders_with_basic_auth_and_expected_query(): void
     {
         Http::preventStrayRequests();

@@ -67,15 +67,7 @@ class ReportExportSafetyTest extends TestCase
         $this->actingAs($viewer)->post(route($route), self::INPUT)->assertForbidden();
     }
 
-    /**
-     * @return array<string, array{string, class-string}>
-     */
-    public static function exportsGuardingCredentials(): array
-    {
-        return array_diff_key(self::exports(), ['shipping margin' => true]);
-    }
-
-    #[DataProvider('exportsGuardingCredentials')]
+    #[DataProvider('exports')]
     public function test_export_is_refused_when_store_credentials_are_missing(string $route, string $report): void
     {
         [$operator] = $this->userWithStore(true, ['shopify_access_token' => '', 'shipstation_api_key' => '']);

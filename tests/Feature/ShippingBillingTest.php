@@ -137,6 +137,26 @@ class ShippingBillingTest extends TestCase
         $this->put(route('shipping-billing.update', $entry), ['dispute_status' => 'review', 'excluded' => true])->assertSessionHasErrors('review_note');
     }
 
+    public function test_benchmarks_are_store_scoped_per_currency_and_trace_back_to_shipments(): void
+    {
+        $this->travelTo('2026-10-23 12:00:00 UTC');
+        [$operator, $store] = $this->userWithStore(true);
+        $make = fn (string $shipment, string $amount, array $extra = []) => ShippingBillingEntry::factory()->forAccount($store)->create(['shipment_id' => $shipment, 'order_id' => 'o'.$shipment, 'order_number' => '1'.$shipment, 'amount' => $amount, 'skus' => 'SKU-A', 'service' => 'ground', 'posted_at' => '2026-10-10', ...$extra]);
+        $make('1', '10');
+        $make('2', '30');
+        $make('3', '7', ['currency' => 'EUR']);
+        ShippingBillingEntry::factory()->forAccount(Store::factory()->create())->create(['shipment_id' => '9', 'amount' => '500', 'skus' => 'SKU-A', 'service' => 'ground', 'posted_at' => '2026-10-10']);
+
+        $response = $this->actingAs($operator)->get('/shipping-billing')->assertOk()->assertSeeText('Observed cost benchmarks');
+
+        $benchmarks = collect($response->viewData('benchmarks'));
+        $this->assertCount(2, $benchmarks);
+        $usd = $benchmarks->firstWhere('currency', 'USD');
+        $this->assertSame(['20.0000', 2, ['1', '2']], [$usd['median'], $usd['sampled'], $usd['shipment_ids']]);
+        $this->assertTrue($usd['small_sample']);
+        $this->assertSame('7.000000', $benchmarks->firstWhere('currency', 'EUR')['min']);
+    }
+
     public function test_export_is_store_scoped_formula_safe_and_uses_posting_dates(): void
     {
         $this->travelTo('2026-10-23 12:00:00 UTC');

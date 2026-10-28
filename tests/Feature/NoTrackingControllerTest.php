@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class NoTrackingControllerTest extends TestCase
@@ -44,7 +45,7 @@ class NoTrackingControllerTest extends TestCase
 
     private function candidates(string $name, bool $truncated = false): array
     {
-        return ['orders' => [['name' => $name, 'created_at' => '2025-01-01', 'fulfillments' => [['created_at' => '2026-06-15T12:00:00Z', 'tracking_number' => '']]]], 'pages' => $truncated ? 100 : 1, 'truncated' => $truncated];
+        return ShopifyFixtures::history([['name' => $name, 'created_at' => '2025-01-01', 'fulfillments' => [['created_at' => '2026-06-15T12:00:00Z', 'tracking_number' => '']]]], $truncated, $truncated ? 100 : 1);
     }
 
     private function input(): array

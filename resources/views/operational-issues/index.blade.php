@@ -4,6 +4,7 @@
     <div class="flex flex-col gap-6">
         <x-page-header eyebrow="Operations" title="{{ __('Issue triage') }}" :subtitle="__(':count open or in-progress issues for :store', ['count' => $openCount, 'store' => $activeStore->label])">
             <x-button size="sm" variant="ghost" :href="route('orders.remediation.create')">{{ __('Fix orders') }}</x-button>
+            <x-button size="sm" variant="ghost" :href="route('operational-issues.import-freshness')">{{ __('Import freshness') }}</x-button>
             <x-button size="sm" :href="route('reports.run-audit')">{{ __('Run audit') }}</x-button>
         </x-page-header>
 

@@ -11,6 +11,7 @@ use Mockery;
 use Mockery\MockInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Tests\Support\ShipStationFixtures;
 
 class VerifyShipStationShipmentOwnershipTest extends TestCase
 {
@@ -29,7 +30,7 @@ class VerifyShipStationShipmentOwnershipTest extends TestCase
     /** @return array<string, mixed> */
     private function parent(array $overrides = []): array
     {
-        return array_replace_recursive(['orderId' => 7, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 42]], $overrides);
+        return array_replace_recursive(ShipStationFixtures::lookupOrder(7, '1001'), $overrides);
     }
 
     private function client(array $parents): MockInterface

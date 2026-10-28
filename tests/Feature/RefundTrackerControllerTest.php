@@ -2,14 +2,14 @@
 
 namespace Tests\Feature;
 
-use App\Integrations\ShipStation\ShipStationClientContract;
-use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyPayments;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
+use Tests\Support\ShipStationFixtures;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class RefundTrackerControllerTest extends TestCase
@@ -38,12 +38,9 @@ class RefundTrackerControllerTest extends TestCase
             'pages' => 100,
             'truncated' => true,
         ]);
-        $client = Mockery::mock(ShipStationClientContract::class);
-        $client->shouldReceive('fetchAllOrders')->once()->with('2026-01-01', '2026-02-07')->andReturn([['orderId' => 1, 'advancedOptions' => ['storeId' => (int) $store->store_number], 'orderNumber' => '1001', 'orderStatus' => 'awaiting_shipment']]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)))->andReturn($client);
+        $client = ShipStationFixtures::bindClient(1, $store);
+        $client->shouldReceive('fetchAllOrders')->once()->with('2026-01-01', '2026-02-07')->andReturn([ShipStationFixtures::lookupOrder(1, '1001', (int) $store->store_number, ['orderStatus' => 'awaiting_shipment'])]);
         $this->app->instance(ShopifyPayments::class, $gateway);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
 
         $this->actingAs($operator)->post('/reports/refund-tracker', ['start_date' => '2026-01-01', 'end_date' => '2026-01-31'])
             ->assertOk()
@@ -59,7 +56,7 @@ class RefundTrackerControllerTest extends TestCase
     {
         [$operator] = $this->userWithStore(true, ['shipstation_api_key' => '', 'shipstation_api_secret' => '']);
         $gateway = Mockery::mock(ShopifyPayments::class);
-        $gateway->shouldReceive('refundTrackerCandidates')->once()->andReturn(['orders' => [], 'pages' => 1, 'truncated' => false]);
+        $gateway->shouldReceive('refundTrackerCandidates')->once()->andReturn(ShopifyFixtures::history([]));
         $this->app->instance(ShopifyPayments::class, $gateway);
         $this->actingAs($operator)->post('/reports/refund-tracker', ['start_date' => '2026-01-01', 'end_date' => '2026-01-31'])->assertOk()->assertSeeText('shown without a cross-check');
 

@@ -8,14 +8,14 @@ use App\Application\Reports\RunOrphanOrderReport;
 use App\Application\Reports\RunRefundTrackerReport;
 use App\Application\Reports\RunShippedUnfulfilledReport;
 use App\Integrations\Exceptions\UnexpectedResponse;
-use App\Integrations\ShipStation\ShipStationClientContract;
-use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Integrations\Shopify\Contracts\ShopifyPayments;
 use App\Models\Store;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Support\ShipStationFixtures;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class OrderReportTenantIsolationTest extends TestCase
@@ -124,8 +124,8 @@ class OrderReportTenantIsolationTest extends TestCase
     public function test_shopify_only_refund_tracker_does_not_require_a_shipstation_store_number(): void
     {
         $store = Store::factory()->create(['store_number' => '', 'shipstation_api_key' => '', 'shipstation_api_secret' => '']);
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andReturnNull();
-        $this->mock(ShopifyPayments::class)->shouldReceive('refundTrackerCandidates')->once()->andReturn(['orders' => [$this->shopifyOrder('1001')], 'pages' => 1, 'truncated' => false]);
+        ShipStationFixtures::bindUnconfigured(1);
+        $this->mock(ShopifyPayments::class)->shouldReceive('refundTrackerCandidates')->once()->andReturn(ShopifyFixtures::history([$this->shopifyOrder('1001')]));
 
         $result = app(RunRefundTrackerReport::class)->handle($store, '2026-10-01', '2026-10-25');
 
@@ -187,11 +187,10 @@ class OrderReportTenantIsolationTest extends TestCase
      * @param list<array<string, mixed>> $shopify */
     private function bindOrders(array $orders, array $shopify): void
     {
-        $client = $this->mock(ShipStationClientContract::class);
+        $client = ShipStationFixtures::bindClient();
         $client->shouldReceive('fetchAllOrders')->andReturn($orders);
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->andReturn($client);
-        $this->mock(ShopifyOrders::class)->shouldReceive('itemMismatchCandidates')->andReturn(['orders' => $shopify, 'pages' => 1, 'truncated' => false]);
-        $this->mock(ShopifyPayments::class)->shouldReceive('refundTrackerCandidates')->andReturn(['orders' => $shopify, 'pages' => 1, 'truncated' => false]);
+        $this->mock(ShopifyOrders::class)->shouldReceive('itemMismatchCandidates')->andReturn(ShopifyFixtures::history($shopify));
+        $this->mock(ShopifyPayments::class)->shouldReceive('refundTrackerCandidates')->andReturn(ShopifyFixtures::history($shopify));
     }
 
     /** @param array<string, mixed> $overrides

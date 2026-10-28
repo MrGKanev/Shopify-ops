@@ -2,11 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Integrations\ShipStation\ShipStationClientContract;
-use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Support\ShipStationFixtures;
 use Tests\TestCase;
 
 class OrderLookupTenantIsolationTest extends TestCase
@@ -19,11 +18,10 @@ class OrderLookupTenantIsolationTest extends TestCase
         [$viewer] = $this->userWithStore(false, ['store_number' => '42']);
         $shopify = $this->mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumber')->zeroOrMoreTimes()->andReturn([]);
-        $client = $this->mock(ShipStationClientContract::class);
-        $client->shouldReceive('findByOrderNumber')->with('1001', 42)->once()->andReturn([['orderId' => 99, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 99], 'orderStatus' => 'FOREIGN-STATUS', 'customerEmail' => 'private@example.com']]);
+        $client = ShipStationFixtures::bindClient(1);
+        $client->shouldReceive('findByOrderNumber')->with('1001', 42)->once()->andReturn([ShipStationFixtures::lookupOrder(99, '1001', 99, ['orderStatus' => 'FOREIGN-STATUS', 'customerEmail' => 'private@example.com'])]);
         $client->shouldReceive('findByOrderNumber')->with('1002', 42)->zeroOrMoreTimes()->andReturn([]);
         $client->shouldNotReceive('getOrderShipments');
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andReturn($client);
         $this->actingAs($viewer);
 
         $response = $this->call($method, route($route), $input);
@@ -45,14 +43,13 @@ class OrderLookupTenantIsolationTest extends TestCase
     {
         [$viewer] = $this->userWithStore(false, ['store_number' => '42']);
         $this->mock(ShopifyOrders::class)->shouldReceive('findByOrderNumber')->once()->andReturn([]);
-        $client = $this->mock(ShipStationClientContract::class);
-        $client->shouldReceive('findByOrderNumber')->once()->with('1001', 42)->andReturn([['orderId' => 1, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 42], 'orderStatus' => 'shipped']]);
+        $client = ShipStationFixtures::bindClient(1);
+        $client->shouldReceive('findByOrderNumber')->once()->with('1001', 42)->andReturn([ShipStationFixtures::lookupOrder(1, '1001', 42, ['orderStatus' => 'shipped'])]);
         $client->shouldReceive('getOrderShipments')->once()->with('1001', true)->andReturn([
             ['shipmentId' => 1, 'orderId' => 1, 'trackingNumber' => 'OWN-TRACKING', 'carrierCode' => 'ups'],
             ['shipmentId' => 1, 'orderId' => 1, 'trackingNumber' => 'OWN-TRACKING', 'carrierCode' => 'ups'],
             ['shipmentId' => 2, 'orderId' => 99, 'trackingNumber' => 'FOREIGN-TRACKING', 'carrierCode' => 'ups'],
         ]);
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andReturn($client);
 
         $response = $this->actingAs($viewer)->get(route('orders.lookup', ['order_number' => '1001']));
 
@@ -66,10 +63,9 @@ class OrderLookupTenantIsolationTest extends TestCase
         [$viewer] = $this->userWithStore(false, ['store_number' => null]);
         $shopify = $this->mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumber')->zeroOrMoreTimes()->andReturn([]);
-        $client = $this->mock(ShipStationClientContract::class);
+        $client = ShipStationFixtures::bindClient(1);
         $client->shouldNotReceive('findByOrderNumber');
         $client->shouldNotReceive('getOrderShipments');
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andReturn($client);
         $this->actingAs($viewer);
 
         $response = $this->call($method, route($route), $input);
@@ -81,10 +77,9 @@ class OrderLookupTenantIsolationTest extends TestCase
     {
         [$viewer] = $this->userWithStore(false, ['store_number' => '42']);
         $this->fakeTimelineOrder();
-        $client = $this->mock(ShipStationClientContract::class);
-        $client->shouldReceive('findByOrderNumber')->once()->with('1001', 42)->andReturn([['orderId' => 99, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 99], 'orderStatus' => 'FOREIGN-STATUS']]);
+        $client = ShipStationFixtures::bindClient(1);
+        $client->shouldReceive('findByOrderNumber')->once()->with('1001', 42)->andReturn([ShipStationFixtures::lookupOrder(99, '1001', 99, ['orderStatus' => 'FOREIGN-STATUS'])]);
         $client->shouldNotReceive('getOrderShipments');
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andReturn($client);
 
         $response = $this->actingAs($viewer)->get(route('orders.timeline', ['order_number' => '1001']));
 
@@ -95,13 +90,12 @@ class OrderLookupTenantIsolationTest extends TestCase
     {
         [$viewer] = $this->userWithStore(false, ['store_number' => '42']);
         $this->fakeTimelineOrder();
-        $client = $this->mock(ShipStationClientContract::class);
-        $client->shouldReceive('findByOrderNumber')->once()->with('1001', 42)->andReturn([['orderId' => 1, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 42], 'orderStatus' => 'shipped']]);
+        $client = ShipStationFixtures::bindClient(1);
+        $client->shouldReceive('findByOrderNumber')->once()->with('1001', 42)->andReturn([ShipStationFixtures::lookupOrder(1, '1001', 42, ['orderStatus' => 'shipped'])]);
         $client->shouldReceive('getOrderShipments')->once()->with('1001', true)->andReturn([
             ['shipmentId' => 1, 'orderId' => 1, 'trackingNumber' => 'OWN-TRACKING', 'shipDate' => '2026-10-10T10:00:00Z'],
             ['shipmentId' => 2, 'orderId' => 99, 'trackingNumber' => 'FOREIGN-TRACKING', 'shipDate' => '2026-10-10T10:00:00Z'],
         ]);
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andReturn($client);
 
         $response = $this->actingAs($viewer)->get(route('orders.timeline', ['order_number' => '1001']));
 
@@ -113,10 +107,9 @@ class OrderLookupTenantIsolationTest extends TestCase
     {
         [$viewer] = $this->userWithStore(false, ['store_number' => '42']);
         $this->mock(ShopifyOrders::class)->shouldReceive('findByOrderNumber')->once()->andReturn([]);
-        $client = $this->mock(ShipStationClientContract::class);
-        $client->shouldReceive('findByOrderNumber')->once()->with('1001', 42)->andReturn([['orderId' => 1, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 42], 'orderStatus' => 'shipped']]);
+        $client = ShipStationFixtures::bindClient(1);
+        $client->shouldReceive('findByOrderNumber')->once()->with('1001', 42)->andReturn([ShipStationFixtures::lookupOrder(1, '1001', 42, ['orderStatus' => 'shipped'])]);
         $client->shouldReceive('getOrderShipments')->once()->with('1001', true)->andReturn($shipments);
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andReturn($client);
 
         $response = $this->actingAs($viewer)->get(route('orders.lookup', ['order_number' => '1001']));
 

@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Domain\Orders\CustomerFulfillmentContext;
-use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyCustomers;
 use App\Integrations\Shopify\ShopifyAdminClient;
 use App\Models\CustomerContextFilter;
@@ -279,9 +278,7 @@ class CustomerContextTest extends TestCase
     public function test_open_source_reports_unconfigured_shipstation(): void
     {
         [$operator] = $this->userWithStore(true, ['store_number' => '42']);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andReturn(null);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
+        ShipStationFixtures::bindUnconfigured();
         $this->app->instance(ShopifyCustomers::class, Mockery::mock(ShopifyCustomers::class));
 
         $this->actingAs($operator)->get(route('print-queue.customer-context', ['generate' => 1, 'source' => 'open']))->assertOk()->assertSeeText('ShipStation is not configured completely for this store.');

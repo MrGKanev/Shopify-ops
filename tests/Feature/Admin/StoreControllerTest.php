@@ -159,4 +159,14 @@ class StoreControllerTest extends TestCase
         $this->assertNull($store->store_number);
         $this->assertSame(12, $store->delivery_watch_days);
     }
+
+    public function test_store_settings_render_the_subscription_removal_retry_action(): void
+    {
+        $store = Store::factory()->create();
+        $store->forceFill(['shipstation_monitoring_enabled' => false, 'shipstation_monitoring_token' => 'private-token', 'shipstation_monitoring_status' => 'failed'])->save();
+        $admin = User::factory()->admin()->create();
+        $admin->stores()->attach($store);
+
+        $this->actingAs($admin)->get(route('admin.stores.edit', $store))->assertOk()->assertSeeText('Retry subscription removal')->assertDontSee('private-token');
+    }
 }

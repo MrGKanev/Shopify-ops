@@ -32,6 +32,9 @@ interface ShipStationClientContract
 
     public function refreshStore(int $storeId): void;
 
+    /** @return array{status: string|null, refresh_date: string|null} what ShipStation reports; a refresh date is not proof that an import finished successfully */
+    public function refreshStatus(int $storeId): array;
+
     /** @param array<string, mixed> $request
      * @return list<array<string, mixed>> */
     public function getRates(array $request): array;

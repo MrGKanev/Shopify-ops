@@ -333,6 +333,94 @@ class ShopifyClient
         return ['orders' => $orders, 'pages' => $result['pages'], 'truncated' => $result['truncated']];
     }
 
+    /**
+     * Remaining shippable SKU quantities per Shopify order, read from its fulfillment orders. Closed and cancelled fulfillment orders contribute nothing; an order whose fulfillment orders or lines could not be read completely is marked incomplete rather than guessed.
+     *
+     * @param  list<string>  $orderNumbers
+     * @return array<string, list<array{id: string, cancelled: bool, complete: bool, has_fulfillment_orders: bool, remaining: array<string, int>, unidentified_lines: bool, address: array<string, string|null>}>>
+     */
+    public function preShipmentRemainingItems(array $orderNumbers): array
+    {
+        $numbers = [];
+        foreach ($orderNumbers as $orderNumber) {
+            $clean = ltrim(trim($orderNumber), '#');
+            if ($clean === '' || mb_strlen($clean) > 64 || preg_match('/\A[a-zA-Z0-9_-]+\z/', $clean) !== 1) {
+                throw new InvalidArgumentException('A Shopify order number is invalid.');
+            }
+            $numbers[$clean] = true;
+        }
+        $result = array_fill_keys(array_keys($numbers), []);
+        foreach (array_chunk(array_keys($numbers), 8) as $chunk) {
+            $search = '('.implode(' OR ', array_map(fn (string $number): string => "name:{$number}", $chunk)).')';
+            $orders = $this->graphql(ShopifyQueries::get('PreShipmentRemainingItems'), ['search' => $search])['data']['orders'] ?? null;
+            if (! is_array($orders) || ! is_array($orders['edges'] ?? null) || ! array_is_list($orders['edges']) || ($orders['pageInfo']['hasNextPage'] ?? true) !== false) {
+                throw new ShopifyGraphqlException([], 'Shopify remaining-item lookup returned an unexpected or incomplete response.');
+            }
+            foreach ($this->nodes($orders['edges'], 'PreShipmentRemainingItems') as $node) {
+                $number = ltrim(trim((string) ($node['name'] ?? '')), '#');
+                if (! array_key_exists($number, $result) || ! is_string($node['id'] ?? null)) {
+                    continue;
+                }
+                $result[$number][] = $this->remainingItems($node);
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param  array<string, mixed>  $node
+     * @return array{id: string, cancelled: bool, complete: bool, has_fulfillment_orders: bool, remaining: array<string, int>, unidentified_lines: bool, address: array<string, string|null>}
+     */
+    private function remainingItems(array $node): array
+    {
+        $connection = $node['fulfillmentOrders'] ?? null;
+        $complete = is_array($connection) && is_array($connection['nodes'] ?? null) && ($connection['pageInfo']['hasNextPage'] ?? true) === false;
+        $fulfillmentOrders = $complete ? $connection['nodes'] : [];
+        $remaining = [];
+        $unidentified = false;
+        foreach ($fulfillmentOrders as $fulfillmentOrder) {
+            $lines = is_array($fulfillmentOrder) ? ($fulfillmentOrder['lineItems'] ?? null) : null;
+            if (! is_array($lines) || ! is_array($lines['nodes'] ?? null) || ($lines['pageInfo']['hasNextPage'] ?? true) !== false) {
+                $complete = false;
+
+                continue;
+            }
+            if (in_array($fulfillmentOrder['status'] ?? null, ['CLOSED', 'CANCELLED'], true)) {
+                continue;
+            }
+            foreach ($lines['nodes'] as $line) {
+                if (! is_array($line) || ! is_int($line['remainingQuantity'] ?? null) || ($line['requiresShipping'] ?? true) !== true || $line['remainingQuantity'] === 0) {
+                    continue;
+                }
+                $sku = mb_strtolower(trim((string) ($line['sku'] ?? '')));
+                if ($sku === '') {
+                    $unidentified = true;
+
+                    continue;
+                }
+                $remaining[$sku] = ($remaining[$sku] ?? 0) + $line['remainingQuantity'];
+            }
+        }
+        ksort($remaining);
+        $address = is_array($node['shippingAddress'] ?? null) ? $node['shippingAddress'] : [];
+
+        return [
+            'id' => (string) $node['id'],
+            'cancelled' => ($node['cancelledAt'] ?? null) !== null,
+            'complete' => $complete,
+            'has_fulfillment_orders' => $fulfillmentOrders !== [],
+            'remaining' => $remaining,
+            'unidentified_lines' => $unidentified,
+            'address' => ['name' => $this->nullableText($address['name'] ?? null), 'company' => $this->nullableText($address['company'] ?? null), 'street_1' => $this->nullableText($address['address1'] ?? null), 'street_2' => $this->nullableText($address['address2'] ?? null), 'city' => $this->nullableText($address['city'] ?? null), 'state' => $this->nullableText($address['provinceCode'] ?? null), 'postal_code' => $this->nullableText($address['zip'] ?? null), 'country' => $this->nullableText($address['countryCodeV2'] ?? null), 'phone' => $this->nullableText($address['phone'] ?? null)],
+        ];
+    }
+
+    private function nullableText(mixed $value): ?string
+    {
+        return is_scalar($value) && trim((string) $value) !== '' ? trim((string) $value) : null;
+    }
+
     /** @return list<array<string, mixed>> */
     public function orderMetafieldDefinitions(): array
     {

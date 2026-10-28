@@ -15,6 +15,7 @@ use LogicException;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
+use Tests\Support\ShipStationFixtures;
 use Tests\TestCase;
 
 class DetectDeliveryExceptionsTest extends TestCase
@@ -33,7 +34,7 @@ class DetectDeliveryExceptionsTest extends TestCase
             ->method('fetchShipmentsByDate')
             ->with(now()->subDays(30)->toDateString(), now()->toDateString(), 42)
             ->willReturnOnConsecutiveCalls([$shipment], [$delivered]);
-        $client->expects($this->exactly(2))->method('getOrder')->with(1)->willReturn(['orderId' => 1, 'orderNumber' => '#1001', 'advancedOptions' => ['storeId' => 42]]);
+        $client->expects($this->exactly(2))->method('getOrder')->with(1)->willReturn(ShipStationFixtures::lookupOrder(1, '#1001'));
         $factory = $this->createMock(ShipStationClientFactory::class);
         $factory->expects($this->exactly(2))->method('forStore')->willReturn($client);
         $this->app->instance(ShipStationClientFactory::class, $factory);
@@ -90,7 +91,7 @@ class DetectDeliveryExceptionsTest extends TestCase
 
             return [[...$shipment, 'orderId' => $storeId]];
         });
-        $client->expects($this->exactly(2))->method('getOrder')->willReturnCallback(fn (int $id): array => ['orderId' => $id, 'orderNumber' => '#1001', 'advancedOptions' => ['storeId' => $id]]);
+        $client->expects($this->exactly(2))->method('getOrder')->willReturnCallback(fn (int $id): array => ShipStationFixtures::lookupOrder($id, '#1001', $id));
         $factory = $this->createMock(ShipStationClientFactory::class);
         $factory->expects($this->exactly(2))->method('forStore')->willReturn($client);
         $this->app->instance(ShipStationClientFactory::class, $factory);
@@ -118,14 +119,13 @@ class DetectDeliveryExceptionsTest extends TestCase
         $store = Store::factory()->create(['store_number' => '42']);
         $other = Store::factory()->create(['store_number' => '99', 'shipstation_api_key' => $store->shipstation_api_key, 'shipstation_api_secret' => $store->shipstation_api_secret]);
         $existing = OperationalIssue::factory()->for($store)->create(['source_tool' => 'delivery_watch', 'fingerprint' => hash('sha256', 'delivery_watch|101'), 'status' => IssueStatus::InProgress]);
-        $client = $this->mock(ShipStationClientContract::class);
+        $client = ShipStationFixtures::bindClient(1);
         $client->shouldReceive('fetchShipmentsByDate')->once()->with('2026-09-24', '2026-10-24', 42)->andReturn([
             ['shipmentId' => 101, 'orderId' => 1, 'orderNumber' => '#1001', 'shipDate' => '2026-10-10T00:00:00Z', 'deliveryDate' => '2026-10-23T00:00:00Z'],
             ['shipmentId' => 102, 'orderId' => 2, 'orderNumber' => '#1001', 'shipDate' => '2026-10-10T00:00:00Z'],
         ]);
-        $client->shouldReceive('getOrder')->with(1)->once()->andReturn(['orderId' => 1, 'orderNumber' => '#1001', 'advancedOptions' => ['storeId' => 42]]);
-        $client->shouldReceive('getOrder')->with(2)->once()->andReturn(['orderId' => 2, 'orderNumber' => '#1001', 'advancedOptions' => ['storeId' => 99]]);
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andReturn($client);
+        $client->shouldReceive('getOrder')->with(1)->once()->andReturn(ShipStationFixtures::lookupOrder(1, '#1001'));
+        $client->shouldReceive('getOrder')->with(2)->once()->andReturn(ShipStationFixtures::lookupOrder(2, '#1001', 99));
 
         try {
             $this->expectException(UnexpectedResponse::class);
@@ -142,10 +142,9 @@ class DetectDeliveryExceptionsTest extends TestCase
         $this->travelTo('2026-10-24 12:00:00 UTC');
         $store = Store::factory()->create(['store_number' => '42']);
         $shipment = ['shipmentId' => 101, 'orderId' => 1, 'orderNumber' => '#1001', 'shipDate' => '2026-10-10T00:00:00Z'];
-        $client = $this->mock(ShipStationClientContract::class);
+        $client = ShipStationFixtures::bindClient(1);
         $client->shouldReceive('fetchShipmentsByDate')->once()->andReturn([$shipment, $shipment, [...$shipment, 'shipmentId' => 102]]);
-        $client->shouldReceive('getOrder')->with(1)->once()->andReturn(['orderId' => 1, 'orderNumber' => '#1001', 'advancedOptions' => ['storeId' => 42]]);
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andReturn($client);
+        $client->shouldReceive('getOrder')->with(1)->once()->andReturn(ShipStationFixtures::lookupOrder(1, '#1001'));
 
         $this->assertSame(2, app(DetectDeliveryExceptions::class)->handle($store));
 
@@ -157,10 +156,9 @@ class DetectDeliveryExceptionsTest extends TestCase
     {
         $this->travelTo('2026-10-24 12:00:00 UTC');
         $store = Store::factory()->create(['store_number' => '42']);
-        $client = $this->mock(ShipStationClientContract::class);
+        $client = ShipStationFixtures::bindClient(1);
         $client->shouldReceive('fetchShipmentsByDate')->once()->andReturn([['shipmentId' => 101, 'orderId' => 1, 'orderNumber' => '#1001', 'shipDate' => '2026-10-10T00:00:00Z']]);
         $client->shouldReceive('getOrder')->once()->with(1)->andReturn($parent);
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andReturn($client);
 
         try {
             $this->expectException(UnexpectedResponse::class);
@@ -174,8 +172,8 @@ class DetectDeliveryExceptionsTest extends TestCase
     {
         return [
             'missing store' => [['orderId' => 1, 'orderNumber' => '#1001']],
-            'different parent' => [['orderId' => 2, 'orderNumber' => '#1001', 'advancedOptions' => ['storeId' => 42]]],
-            'inexact number' => [['orderId' => 1, 'orderNumber' => '#1001-extra', 'advancedOptions' => ['storeId' => 42]]],
+            'different parent' => [ShipStationFixtures::lookupOrder(2, '#1001')],
+            'inexact number' => [ShipStationFixtures::lookupOrder(1, '#1001-extra')],
         ];
     }
 

@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Integrations\ShipStation\ShipStationClientContract;
 use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
@@ -11,6 +10,7 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Mockery;
 use RuntimeException;
+use Tests\Support\ShipStationFixtures;
 use Tests\TestCase;
 
 class OrderBatchLookupControllerTest extends TestCase
@@ -127,7 +127,7 @@ class OrderBatchLookupControllerTest extends TestCase
         $shopify->shouldReceive('findByOrderNumbers')->once()->andReturn($shopifyOrders);
         $this->app->instance(ShopifyOrders::class, $shopify);
 
-        $shipStation = Mockery::mock(ShipStationClientContract::class);
+        $shipStation = ShipStationFixtures::bindClient(1);
         $shipStation->shouldReceive('findByOrderNumber')->once()->with('1001', 42)->andReturn([]);
         $shipStation->shouldReceive('findByOrderNumber')->once()->with('1002', 42)->andReturn([[
             'orderId' => 2,
@@ -144,9 +144,6 @@ class OrderBatchLookupControllerTest extends TestCase
             'orderTotal' => '19.90',
         ]]);
         $shipStation->shouldReceive('findByOrderNumber')->once()->with('1004', 42)->andReturn([]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->once()->andReturn($shipStation);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
 
         $response = $this->actingAs($user)->post(route('orders.spot-check.store'), [
             'orders' => '1001, 1002 1003'."\n".'1004',
@@ -192,11 +189,8 @@ class OrderBatchLookupControllerTest extends TestCase
         $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldNotReceive('findByOrderNumbers');
         $this->app->instance(ShopifyOrders::class, $shopify);
-        $shipStation = Mockery::mock(ShipStationClientContract::class);
+        $shipStation = ShipStationFixtures::bindClient(1);
         $shipStation->shouldReceive('findByOrderNumber')->once()->with('1001', 42)->andReturn([]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->once()->andReturn($shipStation);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
 
         $this->actingAs($user)->post(route('orders.spot-check.store'), [
             'orders' => '1001',
@@ -234,14 +228,8 @@ class OrderBatchLookupControllerTest extends TestCase
             ->with(Mockery::on(fn (Store $received): bool => $received->is($selectedStore)), ['1001'])
             ->andReturn(['1001' => []]);
         $this->app->instance(ShopifyOrders::class, $shopify);
-        $shipStation = Mockery::mock(ShipStationClientContract::class);
+        $shipStation = ShipStationFixtures::bindClient(1, $selectedStore);
         $shipStation->shouldReceive('findByOrderNumber')->once()->andReturn([]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')
-            ->once()
-            ->with(Mockery::on(fn (Store $received): bool => $received->is($selectedStore)))
-            ->andReturn($shipStation);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
 
         $this->actingAs($user)
             ->withSession(['active_store_id' => $selectedStore->getKey()])
@@ -288,16 +276,13 @@ class OrderBatchLookupControllerTest extends TestCase
         $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldNotReceive('findByOrderNumbers');
         $this->app->instance(ShopifyOrders::class, $shopify);
-        $shipStation = Mockery::mock(ShipStationClientContract::class);
+        $shipStation = ShipStationFixtures::bindClient(1);
         $shipStation->shouldReceive('findByOrderNumber')->once()->with('1001', 42)->andReturn([[
             'orderId' => 1,
             'advancedOptions' => ['storeId' => 42],
             'orderNumber' => '1001',
         ]]);
         $shipStation->shouldReceive('findByOrderNumber')->once()->with('1002', 42)->andThrow(new RuntimeException('private-secret'));
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->once()->andReturn($shipStation);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
 
         $this->actingAs($user)->post(route('orders.spot-check.store'), [
             'orders' => '1001 1002',

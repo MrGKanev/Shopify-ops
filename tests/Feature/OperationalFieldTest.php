@@ -4,14 +4,14 @@ namespace Tests\Feature;
 
 use App\Domain\Orders\OperationalFieldFilterMatcher;
 use App\Domain\Orders\OperationalFieldResolver;
-use App\Integrations\ShipStation\ShipStationClientContract;
-use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\OperationalField;
 use App\Models\OperationalFieldFilter;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
+use Tests\Support\ShipStationFixtures;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class OperationalFieldTest extends TestCase
@@ -77,14 +77,11 @@ class OperationalFieldTest extends TestCase
         foreach (['1001', '1002', '1003'] as $number) {
             $store->printQueueItems()->create(['order_number' => $number]);
         }
-        $ship = fn (string $number, array $advanced): array => ['orderId' => (int) $number, 'orderNumber' => $number, 'advancedOptions' => ['storeId' => 42] + $advanced, 'items' => [['sku' => '=SKU', 'name' => 'Tee', 'quantity' => 2]]];
-        $client = Mockery::mock(ShipStationClientContract::class);
+        $ship = fn (string $number, array $advanced): array => ShipStationFixtures::order($number, ['advancedOptions' => ['storeId' => ShipStationFixtures::STORE_NUMBER] + $advanced, 'items' => [['sku' => '=SKU', 'name' => 'Tee', 'quantity' => 2]]]);
+        $client = ShipStationFixtures::bindClient();
         $client->shouldReceive('findByOrderNumber')->with('1001', 42)->andReturn([$ship('1001', ['customField2' => '2026-11-01'])]);
         $client->shouldReceive('findByOrderNumber')->with('1002', 42)->andReturn([$ship('1002', [])]);
         $client->shouldReceive('findByOrderNumber')->with('1003', 42)->andReturn([]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andReturn($client);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
         $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumbers')->andReturn(['1001' => [['id' => '11']], '1002' => [['id' => '12']]]);
         $shopify->shouldReceive('orderMetafields')->andReturn(['11' => [['namespace' => 'custom', 'key' => 'po', 'value' => '=HYPERLINK("x")', 'type' => 'single_line_text_field']], '12' => []]);
@@ -103,11 +100,8 @@ class OperationalFieldTest extends TestCase
         [$operator, $store] = $this->userWithStore(true, ['store_number' => '42']);
         OperationalField::factory()->for($store)->create(['alias' => 'PO reference', 'source' => 'custom.po', 'required' => true]);
         $store->printQueueItems()->create(['order_number' => '1001']);
-        $client = Mockery::mock(ShipStationClientContract::class);
-        $client->shouldReceive('findByOrderNumber')->andReturn([['orderId' => 1, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 42], 'items' => []]]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andReturn($client);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
+        $client = ShipStationFixtures::bindClient();
+        $client->shouldReceive('findByOrderNumber')->andReturn([ShipStationFixtures::order('1001', ['orderId' => 1])]);
         $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumbers')->andThrow(new RuntimeException('secret'));
         $this->app->instance(ShopifyOrders::class, $shopify);
@@ -172,14 +166,11 @@ class OperationalFieldTest extends TestCase
         foreach (['1001', '1002', '1003'] as $number) {
             $store->printQueueItems()->create(['order_number' => $number]);
         }
-        $ship = fn (string $number): array => ['orderId' => (int) $number, 'orderNumber' => $number, 'advancedOptions' => ['storeId' => 42], 'items' => [['sku' => 'S'.$number, 'name' => 'Tee', 'quantity' => 1]]];
-        $client = Mockery::mock(ShipStationClientContract::class);
+        $ship = fn (string $number): array => ShipStationFixtures::order($number, ['items' => [['sku' => 'S'.$number, 'name' => 'Tee', 'quantity' => 1]]]);
+        $client = ShipStationFixtures::bindClient();
         foreach (['1001', '1002', '1003'] as $number) {
             $client->shouldReceive('findByOrderNumber')->with($number, 42)->andReturn([$ship($number)]);
         }
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andReturn($client);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
         $shopify = Mockery::mock(ShopifyOrders::class);
         $shopify->shouldReceive('findByOrderNumbers')->andReturn(['1001' => [['id' => '11']], '1002' => [['id' => '12']], '1003' => [['id' => '13']]]);
         $shopify->shouldReceive('orderMetafields')->andReturn([
@@ -212,16 +203,13 @@ class OperationalFieldTest extends TestCase
     {
         [$operator, $store] = $this->userWithStore(true, ['store_number' => '42']);
         OperationalField::factory()->for($store)->create(['alias' => 'PO reference', 'source' => 'custom.po']);
-        $ship = fn (string $number): array => ['orderId' => (int) ltrim($number, '#'), 'orderNumber' => $number, 'advancedOptions' => ['storeId' => 42], 'items' => []];
-        $client = Mockery::mock(ShipStationClientContract::class);
+        $ship = fn (string $number): array => ShipStationFixtures::order($number, ['orderId' => (int) ltrim($number, '#')]);
+        $client = ShipStationFixtures::bindClient();
         $client->shouldReceive('findByOrderNumber')->with('#1001', 42)->andReturn([$ship('#1001')]);
         $client->shouldReceive('findByOrderNumber')->with('#1002', 42)->andReturn([$ship('#1002')]);
         $client->shouldReceive('findByOrderNumber')->with('#1003', 42)->andReturn([]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andReturn($client);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
         $shopify = Mockery::mock(ShopifyOrders::class);
-        $shopify->shouldReceive('noTrackingCandidates')->andReturn(['orders' => array_map(fn (string $name): array => ['name' => $name, 'created_at' => '2026-06-01', 'fulfillments' => [['created_at' => '2026-06-15T12:00:00Z', 'tracking_number' => '']]], ['#1001', '#1002', '#1003']), 'pages' => 1, 'truncated' => false]);
+        $shopify->shouldReceive('noTrackingCandidates')->andReturn(ShopifyFixtures::history(array_map(fn (string $name): array => ['name' => $name, 'created_at' => '2026-06-01', 'fulfillments' => [['created_at' => '2026-06-15T12:00:00Z', 'tracking_number' => '']]], ['#1001', '#1002', '#1003'])));
         $shopify->shouldReceive('findByOrderNumbers')->andReturn(['1001' => [['id' => '11']], '1002' => [['id' => '12']]]);
         $shopify->shouldReceive('orderMetafields')->andReturn(['11' => [['namespace' => 'custom', 'key' => 'po', 'value' => 'PO-9', 'type' => 'single_line_text_field']], '12' => []]);
         $this->app->instance(ShopifyOrders::class, $shopify);

@@ -10,6 +10,7 @@ use LogicException;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Tests\Support\ShipStationFixtures;
 
 class FindStoreShipStationOrdersTest extends TestCase
 {
@@ -31,7 +32,7 @@ class FindStoreShipStationOrdersTest extends TestCase
     /** @return array<string, mixed> */
     private function order(array $overrides = []): array
     {
-        return array_replace_recursive(['orderId' => 7, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 42]], $overrides);
+        return array_replace_recursive(ShipStationFixtures::lookupOrder(7, '1001'), $overrides);
     }
 
     private function find(array $orders, string $number = '1001', mixed $storeNumber = '42'): array

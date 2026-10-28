@@ -9,13 +9,14 @@ use App\Models\Store;
 use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Tests\Support\ShipStationFixtures;
 
 class FilterStoreShipStationOrdersTest extends TestCase
 {
     /** @return array<string, mixed> */
     private function order(array $overrides = []): array
     {
-        return array_replace_recursive(['orderId' => 7, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 42]], $overrides);
+        return array_replace_recursive(ShipStationFixtures::lookupOrder(7, '1001'), $overrides);
     }
 
     private function filter(array $orders, mixed $storeNumber = '42'): array

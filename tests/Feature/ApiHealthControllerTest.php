@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Integrations\ShipStation\ShipStationClientContract;
 use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyHealth;
 use App\Models\Store;
@@ -10,6 +9,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
+use Tests\Support\ShipStationFixtures;
 use Tests\TestCase;
 
 class ApiHealthControllerTest extends TestCase
@@ -59,12 +59,9 @@ class ApiHealthControllerTest extends TestCase
             'requested_version' => '2026-07',
             'returned_version' => '2026-07',
         ]);
-        $shipStation = Mockery::mock(ShipStationClientContract::class);
+        $shipStation = ShipStationFixtures::bindClient(1, $store);
         $shipStation->shouldReceive('healthCheck')->once();
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->once()->with(Mockery::on(fn (Store $selected): bool => $selected->is($store)))->andReturn($shipStation);
         $this->app->instance(ShopifyHealth::class, $shopify);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
 
         $this->actingAs($admin)->post(route('admin.api-health.check'))->assertOk()
             ->assertSeeText('Required Shopify scopes are missing')->assertSeeText('read_fulfillments')
@@ -83,12 +80,9 @@ class ApiHealthControllerTest extends TestCase
             'requested_version' => '2026-07',
             'returned_version' => '2026-04',
         ]);
-        $shipStation = Mockery::mock(ShipStationClientContract::class);
+        $shipStation = ShipStationFixtures::bindClient(1);
         $shipStation->shouldReceive('healthCheck')->once();
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->once()->andReturn($shipStation);
         $this->app->instance(ShopifyHealth::class, $shopify);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
 
         $this->actingAs($admin)->post(route('admin.api-health.check'))->assertOk()
             ->assertSeeText('Shopify served a different API version than requested')
@@ -114,12 +108,9 @@ class ApiHealthControllerTest extends TestCase
         [$admin] = $this->makeUserAndStore();
         $shopify = Mockery::mock(ShopifyHealth::class);
         $shopify->shouldReceive('healthCheck')->andThrow(new RuntimeException('shopify-secret'));
-        $shipStation = Mockery::mock(ShipStationClientContract::class);
+        $shipStation = ShipStationFixtures::bindClient();
         $shipStation->shouldReceive('healthCheck')->andThrow(new RuntimeException('shipstation-secret'));
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andReturn($shipStation);
         $this->app->instance(ShopifyHealth::class, $shopify);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
 
         $this->actingAs($admin)->post(route('admin.api-health.check'))->assertOk()->assertSeeText('Shopify could not be reached')->assertSeeText('ShipStation could not be reached')->assertDontSeeText('shopify-secret')->assertDontSeeText('shipstation-secret');
     }

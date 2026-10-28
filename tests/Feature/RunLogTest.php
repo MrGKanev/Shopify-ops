@@ -41,10 +41,10 @@ class RunLogTest extends TestCase
         $user = User::factory()->create();
         $user->stores()->attach($store);
         $recorder = app(RecordRun::class);
+        $this->travelTo('2026-01-10 12:00:00');
         $recorder->handle($store, ['tool' => 'old-scan']);
+        $this->travelTo('2026-02-10 12:00:00');
         $recorder->handle($store, ['tool' => 'new-scan']);
-        $store->runLogs()->where('tool', 'old-scan')->update(['created_at' => '2026-01-10 12:00:00']);
-        $store->runLogs()->where('tool', 'new-scan')->update(['created_at' => '2026-02-10 12:00:00']);
 
         $this->actingAs($user)->get('/run-logs?from=2026-02-01&to=2026-02-10')
             ->assertOk()->assertSeeText('new-scan')->assertDontSeeText('old-scan');

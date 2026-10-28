@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\URL;
 use PHPUnit\Framework\Attributes\TestWith;
+use Tests\Support\ShipStationFixtures;
 use Tests\TestCase;
 
 class ShipStationMonitoringTest extends TestCase
@@ -321,7 +322,7 @@ class ShipStationMonitoringTest extends TestCase
         Queue::assertPushed(ReconcileShipStationMonitoring::class, 1);
         app()->call([new ReconcileShipStationMonitoring($store->id), 'handle']);
 
-        $this->assertNotNull($store->fresh()->shipstation_monitoring_checked_at);
+        $this->assertTrue(now()->equalTo($store->fresh()->shipstation_monitoring_checked_at));
         $this->assertDatabaseCount('ship_station_events', 1);
         Queue::assertPushed(ProcessShipStationEvent::class, 1);
     }
@@ -469,16 +470,6 @@ class ShipStationMonitoringTest extends TestCase
         $this->assertArrayNotHasKey('shipstation_monitoring_token', $store->toArray());
     }
 
-    public function test_store_settings_render_the_subscription_removal_retry_action(): void
-    {
-        $store = $this->store(false);
-        $store->forceFill(['shipstation_monitoring_token' => 'private-token', 'shipstation_monitoring_status' => 'failed'])->save();
-        $admin = User::factory()->admin()->create();
-        $admin->stores()->attach($store);
-
-        $this->actingAs($admin)->get(route('admin.stores.edit', $store))->assertOk()->assertSeeText('Retry subscription removal')->assertDontSee('private-token');
-    }
-
     private function store(bool $enabled = true): Store
     {
         config(['queue.default' => 'database']);
@@ -514,7 +505,7 @@ class ShipStationMonitoringTest extends TestCase
     /** @return array<string, mixed> */
     private function order(): array
     {
-        return ['orderId' => 77, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 12], 'items' => [['orderItemId' => 55, 'lineItemKey' => '21', 'sku' => 'SKU1', 'quantity' => 2]]];
+        return ShipStationFixtures::lookupOrder(77, '1001', 12, ['items' => [['orderItemId' => 55, 'lineItemKey' => '21', 'sku' => 'SKU1', 'quantity' => 2]]]);
     }
 
     /** @return array<string, mixed> */

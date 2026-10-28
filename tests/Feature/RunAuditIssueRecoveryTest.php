@@ -5,8 +5,6 @@ namespace Tests\Feature;
 use App\Application\Operations\SyncAuditIssues;
 use App\Application\Reports\RunAudit;
 use App\Integrations\Exceptions\UnexpectedResponse;
-use App\Integrations\ShipStation\ShipStationClientContract;
-use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\IssueStatus;
 use App\Models\OperationalIssue;
@@ -14,6 +12,7 @@ use App\Models\Store;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Support\ShipStationFixtures;
 use Tests\TestCase;
 
 class RunAuditIssueRecoveryTest extends TestCase
@@ -126,7 +125,7 @@ class RunAuditIssueRecoveryTest extends TestCase
     public function test_foreign_store_order_with_same_number_cannot_hide_or_resolve_a_missing_order(): void
     {
         [$store, $issue] = $this->existingIssue();
-        $this->sources([$this->order()], [['orderNumber' => '1001', 'advancedOptions' => ['storeId' => 99]]]);
+        $this->sources([$this->order()], [ShipStationFixtures::lookupOrder(0, '1001', 99)]);
         Notification::fake();
 
         $result = app(RunAudit::class)->handle($store, '2026-10-01', '2026-10-24');
@@ -211,9 +210,8 @@ class RunAuditIssueRecoveryTest extends TestCase
      * @param list<array<string, mixed>> $shipments */
     private function sources(array $orders, array $shipments, bool $shopifyTruncated = false, bool $holdsTruncated = false): void
     {
-        $client = $this->mock(ShipStationClientContract::class);
+        $client = ShipStationFixtures::bindClient(1);
         $client->shouldReceive('fetchAllOrders')->once()->andReturn(array_map(fn (array $shipment): array => ['orderId' => 1, 'advancedOptions' => ['storeId' => 42], ...$shipment], $shipments));
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andReturn($client);
         $shopify = $this->mock(ShopifyOrders::class);
         $shopify->shouldReceive('itemMismatchCandidates')->once()->andReturn(['orders' => $orders, 'pages' => 1, 'truncated' => $shopifyTruncated]);
         $shopify->shouldReceive('onHoldFulfillmentCandidates')->once()->andReturn(['fulfillment_orders' => [], 'pages' => 1, 'truncated' => $holdsTruncated]);

@@ -13,6 +13,7 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use PHPUnit\Framework\Attributes\TestWith;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class ReturnExceptionsTest extends TestCase
@@ -178,7 +179,7 @@ class ReturnExceptionsTest extends TestCase
         $this->travelTo('2026-10-06 12:00:00');
         $store = Store::factory()->create();
         $issue = app(RaiseOperationalIssue::class)->handle($store, ['source_tool' => 'return_exceptions', 'reference' => 'gid://shopify/Return/1', 'fingerprint' => RaiseOperationalIssue::fingerprint('return_exceptions', '1|approval_overdue'), 'title' => 'Waiting', 'priority' => 'normal']);
-        $this->mock(ShopifyPayments::class)->shouldReceive('refundTrackerCandidates')->andReturn(['orders' => [], 'pages' => 1, 'truncated' => false]);
+        $this->mock(ShopifyPayments::class)->shouldReceive('refundTrackerCandidates')->andReturn(ShopifyFixtures::history([]));
         $this->mock(ShopifyReturns::class)->shouldReceive('candidates')->andReturn(['returns' => [], 'pages' => 20, 'truncated' => true]);
 
         $result = app(RunReturnRmaReport::class)->handle($store, '2026-10-01', '2026-10-06');
@@ -203,7 +204,7 @@ class ReturnExceptionsTest extends TestCase
     public function test_a_refund_without_a_return_is_not_an_exception(): void
     {
         $store = Store::factory()->create();
-        $this->mock(ShopifyPayments::class)->shouldReceive('refundTrackerCandidates')->andReturn(['orders' => [['id' => 1, 'name' => '#1', 'refunds' => [['created_at' => '2026-10-01', 'note' => 'Goodwill', 'total_refunded' => 10]]]], 'pages' => 1, 'truncated' => false]);
+        $this->mock(ShopifyPayments::class)->shouldReceive('refundTrackerCandidates')->andReturn(ShopifyFixtures::history([['id' => 1, 'name' => '#1', 'refunds' => [['created_at' => '2026-10-01', 'note' => 'Goodwill', 'total_refunded' => 10]]]]));
         $this->mock(ShopifyReturns::class)->shouldReceive('candidates')->andReturn(['returns' => [], 'pages' => 1, 'truncated' => false]);
         $result = app(RunReturnRmaReport::class)->handle($store, '2026-10-01', '2026-10-06');
         $this->assertSame([], $result->rows);
@@ -234,7 +235,7 @@ class ReturnExceptionsTest extends TestCase
     /** @param array<string, mixed> $return */
     private function fakeSources(array &$return): void
     {
-        $this->mock(ShopifyPayments::class)->shouldReceive('refundTrackerCandidates')->andReturn(['orders' => [], 'pages' => 1, 'truncated' => false]);
+        $this->mock(ShopifyPayments::class)->shouldReceive('refundTrackerCandidates')->andReturn(ShopifyFixtures::history([]));
         $this->mock(ShopifyReturns::class)->shouldReceive('candidates')->andReturnUsing(function () use (&$return): array {
             return ['returns' => [$return], 'pages' => 1, 'truncated' => false];
         });

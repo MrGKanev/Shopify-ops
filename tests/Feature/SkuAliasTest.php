@@ -12,6 +12,7 @@ use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class SkuAliasTest extends TestCase
@@ -74,8 +75,8 @@ class SkuAliasTest extends TestCase
     {
         $store = Store::factory()->create(['sku_aliases' => $this->mappings(), 'sku_aliases_enabled' => true]);
         $items = [['title' => 'Old label', 'sku' => 'OLD', 'quantity' => 2], ['title' => 'New label', 'sku' => 'MASTER', 'quantity' => 3], ['title' => 'New label', 'sku' => 'UNRELATED', 'quantity' => 7]];
-        $this->mock(ShopifyOrders::class)->shouldReceive('fulfilledItemCandidates')->once()->andReturn(['orders' => [['fulfillments' => [['status' => 'success', 'created_at' => '2026-10-20T00:00:00Z', 'line_items' => $items]]]], 'pages' => 1, 'truncated' => false]);
-        $this->mock(ShopifyPayments::class)->shouldReceive('returnedItemCandidates')->once()->andReturn(['orders' => [['refunds' => [['created_at' => '2026-10-20T00:00:00Z', 'refund_line_items' => array_map(fn (array $item): array => ['quantity' => $item['quantity'], 'line_item' => $item], $items)]]]], 'pages' => 1, 'truncated' => false]);
+        $this->mock(ShopifyOrders::class)->shouldReceive('fulfilledItemCandidates')->once()->andReturn(ShopifyFixtures::history([['fulfillments' => [['status' => 'success', 'created_at' => '2026-10-20T00:00:00Z', 'line_items' => $items]]]]));
+        $this->mock(ShopifyPayments::class)->shouldReceive('returnedItemCandidates')->once()->andReturn(ShopifyFixtures::history([['refunds' => [['created_at' => '2026-10-20T00:00:00Z', 'refund_line_items' => array_map(fn (array $item): array => ['quantity' => $item['quantity'], 'line_item' => $item], $items)]]]]));
         $fulfilled = app(RunFulfilledItemsReport::class)->handle($store, '2026-10-01', '2026-10-23')->rows;
         $returned = app(RunReturnedItemsReport::class)->handle($store, '2026-10-01', '2026-10-23')->rows;
         $expected = [['product' => 'MASTER', 'quantity' => 5, 'sku' => 'MASTER', 'source_skus' => ['MASTER', 'OLD']], ['product' => 'New label', 'quantity' => 7, 'sku' => 'UNRELATED', 'source_skus' => ['UNRELATED']]];
@@ -86,7 +87,7 @@ class SkuAliasTest extends TestCase
     public function test_disabled_mappings_keep_existing_report_grouping(): void
     {
         $store = Store::factory()->create(['sku_aliases' => $this->mappings()]);
-        $this->mock(ShopifyOrders::class)->shouldReceive('fulfilledItemCandidates')->once()->andReturn(['orders' => [['fulfillments' => [['status' => 'success', 'created_at' => '2026-10-20T00:00:00Z', 'line_items' => [['title' => 'Legacy label', 'sku' => 'OLD', 'quantity' => 2]]]]]], 'pages' => 1, 'truncated' => false]);
+        $this->mock(ShopifyOrders::class)->shouldReceive('fulfilledItemCandidates')->once()->andReturn(ShopifyFixtures::history([['fulfillments' => [['status' => 'success', 'created_at' => '2026-10-20T00:00:00Z', 'line_items' => [['title' => 'Legacy label', 'sku' => 'OLD', 'quantity' => 2]]]]]]));
         $this->assertSame([['product' => 'Legacy label', 'quantity' => 2]], app(RunFulfilledItemsReport::class)->handle($store, '2026-10-01', '2026-10-23')->rows);
     }
 
@@ -108,7 +109,7 @@ class SkuAliasTest extends TestCase
         $this->actingAs($admin)->put('/admin/sku-aliases', ['enabled' => true, 'aliases' => $mappings])->assertRedirect();
         $this->assertSame($mappings, $store->fresh()->activeSkuAliases());
         $items = [['sku' => '0', 'title' => '', 'quantity' => 1], ['sku' => 'OLD', 'title' => 'Same title', 'quantity' => 2], ['sku' => 'old', 'title' => 'Same title', 'quantity' => 4], ['sku' => '', 'title' => 'MASTER', 'quantity' => 8]];
-        $this->mock(ShopifyOrders::class)->shouldReceive('fulfilledItemCandidates')->once()->andReturn(['orders' => [['fulfillments' => [['status' => 'success', 'created_at' => '2026-10-20T00:00:00Z', 'line_items' => $items]]]], 'pages' => 1, 'truncated' => false]);
+        $this->mock(ShopifyOrders::class)->shouldReceive('fulfilledItemCandidates')->once()->andReturn(ShopifyFixtures::history([['fulfillments' => [['status' => 'success', 'created_at' => '2026-10-20T00:00:00Z', 'line_items' => $items]]]]));
         $rows = app(RunFulfilledItemsReport::class)->handle($store->fresh(), '2026-10-01', '2026-10-23')->rows;
         $this->assertCount(3, $rows);
         $this->assertSame([8, 3, 4], array_column($rows, 'quantity'));
@@ -118,7 +119,7 @@ class SkuAliasTest extends TestCase
     public function test_fulfilled_result_and_csv_keep_the_saved_alias_basis_after_configuration_changes(): void
     {
         [$operator, $store] = $this->userWithStore(true, ['sku_aliases' => $this->mappings(), 'sku_aliases_enabled' => true]);
-        $this->mock(ShopifyOrders::class)->shouldReceive('fulfilledItemCandidates')->once()->andReturn(['orders' => [['fulfillments' => [['status' => 'success', 'created_at' => '2026-10-20T00:00:00Z', 'line_items' => [['title' => 'Historical title', 'sku' => 'OLD', 'quantity' => 2]]]]]], 'pages' => 1, 'truncated' => false]);
+        $this->mock(ShopifyOrders::class)->shouldReceive('fulfilledItemCandidates')->once()->andReturn(ShopifyFixtures::history([['fulfillments' => [['status' => 'success', 'created_at' => '2026-10-20T00:00:00Z', 'line_items' => [['title' => 'Historical title', 'sku' => 'OLD', 'quantity' => 2]]]]]]));
         $dates = ['start_date' => '2026-10-01', 'end_date' => '2026-10-23'];
         $this->actingAs($operator)->post('/reports/fulfilled-items', $dates)->assertSeeText('Explicit SKU aliases were applied.')->assertSeeText('MASTER')->assertSeeText('OLD');
         $run = $store->reportRuns()->where('tool', 'fulfilled_items')->sole();
@@ -130,7 +131,7 @@ class SkuAliasTest extends TestCase
     public function test_returned_result_and_csv_show_original_codes_safely(): void
     {
         [$operator] = $this->userWithStore(true, ['sku_aliases' => [['alias' => '=OLD', 'master' => '<b>MASTER</b>']], 'sku_aliases_enabled' => true]);
-        $this->mock(ShopifyPayments::class)->shouldReceive('returnedItemCandidates')->once()->andReturn(['orders' => [['refunds' => [['created_at' => '2026-10-20T00:00:00Z', 'refund_line_items' => [['quantity' => 3, 'line_item' => ['name' => 'Old title', 'sku' => '=OLD']]]]]]], 'pages' => 1, 'truncated' => false]);
+        $this->mock(ShopifyPayments::class)->shouldReceive('returnedItemCandidates')->once()->andReturn(ShopifyFixtures::history([['refunds' => [['created_at' => '2026-10-20T00:00:00Z', 'refund_line_items' => [['quantity' => 3, 'line_item' => ['name' => 'Old title', 'sku' => '=OLD']]]]]]]));
         $dates = ['start_date' => '2026-10-01', 'end_date' => '2026-10-23'];
         $this->actingAs($operator)->post('/reports/returned-items', $dates)->assertSeeText('Explicit SKU aliases were applied.')->assertDontSee('<b>MASTER</b>', false)->assertSeeText('=OLD');
         $response = $this->post(route('reports.returned-items.export'), $dates);

@@ -7,6 +7,7 @@ use App\Models\Store;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class DiscountAbuseControllerTest extends TestCase
@@ -26,7 +27,7 @@ class DiscountAbuseControllerTest extends TestCase
         [$operator, $store] = $this->userWithStore(true);
         $address = ['address1' => '1 Main St', 'city' => 'Austin', 'zip' => '78701', 'country_code' => 'US'];
         $shopify = Mockery::mock(ShopifyOrders::class);
-        $shopify->shouldReceive('discountAbuseCandidates')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '2026-09-01', '2026-09-07')->andReturn(['orders' => [['id' => '42', 'name' => '#<script>', 'email' => 'a@x.com', 'total_price' => 10, 'discount_codes' => [['code' => 'SAVE']], 'shipping_address' => $address], ['id' => '43', 'name' => '#2', 'email' => '<img>@x.com', 'total_price' => 20, 'discount_codes' => [['code' => 'SAVE']], 'shipping_address' => $address]], 'pages' => 100, 'truncated' => true]);
+        $shopify->shouldReceive('discountAbuseCandidates')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), '2026-09-01', '2026-09-07')->andReturn(ShopifyFixtures::history([['id' => '42', 'name' => '#<script>', 'email' => 'a@x.com', 'total_price' => 10, 'discount_codes' => [['code' => 'SAVE']], 'shipping_address' => $address], ['id' => '43', 'name' => '#2', 'email' => '<img>@x.com', 'total_price' => 20, 'discount_codes' => [['code' => 'SAVE']], 'shipping_address' => $address]], true, 100));
         $this->app->instance(ShopifyOrders::class, $shopify);
         $this->actingAs($operator)->post('/reports/discount-abuse', ['start_date' => '2026-09-01', 'end_date' => '2026-09-07', 'minimum_emails' => 2])->assertOk()->assertSeeText('2 scanned · 1 suspicious clusters')->assertSeeText('truncated after 100 pages')->assertDontSee('<script>', false)->assertDontSee('<img>', false);
 

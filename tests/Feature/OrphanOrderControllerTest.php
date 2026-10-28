@@ -2,14 +2,14 @@
 
 namespace Tests\Feature;
 
-use App\Integrations\ShipStation\ShipStationClientContract;
-use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
+use Tests\Support\ShipStationFixtures;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class OrphanOrderControllerTest extends TestCase
@@ -25,9 +25,7 @@ class OrphanOrderControllerTest extends TestCase
         [$operator] = $this->userWithStore(true, ['store_number' => '42']);
         $this->bindSuccess('<script>', true);
         $this->actingAs($operator)->post('/reports/orphan-orders', $this->input())->assertOk()->assertSeeText('1 ShipStation vs 0 Shopify orders')->assertSeeText('truncated after 100 pages')->assertDontSee('<script>', false);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andThrow(new RuntimeException('secret-token'));
-        $this->app->instance(ShipStationClientFactory::class, $factory);
+        ShipStationFixtures::bindFailure(new RuntimeException('secret-token'));
         $this->actingAs($operator)->post('/reports/orphan-orders', $this->input())->assertOk()->assertSeeText('could not be completed')->assertDontSeeText('secret-token');
     }
 
@@ -42,13 +40,10 @@ class OrphanOrderControllerTest extends TestCase
 
     private function bindSuccess(string $customer, bool $truncated = false): void
     {
-        $client = Mockery::mock(ShipStationClientContract::class);
+        $client = ShipStationFixtures::bindClient();
         $client->shouldReceive('fetchAllOrders')->andReturn([['orderId' => 1, 'advancedOptions' => ['storeId' => 42], 'orderNumber' => '9999', 'orderDate' => '2026-06-01', 'orderStatus' => 'awaiting_shipment', 'shipTo' => ['name' => $customer]]]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andReturn($client);
         $gateway = Mockery::mock(ShopifyOrders::class);
-        $gateway->shouldReceive('itemMismatchCandidates')->andReturn(['orders' => [], 'pages' => $truncated ? 100 : 1, 'truncated' => $truncated]);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
+        $gateway->shouldReceive('itemMismatchCandidates')->andReturn(ShopifyFixtures::history([], $truncated, $truncated ? 100 : 1));
         $this->app->instance(ShopifyOrders::class, $gateway);
     }
 

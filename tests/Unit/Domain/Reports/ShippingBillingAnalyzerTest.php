@@ -169,6 +169,78 @@ class ShippingBillingAnalyzerTest extends TestCase
         $this->assertSame('review_required', $rows[0]['refund_status']);
     }
 
+    public function test_benchmarks_report_median_coverage_and_source_shipments_per_sku_and_service(): void
+    {
+        $rows = $this->analyze([
+            $this->entry(['shipment_id' => 'a', 'amount' => '10']),
+            $this->entry(['shipment_id' => 'b', 'amount' => '20']),
+            $this->entry(['shipment_id' => 'c', 'amount' => '40']),
+            $this->entry(['shipment_id' => 'd', 'amount' => '30']),
+            $this->entry(['shipment_id' => 'e', 'amount' => '99', 'service' => 'express']),
+        ]);
+
+        $benchmarks = (new ShippingBillingAnalyzer)->benchmarks($rows, 4);
+
+        $this->assertCount(2, $benchmarks);
+        $ground = $benchmarks[0];
+        $this->assertSame(['single_sku', 'SKU-A', 'ground', 'USD', 4, 4], [$ground['basis'], $ground['skus'], $ground['service'], $ground['currency'], $ground['shipments'], $ground['sampled']]);
+        $this->assertSame(['25.0000', '25.0000', '10', '40'], [$ground['median'], $ground['mean'], $ground['min'], $ground['max']]);
+        $this->assertSame(1.0, $ground['coverage']);
+        $this->assertFalse($ground['small_sample']);
+        $this->assertSame(['a', 'b', 'c', 'd'], $ground['shipment_ids']);
+        $this->assertTrue($benchmarks[1]['small_sample']);
+    }
+
+    public function test_benchmarks_never_mix_currencies_or_attribute_mixed_baskets_to_a_single_sku(): void
+    {
+        $rows = $this->analyze([
+            $this->entry(['shipment_id' => 'a', 'amount' => '10']),
+            $this->entry(['shipment_id' => 'b', 'amount' => '8', 'currency' => 'EUR']),
+            $this->entry(['shipment_id' => 'c', 'amount' => '30', 'skus' => 'SKU-A;SKU-B']),
+        ]);
+
+        $benchmarks = (new ShippingBillingAnalyzer)->benchmarks($rows);
+
+        $this->assertCount(3, $benchmarks);
+        $byKey = array_column($benchmarks, null, 'skus');
+        $this->assertSame('single_sku', $byKey['SKU-A']['basis']);
+        $this->assertSame('sku_set', $byKey['SKU-A;SKU-B']['basis']);
+        $currencies = array_column(array_filter($benchmarks, fn (array $row): bool => $row['skus'] === 'SKU-A'), 'currency');
+        sort($currencies);
+        $this->assertSame(['EUR', 'USD'], $currencies);
+    }
+
+    public function test_benchmarks_exclude_ambiguous_labels_from_the_sample_but_keep_them_in_coverage(): void
+    {
+        $rows = $this->analyze([
+            $this->entry(['shipment_id' => 'a', 'amount' => '10']),
+            $this->entry(['shipment_id' => 'b', 'amount' => '12']),
+            $this->entry(['shipment_id' => 'b', 'amount' => '12']),
+            $this->entry(['shipment_id' => 'c', 'amount' => '14', 'order_id' => 'order-2']),
+            $this->entry(['shipment_id' => 'c', 'amount' => '1', 'type' => 'adjustment_debit', 'order_id' => 'order-2']),
+        ]);
+
+        $benchmarks = (new ShippingBillingAnalyzer)->benchmarks($rows, 1);
+
+        $this->assertCount(1, $benchmarks);
+        $this->assertSame(3, $benchmarks[0]['shipments']);
+        $this->assertSame(2, $benchmarks[0]['sampled']);
+        $this->assertSame(0.6667, $benchmarks[0]['coverage']);
+        $this->assertSame('12.5000', $benchmarks[0]['median']);
+        $this->assertSame(['a', 'c'], $benchmarks[0]['shipment_ids']);
+    }
+
+    public function test_benchmarks_report_unknown_statistics_when_nothing_is_sampled(): void
+    {
+        $rows = $this->analyze([$this->entry(['skus' => '', 'amount' => '10'])]);
+
+        $benchmarks = (new ShippingBillingAnalyzer)->benchmarks($rows);
+
+        $this->assertNull($benchmarks[0]['median']);
+        $this->assertSame(0, $benchmarks[0]['sampled']);
+        $this->assertTrue($benchmarks[0]['small_sample']);
+    }
+
     /** @param list<array<string, mixed>> $entries
      * @return list<array<string, mixed>> */
     private function analyze(array $entries, ?CarbonImmutable $now = null): array

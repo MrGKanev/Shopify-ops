@@ -5,8 +5,6 @@ namespace Tests\Feature;
 use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\RunOperationalDigest;
 use App\Domain\Reports\OperationalDigestAnalyzer;
-use App\Integrations\ShipStation\ShipStationClientContract;
-use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyTransport;
 use App\Jobs\BuildOperationalDigestEmail;
 use App\Models\OperationalIssue;
@@ -20,6 +18,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Mockery;
 use RuntimeException;
+use Tests\Support\ShipStationFixtures;
 use Tests\TestCase;
 
 class OperationalDigestTest extends TestCase
@@ -244,9 +243,8 @@ class OperationalDigestTest extends TestCase
         ];
         $this->mock(ShopifyTransport::class)->shouldReceive('paginateGraphql')->once()->with(Mockery::on(fn (Store $candidate): bool => $candidate->is($store)), Mockery::type('string'), 'orders', Mockery::type('array'), 100)->andReturn(['edges' => array_map(fn (array $node): array => ['node' => $node], $nodes), 'pages' => 1, 'truncated' => false]);
         $ss = $foreignOnly ? [['orderNumber' => '1001', 'orderStatus' => 'shipped', 'advancedOptions' => ['storeId' => 999]], ['orderNumber' => '1002', 'orderStatus' => 'shipped']] : [['orderNumber' => '1001', 'orderStatus' => 'shipped', 'advancedOptions' => ['storeId' => 12]], ['orderNumber' => '1003', 'orderStatus' => 'awaiting_shipment', 'advancedOptions' => ['storeId' => 12]]];
-        $client = Mockery::mock(ShipStationClientContract::class);
+        $client = ShipStationFixtures::bindClient(1);
         $client->shouldReceive('fetchAllOrders')->once()->andReturn($ss);
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andReturn($client);
     }
 
     /** @return array<string, mixed> */

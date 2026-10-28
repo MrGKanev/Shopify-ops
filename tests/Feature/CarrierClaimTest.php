@@ -93,7 +93,7 @@ class CarrierClaimTest extends TestCase
         $this->actingAs($operator)->post(route('carrier-claims.store'), $this->input(['external_reference' => 'OK-9', 'status' => 'approved', 'submitted_on' => today()->subDays(3)->toDateString(), 'decision_on' => today()->toDateString(), 'dates_verified' => '1', 'goods_approved' => '25.50', 'evidence' => "https://portal.example/claims/9\n"]))->assertSessionHasNoErrors();
         $claim = CarrierClaim::query()->where('external_reference', 'OK-9')->sole();
         $this->assertSame(['https://portal.example/claims/9'], $claim->evidence);
-        $this->assertNotNull($claim->dates_verified_at);
+        $this->assertTrue(now()->equalTo($claim->dates_verified_at));
         $this->assertSame($operator->id, $claim->dates_verified_by);
     }
 

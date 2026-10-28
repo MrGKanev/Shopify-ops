@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Tests\Support\ShipStationFixtures;
 use Tests\TestCase;
 
 class OrderComparisonControllerTest extends TestCase
@@ -102,8 +103,8 @@ class OrderComparisonControllerTest extends TestCase
                     'displayFulfillmentStatus' => 'UNFULFILLED',
                 ]))),
             'https://ssapi.shipstation.com/orders*' => Http::sequence()
-                ->push(['orders' => [['orderId' => 1, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 42], 'orderStatus' => 'shipped']], 'pages' => 1])
-                ->push(['orders' => [['orderId' => 2, 'orderNumber' => '1002', 'advancedOptions' => ['storeId' => 42], 'orderStatus' => 'on_hold']], 'pages' => 1]),
+                ->push(['orders' => [ShipStationFixtures::lookupOrder(1, '1001', 42, ['orderStatus' => 'shipped'])], 'pages' => 1])
+                ->push(['orders' => [ShipStationFixtures::lookupOrder(2, '1002', 42, ['orderStatus' => 'on_hold'])], 'pages' => 1]),
         ]);
 
         $response = $this->actingAs($user)
@@ -166,8 +167,8 @@ class OrderComparisonControllerTest extends TestCase
                 ->push($this->shopifyResponse($this->orderNode('#1002'))),
             'https://ssapi.shipstation.com/orders*' => Http::sequence()
                 ->push(['orders' => [
-                    ['orderId' => 1, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 42], 'orderStatus' => 'shipped'],
-                    ['orderId' => 2, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 42], 'orderStatus' => 'on_hold'],
+                    ShipStationFixtures::lookupOrder(1, '1001', 42, ['orderStatus' => 'shipped']),
+                    ShipStationFixtures::lookupOrder(2, '1001', 42, ['orderStatus' => 'on_hold']),
                 ], 'pages' => 1])
                 ->push(['orders' => [], 'pages' => 1]),
         ]);

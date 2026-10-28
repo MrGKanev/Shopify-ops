@@ -45,6 +45,7 @@ use Spatie\Activitylog\Support\LogOptions;
     'sku_aliases',
     'sku_aliases_enabled',
     'movement_policy',
+    'import_grace_hours',
 ])]
 #[Hidden(['shipstation_v2_api_key', 'shopify_access_token', 'shopify_webhook_secret', 'shipstation_api_key', 'shipstation_api_secret', 'shipstation_monitoring_token', 'shipstation_monitoring_subscriptions'])]
 class Store extends Model
@@ -85,6 +86,14 @@ class Store extends Model
 
         return ['access_verified' => ($policy['access_verified'] ?? false) === true || ($policy['access_verified'] ?? null) === '1' || ($policy['access_verified'] ?? null) === 1,
             'lookback_days' => max(1, min(90, (int) ($policy['lookback_days'] ?? 30))), 'acceptance_hours' => max(1, min(720, (int) ($policy['acceptance_hours'] ?? 48))), 'stale_hours' => max(1, min(2160, (int) ($policy['stale_hours'] ?? 72))), 'max_labels' => max(1, min(10, (int) ($policy['max_labels'] ?? 5))), 'daily_limit' => max(0, min(1000, (int) ($policy['daily_limit'] ?? 100))), 'carriers' => array_values($policy['carriers'] ?? ['ups', 'fedex', 'usps', 'stamps_com'])];
+    }
+
+    public const int DEFAULT_IMPORT_GRACE_HOURS = 6;
+
+    /** Hours an expected order may stay absent from ShipStation before it counts as a late import. */
+    public function importGraceHours(): int
+    {
+        return max(1, min(720, (int) ($this->import_grace_hours ?? self::DEFAULT_IMPORT_GRACE_HOURS)));
     }
 
     /** @return HasMany<ShipmentMovementObservation, $this> */
@@ -176,6 +185,12 @@ class Store extends Model
     public function operationalFields(): HasMany
     {
         return $this->hasMany(OperationalField::class);
+    }
+
+    /** @return HasMany<ConsolidationDecision, $this> */
+    public function consolidationDecisions(): HasMany
+    {
+        return $this->hasMany(ConsolidationDecision::class);
     }
 
     /** @return HasMany<OperationalFieldFilter, $this> */

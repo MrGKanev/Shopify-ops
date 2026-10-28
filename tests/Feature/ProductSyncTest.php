@@ -14,6 +14,7 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\TestWith;
+use Tests\Support\ShipStationFixtures;
 use Tests\TestCase;
 use UnexpectedValueException;
 
@@ -354,7 +355,7 @@ class ProductSyncTest extends TestCase
     /** @return array<string, mixed> */
     private function order(): array
     {
-        return ['orderId' => 77, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 12], 'items' => [['orderItemId' => 55, 'lineItemKey' => '21', 'sku' => 'SKU1', 'quantity' => 2, 'weight' => ['value' => 400, 'units' => 'grams']]]];
+        return ShipStationFixtures::lookupOrder(77, '1001', 12, ['items' => [['orderItemId' => 55, 'lineItemKey' => '21', 'sku' => 'SKU1', 'quantity' => 2, 'weight' => ['value' => 400, 'units' => 'grams']]]]);
     }
 
     /** @return array<string, mixed> */

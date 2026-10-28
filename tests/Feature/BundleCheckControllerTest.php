@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class BundleCheckControllerTest extends TestCase
@@ -57,7 +58,7 @@ class BundleCheckControllerTest extends TestCase
 
     private function candidates(string $name, bool $truncated = false): array
     {
-        return ['orders' => [['name' => $name, 'created_at' => '2026-06-01', 'financial_status' => 'paid', 'total_price' => 99, 'shipping_lines' => [['title' => 'Standard']], 'line_items' => [['sku' => 'z1-main', 'title' => 'Grinder']]]], 'pages' => $truncated ? 100 : 1, 'truncated' => $truncated];
+        return ShopifyFixtures::history([['name' => $name, 'created_at' => '2026-06-01', 'financial_status' => 'paid', 'total_price' => 99, 'shipping_lines' => [['title' => 'Standard']], 'line_items' => [['sku' => 'z1-main', 'title' => 'Grinder']]]], $truncated, $truncated ? 100 : 1);
     }
 
     private function input(): array

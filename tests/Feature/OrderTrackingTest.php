@@ -2,14 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Integrations\ShipStation\ShipStationClientContract;
-use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
-use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
+use Tests\Support\ShipStationFixtures;
 use Tests\TestCase;
 
 class OrderTrackingTest extends TestCase
@@ -41,13 +39,10 @@ class OrderTrackingTest extends TestCase
     public function test_tracks_unique_orders_with_real_shipments_and_escapes_upstream_text(): void
     {
         [$user, $store] = $this->makeUserAndStore();
-        $client = Mockery::mock(ShipStationClientContract::class);
-        $client->shouldReceive('findByOrderNumber')->once()->with('1002', (int) $store->store_number)->andReturn([['orderId' => 2, 'orderNumber' => '1002', 'advancedOptions' => ['storeId' => (int) $store->store_number], 'orderStatus' => '<script>x</script>']]);
+        $client = ShipStationFixtures::bindClient(1, $store);
+        $client->shouldReceive('findByOrderNumber')->once()->with('1002', (int) $store->store_number)->andReturn([ShipStationFixtures::lookupOrder(2, '1002', (int) $store->store_number, ['orderStatus' => '<script>x</script>'])]);
         $client->shouldReceive('getOrderShipments')->once()->with('1002', true)->andReturn([['shipmentId' => 1, 'orderId' => 2, 'carrierCode' => 'UPS', 'trackingNumber' => 'ABC 1', 'shipDate' => '2026-09-01T10:00:00Z'], ['shipmentId' => 2, 'orderId' => 2, 'carrierCode' => 'unknown', 'trackingNumber' => 'T2']]);
         $client->shouldReceive('findByOrderNumber')->once()->with('1001', (int) $store->store_number)->andReturn([]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->once()->with(Mockery::on(fn (Store $received): bool => $received->is($store)))->andReturn($client);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
 
         $this->actingAs($user)->post(route('orders.tracking.store'), ['orders' => "#1002,1002\n1001"])->assertOk()
             ->assertSeeTextInOrder(['#1002', '#1001'])->assertSeeText('2 shipments')->assertSee('&lt;script&gt;x&lt;/script&gt;', false)->assertDontSee('<script>', false)
@@ -57,24 +52,19 @@ class OrderTrackingTest extends TestCase
     public function test_missing_configuration_and_upstream_failure_are_safe_and_atomic(): void
     {
         [$user] = $this->makeUserAndStore();
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->once()->andReturn(null);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
+        ShipStationFixtures::bindUnconfigured(1);
         $this->actingAs($user)->post(route('orders.tracking.store'), ['orders' => '1001'])->assertOk()->assertSeeText('not configured completely');
 
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->once()->andThrow(new RuntimeException('private-secret'));
-        $this->app->instance(ShipStationClientFactory::class, $factory);
+        ShipStationFixtures::bindFailure(new RuntimeException('private-secret'), 1);
         $this->actingAs($user)->post(route('orders.tracking.store'), ['orders' => '1001'])->assertOk()->assertSeeText('Tracking could not be loaded')->assertDontSeeText('private-secret');
     }
 
     public function test_shared_credentials_never_expose_another_stores_order_with_the_same_number(): void
     {
         [$user, $store] = $this->makeUserAndStore();
-        $client = $this->mock(ShipStationClientContract::class);
-        $client->shouldReceive('findByOrderNumber')->once()->with('1001', (int) $store->store_number)->andReturn([['orderId' => 99, 'orderNumber' => '1001', 'orderStatus' => 'FOREIGN-ORDER', 'advancedOptions' => ['storeId' => 99999]]]);
+        $client = ShipStationFixtures::bindClient(1);
+        $client->shouldReceive('findByOrderNumber')->once()->with('1001', (int) $store->store_number)->andReturn([ShipStationFixtures::lookupOrder(99, '1001', 99999, ['orderStatus' => 'FOREIGN-ORDER'])]);
         $client->shouldNotReceive('getOrderShipments');
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andReturn($client);
 
         $response = $this->actingAs($user)->post(route('orders.tracking.store'), ['orders' => '1001']);
 
@@ -84,13 +74,12 @@ class OrderTrackingTest extends TestCase
     public function test_shipments_are_matched_to_the_verified_parent_order_instead_of_just_its_number(): void
     {
         [$user, $store] = $this->makeUserAndStore();
-        $client = $this->mock(ShipStationClientContract::class);
-        $client->shouldReceive('findByOrderNumber')->once()->with('1001', (int) $store->store_number)->andReturn([['orderId' => 1, 'orderNumber' => '1001', 'orderStatus' => 'shipped', 'advancedOptions' => ['storeId' => (int) $store->store_number]]]);
+        $client = ShipStationFixtures::bindClient(1);
+        $client->shouldReceive('findByOrderNumber')->once()->with('1001', (int) $store->store_number)->andReturn([ShipStationFixtures::lookupOrder(1, '1001', (int) $store->store_number, ['orderStatus' => 'shipped'])]);
         $client->shouldReceive('getOrderShipments')->once()->with('1001', true)->andReturn([
             ['shipmentId' => 1, 'orderId' => 1, 'trackingNumber' => 'OWN-TRACKING', 'carrierCode' => 'ups'],
             ['shipmentId' => 2, 'orderId' => 99, 'trackingNumber' => 'FOREIGN-TRACKING', 'carrierCode' => 'ups'],
         ]);
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andReturn($client);
 
         $response = $this->actingAs($user)->post(route('orders.tracking.store'), ['orders' => '1001']);
 
@@ -101,10 +90,9 @@ class OrderTrackingTest extends TestCase
     public function test_ambiguous_or_unconfirmed_tracking_order_identity_never_loads_shipments(array $orders): void
     {
         [$user] = $this->makeUserAndStore();
-        $client = $this->mock(ShipStationClientContract::class);
+        $client = ShipStationFixtures::bindClient(1);
         $client->shouldReceive('findByOrderNumber')->once()->andReturn($orders);
         $client->shouldNotReceive('getOrderShipments');
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andReturn($client);
 
         $response = $this->actingAs($user)->post(route('orders.tracking.store'), ['orders' => '1001']);
 
@@ -115,10 +103,10 @@ class OrderTrackingTest extends TestCase
     public static function unconfirmedOrders(): array
     {
         return [
-            'ambiguous order' => [[['orderId' => 1, 'orderNumber' => '1001', 'orderStatus' => 'PRIVATE-STATUS', 'advancedOptions' => ['storeId' => 42]], ['orderId' => 2, 'orderNumber' => '1001', 'orderStatus' => 'PRIVATE-STATUS', 'advancedOptions' => ['storeId' => 42]]]],
-            'invalid order id' => [[['orderId' => 'broken', 'orderNumber' => '1001', 'orderStatus' => 'PRIVATE-STATUS', 'advancedOptions' => ['storeId' => 42]]]],
+            'ambiguous order' => [[ShipStationFixtures::lookupOrder(1, '1001', extra: ['orderStatus' => 'PRIVATE-STATUS']), ShipStationFixtures::lookupOrder(2, '1001', extra: ['orderStatus' => 'PRIVATE-STATUS'])]],
+            'invalid order id' => [[ShipStationFixtures::order('1001', ['orderId' => 'broken', 'orderStatus' => 'PRIVATE-STATUS'])]],
             'missing store identity' => [[['orderId' => 1, 'orderNumber' => '1001', 'orderStatus' => 'PRIVATE-STATUS']]],
-            'inexact number' => [[['orderId' => 1, 'orderNumber' => '1001-extra', 'orderStatus' => 'PRIVATE-STATUS', 'advancedOptions' => ['storeId' => 42]]]],
+            'inexact number' => [[ShipStationFixtures::lookupOrder(1, '1001-extra', extra: ['orderStatus' => 'PRIVATE-STATUS'])]],
         ];
     }
 

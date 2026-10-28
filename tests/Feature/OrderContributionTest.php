@@ -6,8 +6,6 @@ use App\Application\Reports\QueuedReportRunner;
 use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunOrderContributionReport;
 use App\Domain\Reports\OrderContributionAnalyzer;
-use App\Integrations\ShipStation\ShipStationClientContract;
-use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyTransport;
 use App\Jobs\RunQueuedReport;
 use App\Models\Store;
@@ -15,6 +13,7 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Mockery;
 use PHPUnit\Framework\Attributes\TestWith;
+use Tests\Support\ShipStationFixtures;
 use Tests\TestCase;
 
 class OrderContributionTest extends TestCase
@@ -109,17 +108,16 @@ class OrderContributionTest extends TestCase
         $this->travelTo('2026-10-07 12:00:00');
         [$operator, $store] = $this->userWithStore(true, ['store_number' => '12']);
         $this->fakeShopify($store);
-        $ss = Mockery::mock(ShipStationClientContract::class);
+        $ss = ShipStationFixtures::bindClient(1);
         $ss->shouldReceive('findByOrderNumber')->once()->with('WEB-1001', 12)->andReturn([
-            ['orderId' => 77, 'orderNumber' => 'WEB-1001', 'advancedOptions' => ['storeId' => 12]],
-            ['orderId' => 88, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 12]],
-            ['orderId' => 99, 'orderNumber' => 'WEB-1001', 'advancedOptions' => ['storeId' => 13]],
+            ShipStationFixtures::lookupOrder(77, 'WEB-1001', 12),
+            ShipStationFixtures::lookupOrder(88, '1001', 12),
+            ShipStationFixtures::lookupOrder(99, 'WEB-1001', 13),
         ]);
         $ss->shouldReceive('getOrderCostShipments')->once()->with(77, 12, '2026-10-01', '2026-10-07')->andReturn([
             $this->label('1', 5),
             $this->label('2', 100, ['orderId' => 99]),
         ]);
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andReturn($ss);
 
         $result = app(RunOrderContributionReport::class)->handle($store, '2026-10-01', '2026-10-02');
 
@@ -133,10 +131,9 @@ class OrderContributionTest extends TestCase
         $this->travelTo('2026-10-07 12:00:00');
         [$operator, $store] = $this->userWithStore(true, ['store_number' => '12']);
         $this->fakeShopify($store);
-        $ss = Mockery::mock(ShipStationClientContract::class);
-        $ss->shouldReceive('findByOrderNumber')->andReturn([['orderId' => 77, 'orderNumber' => 'WEB-1001', 'advancedOptions' => ['storeId' => 12]]]);
+        $ss = ShipStationFixtures::bindClient();
+        $ss->shouldReceive('findByOrderNumber')->andReturn([ShipStationFixtures::lookupOrder(77, 'WEB-1001', 12)]);
         $ss->shouldReceive('getOrderCostShipments')->andReturn([array_diff_key($this->label('1', 5), ['currencyCode' => true])]);
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->andReturn($ss);
 
         $response = $this->actingAs($operator)->post(route('reports.order-contribution.store'), ['start_date' => '2026-10-01', 'end_date' => '2026-10-02']);
 

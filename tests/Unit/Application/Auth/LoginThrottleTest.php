@@ -145,7 +145,7 @@ class LoginThrottleTest extends TestCase
     {
         $this->travelTo(now()->startOfSecond());
         $throttle = new LoginThrottle;
-        for ($attempt = 0; $attempt < 99; $attempt++) {
+        for ($attempt = 0; $attempt < 9; $attempt++) {
             $throttle->recordFailureMessage('1.2.3.4');
         }
         $this->travelTo(now()->addSeconds(59));
@@ -156,16 +156,16 @@ class LoginThrottleTest extends TestCase
         $message = $throttle->recordFailureMessage('1.2.3.4');
 
         $entry = LoginAttempt::where('ip', '1.2.3.4')->firstOrFail();
-        $this->assertSame(100, $entry->attempts);
+        $this->assertSame(10, $entry->attempts);
         $this->assertTrue($entry->banned_until->equalTo($bannedUntil));
         $this->assertStringContainsString('Try again in', $message);
         $this->assertNotNull($throttle->bannedMessage('1.2.3.4'));
     }
 
-    public function test_the_ninety_ninth_failure_does_not_ban_and_the_hundredth_does(): void
+    public function test_the_ninth_failure_does_not_ban_and_the_tenth_does(): void
     {
         $throttle = new LoginThrottle;
-        for ($attempt = 0; $attempt < 99; $attempt++) {
+        for ($attempt = 0; $attempt < 9; $attempt++) {
             $throttle->recordFailureMessage('1.2.3.4');
         }
         $this->assertNull($throttle->bannedMessage('1.2.3.4'));

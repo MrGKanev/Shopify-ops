@@ -1,0 +1,14 @@
+query PreShipmentRemainingItems($search: String!) {
+  orders(first: 10, query: $search) {
+    pageInfo { hasNextPage }
+    edges { node {
+      id name cancelledAt
+      shippingAddress { name company address1 address2 city provinceCode zip countryCodeV2 phone }
+      fulfillmentOrders(first: 5, includeClosed: true) {
+        pageInfo { hasNextPage }
+        nodes { id status
+          lineItems(first: 15) { pageInfo { hasNextPage } nodes { id sku remainingQuantity totalQuantity requiresShipping } } }
+      }
+    } }
+  }
+}

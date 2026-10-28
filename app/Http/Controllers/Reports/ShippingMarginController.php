@@ -38,6 +38,9 @@ class ShippingMarginController extends ReportController
         $store = $this->resolveStore($request);
         $startDate = (string) $request->validated('start_date');
         $endDate = (string) $request->validated('end_date');
+        if ($store->missingShopifyCredentials() || $store->missingShipStationCredentials()) {
+            return back()->withErrors(['export' => __('reports.integration_credentials_required')]);
+        }
         try {
             $result = $reports->completedResult($store, 'shipping_margin', $report::class, [$startDate, $endDate, (float) $request->validated('threshold')]) ?? $report->handle($store, $startDate, $endDate, (float) $request->validated('threshold'));
         } catch (Throwable $exception) {

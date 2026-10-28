@@ -6,12 +6,12 @@ use App\Application\Reports\RunShippingMarginReport;
 use App\Application\Reports\RunVoidedShipmentsReport;
 use App\Application\Reports\ShippingBillingCosts;
 use App\Domain\Reports\ShippingBillingAnalyzer;
-use App\Integrations\ShipStation\ShipStationClientContract;
-use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\ShippingBillingEntry;
 use App\Models\Store;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Tests\Support\ShipStationFixtures;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class ShippingBillingReportsTest extends TestCase
@@ -112,11 +112,10 @@ class ShippingBillingReportsTest extends TestCase
         foreach (['123', '124'] as $id) {
             ShippingBillingEntry::factory()->forAccount($store)->create(['shipment_id' => $id, 'amount' => '15']);
         }
-        $client = $this->mock(ShipStationClientContract::class);
+        $client = ShipStationFixtures::bindClient(1);
         $client->shouldReceive('fetchShipmentsByDate')->once()->andReturn(array_map(fn (string $id): array => ['shipmentId' => $id, 'orderId' => '42', 'orderNumber' => '1001', 'shipmentCost' => 10, 'insuranceCost' => 0, 'voided' => false, 'shipDate' => '2026-10-01', 'carrierCode' => 'ups'], ['123', '124']));
-        $client->shouldReceive('getOrder')->once()->with(42)->andReturn(['orderId' => 42, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => (int) $store->store_number]]);
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andReturn($client);
-        $this->mock(ShopifyOrders::class)->shouldReceive('shippingMarginCandidates')->once()->andReturn(['orders' => [['order_number' => '1001', 'currency' => 'USD', 'shipping_lines' => [['price' => '20']]]], 'pages' => 1, 'truncated' => false]);
+        $client->shouldReceive('getOrder')->once()->with(42)->andReturn(ShipStationFixtures::lookupOrder(42, '1001', (int) $store->store_number));
+        $this->mock(ShopifyOrders::class)->shouldReceive('shippingMarginCandidates')->once()->andReturn(ShopifyFixtures::history([['order_number' => '1001', 'currency' => 'USD', 'shipping_lines' => [['price' => '20']]]]));
 
         $result = app(RunShippingMarginReport::class)->handle($store, '2026-10-01', '2026-10-23', 5);
 
@@ -133,10 +132,9 @@ class ShippingBillingReportsTest extends TestCase
         $store = Store::factory()->create();
         ShippingBillingEntry::factory()->forAccount($store)->create(['expected_refund' => '10.1', 'refund_due_at' => '2026-10-20']);
         ShippingBillingEntry::factory()->forAccount($store)->create(['type' => 'label_refund', 'amount' => '4']);
-        $client = $this->mock(ShipStationClientContract::class);
+        $client = ShipStationFixtures::bindClient(1);
         $client->shouldReceive('fetchVoidedShipments')->once()->andReturn([['shipmentId' => 123, 'orderId' => 42, 'orderNumber' => '1001', 'voidDate' => '2026-10-01'], ['shipmentId' => 999, 'orderId' => 42, 'orderNumber' => '1001', 'voidDate' => '2026-10-01']]);
-        $client->shouldReceive('getOrder')->once()->with(42)->andReturn(['orderId' => 42, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => (int) $store->store_number]]);
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andReturn($client);
+        $client->shouldReceive('getOrder')->once()->with(42)->andReturn(ShipStationFixtures::lookupOrder(42, '1001', (int) $store->store_number));
 
         $result = app(RunVoidedShipmentsReport::class)->handle($store, '2026-10-01', '2026-10-23');
 

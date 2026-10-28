@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class FulfillmentSlaControllerTest extends TestCase
@@ -23,7 +24,7 @@ class FulfillmentSlaControllerTest extends TestCase
 
         [$operator] = $this->userWithStore(true);
         $gateway = Mockery::mock(ShopifyOrders::class);
-        $gateway->shouldReceive('fulfillmentSlaCandidates')->andReturn(['orders' => [['name' => '<script>', 'created_at' => now()->subDays(10)->toIso8601String(), 'financial_status' => 'paid']], 'pages' => 100, 'truncated' => true]);
+        $gateway->shouldReceive('fulfillmentSlaCandidates')->andReturn(ShopifyFixtures::history([['name' => '<script>', 'created_at' => now()->subDays(10)->toIso8601String(), 'financial_status' => 'paid']], true, 100));
         $this->app->instance(ShopifyOrders::class, $gateway);
         $this->actingAs($operator)->post('/reports/fulfillment-sla', $this->input())->assertOk()->assertSeeText('1 orders scanned · 1 breaches')->assertSeeText('truncated after 100 pages')->assertDontSee('<script>', false);
 
@@ -37,7 +38,7 @@ class FulfillmentSlaControllerTest extends TestCase
     {
         [$operator] = $this->userWithStore(true);
         $gateway = Mockery::mock(ShopifyOrders::class);
-        $gateway->shouldReceive('fulfillmentSlaCandidates')->andReturn(['orders' => [['name' => '=bad', 'created_at' => now()->subDays(10)->toIso8601String(), 'financial_status' => 'paid']], 'pages' => 1, 'truncated' => false]);
+        $gateway->shouldReceive('fulfillmentSlaCandidates')->andReturn(ShopifyFixtures::history([['name' => '=bad', 'created_at' => now()->subDays(10)->toIso8601String(), 'financial_status' => 'paid']]));
         $this->app->instance(ShopifyOrders::class, $gateway);
 
         $response = $this->actingAs($operator)->post(route('reports.fulfillment-sla.export'), $this->input());

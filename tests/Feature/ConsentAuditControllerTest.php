@@ -7,6 +7,7 @@ use App\Models\Store;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class ConsentAuditControllerTest extends TestCase
@@ -26,7 +27,7 @@ class ConsentAuditControllerTest extends TestCase
     {
         [$operator, $store] = $this->userWithStore(true);
         $shopify = Mockery::mock(ShopifyCustomers::class);
-        $shopify->shouldReceive('consentAuditCandidates')->once()->with(Mockery::on(fn (Store $s): bool => $s->is($store)), '2026-09-01', '2026-09-07')->andReturn(['orders' => [['id' => 42, 'name' => '#1<script>', 'created_at' => '2026-09-02', 'email' => '<img src=x>', 'customer_email_consent' => 'not_subscribed', 'customer_sms_consent' => 'pending', 'total_price' => 20, 'currency' => 'USD']], 'pages' => 100, 'truncated' => true]);
+        $shopify->shouldReceive('consentAuditCandidates')->once()->with(Mockery::on(fn (Store $s): bool => $s->is($store)), '2026-09-01', '2026-09-07')->andReturn(ShopifyFixtures::history([['id' => 42, 'name' => '#1<script>', 'created_at' => '2026-09-02', 'email' => '<img src=x>', 'customer_email_consent' => 'not_subscribed', 'customer_sms_consent' => 'pending', 'total_price' => 20, 'currency' => 'USD']], true, 100));
         $this->app->instance(ShopifyCustomers::class, $shopify);
         $this->actingAs($operator)->post('/reports/consent-audit', ['start_date' => '2026-09-01', 'end_date' => '2026-09-07'])->assertOk()->assertSeeText('1 scanned · 1 without active email consent')->assertSeeText('truncated after 100 pages')->assertDontSee('<script>', false)->assertDontSee('<img', false);
 

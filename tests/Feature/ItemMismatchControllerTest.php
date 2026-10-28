@@ -2,14 +2,14 @@
 
 namespace Tests\Feature;
 
-use App\Integrations\ShipStation\ShipStationClientContract;
-use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyOrders;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
+use Tests\Support\ShipStationFixtures;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class ItemMismatchControllerTest extends TestCase
@@ -25,9 +25,7 @@ class ItemMismatchControllerTest extends TestCase
         [$operator] = $this->userWithStore(true, ['store_number' => '42']);
         $this->bindSuccess('<script>', true);
         $this->actingAs($operator)->post('/reports/item-mismatch', $this->input())->assertOk()->assertSeeText('1 ShipStation orders scanned')->assertSeeText('truncated after 100 pages')->assertDontSee('<script>', false);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andThrow(new RuntimeException('secret-token'));
-        $this->app->instance(ShipStationClientFactory::class, $factory);
+        ShipStationFixtures::bindFailure(new RuntimeException('secret-token'));
         $this->actingAs($operator)->post('/reports/item-mismatch', $this->input())->assertOk()->assertSeeText('could not be completed')->assertDontSeeText('secret-token');
     }
 
@@ -45,13 +43,10 @@ class ItemMismatchControllerTest extends TestCase
 
     private function bindSuccess(string $name, bool $truncated = false): void
     {
-        $client = Mockery::mock(ShipStationClientContract::class);
-        $client->shouldReceive('fetchAllOrders')->andReturn([['orderId' => 1, 'advancedOptions' => ['storeId' => 42], 'orderNumber' => ltrim($name, '#'), 'orderStatus' => 'shipped', 'items' => []]]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andReturn($client);
+        $client = ShipStationFixtures::bindClient();
+        $client->shouldReceive('fetchAllOrders')->andReturn([ShipStationFixtures::order(ltrim($name, '#'), ['orderId' => 1, 'orderStatus' => 'shipped'])]);
         $gateway = Mockery::mock(ShopifyOrders::class);
-        $gateway->shouldReceive('itemMismatchCandidates')->andReturn(['orders' => [['id' => 1, 'name' => $name, 'total_price' => 10, 'financial_status' => 'paid', 'line_items' => [['sku' => 'A', 'quantity' => 1]]]], 'pages' => $truncated ? 100 : 1, 'truncated' => $truncated]);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
+        $gateway->shouldReceive('itemMismatchCandidates')->andReturn(ShopifyFixtures::history([['id' => 1, 'name' => $name, 'total_price' => 10, 'financial_status' => 'paid', 'line_items' => [['sku' => 'A', 'quantity' => 1]]]], $truncated, $truncated ? 100 : 1));
         $this->app->instance(ShopifyOrders::class, $gateway);
     }
 

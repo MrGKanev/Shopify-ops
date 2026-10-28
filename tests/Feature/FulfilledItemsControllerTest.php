@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class FulfilledItemsControllerTest extends TestCase
@@ -21,7 +22,7 @@ class FulfilledItemsControllerTest extends TestCase
 
         [$operator] = $this->userWithStore(true);
         $gateway = Mockery::mock(ShopifyOrders::class);
-        $gateway->shouldReceive('fulfilledItemCandidates')->once()->andReturn(['orders' => [['fulfillments' => [['created_at' => '2026-07-10T00:00:00Z', 'status' => 'success', 'line_items' => [['title' => '<script>', 'quantity' => 2]]]]]], 'pages' => 100, 'truncated' => true]);
+        $gateway->shouldReceive('fulfilledItemCandidates')->once()->andReturn(ShopifyFixtures::history([['fulfillments' => [['created_at' => '2026-07-10T00:00:00Z', 'status' => 'success', 'line_items' => [['title' => '<script>', 'quantity' => 2]]]]]], true, 100));
         $this->app->instance(ShopifyOrders::class, $gateway);
         $this->actingAs($operator)->post('/reports/fulfilled-items', ['start_date' => '2026-07-01', 'end_date' => '2026-07-31'])->assertOk()->assertSeeText('1 orders scanned · 1 products')->assertSeeText('truncated after 100 pages')->assertDontSee('<script>', false);
 
@@ -35,7 +36,7 @@ class FulfilledItemsControllerTest extends TestCase
     {
         [$operator] = $this->userWithStore(true);
         $gateway = Mockery::mock(ShopifyOrders::class);
-        $gateway->shouldReceive('fulfilledItemCandidates')->once()->andReturn(['orders' => [['fulfillments' => [['created_at' => '2026-07-10T00:00:00Z', 'status' => 'success', 'line_items' => [['title' => '=HYPERLINK("bad")', 'quantity' => 2]]]]]], 'pages' => 1, 'truncated' => false]);
+        $gateway->shouldReceive('fulfilledItemCandidates')->once()->andReturn(ShopifyFixtures::history([['fulfillments' => [['created_at' => '2026-07-10T00:00:00Z', 'status' => 'success', 'line_items' => [['title' => '=HYPERLINK("bad")', 'quantity' => 2]]]]]]));
         $this->app->instance(ShopifyOrders::class, $gateway);
 
         $response = $this->actingAs($operator)->post(route('reports.fulfilled-items.export'), ['start_date' => '2026-07-01', 'end_date' => '2026-07-31']);

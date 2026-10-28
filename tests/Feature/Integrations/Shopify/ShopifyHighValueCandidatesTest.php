@@ -6,6 +6,7 @@ use App\Integrations\Shopify\ShopifyAdminClient;
 use App\Models\Store;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class ShopifyHighValueCandidatesTest extends TestCase
@@ -17,7 +18,7 @@ class ShopifyHighValueCandidatesTest extends TestCase
 
         $result = $this->client()->highValueOrderCandidates($this->store(), '2026-09-01', '2026-09-06');
 
-        $this->assertSame(['orders' => [], 'pages' => 1, 'truncated' => false], $result);
+        $this->assertSame(ShopifyFixtures::history([]), $result);
         Http::assertSent(fn (Request $request): bool => $request['variables']['search'] === 'status:any (financial_status:paid OR financial_status:partially_paid) (fulfillment_status:unfulfilled OR fulfillment_status:partial) created_at:>=2026-09-01T00:00:00Z created_at:<=2026-09-06T23:59:59Z'
             && str_contains((string) $request['query'], 'shippingAddress') && str_contains((string) $request['query'], 'cancelledAt') && ! str_contains((string) $request['query'], 'shippingLines'));
     }

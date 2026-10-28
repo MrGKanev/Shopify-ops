@@ -53,6 +53,44 @@ class OrderChannelComparator
         ];
     }
 
+    /**
+     * Field-level shipping address differences for one order, classified so that punctuation, case and spacing changes
+     * ("St." / "street") are not mistaken for a substantive change such as a dropped unit or third address line.
+     *
+     * @param  array<string, string|null>  $shopify  keyed like ShipStation addresses (name, company, street_1, street_2, city, state, postal_code, country, phone)
+     * @param  array<string, string|null>  $shipStation
+     * @return list<array{field: string, shopify: string, shipstation: string, kind: string}>
+     */
+    public function addressDifferences(array $shopify, array $shipStation): array
+    {
+        $changes = [];
+        foreach (array_keys($this->addressLabels()) as $field) {
+            $left = $this->nullableText($shopify[$field] ?? null);
+            $right = $this->nullableText($shipStation[$field] ?? null);
+            if ($left === $right) {
+                continue;
+            }
+            $kind = $this->addressKey($field, $left) === $this->addressKey($field, $right) ? 'formatting' : 'substantive';
+            $changes[] = ['field' => $field, 'shopify' => $left ?? '', 'shipstation' => $right ?? '', 'kind' => $kind];
+        }
+
+        return $changes;
+    }
+
+    private function nullableText(mixed $value): ?string
+    {
+        $text = $this->display($value);
+
+        return $text === '—' ? null : $text;
+    }
+
+    private function addressKey(string $field, ?string $value): string
+    {
+        $value = mb_strtolower((string) $value);
+
+        return ($field === 'phone' ? preg_replace('/\D+/', '', $value) : preg_replace('/[^\p{L}\p{N}]+/u', '', $value)) ?? '';
+    }
+
     /** @return array<string, string> */
     private function addressLabels(): array
     {

@@ -7,8 +7,6 @@ use App\Application\Reports\ReportResult;
 use App\Application\Reports\RunShipmentMovementReport;
 use App\Domain\Reports\ShipmentMovementAnalyzer;
 use App\Integrations\Exceptions\UnexpectedResponse;
-use App\Integrations\ShipStation\ShipStationClientContract;
-use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\IssueStatus;
 use App\Jobs\RunQueuedReport;
 use App\Models\Store;
@@ -19,6 +17,7 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Support\ShipStationFixtures;
 use Tests\TestCase;
 
 class ShipmentMovementTest extends TestCase
@@ -121,7 +120,7 @@ class ShipmentMovementTest extends TestCase
     {
         $store = Store::factory()->create(['store_number' => '42', 'shipstation_v2_api_key' => 'v2-secret']);
         Http::preventStrayRequests();
-        Http::fake(['ssapi.shipstation.com/orders*' => Http::response($this->page([['orderId' => 1, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 99]]]))]);
+        Http::fake(['ssapi.shipstation.com/orders*' => Http::response($this->page([ShipStationFixtures::lookupOrder(1, '1001', 99)]))]);
         try {
             $this->expectException(UnexpectedResponse::class);
             app(RunShipmentMovementReport::class)->handle($store, '1001', 48, 72);
@@ -183,11 +182,10 @@ class ShipmentMovementTest extends TestCase
     {
         $this->travelTo('2026-10-24 12:00:00 UTC');
         $store = Store::factory()->create(['store_number' => '42', 'shipstation_v2_api_key' => 'v2-secret']);
-        $client = $this->mock(ShipStationClientContract::class);
-        $client->shouldReceive('findByOrderNumber')->once()->andReturn([['orderId' => 1, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 42]]]);
+        $client = ShipStationFixtures::bindClient(1);
+        $client->shouldReceive('findByOrderNumber')->once()->andReturn([ShipStationFixtures::lookupOrder(1, '1001')]);
         $first = ['shipmentId' => 1, 'orderId' => 1, 'carrierCode' => 'ups', 'trackingNumber' => 'TRACK-1', 'createDate' => '2026-10-10T12:00:00Z'];
         $client->shouldReceive('getOrderCostShipments')->once()->andReturn([$first, [...$first, 'shipmentId' => 2, 'trackingNumber' => 'TRACK-2']]);
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andReturn($client);
         Http::preventStrayRequests();
         Http::fake(['api.shipstation.com/v2/tracking*' => fn (Request $request) => Http::response($request['tracking_number'] === 'TRACK-1' ? $this->tracking('EX') : [...$this->tracking('EX'), 'tracking_number' => 'FOREIGN'])]);
         try {
@@ -203,10 +201,9 @@ class ShipmentMovementTest extends TestCase
     public function test_unverified_or_ambiguous_labels_are_rejected_before_tracking_calls(array $rows): void
     {
         $store = Store::factory()->create(['store_number' => '42', 'shipstation_v2_api_key' => 'v2-secret']);
-        $client = $this->mock(ShipStationClientContract::class);
-        $client->shouldReceive('findByOrderNumber')->once()->andReturn([['orderId' => 1, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 42]]]);
+        $client = ShipStationFixtures::bindClient(1);
+        $client->shouldReceive('findByOrderNumber')->once()->andReturn([ShipStationFixtures::lookupOrder(1, '1001')]);
         $client->shouldReceive('getOrderCostShipments')->once()->andReturn($rows);
-        $this->mock(ShipStationClientFactory::class)->shouldReceive('forStore')->once()->andReturn($client);
         Http::preventStrayRequests();
         try {
             $this->expectException(UnexpectedResponse::class);
@@ -241,7 +238,7 @@ class ShipmentMovementTest extends TestCase
         Http::preventStrayRequests();
         $trackingResponses = [$tracking, ...$later];
         Http::fake([
-            'ssapi.shipstation.com/orders*' => fn (Request $request) => Http::response($this->page([['orderId' => 1, 'orderNumber' => '1001', 'advancedOptions' => ['storeId' => 42]]])),
+            'ssapi.shipstation.com/orders*' => fn (Request $request) => Http::response($this->page([ShipStationFixtures::lookupOrder(1, '1001')])),
             'ssapi.shipstation.com/shipments*' => function (Request $request) {
                 $this->assertSame('42', (string) $request['storeId']);
                 $this->assertSame('1', (string) $request['orderId']);

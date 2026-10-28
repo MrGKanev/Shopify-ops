@@ -7,6 +7,7 @@ use App\Models\Store;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use RuntimeException;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class RepeatRefundControllerTest extends TestCase
@@ -21,7 +22,7 @@ class RepeatRefundControllerTest extends TestCase
         [$operator, $store] = $this->userWithStore(true);
         $orders = [['email' => '<img>@x.com', 'name' => '#<script>', 'refunds' => []], ['email' => '<img>@x.com', 'name' => '#2', 'refunds' => []]];
         $gateway = Mockery::mock(ShopifyPayments::class);
-        $gateway->shouldReceive('repeatRefundCandidates')->once()->with(Mockery::on(fn (Store $value): bool => $value->is($store)), '2026-01-01', '2026-01-31')->andReturn(['orders' => $orders, 'pages' => 100, 'truncated' => true]);
+        $gateway->shouldReceive('repeatRefundCandidates')->once()->with(Mockery::on(fn (Store $value): bool => $value->is($store)), '2026-01-01', '2026-01-31')->andReturn(ShopifyFixtures::history($orders, true, 100));
         $this->app->instance(ShopifyPayments::class, $gateway);
         $this->actingAs($operator)->post('/reports/repeat-refunds', ['start_date' => '2026-01-01', 'end_date' => '2026-01-31', 'minimum' => 2])->assertOk()->assertSeeText('2 scanned · 1 repeat customers')->assertSeeText('truncated after 100 pages')->assertDontSee('<script>', false)->assertDontSee('<img>', false);
         $gateway = Mockery::mock(ShopifyPayments::class);
