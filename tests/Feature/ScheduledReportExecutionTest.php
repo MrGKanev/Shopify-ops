@@ -17,6 +17,7 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
@@ -39,6 +40,18 @@ class ScheduledReportExecutionTest extends TestCase
         $this->assertSame(['2026-09-23', '2026-10-22'], $run->arguments);
         $this->assertSame('2026-10-24 04:30:00', $schedule->fresh()->next_run_at->format('Y-m-d H:i:s'));
         Queue::assertPushed(RunQueuedReport::class, 1, fn (RunQueuedReport $job): bool => $job->reportRunId === $run->id);
+    }
+
+    public function test_one_failing_schedule_does_not_stop_the_others_and_fails_the_command(): void
+    {
+        $this->travelTo('2026-10-23 04:30:00 UTC');
+        $broken = $this->schedule(['enabled' => true, 'next_run_at' => now()->subHour()]);
+        $healthy = $this->schedule(['enabled' => true, 'next_run_at' => now()]);
+        $dispatch = $this->partialMock(DispatchScheduledReport::class);
+        $dispatch->shouldReceive('handle')->with(Mockery::on(fn (ReportSchedule $schedule): bool => $schedule->is($broken)))->andThrow(new RuntimeException('secret-token'));
+        $dispatch->shouldReceive('handle')->with(Mockery::on(fn (ReportSchedule $schedule): bool => $schedule->is($healthy)))->andReturn(null)->once();
+
+        $this->artisan('reports:queue-scheduled-reports')->expectsOutput('Queued 0 scheduled report(s). 1 schedule(s) failed.')->assertFailed();
     }
 
     public function test_success_notifies_once_using_schedule_rules_and_saved_result_never_rescans(): void

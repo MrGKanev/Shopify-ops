@@ -3,33 +3,30 @@
 namespace Tests\Feature;
 
 use App\Domain\Orders\CustomerFulfillmentContext;
-use App\Integrations\ShipStation\ShipStationClientContract;
 use App\Integrations\ShipStation\ShipStationClientFactory;
 use App\Integrations\Shopify\Contracts\ShopifyCustomers;
 use App\Integrations\Shopify\ShopifyAdminClient;
 use App\Models\CustomerContextFilter;
 use App\Models\Store;
+use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Mockery;
+use Mockery\MockInterface;
 use RuntimeException;
+use Tests\Support\ShipStationFixtures;
+use Tests\Support\ShopifyFixtures;
 use Tests\TestCase;
 
 class CustomerContextTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    /** @return array{name: string, created_at: string, cancelled: bool, test: bool, customer_id: string, skus: list<string>, lines_complete: bool} */
-    private function order(string $name, string $at, array $overrides = []): array
-    {
-        return $overrides + ['name' => $name, 'created_at' => $at, 'cancelled' => false, 'test' => false, 'customer_id' => 'c1', 'skus' => [], 'lines_complete' => true];
-    }
-
     public function test_first_order_requires_complete_history(): void
     {
         $analyzer = new CustomerFulfillmentContext;
-        $history = [$this->order('#1002', '2026-10-02T10:00:00Z')];
+        $history = [ShopifyFixtures::historyOrder('#1002', '2026-10-02T10:00:00Z')];
 
         $first = $analyzer->classify('a@example.com', '1002', $history, false, ['TEE']);
         $this->assertSame('first', $first['status']);
@@ -41,18 +38,18 @@ class CustomerContextTest extends TestCase
 
         $this->assertSame('unknown', $analyzer->classify('a@example.com', '9999', $history, false, [])['status']);
         $this->assertSame('unknown', $analyzer->classify('', '1002', $history, false, [])['status']);
-        $this->assertSame('unknown', $analyzer->classify('a@example.com', '1002', [$this->order('#1002', 'not a date')], false, [])['status']);
+        $this->assertSame('unknown', $analyzer->classify('a@example.com', '1002', [ShopifyFixtures::historyOrder('#1002', 'not a date')], false, [])['status']);
     }
 
     public function test_repeat_counts_only_earlier_valid_orders_of_the_same_customer(): void
     {
         $history = [
-            $this->order('#1005', '2026-10-05T10:00:00Z'),
-            $this->order('#1004', '2026-10-04T10:00:00Z', ['skus' => ['tee', 'mug']]),
-            $this->order('#1003', '2026-10-03T10:00:00Z', ['cancelled' => true, 'skus' => ['hat']]),
-            $this->order('#1002', '2026-10-02T10:00:00Z', ['test' => true]),
-            $this->order('#1001', '2026-10-01T10:00:00Z', ['customer_id' => 'other']),
-            $this->order('#1006', '2026-10-06T10:00:00Z'),
+            ShopifyFixtures::historyOrder('#1005', '2026-10-05T10:00:00Z'),
+            ShopifyFixtures::historyOrder('#1004', '2026-10-04T10:00:00Z', ['skus' => ['tee', 'mug']]),
+            ShopifyFixtures::historyOrder('#1003', '2026-10-03T10:00:00Z', ['cancelled' => true, 'skus' => ['hat']]),
+            ShopifyFixtures::historyOrder('#1002', '2026-10-02T10:00:00Z', ['test' => true]),
+            ShopifyFixtures::historyOrder('#1001', '2026-10-01T10:00:00Z', ['customer_id' => 'other']),
+            ShopifyFixtures::historyOrder('#1006', '2026-10-06T10:00:00Z'),
         ];
 
         $result = (new CustomerFulfillmentContext)->classify('a@example.com', '#1005', $history, false, ['TEE', 'HAT']);
@@ -66,7 +63,7 @@ class CustomerContextTest extends TestCase
 
     public function test_truncated_history_with_prior_orders_is_a_minimum_and_tiers_apply(): void
     {
-        $history = [$this->order('#5', '2026-10-05T10:00:00Z', ['lines_complete' => false]), $this->order('#4', '2026-10-04T10:00:00Z'), $this->order('#3', '2026-10-03T10:00:00Z'), $this->order('#2', '2026-10-02T10:00:00Z'), $this->order('#1', '2026-10-01T10:00:00Z')];
+        $history = [ShopifyFixtures::historyOrder('#5', '2026-10-05T10:00:00Z', ['lines_complete' => false]), ShopifyFixtures::historyOrder('#4', '2026-10-04T10:00:00Z'), ShopifyFixtures::historyOrder('#3', '2026-10-03T10:00:00Z'), ShopifyFixtures::historyOrder('#2', '2026-10-02T10:00:00Z'), ShopifyFixtures::historyOrder('#1', '2026-10-01T10:00:00Z')];
         $analyzer = new CustomerFulfillmentContext;
 
         $vip = $analyzer->classify('a@example.com', '5', $history, true, [], 5);
@@ -99,108 +96,146 @@ class CustomerContextTest extends TestCase
         Http::assertSent(fn (Request $request): bool => str_contains((string) $request['variables']['search'], 'email:"jane@example.com"'));
     }
 
-    public function test_page_is_store_scoped_filters_by_rule_and_never_calls_mutations(): void
+    public function test_guest_is_sent_to_login_for_the_customer_context_page(): void
     {
         $this->get(route('print-queue.customer-context'))->assertRedirect(route('login'));
+    }
+
+    public function test_viewer_cannot_open_the_customer_context_page(): void
+    {
         [$viewer] = $this->userWithStore();
+
         $this->actingAs($viewer)->get(route('print-queue.customer-context'))->assertForbidden();
+    }
 
-        [$operator, $store] = $this->userWithStore(true, ['store_number' => '42']);
-        foreach (['1001', '1002', '1003', '1004'] as $number) {
-            $store->printQueueItems()->create(['order_number' => $number]);
-        }
-        $ship = fn (string $number, string $email): array => ['orderId' => (int) $number, 'orderNumber' => $number, 'customerEmail' => $email, 'advancedOptions' => ['storeId' => 42], 'items' => [['sku' => 'TEE', 'quantity' => 1]]];
-        $client = Mockery::mock(ShipStationClientContract::class);
-        $client->shouldReceive('findByOrderNumber')->with('1001', 42)->andReturn([$ship('1001', 'new@example.com')]);
-        $client->shouldReceive('findByOrderNumber')->with('1002', 42)->andReturn([$ship('1002', 'old@example.com')]);
-        $client->shouldReceive('findByOrderNumber')->with('1003', 42)->andReturn([$ship('1003', 'broken@example.com')]);
-        $client->shouldReceive('findByOrderNumber')->with('1004', 42)->andReturn([]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andReturn($client);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
-        $shopify = Mockery::mock(ShopifyCustomers::class);
-        $shopify->shouldReceive('customerFulfillmentHistory')->with(Mockery::type(Store::class), 'new@example.com')->twice()->andReturn(['orders' => [$this->order('#1001', '2026-10-01T00:00:00Z')], 'pages' => 1, 'truncated' => false]);
-        $shopify->shouldReceive('customerFulfillmentHistory')->with(Mockery::type(Store::class), 'old@example.com')->twice()->andReturn(['orders' => [$this->order('#1002', '2026-10-02T00:00:00Z'), $this->order('#900', '2026-09-01T00:00:00Z', ['skus' => ['tee']])], 'pages' => 1, 'truncated' => false]);
-        $shopify->shouldReceive('customerFulfillmentHistory')->with(Mockery::type(Store::class), 'broken@example.com')->twice()->andThrow(new RuntimeException('secret'));
-        $this->app->instance(ShopifyCustomers::class, $shopify);
+    public function test_page_classifies_every_queued_order_and_reports_what_could_not_be_checked(): void
+    {
+        $operator = $this->queuedOrdersWithHistory();
 
-        $all = $this->actingAs($operator)->get(route('print-queue.customer-context', ['generate' => 1]))->assertOk();
-        $all->assertSeeText('First order')->assertSeeText('Repeat customer')->assertSeeText('Shopify history could not be loaded.')->assertSeeText('Not found in ShipStation:')->assertDontSeeText('secret');
+        $this->actingAs($operator)->get(route('print-queue.customer-context', ['generate' => 1]))->assertOk()
+            ->assertSeeText('First order')->assertSeeText('Repeat customer')
+            ->assertSeeText('Shopify history could not be loaded.')->assertSeeText('Not found in ShipStation:');
+    }
 
-        $repeat = $this->actingAs($operator)->get(route('print-queue.customer-context', ['generate' => 1, 'rule' => 'repeat']))->assertOk();
-        $repeat->assertSeeText('old@example.com')->assertDontSeeText('new@example.com')->assertSeeText('1 / 3');
+    public function test_failed_history_lookup_never_exposes_the_upstream_error(): void
+    {
+        $operator = $this->queuedOrdersWithHistory();
+
+        $this->actingAs($operator)->get(route('print-queue.customer-context', ['generate' => 1]))->assertOk()->assertDontSeeText('secret');
+    }
+
+    public function test_rule_filter_keeps_only_matching_customers(): void
+    {
+        $operator = $this->queuedOrdersWithHistory();
+
+        $this->actingAs($operator)->get(route('print-queue.customer-context', ['generate' => 1, 'rule' => 'repeat']))->assertOk()
+            ->assertSeeText('old@example.com')->assertDontSeeText('new@example.com')->assertSeeText('1 / 3');
+    }
+
+    public function test_unknown_rule_is_rejected(): void
+    {
+        [$operator] = $this->userWithStore(true, ['store_number' => '42']);
+
         $this->actingAs($operator)->get(route('print-queue.customer-context', ['rule' => 'bogus']))->assertSessionHasErrors('rule');
     }
 
-    public function test_saved_filters_are_store_scoped_validated_and_drive_rule_vip_and_milestones(): void
+    public function test_page_never_modifies_shipstation(): void
+    {
+        $operator = $this->queuedOrdersWithHistory($client);
+        $client->shouldNotReceive('updateOrder', 'holdOrder', 'restoreOrder', 'createOrder', 'addOrderTag');
+
+        $this->actingAs($operator)->get(route('print-queue.customer-context', ['generate' => 1]))->assertOk();
+    }
+
+    public function test_saved_filter_rejects_an_unknown_rule(): void
+    {
+        [$operator] = $this->userWithStore(true, ['store_number' => '42']);
+
+        $this->actingAs($operator)->post(route('print-queue.customer-context.filters.store'), ['name' => 'Bad', 'rule' => 'bogus', 'vip' => 5, 'milestones' => '3'])->assertSessionHasErrors('rule');
+    }
+
+    public function test_saved_filter_rejects_non_numeric_milestones(): void
+    {
+        [$operator] = $this->userWithStore(true, ['store_number' => '42']);
+
+        $this->actingAs($operator)->post(route('print-queue.customer-context.filters.store'), ['name' => 'Bad', 'rule' => 'all', 'vip' => 5, 'milestones' => '1, x'])->assertSessionHasErrors(['milestones.0', 'milestones.1']);
+    }
+
+    public function test_saved_filter_is_stored_for_the_active_store_with_sorted_unique_milestones(): void
     {
         [$operator, $store] = $this->userWithStore(true, ['store_number' => '42']);
-        $this->actingAs($operator)->post(route('print-queue.customer-context.filters.store'), ['name' => 'Bad', 'rule' => 'bogus', 'vip' => 5, 'milestones' => '3'])->assertSessionHasErrors('rule');
-        $this->actingAs($operator)->post(route('print-queue.customer-context.filters.store'), ['name' => 'Bad', 'rule' => 'all', 'vip' => 5, 'milestones' => '1, x'])->assertSessionHasErrors(['milestones.0', 'milestones.1']);
+
         $this->actingAs($operator)->post(route('print-queue.customer-context.filters.store'), ['name' => 'Loyal', 'rule' => 'milestone', 'vip' => 8, 'milestones' => '3, 2, 3'])->assertRedirect();
+
         $filter = $store->customerContextFilters()->sole();
         $this->assertSame([2, 3], $filter->milestones);
         $this->assertSame(8, $filter->vip_at);
+    }
 
+    public function test_another_stores_saved_filter_can_neither_be_deleted_nor_applied(): void
+    {
+        [$operator] = $this->userWithStore(true, ['store_number' => '42']);
         $foreign = CustomerContextFilter::factory()->create();
+
         $this->actingAs($operator)->delete(route('print-queue.customer-context.filters.destroy', $foreign->id))->assertNotFound();
         $this->actingAs($operator)->get(route('print-queue.customer-context', ['filter' => $foreign->id]))->assertOk()->assertDontSee($foreign->name);
+        $this->assertModelExists($foreign);
+    }
 
-        $store->printQueueItems()->create(['order_number' => '1003']);
-        $client = Mockery::mock(ShipStationClientContract::class);
-        $client->shouldReceive('findByOrderNumber')->andReturn([['orderId' => 3, 'orderNumber' => '1003', 'customerEmail' => 'm@example.com', 'advancedOptions' => ['storeId' => 42], 'items' => []]]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andReturn($client);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
-        $shopify = Mockery::mock(ShopifyCustomers::class);
-        $shopify->shouldReceive('customerFulfillmentHistory')->andReturn(['orders' => [$this->order('#1003', '2026-10-03T00:00:00Z'), $this->order('#1002', '2026-10-02T00:00:00Z'), $this->order('#1001', '2026-10-01T00:00:00Z')], 'pages' => 1, 'truncated' => false]);
-        $this->app->instance(ShopifyCustomers::class, $shopify);
+    public function test_saved_filter_milestones_and_vip_threshold_label_the_customer(): void
+    {
+        [$operator, $store] = $this->userWithStore(true, ['store_number' => '42']);
+        $filter = CustomerContextFilter::factory()->for($store)->create(['rule' => 'milestone', 'vip_at' => 8, 'milestones' => [2, 3]]);
+        $this->threeOrderCustomerForOrder('1003', $store);
 
         $this->actingAs($operator)->get(route('print-queue.customer-context', ['filter' => $filter->id, 'generate' => 1]))->assertOk()->assertSeeText('Milestone')->assertSeeText('1 / 1');
         $this->actingAs($operator)->get(route('print-queue.customer-context', ['filter' => $filter->id, 'generate' => 1, 'vip' => 3]))->assertOk()->assertSeeText('VIP');
-        $this->actingAs($operator)->delete(route('print-queue.customer-context.filters.destroy', $filter->id))->assertRedirect();
-        $this->assertSame(0, $store->customerContextFilters()->count());
     }
 
-    public function test_packing_slip_and_pick_list_can_include_customer_context_and_survive_its_failure(): void
+    public function test_saved_filter_can_be_deleted(): void
     {
         [$operator, $store] = $this->userWithStore(true, ['store_number' => '42']);
-        $store->printQueueItems()->create(['order_number' => '1002']);
-        $client = Mockery::mock(ShipStationClientContract::class);
-        $client->shouldReceive('findByOrderNumber')->andReturn([['orderId' => 2, 'orderNumber' => '1002', 'customerEmail' => 'r@example.com', 'advancedOptions' => ['storeId' => 42], 'orderDate' => '2026-10-02T00:00:00', 'shipTo' => ['name' => 'R'], 'items' => [['sku' => 'TEE', 'name' => 'Tee', 'quantity' => 1]]]]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andReturn($client);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
-        $shopify = Mockery::mock(ShopifyCustomers::class);
-        $shopify->shouldReceive('customerFulfillmentHistory')->andReturn(['orders' => [$this->order('#1002', '2026-10-02T00:00:00Z'), $this->order('#1001', '2026-10-01T00:00:00Z', ['skus' => ['tee']])], 'pages' => 1, 'truncated' => false]);
-        $this->app->instance(ShopifyCustomers::class, $shopify);
+        $filter = CustomerContextFilter::factory()->for($store)->create();
+
+        $this->actingAs($operator)->delete(route('print-queue.customer-context.filters.destroy', $filter->id))->assertRedirect();
+
+        $this->assertModelMissing($filter);
+    }
+
+    public function test_packing_slip_includes_customer_context_only_when_asked(): void
+    {
+        $operator = $this->repeatCustomerInPrintQueue();
 
         $this->actingAs($operator)->post(route('orders.packing-slip.store'), ['order_number' => '1002', 'customer_context' => '1'])->assertOk()->assertSeeText('Repeat customer')->assertSeeText('tee');
         $this->actingAs($operator)->post(route('orders.packing-slip.store'), ['order_number' => '1002'])->assertOk()->assertDontSeeText('Repeat customer');
+    }
+
+    public function test_pick_list_includes_customer_context_only_when_asked(): void
+    {
+        $operator = $this->repeatCustomerInPrintQueue();
+
         $this->actingAs($operator)->get(route('print-queue.pick-list', ['generate' => 1, 'customer_context' => 1]))->assertOk()->assertSeeText('1002 — Repeat customer');
         $this->actingAs($operator)->get(route('print-queue.pick-list', ['generate' => 1]))->assertOk()->assertDontSeeText('Repeat customer');
     }
 
-    public function test_open_orders_beyond_the_print_queue_are_capped_read_only_and_never_guessed_as_first(): void
+    public function test_packing_slip_still_renders_when_customer_context_fails(): void
+    {
+        $operator = $this->repeatCustomerInPrintQueue();
+        $this->failingShopifyHistory();
+
+        $this->actingAs($operator)->post(route('orders.packing-slip.store'), ['order_number' => '1002', 'customer_context' => '1'])->assertOk()->assertSeeText('Packing Slip')->assertDontSeeText('Repeat customer')->assertDontSeeText('secret');
+    }
+
+    public function test_open_orders_beyond_the_cap_are_not_checked_and_the_print_queue_is_not_mixed_in(): void
     {
         [$operator, $store] = $this->userWithStore(true, ['store_number' => '42']);
         $store->printQueueItems()->create(['order_number' => '9999']);
-        $open = [];
-        foreach (range(1, 52) as $i) {
-            $open[] = ['orderId' => $i, 'orderNumber' => (string) (2000 + $i), 'advancedOptions' => ['storeId' => 42]];
-        }
-        $open[] = ['orderId' => 99, 'orderNumber' => '2001', 'advancedOptions' => ['storeId' => 42]];
-        $ship = fn (string $number): array => ['orderId' => (int) $number, 'orderNumber' => $number, 'customerEmail' => 'c'.$number.'@example.com', 'advancedOptions' => ['storeId' => 42], 'items' => [['sku' => 'TEE', 'quantity' => 1]]];
-        $client = Mockery::mock(ShipStationClientContract::class);
-        $client->shouldReceive('fetchBacklogOrders')->once()->with(42)->andReturn($open);
-        $client->shouldReceive('findByOrderNumber')->times(50)->andReturnUsing(fn (string $number): array => [$ship($number)]);
-        $client->shouldNotReceive('updateOrder', 'holdOrder', 'restoreOrder', 'createOrder', 'addOrderTag');
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andReturn($client);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
-        $shopify = Mockery::mock(ShopifyCustomers::class);
-        $shopify->shouldReceive('customerFulfillmentHistory')->andReturn(['orders' => [], 'pages' => 1, 'truncated' => false]);
-        $this->app->instance(ShopifyCustomers::class, $shopify);
+        $open = array_map(fn (int $i): array => ShipStationFixtures::order((string) (2000 + $i)), range(1, 52));
+        $open[] = ShipStationFixtures::order('2001', ['orderId' => 99]);
+        $client = ShipStationFixtures::bindClient();
+        $client->shouldReceive('fetchBacklogOrders')->with(42)->andReturn($open);
+        $client->shouldReceive('findByOrderNumber')->andReturnUsing(fn (string $number): array => [ShipStationFixtures::order($number, ['customerEmail' => 'c'.$number.'@example.com', 'items' => [['sku' => 'TEE', 'quantity' => 1]]])]);
+        $this->bindShopify(ShopifyFixtures::history([]));
 
         $this->actingAs($operator)->get(route('print-queue.customer-context', ['generate' => 1, 'source' => 'open', 'vip' => 5]))->assertOk()
             ->assertSeeText('Showing the oldest 50 of 52 open orders; the rest were not checked.')
@@ -210,37 +245,116 @@ class CustomerContextTest extends TestCase
 
     public function test_open_order_with_truncated_or_failed_history_is_unknown_not_first(): void
     {
-        [$operator, $store] = $this->userWithStore(true, ['store_number' => '42']);
-        $ship = fn (string $number, string $email): array => ['orderId' => (int) $number, 'orderNumber' => $number, 'customerEmail' => $email, 'advancedOptions' => ['storeId' => 42], 'items' => []];
-        $client = Mockery::mock(ShipStationClientContract::class);
-        $client->shouldReceive('fetchBacklogOrders')->andReturn([$ship('3001', 'cut@example.com'), $ship('3002', 'down@example.com')]);
-        $client->shouldReceive('findByOrderNumber')->with('3001', 42)->andReturn([$ship('3001', 'cut@example.com')]);
-        $client->shouldReceive('findByOrderNumber')->with('3002', 42)->andReturn([$ship('3002', 'down@example.com')]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andReturn($client);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
-        $shopify = Mockery::mock(ShopifyCustomers::class);
-        $shopify->shouldReceive('customerFulfillmentHistory')->with(Mockery::type(Store::class), 'cut@example.com')->andReturn(['orders' => [$this->order('#3001', '2026-10-01T00:00:00Z')], 'pages' => 5, 'truncated' => true]);
-        $shopify->shouldReceive('customerFulfillmentHistory')->with(Mockery::type(Store::class), 'down@example.com')->andThrow(new RuntimeException('secret'));
-        $this->app->instance(ShopifyCustomers::class, $shopify);
+        [$operator] = $this->userWithStore(true, ['store_number' => '42']);
+        $this->twoOpenOrdersWithUnreliableHistory();
 
         $this->actingAs($operator)->get(route('print-queue.customer-context', ['generate' => 1, 'source' => 'open']))->assertOk()
             ->assertSeeText('Customer history was cut off')->assertSeeText('Shopify history could not be loaded.')->assertDontSeeText('secret');
+    }
+
+    public function test_first_order_rule_excludes_open_orders_with_unreliable_history(): void
+    {
+        [$operator] = $this->userWithStore(true, ['store_number' => '42']);
+        $this->twoOpenOrdersWithUnreliableHistory();
+
         $this->actingAs($operator)->get(route('print-queue.customer-context', ['generate' => 1, 'source' => 'open', 'rule' => 'first']))->assertOk()->assertSeeText('0 / 2');
+    }
+
+    public function test_unknown_source_is_rejected(): void
+    {
+        [$operator] = $this->userWithStore(true, ['store_number' => '42']);
+
         $this->actingAs($operator)->get(route('print-queue.customer-context', ['source' => 'bogus']))->assertSessionHasErrors('source');
     }
 
-    public function test_open_source_reports_unconfigured_shipstation_and_empty_backlog(): void
+    public function test_open_source_reports_an_empty_backlog(): void
     {
         [$operator] = $this->userWithStore(true, ['store_number' => '42']);
-        $client = Mockery::mock(ShipStationClientContract::class);
-        $client->shouldReceive('fetchBacklogOrders')->andReturn([]);
-        $factory = Mockery::mock(ShipStationClientFactory::class);
-        $factory->shouldReceive('forStore')->andReturn($client, $client, null);
-        $this->app->instance(ShipStationClientFactory::class, $factory);
+        ShipStationFixtures::bindClient()->shouldReceive('fetchBacklogOrders')->andReturn([]);
         $this->app->instance(ShopifyCustomers::class, Mockery::mock(ShopifyCustomers::class));
 
         $this->actingAs($operator)->get(route('print-queue.customer-context', ['generate' => 1, 'source' => 'open']))->assertOk()->assertSeeText('No open orders found in ShipStation.');
+    }
+
+    public function test_open_source_reports_unconfigured_shipstation(): void
+    {
+        [$operator] = $this->userWithStore(true, ['store_number' => '42']);
+        $factory = Mockery::mock(ShipStationClientFactory::class);
+        $factory->shouldReceive('forStore')->andReturn(null);
+        $this->app->instance(ShipStationClientFactory::class, $factory);
+        $this->app->instance(ShopifyCustomers::class, Mockery::mock(ShopifyCustomers::class));
+
         $this->actingAs($operator)->get(route('print-queue.customer-context', ['generate' => 1, 'source' => 'open']))->assertOk()->assertSeeText('ShipStation is not configured completely for this store.');
+    }
+
+    /**
+     * Four queued orders: a first-time customer, a repeat customer, a customer whose Shopify lookup fails, and one missing from ShipStation.
+     */
+    private function queuedOrdersWithHistory(?MockInterface &$client = null): User
+    {
+        [$operator, $store] = $this->userWithStore(true, ['store_number' => '42']);
+        foreach (['1001', '1002', '1003', '1004'] as $number) {
+            $store->printQueueItems()->create(['order_number' => $number]);
+        }
+        $client = ShipStationFixtures::bindClient();
+        $client->shouldReceive('findByOrderNumber')->with('1001', 42)->andReturn([ShipStationFixtures::order('1001', ['customerEmail' => 'new@example.com', 'items' => [['sku' => 'TEE', 'quantity' => 1]]])]);
+        $client->shouldReceive('findByOrderNumber')->with('1002', 42)->andReturn([ShipStationFixtures::order('1002', ['customerEmail' => 'old@example.com', 'items' => [['sku' => 'TEE', 'quantity' => 1]]])]);
+        $client->shouldReceive('findByOrderNumber')->with('1003', 42)->andReturn([ShipStationFixtures::order('1003', ['customerEmail' => 'broken@example.com', 'items' => [['sku' => 'TEE', 'quantity' => 1]]])]);
+        $client->shouldReceive('findByOrderNumber')->with('1004', 42)->andReturn([]);
+        $shopify = Mockery::mock(ShopifyCustomers::class);
+        $shopify->shouldReceive('customerFulfillmentHistory')->with(Mockery::type(Store::class), 'new@example.com')->andReturn(ShopifyFixtures::history([ShopifyFixtures::historyOrder('#1001', '2026-10-01T00:00:00Z')]));
+        $shopify->shouldReceive('customerFulfillmentHistory')->with(Mockery::type(Store::class), 'old@example.com')->andReturn(ShopifyFixtures::history([ShopifyFixtures::historyOrder('#1002', '2026-10-02T00:00:00Z'), ShopifyFixtures::historyOrder('#900', '2026-09-01T00:00:00Z', ['skus' => ['tee']])]));
+        $shopify->shouldReceive('customerFulfillmentHistory')->with(Mockery::type(Store::class), 'broken@example.com')->andThrow(new RuntimeException('secret'));
+        $this->app->instance(ShopifyCustomers::class, $shopify);
+
+        return $operator;
+    }
+
+    private function repeatCustomerInPrintQueue(): User
+    {
+        [$operator, $store] = $this->userWithStore(true, ['store_number' => '42']);
+        $store->printQueueItems()->create(['order_number' => '1002']);
+        ShipStationFixtures::bindClient()->shouldReceive('findByOrderNumber')->andReturn([ShipStationFixtures::order('1002', ['customerEmail' => 'r@example.com', 'orderDate' => '2026-10-02T00:00:00', 'shipTo' => ['name' => 'R'], 'items' => [['sku' => 'TEE', 'name' => 'Tee', 'quantity' => 1]]])]);
+        $this->bindShopify(ShopifyFixtures::history([ShopifyFixtures::historyOrder('#1002', '2026-10-02T00:00:00Z'), ShopifyFixtures::historyOrder('#1001', '2026-10-01T00:00:00Z', ['skus' => ['tee']])]));
+
+        return $operator;
+    }
+
+    private function threeOrderCustomerForOrder(string $number, Store $store): void
+    {
+        $store->printQueueItems()->create(['order_number' => $number]);
+        ShipStationFixtures::bindClient()->shouldReceive('findByOrderNumber')->andReturn([ShipStationFixtures::order($number, ['customerEmail' => 'm@example.com'])]);
+        $this->bindShopify(ShopifyFixtures::history([ShopifyFixtures::historyOrder('#1003', '2026-10-03T00:00:00Z'), ShopifyFixtures::historyOrder('#1002', '2026-10-02T00:00:00Z'), ShopifyFixtures::historyOrder('#1001', '2026-10-01T00:00:00Z')]));
+    }
+
+    private function twoOpenOrdersWithUnreliableHistory(): void
+    {
+        $cut = ShipStationFixtures::order('3001', ['customerEmail' => 'cut@example.com']);
+        $down = ShipStationFixtures::order('3002', ['customerEmail' => 'down@example.com']);
+        $client = ShipStationFixtures::bindClient();
+        $client->shouldReceive('fetchBacklogOrders')->andReturn([$cut, $down]);
+        $client->shouldReceive('findByOrderNumber')->with('3001', 42)->andReturn([$cut]);
+        $client->shouldReceive('findByOrderNumber')->with('3002', 42)->andReturn([$down]);
+        $shopify = Mockery::mock(ShopifyCustomers::class);
+        $shopify->shouldReceive('customerFulfillmentHistory')->with(Mockery::type(Store::class), 'cut@example.com')->andReturn(ShopifyFixtures::history([ShopifyFixtures::historyOrder('#3001', '2026-10-01T00:00:00Z')], true, 5));
+        $shopify->shouldReceive('customerFulfillmentHistory')->with(Mockery::type(Store::class), 'down@example.com')->andThrow(new RuntimeException('secret'));
+        $this->app->instance(ShopifyCustomers::class, $shopify);
+    }
+
+    /**
+     * @param  array{orders: list<array<string, mixed>>, pages: int, truncated: bool}  $history
+     */
+    private function bindShopify(array $history): void
+    {
+        $shopify = Mockery::mock(ShopifyCustomers::class);
+        $shopify->shouldReceive('customerFulfillmentHistory')->andReturn($history);
+        $this->app->instance(ShopifyCustomers::class, $shopify);
+    }
+
+    private function failingShopifyHistory(): void
+    {
+        $shopify = Mockery::mock(ShopifyCustomers::class);
+        $shopify->shouldReceive('customerFulfillmentHistory')->andThrow(new RuntimeException('secret'));
+        $this->app->instance(ShopifyCustomers::class, $shopify);
     }
 }

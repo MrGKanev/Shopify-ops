@@ -8,6 +8,7 @@ use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
+use RuntimeException;
 use Tests\TestCase;
 
 class PackingSlipTest extends TestCase
@@ -48,6 +49,19 @@ class PackingSlipTest extends TestCase
         $factory->shouldReceive('forStore')->once()->andReturn(null);
         $this->app->instance(ShipStationClientFactory::class, $factory);
         $this->actingAs($user)->post(route('orders.packing-slip.store'), ['order_number' => '1001'])->assertOk()->assertSeeText('not configured completely');
+    }
+
+    public function test_lookup_failure_is_reported_without_leaking_the_error(): void
+    {
+        [$user] = $this->makeUserAndStore();
+        $client = Mockery::mock(ShipStationClientContract::class);
+        $client->shouldReceive('findByOrderNumber')->andThrow(new RuntimeException('secret-token'));
+        $factory = Mockery::mock(ShipStationClientFactory::class);
+        $factory->shouldReceive('forStore')->andReturn($client);
+        $this->app->instance(ShipStationClientFactory::class, $factory);
+
+        $this->actingAs($user)->post(route('orders.packing-slip.store'), ['order_number' => '1001'])
+            ->assertOk()->assertSeeText('could not be loaded')->assertDontSeeText('secret-token');
     }
 
     private function makeUserAndStore(): array

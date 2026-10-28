@@ -12,7 +12,9 @@ use App\Models\Store;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use LogicException;
+use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
+use RuntimeException;
 use Tests\TestCase;
 
 class DetectDeliveryExceptionsTest extends TestCase
@@ -49,6 +51,19 @@ class DetectDeliveryExceptionsTest extends TestCase
         $this->assertSame(IssueStatus::Resolved, $issue->fresh()->status);
         $this->assertSame(1, $issue->fresh()->occurrences);
         $this->assertFalse($otherStore->operationalIssues()->exists());
+    }
+
+    public function test_command_skips_unconfigured_stores_and_keeps_scanning_after_a_failure(): void
+    {
+        Store::query()->delete();
+        $broken = Store::factory()->create(['shipstation_api_key' => 'key1', 'shipstation_api_secret' => 'secret1']);
+        $healthy = Store::factory()->create(['shipstation_api_key' => 'key2', 'shipstation_api_secret' => 'secret2']);
+        Store::factory()->create(['shipstation_api_key' => '', 'shipstation_api_secret' => '']);
+        $detector = $this->mock(DetectDeliveryExceptions::class);
+        $detector->shouldReceive('handle')->with(Mockery::on(fn (Store $store): bool => $store->is($broken)))->once()->andThrow(new RuntimeException('secret-token'));
+        $detector->shouldReceive('handle')->with(Mockery::on(fn (Store $store): bool => $store->is($healthy)))->once()->andReturn(3);
+
+        $this->artisan('operations:detect-delivery-exceptions')->expectsOutput('Detected 3 delivery exception(s). 1 store scan(s) failed.')->assertFailed();
     }
 
     public function test_the_delivery_watch_runs_daily_without_overlap(): void

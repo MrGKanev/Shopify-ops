@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Application\Reports\CaptureShipmentBacklog;
+use App\Application\Reports\RunShipmentBacklogReport;
 use App\Integrations\Exceptions\UnexpectedResponse;
 use App\Models\Store;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -34,6 +35,19 @@ class CaptureShipmentBacklogsTest extends TestCase
         $this->assertSame('2026-10-23T19:15:00+03:00', $first->result['captured_at']);
         $this->assertSame(['under_1_day' => 0, '1_2_days' => 1, '3_6_days' => 0, '7_plus_days' => 1, 'unknown' => 0], $first->result['age_buckets']);
         Http::assertSentCount(2);
+    }
+
+    public function test_scheduled_backlog_report_exposes_the_captured_snapshot(): void
+    {
+        $store = Store::factory()->create(['store_number' => '42']);
+        Http::fake(['ssapi.shipstation.com/orders*' => fn (Request $request) => Http::response($request['orderStatus'] === 'on_hold' ? $this->page([]) : $this->page([$this->order(1, '2026-10-22T09:15:00')]))]);
+
+        $result = app(RunShipmentBacklogReport::class)->handle($store);
+
+        $snapshot = $store->auditSnapshots()->sole();
+        $this->assertSame($snapshot->rows_found, $result->scanned);
+        $this->assertSame($snapshot->getKey(), $result->meta['snapshot_id']);
+        $this->assertSame($snapshot->result, $result->meta['counts']);
     }
 
     public function test_confirmed_empty_backlog_is_zero(): void
